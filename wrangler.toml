@@ -1,0 +1,12 @@
+name = "senado-br-mcp"
+main = "src/index.ts"
+compatibility_date = "2025-02-18"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+SENADO_BASE_URL = "https://legis.senado.leg.br/dadosabertos"
+ALLOWED_ORIGIN = "*"
+
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "11b79fb8338e4687a332b96124390882"
