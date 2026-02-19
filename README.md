@@ -157,14 +157,52 @@ All requests go to `POST /mcp` with JSON-RPC 2.0 format.
 }
 ```
 
+## Upstream API Endpoints
+
+The server consumes two classes of upstream endpoints from the Senado API:
+
+### Legacy endpoints (`.json` suffix, PascalCase responses)
+
+Used by Groups A, B, H and parts of D/E/F. The `.json` suffix is appended automatically by `upstream.ts`.
+
+| Upstream path | Used by |
+|---------------|---------|
+| `/senador/lista/atual` | `senado_listar_senadores` |
+| `/senador/{codigo}` | `senado_obter_senador`, `senado_senador_detail` |
+| `/senador/{codigo}/votacoes` | `senado_votacoes_senador` |
+| `/materia/pesquisa/lista` | `senado_buscar_materias` |
+| `/materia/{codigo}` | `senado_obter_materia`, `senado_tramitacao_materia` |
+| `/materia/textos/{codigo}` | `senado_textos_materia` |
+| `/materia/votacoes/{codigo}` | `senado_votos_materia` |
+| `/comissao/lista/colegiados` | `senado_listar_comissoes` (+ sigla-to-code resolution) |
+| `/comissao/{codigo}` | `senado_obter_comissao` (numeric code, not sigla) |
+| `/composicao/comissao/{codigo}` | `senado_membros_comissao` |
+| `/comissao/agenda/{data}` | `senado_agenda_comissoes` |
+| `/comissao/agenda/{dataInicio}/{dataFim}` | `senado_reunioes_comissao` |
+| `/plenario/agenda/dia/{data}` | `senado_agenda_plenario` |
+
+### New v3 endpoints (flat JSON arrays/objects, camelCase)
+
+Used by Groups C, D (D1/D2/D3/D5). Dates must be in **ISO format** (`YYYY-MM-DD`).
+
+| Upstream path | Used by |
+|---------------|---------|
+| `/votacao` | `senado_listar_votacoes`, `senado_votacoes_recentes`, `senado_obter_votacao`, `senado_search_votacoes` |
+| `/processo` | `senado_search_processos` |
+| `/processo/{id}` | `senado_obter_processo` |
+
+### e-Cidadania (HTML scraping + internal REST)
+
+List tools use internal REST APIs (`restcolecaomaismateria`, `restcolecaomaisideia`, `restcolecaomaisaudiencia`) that return clean JSON. Detail tools scrape HTML with CSS-class-targeted regex.
+
 ## Caching
 
 ### Layer architecture
 
 | Layer | Storage | Scope | TTL range | Purpose |
 |-------|---------|-------|-----------|---------|
-| **L0** | In-memory `Map` | Per-isolate | 30–300s | Ultra-fast, eliminates redundant requests within a Worker isolate |
-| **L1** | Cloudflare Cache API (`caches.default`) | Per-colo (PoP) | 60–600s | Shared across requests at the same edge location |
+| **L0** | In-memory `Map` | Per-isolate | 30-300s | Ultra-fast, eliminates redundant requests within a Worker isolate |
+| **L1** | Cloudflare Cache API (`caches.default`) | Per-colo (PoP) | 60-600s | Shared across requests at the same edge location |
 | **L2** | KV (optional) | Global | Variable | Reserved for rare, low-write data |
 
 ### Cache categories
@@ -227,27 +265,27 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 
 | Tool | Description |
 |------|-------------|
-| `senado_listar_votacoes` | Plenary votes by year, filterable by month/period |
+| `senado_listar_votacoes` | Plenary votes by year, filterable by month/period. Uses the `/votacao` endpoint with ISO dates. |
 | `senado_votacoes_recentes` | Most recent plenary votes (last N days) |
-| `senado_obter_votacao` | Vote details with individual senator roll call |
-| `senado_votos_materia` | Voting results for a specific bill |
+| `senado_obter_votacao` | Vote details with individual senator roll call. Accepts `codigoSessao` (plenary session code). |
+| `senado_votos_materia` | Voting results for a specific bill (via legacy `/materia/votacoes/{codigo}`) |
 | `senado_search_votacoes` | Flexible vote search by process, bill, senator, period |
 
 ### Group E — Committees (5 tools)
 
 | Tool | Description |
 |------|-------------|
-| `senado_listar_comissoes` | List committees, filter by type and active status |
-| `senado_obter_comissao` | Committee details: chair, vice-chair, purpose |
-| `senado_membros_comissao` | Current committee members with roles |
-| `senado_reunioes_comissao` | Committee meetings with agenda, date, location |
-| `senado_agenda_comissoes` | Committee meeting schedule, filterable by date and committee |
+| `senado_listar_comissoes` | List active committees from `/comissao/lista/colegiados` |
+| `senado_obter_comissao` | Committee details: chair, vice-chair, member counts. Resolves sigla to numeric code internally. |
+| `senado_membros_comissao` | Current committee members via `/composicao/comissao/{codigo}` |
+| `senado_reunioes_comissao` | Committee meetings from `/comissao/agenda` filtered by sigla. Handles cross-year date ranges automatically. |
+| `senado_agenda_comissoes` | Committee meeting schedule for a specific date |
 
 ### Group F — Plenary (1 tool)
 
 | Tool | Description |
 |------|-------------|
-| `senado_agenda_plenario` | Plenary session schedule with bills to be voted |
+| `senado_agenda_plenario` | Plenary session schedule via `/plenario/agenda/dia/{data}` |
 
 ### Group G — e-Cidadania (11 tools)
 
