@@ -166,7 +166,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
           "senado_textos_materia",
           { codigo: params.codigoMateria },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(`/materia/${params.codigoMateria}/textos`, {}, baseUrl),
+          () => upstreamFetch(`/materia/textos/${params.codigoMateria}`, {}, baseUrl),
         );
         const r = response as any;
         const textos = ensureArray(

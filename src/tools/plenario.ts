@@ -28,7 +28,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
       try {
         const data = params.data || formatDateYMD(new Date());
         const response = await cachedFetch("senado_agenda_plenario", { data }, CACHE_DYNAMIC, () =>
-          upstreamFetch(`/agenda/${data}`, {}, baseUrl),
+          upstreamFetch(`/plenario/agenda/dia/${data}`, {}, baseUrl),
         );
         const r = response as any;
         const sessoes = ensureArray(

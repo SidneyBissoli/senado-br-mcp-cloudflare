@@ -1,6 +1,9 @@
 /**
- * Group C — Processes (2 tools — NEW, confirmed in OpenAPI)
+ * Group C — Processes (2 tools)
  * senado_search_processos, senado_obter_processo
+ *
+ * Both use the /processo endpoint (new API, flat JSON, camelCase).
+ * Search returns array, detail returns single object.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -9,6 +12,43 @@ import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolResult, toolError, buildParams, ensureArray } from "../utils/validation.js";
 import { CACHE_ON_DEMAND } from "../types.js";
+
+/** Parse a process item from the search endpoint (flat camelCase). */
+function parseProcessoResumo(p: any) {
+  return {
+    id: p.id || null,
+    codigoMateria: p.codigoMateria || null,
+    identificacao: p.identificacao || null,
+    ementa: p.ementa || null,
+    tipoDocumento: p.tipoDocumento || null,
+    dataApresentacao: p.dataApresentacao || null,
+    autoria: p.autoria || null,
+    tramitando: p.tramitando || null,
+    dataDeliberacao: p.dataDeliberacao || null,
+    normaGerada: p.normaGerada || null,
+  };
+}
+
+/** Parse a process detail from the /{id} endpoint (flat camelCase). */
+function parseProcessoDetalhe(p: any) {
+  return {
+    id: p.id || null,
+    codigoMateria: p.codigoMateria || null,
+    identificacao: p.identificacao || null,
+    sigla: p.sigla || null,
+    descricaoSigla: p.descricaoSigla || null,
+    numero: p.numero || null,
+    ano: p.ano || null,
+    objetivo: p.objetivo || null,
+    ementa: p.conteudo?.ementa || null,
+    tipoConteudo: p.conteudo?.tipo || null,
+    dataApresentacao: p.documento?.dataApresentacao || null,
+    autoria: p.documento?.resumoAutoria || null,
+    indexacao: p.documento?.indexacao || null,
+    urlDocumento: p.documento?.url || null,
+    tramitando: p.tramitando || null,
+  };
+}
 
 export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C1. senado_search_processos
@@ -43,17 +83,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
         const response = await cachedFetch("senado_search_processos", qp, CACHE_ON_DEMAND, () =>
           upstreamFetch("/processo", qp, baseUrl),
         );
-        const r = response as any;
-        const processos = ensureArray(r?.processos ?? r?.Processos ?? r).map((p: any) => ({
-          id: p.id || p.idProcesso || null,
-          sigla: p.sigla || p.siglaTipoProcesso || null,
-          numero: p.numero || null,
-          ano: p.ano || null,
-          ementa: p.ementa || p.descricao || null,
-          autor: p.autor || p.nomeAutor || null,
-          situacao: p.situacao || p.descricaoSituacao || null,
-          dataApresentacao: p.dataApresentacao || null,
-        }));
+        const processos = ensureArray(response).map(parseProcessoResumo);
         return toolResult({ count: processos.length, processos });
       } catch (e) {
         return toolError(e instanceof Error ? e.message : "Erro na busca de processos");
@@ -76,8 +106,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
           CACHE_ON_DEMAND,
           () => upstreamFetch(`/processo/${params.idProcesso}`, {}, baseUrl),
         );
-        // The /processo/{id} endpoint returns detailed process information
-        return toolResult(response);
+        return toolResult(parseProcessoDetalhe(response as any));
       } catch (e) {
         return toolError(e instanceof Error ? e.message : "Processo não encontrado");
       }

@@ -17,5 +17,5 @@ export const CACHE_ON_DEMAND: CacheCategory = { l0Ttl: 30, l1Ttl: 120 };
 export const SENADO_BASE_URL_DEFAULT = "https://legis.senado.leg.br/dadosabertos";
 
 export const MAX_BODY_SIZE = 256 * 1024; // 256 KB
-export const MAX_RESPONSE_SIZE = 2 * 1024 * 1024; // 2 MB
+export const MAX_RESPONSE_SIZE = 5 * 1024 * 1024; // 5 MB
 export const UPSTREAM_TIMEOUT_MS = 10_000; // 10s
