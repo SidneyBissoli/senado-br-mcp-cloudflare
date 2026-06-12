@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
@@ -16,6 +18,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
     "typescript": "^5.7.0",
+    "vitest": "^4.0.18",
     "wrangler": "^4.0.0"
   }
 }

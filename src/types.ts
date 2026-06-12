@@ -2,6 +2,7 @@ export interface Env {
   CACHE_KV: KVNamespace;
   ALLOWED_ORIGIN?: string;
   SENADO_BASE_URL?: string;
+  API_KEY?: string;
 }
 
 export interface CacheCategory {

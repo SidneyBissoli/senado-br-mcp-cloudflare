@@ -9,14 +9,15 @@ import { cachedFetch } from "../cache/manager.js";
 import { toolResult, toolError } from "../utils/validation.js";
 import { CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
 
-const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
+export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
 
-/** Fetch an HTML page from e-Cidadania. */
+/** Fetch an HTML page from e-Cidadania with descriptive errors. */
 async function fetchPage(path: string): Promise<string> {
+  const url = `${ECIDADANIA_BASE}${path}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
   try {
-    const resp = await fetch(`${ECIDADANIA_BASE}${path}`, {
+    const resp = await fetch(url, {
       headers: {
         Accept: "text/html",
         "User-Agent": "senado-br-mcp/2.0.0",
@@ -24,46 +25,89 @@ async function fetchPage(path: string): Promise<string> {
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!resp.ok) throw new Error(`e-Cidadania HTTP ${resp.status}`);
-    return await resp.text();
+    if (!resp.ok) throw new Error(`e-Cidadania retornou HTTP ${resp.status} para ${path}`);
+    const text = await resp.text();
+    if (!text.trim()) throw new Error(`e-Cidadania retornou página vazia para ${path}`);
+    return text;
   } catch (e) {
     clearTimeout(timeout);
+    if ((e as Error).name === "AbortError") {
+      throw new Error(`e-Cidadania: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${path}`);
+    }
+    throw e;
+  }
+}
+
+/**
+ * Fetch JSON from an e-Cidadania REST endpoint with validation.
+ * Ensures the response is valid JSON and an array.
+ */
+async function fetchEcidadaniaJson(endpoint: string): Promise<any[]> {
+  const url = `${ECIDADANIA_BASE}${endpoint}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  try {
+    const resp = await fetch(url, {
+      headers: { Accept: "application/json", "User-Agent": "senado-br-mcp/2.0.0" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) throw new Error(`e-Cidadania REST API retornou HTTP ${resp.status} para ${endpoint}`);
+
+    let data: unknown;
+    try {
+      data = await resp.json();
+    } catch {
+      throw new Error(`e-Cidadania REST API retornou JSON inválido para ${endpoint}`);
+    }
+
+    if (!Array.isArray(data)) {
+      // API returned an object or other non-array — wrap or return empty
+      if (data && typeof data === "object") return [data];
+      return [];
+    }
+    return data;
+  } catch (e) {
+    clearTimeout(timeout);
+    if ((e as Error).name === "AbortError") {
+      throw new Error(`e-Cidadania REST API: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${endpoint}`);
+    }
     throw e;
   }
 }
 
 /** Parse Brazilian number: 1.234.567 -> 1234567 */
-function parseBrNum(s: string): number {
+export function parseBrNum(s: string): number {
   return parseInt(s.replace(/\./g, ""), 10) || 0;
 }
 
 /** Extract ID from href like visualizacaomateria?id=1234 */
-function extractId(href: string): number | null {
+export function extractId(href: string): number | null {
   const m = href.match(/id=(\d+)/);
   return m ? parseInt(m[1], 10) : null;
 }
 
 /** Normalize href from e-Cidadania pages (handles leading spaces and duplicate /ecidadania/ prefix). */
-function normalizeEcidadaniaUrl(href: string, type: "visualizacaomateria" | "visualizacaoideia" | "visualizacaoaudiencia"): string {
+export function normalizeEcidadaniaUrl(href: string, type: "visualizacaomateria" | "visualizacaoideia" | "visualizacaoaudiencia"): string {
   const idMatch = href.match(/id=(\d+)/);
   if (idMatch) return `${ECIDADANIA_BASE}/${type}?id=${idMatch[1]}`;
   return `${ECIDADANIA_BASE}/${href.trim().replace(/^\/?ecidadania\//, "").replace(/^\//, "")}`;
 }
 
 /** Strip HTML tags from a string. */
-function stripHtml(html: string): string {
+export function stripHtml(html: string): string {
   return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
 /** Extract date DD/MM/YY or DD/MM/YYYY -> YYYY-MM-DD */
-function extractDate(text: string): string | null {
+export function extractDate(text: string): string | null {
   const m = text.match(/(\d{2})\/(\d{2})\/(\d{2,4})/);
   if (!m) return null;
   const year = m[3].length === 2 ? `20${m[3]}` : m[3];
   return `${year}-${m[2]}-${m[1]}`;
 }
 
-function extractTime(text: string): string | null {
+export function extractTime(text: string): string | null {
   const m = text.match(/(\d{2}):(\d{2})/);
   return m ? `${m[1]}:${m[2]}` : null;
 }
@@ -77,43 +121,28 @@ interface ConsultaResumo {
   status: string; url: string;
 }
 
-async function listarConsultasInternal(params: { pagina?: number; limite?: number }): Promise<ConsultaResumo[]> {
+export async function listarConsultasInternal(params: { pagina?: number; limite?: number }): Promise<ConsultaResumo[]> {
   const { limite = 20 } = params;
+  const data = await fetchEcidadaniaJson("/restcolecaomaismateria");
 
-  // Use the internal REST API which returns clean JSON with vote counts
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
-  try {
-    const resp = await fetch(`${ECIDADANIA_BASE}/restcolecaomaismateria`, {
-      headers: { Accept: "application/json", "User-Agent": "senado-br-mcp/2.0.0" },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!resp.ok) throw new Error(`e-Cidadania REST API HTTP ${resp.status}`);
-    const data = await resp.json() as any[];
-
-    return data.slice(0, limite).map((item: any) => {
-      const votosSim = parseBrNum(String(item.votosFavor || "0"));
-      const votosNao = parseBrNum(String(item.votosContra || "0"));
-      const totalVotos = parseBrNum(String(item.totalVotos || "0"));
-      const percentualSim = totalVotos > 0 ? Math.round((votosSim / totalVotos) * 100) : 0;
-      const percentualNao = totalVotos > 0 ? Math.round((votosNao / totalVotos) * 100) : 0;
-      return {
-        id: item.id,
-        materia: item.identificacaoBasica || "",
-        ementa: item.ementa || "",
-        votosSim, votosNao, totalVotos, percentualSim, percentualNao,
-        status: "aberta" as const,
-        url: `${ECIDADANIA_BASE}/visualizacaomateria?id=${item.id}`,
-      };
-    });
-  } catch (e) {
-    clearTimeout(timeout);
-    throw e;
-  }
+  return data.slice(0, limite).map((item: any) => {
+    const votosSim = parseBrNum(String(item.votosFavor || "0"));
+    const votosNao = parseBrNum(String(item.votosContra || "0"));
+    const totalVotos = parseBrNum(String(item.totalVotos || "0"));
+    const percentualSim = totalVotos > 0 ? Math.round((votosSim / totalVotos) * 100) : 0;
+    const percentualNao = totalVotos > 0 ? Math.round((votosNao / totalVotos) * 100) : 0;
+    return {
+      id: item.id,
+      materia: item.identificacaoBasica || "",
+      ementa: item.ementa || "",
+      votosSim, votosNao, totalVotos, percentualSim, percentualNao,
+      status: "aberta" as const,
+      url: `${ECIDADANIA_BASE}/visualizacaomateria?id=${item.id}`,
+    };
+  });
 }
 
-async function obterConsultaInternal(id: number) {
+export async function obterConsultaInternal(id: number) {
   const html = await fetchPage(`/visualizacaomateria?id=${id}`);
   const text = stripHtml(html);
 
@@ -168,42 +197,27 @@ interface IdeiaResumo {
   dataPublicacao: string | null; status: string; autor: string | null; url: string;
 }
 
-async function listarIdeiasInternal(params: { status?: string; limite?: number; pagina?: number; ordenarPor?: string; ordem?: string }): Promise<IdeiaResumo[]> {
+export async function listarIdeiasInternal(params: { status?: string; limite?: number; pagina?: number; ordenarPor?: string; ordem?: string }): Promise<IdeiaResumo[]> {
   const { limite = 20 } = params;
+  const data = await fetchEcidadaniaJson("/restcolecaomaisideia");
 
-  // Use the internal REST API for clean JSON data
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
-  try {
-    const resp = await fetch(`${ECIDADANIA_BASE}/restcolecaomaisideia`, {
-      headers: { Accept: "application/json", "User-Agent": "senado-br-mcp/2.0.0" },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!resp.ok) throw new Error(`e-Cidadania REST API HTTP ${resp.status}`);
-    const data = await resp.json() as any[];
+  let ideias: IdeiaResumo[] = data.map((item: any) => ({
+    id: item.id,
+    titulo: item.titulo || "",
+    apoios: parseBrNum(String(item.apoiamentos || "0")),
+    dataPublicacao: null,
+    status: "aberta" as const,
+    autor: null,
+    url: `${ECIDADANIA_BASE}/visualizacaoideia?id=${item.id}`,
+  }));
 
-    let ideias: IdeiaResumo[] = data.map((item: any) => ({
-      id: item.id,
-      titulo: item.titulo || "",
-      apoios: parseBrNum(String(item.apoiamentos || "0")),
-      dataPublicacao: null,
-      status: "aberta" as const,
-      autor: null,
-      url: `${ECIDADANIA_BASE}/visualizacaoideia?id=${item.id}`,
-    }));
-
-    if (params.ordenarPor === "apoios") {
-      ideias.sort((a, b) => params.ordem === "asc" ? a.apoios - b.apoios : b.apoios - a.apoios);
-    }
-    return ideias.slice(0, limite);
-  } catch (e) {
-    clearTimeout(timeout);
-    throw e;
+  if (params.ordenarPor === "apoios") {
+    ideias.sort((a, b) => params.ordem === "asc" ? a.apoios - b.apoios : b.apoios - a.apoios);
   }
+  return ideias.slice(0, limite);
 }
 
-async function obterIdeiaInternal(id: number) {
+export async function obterIdeiaInternal(id: number) {
   const html = await fetchPage(`/visualizacaoideia?id=${id}`);
   const text = stripHtml(html);
 
@@ -258,59 +272,44 @@ interface EventoResumo {
   comissao: string | null; comentarios: number; status: string; url: string;
 }
 
-async function listarEventosInternal(params: { status?: string; comissao?: string; limite?: number }): Promise<EventoResumo[]> {
+export async function listarEventosInternal(params: { status?: string; comissao?: string; limite?: number }): Promise<EventoResumo[]> {
   const { limite = 20 } = params;
+  const data = await fetchEcidadaniaJson("/restcolecaomaisaudiencia");
 
-  // Use the internal REST API for clean JSON data
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
-  try {
-    const resp = await fetch(`${ECIDADANIA_BASE}/restcolecaomaisaudiencia`, {
-      headers: { Accept: "application/json", "User-Agent": "senado-br-mcp/2.0.0" },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!resp.ok) throw new Error(`e-Cidadania REST API HTTP ${resp.status}`);
-    const data = await resp.json() as any[];
+  // Parse date from "DD/MM/YY HH:MM" format
+  let eventos: EventoResumo[] = data.map((item: any) => {
+    const dp = item.dataPublicacao || "";
+    const dateMatch = dp.match(/(\d{2})\/(\d{2})\/(\d{2,4})/);
+    const timeMatch = dp.match(/(\d{2}):(\d{2})/);
+    const year = dateMatch ? (dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3]) : null;
+    const dataStr = dateMatch ? `${year}-${dateMatch[2]}-${dateMatch[1]}` : null;
+    const horaStr = timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : null;
 
-    // Parse date from "DD/MM/YY HH:MM" format
-    let eventos: EventoResumo[] = data.map((item: any) => {
-      const dp = item.dataPublicacao || "";
-      const dateMatch = dp.match(/(\d{2})\/(\d{2})\/(\d{2,4})/);
-      const timeMatch = dp.match(/(\d{2}):(\d{2})/);
-      const year = dateMatch ? (dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3]) : null;
-      const dataStr = dateMatch ? `${year}-${dateMatch[2]}-${dateMatch[1]}` : null;
-      const horaStr = timeMatch ? `${timeMatch[1]}:${timeMatch[2]}` : null;
+    // situacaoAudienciaId: 2 = agendado, 3 = realizado/encerrado
+    let status = "agendado";
+    if (item.situacaoAudienciaId === 3 || item.situacaoAudienciaId === 4) status = "encerrado";
 
-      // situacaoAudienciaId: 2 = agendado, 3 = realizado/encerrado
-      let status = "agendado";
-      if (item.situacaoAudienciaId === 3 || item.situacaoAudienciaId === 4) status = "encerrado";
+    return {
+      id: item.id,
+      titulo: item.titulo || item.tituloAbreviado || "",
+      data: dataStr,
+      hora: horaStr,
+      comissao: item.sigla || null,
+      comentarios: item.qtdComentario || 0,
+      status,
+      url: `${ECIDADANIA_BASE}/visualizacaoaudiencia?id=${item.id}`,
+    };
+  });
 
-      return {
-        id: item.id,
-        titulo: item.titulo || item.tituloAbreviado || "",
-        data: dataStr,
-        hora: horaStr,
-        comissao: item.sigla || null,
-        comentarios: item.qtdComentario || 0,
-        status,
-        url: `${ECIDADANIA_BASE}/visualizacaoaudiencia?id=${item.id}`,
-      };
-    });
-
-    if (params.status && params.status !== "todos") eventos = eventos.filter((e) => e.status === params.status);
-    if (params.comissao) {
-      const s = params.comissao.toUpperCase();
-      eventos = eventos.filter((e) => e.comissao?.toUpperCase().includes(s));
-    }
-    return eventos.slice(0, limite);
-  } catch (e) {
-    clearTimeout(timeout);
-    throw e;
+  if (params.status && params.status !== "todos") eventos = eventos.filter((e) => e.status === params.status);
+  if (params.comissao) {
+    const s = params.comissao.toUpperCase();
+    eventos = eventos.filter((e) => e.comissao?.toUpperCase().includes(s));
   }
+  return eventos.slice(0, limite);
 }
 
-async function obterEventoInternal(id: number) {
+export async function obterEventoInternal(id: number) {
   const html = await fetchPage(`/visualizacaoaudiencia?id=${id}`);
 
   // Title: <div class="audiencia-titulo">...</div>
@@ -393,7 +392,10 @@ async function obterEventoInternal(id: number) {
 export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   function ecidadaniaError(e: unknown) {
     const msg = e instanceof Error ? e.message : "Erro ao acessar e-Cidadania";
-    return toolError(`${msg}. As demais funcionalidades (senadores, matérias, votações) continuam operacionais.`);
+    const retryable = e instanceof Error && "retryable" in e && typeof (e as any).retryable === "boolean"
+      ? (e as any).retryable
+      : false;
+    return toolError(`${msg}. As demais funcionalidades (senadores, matérias, votações) continuam operacionais.`, retryable);
   }
 
   // G1. senado_ecidadania_listar_consultas

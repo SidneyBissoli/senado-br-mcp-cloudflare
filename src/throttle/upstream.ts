@@ -9,7 +9,8 @@
 
 import { globalBucket } from "./token-bucket.js";
 import { UPSTREAM_TIMEOUT_MS, MAX_RESPONSE_SIZE, SENADO_BASE_URL_DEFAULT } from "../types.js";
-import { log } from "../utils/logger.js";
+import { log, logger } from "../utils/logger.js";
+import { incr } from "../metrics.js";
 
 const MAX_RETRIES = 2;
 const MAX_CONCURRENT = 6;
@@ -49,13 +50,15 @@ export async function upstreamFetch(
   }
 
   const startTime = Date.now();
-  let lastError: Error | undefined;
+  let lastError: UpstreamError | undefined;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     // Check global rate limit
     if (!globalBucket.tryConsume()) {
+      incr("upstreamErrors");
+      logger.warn("upstream_rate_limited", { path });
       throw new UpstreamError(
-        "Taxa de requisições excedida. Tente novamente em alguns segundos.",
+        `[${path}] Taxa de requisições excedida. Tente novamente em alguns segundos.`,
         429,
         true,
       );
@@ -63,8 +66,10 @@ export async function upstreamFetch(
 
     // Check concurrency limit
     if (inFlight >= MAX_CONCURRENT) {
+      incr("upstreamErrors");
+      logger.warn("upstream_concurrency_limited", { path });
       throw new UpstreamError(
-        "Muitas requisições simultâneas ao upstream. Tente novamente em breve.",
+        `[${path}] Muitas requisições simultâneas ao upstream. Tente novamente em breve.`,
         503,
         true,
       );
@@ -73,7 +78,14 @@ export async function upstreamFetch(
     // Check remaining time budget
     const elapsed = Date.now() - startTime;
     const remaining = UPSTREAM_TIMEOUT_MS - elapsed;
-    if (remaining <= 0) break;
+    if (remaining <= 0) {
+      lastError = lastError || new UpstreamError(
+        `[${path}] Timeout: orçamento de ${UPSTREAM_TIMEOUT_MS}ms esgotado antes da tentativa ${attempt + 1}`,
+        504,
+        true,
+      );
+      break;
+    }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), remaining);
@@ -93,11 +105,13 @@ export async function upstreamFetch(
 
       if (response.status === 429 || response.status === 503) {
         lastError = new UpstreamError(
-          `Upstream retornou ${response.status}`,
+          `[${path}] Upstream retornou ${response.status}`,
           response.status,
           true,
         );
         if (attempt < MAX_RETRIES) {
+          incr("upstreamRetries");
+          logger.warn("upstream_retry", { path, attempt, status: response.status });
           const backoff = Math.min(1000 * Math.pow(2, attempt), 4000);
           const jitter = Math.random() * 500;
           await sleep(backoff + jitter);
@@ -108,9 +122,9 @@ export async function upstreamFetch(
 
       if (!response.ok) {
         throw new UpstreamError(
-          `Upstream retornou HTTP ${response.status}`,
+          `[${path}] Upstream retornou HTTP ${response.status}`,
           response.status,
-          false,
+          response.status >= 500, // 5xx are retryable, 4xx are not
         );
       }
 
@@ -118,7 +132,7 @@ export async function upstreamFetch(
       const contentLength = response.headers.get("content-length");
       if (contentLength && parseInt(contentLength, 10) > MAX_RESPONSE_SIZE) {
         throw new UpstreamError(
-          "Resposta upstream excede o limite de 2 MB",
+          `[${path}] Resposta upstream excede o limite de 2 MB`,
           413,
           false,
         );
@@ -127,21 +141,29 @@ export async function upstreamFetch(
       const text = await response.text();
       if (text.length > MAX_RESPONSE_SIZE) {
         throw new UpstreamError(
-          "Resposta upstream excede o limite de 2 MB",
+          `[${path}] Resposta upstream excede o limite de 2 MB`,
           413,
           false,
         );
       }
 
       const latency = Date.now() - startTime;
+      incr("upstreamCalls");
       log("upstream", path, response.status, latency, attempt);
+
+      if (!text.trim()) {
+        throw new UpstreamError(
+          `[${path}] Resposta upstream vazia`,
+          502,
+          true,
+        );
+      }
 
       try {
         return JSON.parse(text);
       } catch {
-        // If the API returns non-JSON despite .json suffix, try without suffix
         throw new UpstreamError(
-          "Resposta upstream não é JSON válido",
+          `[${path}] Resposta upstream não é JSON válido`,
           502,
           false,
         );
@@ -149,12 +171,21 @@ export async function upstreamFetch(
     } catch (err) {
       clearTimeout(timeout);
       if (err instanceof UpstreamError) throw err;
-      if ((err as Error).name === "AbortError") {
-        lastError = new UpstreamError("Timeout na requisição upstream (10s)", 504, true);
-        break;
-      }
-      lastError = err as Error;
+
+      // Network-level errors (DNS, TCP, TLS, AbortError)
+      const isAbort = (err as Error).name === "AbortError";
+      lastError = new UpstreamError(
+        isAbort
+          ? `[${path}] Timeout na requisição upstream (${UPSTREAM_TIMEOUT_MS / 1000}s)`
+          : `[${path}] Erro de rede: ${(err as Error).message || "desconhecido"}`,
+        isAbort ? 504 : 502,
+        true, // Network errors are always retryable
+      );
+
+      if (isAbort) break; // AbortError means time budget is spent
       if (attempt < MAX_RETRIES) {
+        incr("upstreamRetries");
+        logger.warn("upstream_retry", { path, attempt, message: lastError.message });
         const backoff = Math.min(1000 * Math.pow(2, attempt), 4000);
         await sleep(backoff + Math.random() * 500);
         continue;
@@ -164,7 +195,10 @@ export async function upstreamFetch(
     }
   }
 
-  throw lastError || new UpstreamError("Falha ao acessar upstream após retries", 502, true);
+  const finalError = lastError || new UpstreamError(`[${path}] Falha ao acessar upstream após retries`, 502, true);
+  incr("upstreamErrors");
+  logger.error("upstream_error", { path, status: finalError.status, message: finalError.message });
+  throw finalError;
 }
 
 function sleep(ms: number): Promise<void> {

@@ -10,11 +10,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, buildParams, ensureArray } from "../utils/validation.js";
+import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 
 /** Parse a process item from the search endpoint (flat camelCase). */
-function parseProcessoResumo(p: any) {
+export function parseProcessoResumo(p: any) {
   return {
     id: p.id || null,
     codigoMateria: p.codigoMateria || null,
@@ -30,7 +30,7 @@ function parseProcessoResumo(p: any) {
 }
 
 /** Parse a process detail from the /{id} endpoint (flat camelCase). */
-function parseProcessoDetalhe(p: any) {
+export function parseProcessoDetalhe(p: any) {
   return {
     id: p.id || null,
     codigoMateria: p.codigoMateria || null,
@@ -86,7 +86,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
         const processos = ensureArray(response).map(parseProcessoResumo);
         return toolResult({ count: processos.length, processos });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro na busca de processos");
+        return errorFrom(e, "Erro na busca de processos");
       }
     },
   );
@@ -108,7 +108,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
         );
         return toolResult(parseProcessoDetalhe(response as any));
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Processo não encontrado");
+        return errorFrom(e, "Processo não encontrado");
       }
     },
   );

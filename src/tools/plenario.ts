@@ -7,7 +7,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, ensureArray } from "../utils/validation.js";
+import { toolResult, toolError, errorFrom, ensureArray } from "../utils/validation.js";
 import { CACHE_DYNAMIC } from "../types.js";
 
 function formatDateYMD(d: Date): string {
@@ -56,7 +56,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
         });
         return toolResult({ data, count: sessoes.length, sessoes });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter agenda do plenário");
+        return errorFrom(e, "Erro ao obter agenda do plenário");
       }
     },
   );

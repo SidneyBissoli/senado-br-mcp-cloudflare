@@ -6,6 +6,8 @@
 import { l0Get, l0Set } from "./l0-memory.js";
 import { l1Get, l1Set } from "./l1-cache-api.js";
 import type { CacheCategory } from "../types.js";
+import { logger } from "../utils/logger.js";
+import { incr } from "../metrics.js";
 
 /** Compute a stable hash for cache keying. */
 export async function hashParams(params: Record<string, unknown>): Promise<string> {
@@ -21,6 +23,9 @@ export async function hashParams(params: Record<string, unknown>): Promise<strin
 /**
  * Multi-layer cache-through fetch.
  * Returns cached data if available, otherwise calls `fetcher` and caches the result.
+ *
+ * Designed for graceful degradation: if hashing or cache operations fail,
+ * falls through to the fetcher so the tool still works.
  */
 export async function cachedFetch<T>(
   toolName: string,
@@ -28,12 +33,24 @@ export async function cachedFetch<T>(
   category: CacheCategory,
   fetcher: () => Promise<T>,
 ): Promise<T> {
-  const paramsHash = await hashParams(params);
+  let paramsHash: string;
+  try {
+    paramsHash = await hashParams(params);
+  } catch {
+    // crypto.subtle failure (unlikely but possible in some runtimes) — skip cache
+    return fetcher();
+  }
+
   const cacheKey = `${toolName}:${paramsHash}`;
+  incr("toolCalls");
 
   // L0: in-memory
   const l0 = l0Get<T>(cacheKey);
-  if (l0 !== undefined) return l0;
+  if (l0 !== undefined) {
+    incr("cacheL0Hits");
+    logger.info("cache_hit", { tool: toolName, layer: "L0" });
+    return l0;
+  }
 
   // L1: Cache API
   const l1 = await l1Get(toolName, paramsHash);
@@ -41,6 +58,8 @@ export async function cachedFetch<T>(
     try {
       const parsed = JSON.parse(l1) as T;
       l0Set(cacheKey, parsed, category.l0Ttl);
+      incr("cacheL1Hits");
+      logger.info("cache_hit", { tool: toolName, layer: "L1" });
       return parsed;
     } catch {
       // corrupted cache entry, fall through
@@ -48,12 +67,18 @@ export async function cachedFetch<T>(
   }
 
   // Miss: fetch upstream
+  incr("cacheMisses");
+  logger.info("cache_miss", { tool: toolName });
   const result = await fetcher();
 
-  // Populate caches
-  const serialized = JSON.stringify(result);
-  l0Set(cacheKey, result, category.l0Ttl);
-  await l1Set(toolName, paramsHash, serialized, category.l1Ttl);
+  // Populate caches — failures here are non-fatal
+  try {
+    const serialized = JSON.stringify(result);
+    l0Set(cacheKey, result, category.l0Ttl);
+    await l1Set(toolName, paramsHash, serialized, category.l1Ttl);
+  } catch {
+    // Serialization or L1 put failure — result is still valid
+  }
 
   return result;
 }

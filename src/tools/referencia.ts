@@ -6,10 +6,10 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, ensureArray } from "../utils/validation.js";
+import { toolResult, toolError, errorFrom, ensureArray } from "../utils/validation.js";
 import { CACHE_STATIC } from "../types.js";
 
-const TIPOS_MATERIA = [
+export const TIPOS_MATERIA = [
   { sigla: "PEC", nome: "Proposta de Emenda à Constituição", descricao: "Altera a Constituição Federal" },
   { sigla: "PL", nome: "Projeto de Lei", descricao: "Projeto de lei ordinária" },
   { sigla: "PLP", nome: "Projeto de Lei Complementar", descricao: "Regulamenta dispositivos constitucionais" },
@@ -24,7 +24,7 @@ const TIPOS_MATERIA = [
   { sigla: "SUG", nome: "Sugestão Legislativa", descricao: "Sugestão da sociedade civil" },
 ];
 
-const UFS = [
+export const UFS = [
   { sigla: "AC", nome: "Acre" }, { sigla: "AL", nome: "Alagoas" }, { sigla: "AP", nome: "Amapá" },
   { sigla: "AM", nome: "Amazonas" }, { sigla: "BA", nome: "Bahia" }, { sigla: "CE", nome: "Ceará" },
   { sigla: "DF", nome: "Distrito Federal" }, { sigla: "ES", nome: "Espírito Santo" }, { sigla: "GO", nome: "Goiás" },
@@ -44,7 +44,7 @@ async function fetchSenadoresAtuais(baseUrl: string) {
   );
 }
 
-function extractParlamentares(response: any): any[] {
+export function extractParlamentares(response: any): any[] {
   const list =
     response?.ListaParlamentarEmExercicio?.Parlamentares?.Parlamentar ??
     response?.ListaParlamentarLegislatura?.Parlamentares?.Parlamentar;
@@ -76,7 +76,7 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
         // Fallback
         return toolResult({ numero: 57, periodo: "2023-2027", dataInicio: "2023-02-01", dataFim: "2027-01-31" });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter legislatura");
+        return errorFrom(e, "Erro ao obter legislatura");
       }
     },
   );
@@ -109,7 +109,7 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
         const partidos = Object.values(counts).sort((a, b) => b.senadores - a.senadores);
         return toolResult({ count: partidos.length, totalSenadores: parlamentares.length, partidos });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter partidos");
+        return errorFrom(e, "Erro ao obter partidos");
       }
     },
   );
@@ -131,7 +131,7 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
         const ufs = UFS.map((u) => ({ ...u, senadores: ufCount[u.sigla] || 0 }));
         return toolResult({ count: ufs.length, totalSenadores: parlamentares.length, ufs });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter UFs");
+        return errorFrom(e, "Erro ao obter UFs");
       }
     },
   );

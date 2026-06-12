@@ -19,6 +19,13 @@ export function l0Get<T>(key: string): T | undefined {
   return entry.value as T;
 }
 
+export const MAX_L0_ENTRIES = MAX_ENTRIES;
+
+/** Reset the in-memory store. For testing only. */
+export function _resetStore(): void {
+  store.clear();
+}
+
 export function l0Set<T>(key: string, value: T, ttlSeconds: number): void {
   // Evict oldest entries if at capacity
   if (store.size >= MAX_ENTRIES) {

@@ -9,10 +9,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, buildParams, ensureArray } from "../utils/validation.js";
+import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
 import { CACHE_ON_DEMAND, CACHE_DYNAMIC } from "../types.js";
 
-function parseMateriaResumo(materia: any) {
+export function parseMateriaResumo(materia: any) {
   const id = materia.IdentificacaoMateria || materia;
   return {
     codigo: parseInt(id.CodigoMateria || materia.CodigoMateria || "0"),
@@ -27,7 +27,7 @@ function parseMateriaResumo(materia: any) {
   };
 }
 
-function parseMateriaDetalhe(dados: any) {
+export function parseMateriaDetalhe(dados: any) {
   const mat = dados.Materia || dados;
   const id = mat.IdentificacaoMateria || {};
   const db = mat.DadosBasicosMateria || {};
@@ -91,7 +91,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
         ).map(parseMateriaResumo);
         return toolResult({ count: materias.length, materias });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro na busca de matérias");
+        return errorFrom(e, "Erro na busca de matérias");
       }
     },
   );
@@ -114,7 +114,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
         const dados = (response as any).DetalheMateria || response;
         return toolResult(parseMateriaDetalhe(dados));
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Matéria não encontrada");
+        return errorFrom(e, "Matéria não encontrada");
       }
     },
   );
@@ -148,7 +148,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
         }));
         return toolResult({ codigoMateria: params.codigoMateria, count: tramitacoes.length, tramitacoes });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter tramitação");
+        return errorFrom(e, "Erro ao obter tramitação");
       }
     },
   );
@@ -179,7 +179,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
         }));
         return toolResult({ codigoMateria: params.codigoMateria, count: textos.length, textos });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter textos");
+        return errorFrom(e, "Erro ao obter textos");
       }
     },
   );

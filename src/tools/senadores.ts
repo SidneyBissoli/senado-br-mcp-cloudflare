@@ -8,10 +8,10 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, buildParams, ensureArray } from "../utils/validation.js";
+import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
-function parseSenadorResumo(parlamentar: any) {
+export function parseSenadorResumo(parlamentar: any) {
   const id = parlamentar.IdentificacaoParlamentar || parlamentar;
   const m = parlamentar.Mandato || {};
   return {
@@ -25,7 +25,7 @@ function parseSenadorResumo(parlamentar: any) {
   };
 }
 
-function parseSenadorDetalhe(dados: any) {
+export function parseSenadorDetalhe(dados: any) {
   const p = dados.Parlamentar || dados;
   const id = p.IdentificacaoParlamentar || {};
   const db = p.DadosBasicosParlamentar || {};
@@ -53,7 +53,7 @@ function parseSenadorDetalhe(dados: any) {
   };
 }
 
-function extractParlamentares(response: any): any[] {
+export function extractParlamentares(response: any): any[] {
   const list =
     response?.ListaParlamentarEmExercicio?.Parlamentares?.Parlamentar ??
     response?.ListaParlamentarLegislatura?.Parlamentares?.Parlamentar;
@@ -90,7 +90,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
         }
         return toolResult({ count: senadores.length, senadores });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao listar senadores");
+        return errorFrom(e, "Erro ao listar senadores");
       }
     },
   );
@@ -117,7 +117,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
           });
         return toolResult({ count: senadores.length, senadores });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro na busca por nome");
+        return errorFrom(e, "Erro na busca por nome");
       }
     },
   );
@@ -140,7 +140,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
         const dados = (response as any).DetalheParlamentar || response;
         return toolResult(parseSenadorDetalhe(dados));
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Senador não encontrado");
+        return errorFrom(e, "Senador não encontrado");
       }
     },
   );
@@ -186,7 +186,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
         }));
         return toolResult({ count: votos.length, votos });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter votações do senador");
+        return errorFrom(e, "Erro ao obter votações do senador");
       }
     },
   );
@@ -246,7 +246,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
           })),
         });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter detalhes do senador");
+        return errorFrom(e, "Erro ao obter detalhes do senador");
       }
     },
   );

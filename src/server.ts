@@ -12,6 +12,11 @@ import { registerComissoesTools } from "./tools/comissoes.js";
 import { registerPlenarioTools } from "./tools/plenario.js";
 import { registerProcessosTools } from "./tools/processos.js";
 import { registerECidadaniaTools } from "./tools/ecidadania.js";
+import { registerDiscursosTools } from "./tools/discursos.js";
+import { registerComposicaoTools } from "./tools/composicao.js";
+import { registerOrcamentoTools } from "./tools/orcamento.js";
+import { registerLegislacaoTools } from "./tools/legislacao.js";
+import { registerVotacaoComissaoTools } from "./tools/votacao-comissao.js";
 import type { Env } from "./types.js";
 
 export function createServer(env: Env): McpServer {
@@ -45,6 +50,21 @@ export function createServer(env: Env): McpServer {
 
   // Group G — e-Cidadania (11 tools)
   registerECidadaniaTools(server, baseUrl);
+
+  // Group I — Speeches (4 tools)
+  registerDiscursosTools(server, baseUrl);
+
+  // Group J — Blocs & Leadership (5 tools)
+  registerComposicaoTools(server, baseUrl);
+
+  // Group K — Budget (2 tools)
+  registerOrcamentoTools(server, baseUrl);
+
+  // Group L — Federal Law (3 tools)
+  registerLegislacaoTools(server, baseUrl);
+
+  // Group M — Committee Voting (2 tools)
+  registerVotacaoComissaoTools(server, baseUrl);
 
   return server;
 }

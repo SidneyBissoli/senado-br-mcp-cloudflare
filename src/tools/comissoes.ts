@@ -15,15 +15,15 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, ensureArray } from "../utils/validation.js";
+import { toolResult, toolError, errorFrom, ensureArray } from "../utils/validation.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC } from "../types.js";
 
-function formatDateYMD(d: Date): string {
+export function formatDateYMD(d: Date): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /** Resolve a committee sigla to its numeric code via the list endpoint. */
-async function resolveComissaoCodigo(sigla: string, baseUrl: string): Promise<number | null> {
+export async function resolveComissaoCodigo(sigla: string, baseUrl: string): Promise<number | null> {
   const response = await cachedFetch("senado_listar_comissoes", {}, CACHE_SEMI_STATIC, () =>
     upstreamFetch("/comissao/lista/colegiados", {}, baseUrl),
   );
@@ -74,7 +74,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         }
         return toolResult({ count: comissoes.length, comissoes });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao listar comissões");
+        return errorFrom(e, "Erro ao listar comissões");
       }
     },
   );
@@ -121,7 +121,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
           suplentes: parseInt(colegiado.QuantidadesMembros?.Distribuicao?.SenadoresSuplentes || "0") || null,
         });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Comissão não encontrada");
+        return errorFrom(e, "Comissão não encontrada");
       }
     },
   );
@@ -154,7 +154,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         }));
         return toolResult({ sigla, count: membros.length, membros });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter membros da comissão");
+        return errorFrom(e, "Erro ao obter membros da comissão");
       }
     },
   );
@@ -226,7 +226,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
           }));
         return toolResult({ sigla, periodo: { dataInicio: di, dataFim: df }, count: reunioes.length, reunioes });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter reuniões da comissão");
+        return errorFrom(e, "Erro ao obter reuniões da comissão");
       }
     },
   );
@@ -265,7 +265,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         }
         return toolResult({ data, siglaComissao: params.siglaComissao || null, count: reunioes.length, reunioes });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter agenda das comissões");
+        return errorFrom(e, "Erro ao obter agenda das comissões");
       }
     },
   );

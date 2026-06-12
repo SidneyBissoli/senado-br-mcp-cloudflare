@@ -11,26 +11,26 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, buildParams, ensureArray } from "../utils/validation.js";
+import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
 import { CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
 /** Convert YYYYMMDD → YYYY-MM-DD (required by /votacao endpoint). */
-function toISODate(yyyymmdd: string): string {
+export function toISODate(yyyymmdd: string): string {
   return `${yyyymmdd.slice(0, 4)}-${yyyymmdd.slice(4, 6)}-${yyyymmdd.slice(6, 8)}`;
 }
 
 /** Format Date as YYYY-MM-DD. */
-function formatISO(d: Date): string {
+export function formatISO(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /** Last day of a month. */
-function lastDayOfMonth(year: number, month: number): number {
+export function lastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
 /** Parse a single vote item from the /votacao endpoint (flat camelCase). */
-function parseVotacaoItem(v: any, includeVotos = false) {
+export function parseVotacaoItem(v: any, includeVotos = false) {
   const result: any = {
     codigoSessao: v.codigoSessao || null,
     codigoVotacao: v.codigoSessaoVotacao || null,
@@ -92,7 +92,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
         const votacoes = ensureArray(response).map((v: any) => parseVotacaoItem(v));
         return toolResult({ ano: params.ano, count: votacoes.length, votacoes });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao listar votações");
+        return errorFrom(e, "Erro ao listar votações");
       }
     },
   );
@@ -121,7 +121,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
           .sort((a, b) => b.data.localeCompare(a.data));
         return toolResult({ periodo: { dias: params.dias ?? 7, ...qp }, count: votacoes.length, votacoes });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter votações recentes");
+        return errorFrom(e, "Erro ao obter votações recentes");
       }
     },
   );
@@ -146,7 +146,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
         if (votacoes.length === 1) return toolResult(votacoes[0]);
         return toolResult({ codigoSessao: params.codigoVotacao, count: votacoes.length, votacoes });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Votação não encontrada");
+        return errorFrom(e, "Votação não encontrada");
       }
     },
   );
@@ -180,7 +180,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
         }));
         return toolResult({ codigoMateria: params.codigoMateria, count: votacoes.length, votacoes });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro ao obter votações da matéria");
+        return errorFrom(e, "Erro ao obter votações da matéria");
       }
     },
   );
@@ -219,7 +219,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
         const votacoes = ensureArray(response).map((v: any) => parseVotacaoItem(v));
         return toolResult({ count: votacoes.length, votacoes });
       } catch (e) {
-        return toolError(e instanceof Error ? e.message : "Erro na busca de votações");
+        return errorFrom(e, "Erro na busca de votações");
       }
     },
   );
