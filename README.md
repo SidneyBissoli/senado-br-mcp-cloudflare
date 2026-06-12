@@ -2,7 +2,7 @@
 
 MCP server for **Brazilian Senate open data** running on Cloudflare Workers with Streamable HTTP transport.
 
-Provides **37 tools** organized into 8 groups covering senators, bills, votes, committees, plenary sessions, legislative processes, reference data, and citizen participation (e-Cidadania). Connects directly to the [Senado Federal Dados Abertos API](https://legis.senado.leg.br/dadosabertos/) and the e-Cidadania portal.
+Provides **53 tools** organized into 13 groups covering senators, bills, votes, committees, plenary sessions, legislative processes, reference data, citizen participation (e-Cidadania), speeches, parliamentary blocs and leadership, budget amendments, federal legislation, and committee voting. Connects directly to the [Senado Federal Dados Abertos API](https://legis.senado.leg.br/dadosabertos/) and the e-Cidadania portal.
 
 ## Architecture
 
@@ -14,6 +14,9 @@ Provides **37 tools** organized into 8 groups covering senators, bills, votes, c
 - **Caching:** 2-layer (L0 memory + L1 Cache API) with SHA-256 keying
 - **Rate limiting:** Token bucket — global (8 req/s) + per-client (2 req/s)
 - **Upstream throttle:** Max 6 concurrent requests, 10s timeout, retry with exponential backoff
+- **Auth:** Optional Bearer token (set the `API_KEY` secret; open access when unset). Constant-time comparison.
+- **Observability:** Structured JSON logging + in-memory counters exposed at `/metrics`
+- **Tests:** Vitest unit tests for parsers, helpers, cache, throttle, and auth
 
 ## Prerequisites
 
@@ -56,14 +59,30 @@ Optionally set `ALLOWED_ORIGIN` to restrict CORS:
 ALLOWED_ORIGIN = "https://your-app.example.com"
 ```
 
-### 4. Local development
+### 4. (Optional) Enable authentication
+
+```bash
+wrangler secret put API_KEY
+# Clients must then send: Authorization: Bearer <key>
+# When API_KEY is not set, the server is open access.
+```
+
+### 5. Local development
 
 ```bash
 npm run dev
 # Server runs at http://localhost:8787
 ```
 
-### 5. Deploy
+### 6. Tests and typecheck
+
+```bash
+npm test             # run all tests once
+npm run test:watch   # watch mode
+npm run typecheck    # tsc --noEmit
+```
+
+### 7. Deploy
 
 ```bash
 npm run deploy
@@ -75,7 +94,8 @@ npm run deploy
 | Path | Methods | Description |
 |------|---------|-------------|
 | `/mcp` | POST, GET, DELETE, OPTIONS | MCP Streamable HTTP endpoint (managed by `createMcpHandler`) |
-| `/health` | GET | Health check — returns `ok` |
+| `/health` | GET | Health check — returns `ok` (always public) |
+| `/metrics` | GET | JSON counters: requests, tool calls, cache hits/misses, upstream calls/retries/errors, auth failures (always public) |
 
 ## MCP Request Examples
 
@@ -163,7 +183,7 @@ The server consumes two classes of upstream endpoints from the Senado API:
 
 ### Legacy endpoints (`.json` suffix, PascalCase responses)
 
-Used by Groups A, B, H and parts of D/E/F. The `.json` suffix is appended automatically by `upstream.ts`.
+Used by Groups A, B, H, I, J, K, L, M and parts of D/E/F. The `.json` suffix is appended automatically by `upstream.ts`.
 
 | Upstream path | Used by |
 |---------------|---------|
@@ -180,6 +200,22 @@ Used by Groups A, B, H and parts of D/E/F. The `.json` suffix is appended automa
 | `/comissao/agenda/{data}` | `senado_agenda_comissoes` |
 | `/comissao/agenda/{dataInicio}/{dataFim}` | `senado_reunioes_comissao` |
 | `/plenario/agenda/dia/{data}` | `senado_agenda_plenario` |
+| `/senador/{codigo}/discursos` | `senado_discursos_senador` |
+| `/plenario/lista/discursos/{dataInicio}/{dataFim}` | `senado_discursos_plenario` |
+| `/discurso/texto-integral/{codigo}` | `senado_discurso_texto` (plain text, fetched directly) |
+| `/senador/lista/tiposUsoPalavra` | `senado_tipos_uso_palavra` |
+| `/composicao/lista/blocos` | `senado_listar_blocos` |
+| `/composicao/bloco/{codigo}` | `senado_obter_bloco` |
+| `/composicao/lideranca` | `senado_liderancas` |
+| `/composicao/mesaSF` | `senado_mesa_senado` |
+| `/composicao/mesaCN` | `senado_mesa_congresso` |
+| `/orcamento/lista` | `senado_orcamento_emendas` |
+| `/orcamento/oficios` | `senado_orcamento_oficios` |
+| `/legislacao/lista` | `senado_buscar_legislacao` |
+| `/legislacao/{codigo}` | `senado_obter_legislacao` |
+| `/legislacao/tiposNorma` | `senado_tipos_norma` |
+| `/votacaoComissao/comissao/{sigla}` | `senado_votacao_comissao` |
+| `/votacaoComissao/parlamentar/{codigo}` | `senado_votacao_comissao_senador` |
 
 ### New v3 endpoints (flat JSON arrays/objects, camelCase)
 
@@ -303,7 +339,48 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_ecidadania_eventos_populares` | Events with most citizen comments and questions |
 | `senado_ecidadania_sugerir_tema_enquete` | Suggests monthly poll topics based on configurable criteria |
 
-**Total: 37 tools**
+### Group I — Speeches (4 tools)
+
+| Tool | Description |
+|------|-------------|
+| `senado_discursos_senador` | Speeches by a specific senator, filterable by period and house (SF/CN) |
+| `senado_discursos_plenario` | All plenary speeches in a date range |
+| `senado_discurso_texto` | Full text of a specific speech (plain-text endpoint) |
+| `senado_tipos_uso_palavra` | Available speech types ("tipos de uso da palavra") |
+
+### Group J — Blocs & Leadership (5 tools)
+
+| Tool | Description |
+|------|-------------|
+| `senado_listar_blocos` | Parliamentary blocs and their member parties |
+| `senado_obter_bloco` | Details of a specific parliamentary bloc |
+| `senado_liderancas` | Senate/Congress leaderships (leaders, vice-leaders), filterable |
+| `senado_mesa_senado` | Senate directing board (Mesa Diretora) members |
+| `senado_mesa_congresso` | National Congress directing board members |
+
+### Group K — Budget (2 tools)
+
+| Tool | Description |
+|------|-------------|
+| `senado_orcamento_emendas` | Budget amendment batches |
+| `senado_orcamento_oficios` | Support letters (ofícios) for budget amendments |
+
+### Group L — Federal Law (3 tools)
+
+| Tool | Description |
+|------|-------------|
+| `senado_buscar_legislacao` | Search federal legal norms by type, number, year, or date (at least one required) |
+| `senado_obter_legislacao` | Details of a specific federal norm |
+| `senado_tipos_norma` | Available norm types (LEI, DEC, LCP, EMC, etc.) |
+
+### Group M — Committee Voting (2 tools)
+
+| Tool | Description |
+|------|-------------|
+| `senado_votacao_comissao` | Votes held in a specific committee, filterable by period |
+| `senado_votacao_comissao_senador` | A senator's committee votes, filterable by committee and period |
+
+**Total: 53 tools**
 
 ## Project Structure
 
@@ -311,6 +388,8 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 src/
 ├── index.ts              # Worker entrypoint (fetch handler)
 ├── server.ts             # McpServer factory (creates per-request instance)
+├── auth.ts               # Optional Bearer token auth (constant-time compare)
+├── metrics.ts            # In-memory counters served at /metrics
 ├── types.ts              # Env, cache categories, safeguard constants
 ├── cache/
 │   ├── l0-memory.ts      # In-memory Map cache with TTL + LRU eviction
@@ -321,16 +400,22 @@ src/
 │   └── upstream.ts       # Upstream fetch with concurrency limit, retry, timeout
 ├── utils/
 │   ├── logger.ts         # Structured JSON logging
-│   └── validation.ts     # toolResult, toolError, buildParams, ensureArray helpers
+│   └── validation.ts     # toolResult, toolError, errorFrom, buildParams, ensureArray helpers
 └── tools/
-    ├── referencia.ts     # Group H — 4 reference/metadata tools
-    ├── senadores.ts      # Group A — 5 senator tools
-    ├── materias.ts       # Group B — 4 bill/matter tools
-    ├── processos.ts      # Group C — 2 process tools
-    ├── votacoes.ts       # Group D — 5 vote tools
-    ├── comissoes.ts      # Group E — 5 committee tools
-    ├── plenario.ts       # Group F — 1 plenary tool
-    └── ecidadania.ts     # Group G — 11 e-Cidadania tools
+    ├── referencia.ts        # Group H — 4 reference/metadata tools
+    ├── senadores.ts         # Group A — 5 senator tools
+    ├── materias.ts          # Group B — 4 bill/matter tools
+    ├── processos.ts         # Group C — 2 process tools
+    ├── votacoes.ts          # Group D — 5 vote tools
+    ├── comissoes.ts         # Group E — 5 committee tools
+    ├── plenario.ts          # Group F — 1 plenary tool
+    ├── ecidadania.ts        # Group G — 11 e-Cidadania tools
+    ├── discursos.ts         # Group I — 4 speech tools
+    ├── composicao.ts        # Group J — 5 bloc/leadership tools
+    ├── orcamento.ts         # Group K — 2 budget tools
+    ├── legislacao.ts        # Group L — 3 federal law tools
+    └── votacao-comissao.ts  # Group M — 2 committee voting tools
+tests/                    # Vitest unit tests mirroring src/ (parsers, cache, throttle, auth, utils)
 ```
 
 ## Environment Variables
@@ -339,6 +424,7 @@ src/
 |----------|----------|---------|-------------|
 | `SENADO_BASE_URL` | No | `https://legis.senado.leg.br/dadosabertos` | Senate API base URL |
 | `ALLOWED_ORIGIN` | No | `*` | CORS allowed origin |
+| `API_KEY` | No (secret) | — | When set, requires `Authorization: Bearer <key>` on all requests except `/health`, `/metrics`, and CORS preflight |
 | `CACHE_KV` | Yes (binding) | — | KV namespace for L2 cache |
 
 ## Connecting MCP Clients
@@ -352,6 +438,21 @@ Add to your MCP configuration:
   "mcpServers": {
     "senado-br": {
       "url": "https://senado-br-mcp.<your-subdomain>.workers.dev/mcp"
+    }
+  }
+}
+```
+
+If `API_KEY` is configured, add the auth header:
+
+```json
+{
+  "mcpServers": {
+    "senado-br": {
+      "url": "https://senado-br-mcp.<your-subdomain>.workers.dev/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-api-key>"
+      }
     }
   }
 }
