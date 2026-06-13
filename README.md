@@ -2,7 +2,7 @@
 
 MCP server for **Brazilian Senate open data** running on Cloudflare Workers with Streamable HTTP transport.
 
-Provides **70 tools** organized into 14 groups covering senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes (with amendments, rapporteurships and deadlines), reference data, citizen participation (e-Cidadania), speeches and stenographic transcripts, parliamentary blocs and leadership, budget amendments, federal legislation, and committee voting. Connects directly to the [Senado Federal Dados Abertos API](https://legis.senado.leg.br/dadosabertos/) and the e-Cidadania portal.
+Provides **73 tools** organized into 14 groups covering senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes (with amendments, rapporteurships and deadlines), reference data, citizen participation (e-Cidadania), speeches and stenographic transcripts, parliamentary blocs and leadership, budget amendments, federal legislation, and committee voting. Connects directly to the [Senado Federal Dados Abertos API](https://legis.senado.leg.br/dadosabertos/) and the e-Cidadania portal.
 
 > **v2.1.0:** all tools that consumed endpoints marked *deprecated* upstream (the legacy `/materia/*` family and `/senador/{codigo}/votacoes`) were migrated to the v3 `/processo` and `/votacao` APIs, keeping tool names and output keys stable.
 
@@ -200,6 +200,9 @@ Used by Groups A, E, F, H, I, J, K, L, M, N. The `.json` suffix is appended auto
 | `/composicao/comissao/{codigo}` | `senado_membros_comissao` |
 | `/comissao/agenda/{data}` | `senado_agenda_comissoes` |
 | `/comissao/agenda/{dataInicio}/{dataFim}` | `senado_reunioes_comissao` |
+| `/comissao/reuniao/{codigoReuniao}` | `senado_reuniao_comissao` |
+| `/comissao/cpi/{sigla}/requerimentos` | `senado_requerimentos_cpi` (empty body = no requests) |
+| `/materia/distribuicao/autoria`, `/distribuicao/relatoria/{sigla}` | `senado_distribuicao_materias` |
 | `/plenario/agenda/dia/{data}`, `/agenda/mes/{data}`, `/agenda/cn/...` | `senado_agenda_plenario` |
 | `/plenario/resultado/{data}`, `/resultado/cn/{data}`, `/resultado/mes/{data}` | `senado_resultado_plenario` |
 | `/plenario/resultado/veto/{codigo}` (+ `/materia/`, `/dispositivo/`) | `senado_resultado_veto` |
@@ -330,7 +333,7 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_votos_materia` | Voting results for a specific bill (via v3 `/votacao?codigoMateria`), optional nominal roll call |
 | `senado_search_votacoes` | Flexible vote search by process, bill, senator, period |
 
-### Group E — Committees (5 tools)
+### Group E — Committees (8 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -339,6 +342,9 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_membros_comissao` | Current committee members via `/composicao/comissao/{codigo}` |
 | `senado_reunioes_comissao` | Committee meetings from `/comissao/agenda` filtered by sigla. Handles cross-year date ranges automatically. |
 | `senado_agenda_comissoes` | Committee meeting schedule for a specific date |
+| `senado_reuniao_comissao` | Full meeting detail: parts, agenda items, guests, results, pauta/ata links |
+| `senado_requerimentos_cpi` | Requests (requerimentos) filed in an active CPI, paginated |
+| `senado_distribuicao_materias` | Per-senator workload stats in a committee: authored matters or rapporteurships |
 
 ### Group F — Plenary (7 tools)
 
@@ -418,7 +424,7 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_notas_taquigraficas` | Official transcripts of plenary sessions or committee meetings — summary mode with excerpts, full-text mode paginated in blocks, speaker filter |
 | `senado_videos_taquigrafia` | Video/audio units per session or meeting, with speaker and media links |
 
-**Total: 70 tools**
+**Total: 73 tools**
 
 ## Project Structure
 
@@ -445,7 +451,7 @@ src/
     ├── materias.ts          # Group B — 4 bill/matter tools (v3 backend)
     ├── processos.ts         # Group C — 7 process tools
     ├── votacoes.ts          # Group D — 5 vote tools
-    ├── comissoes.ts         # Group E — 5 committee tools
+    ├── comissoes.ts         # Group E — 8 committee tools
     ├── plenario.ts          # Group F — 7 plenary tools
     ├── ecidadania.ts        # Group G — 11 e-Cidadania tools
     ├── discursos.ts         # Group I — 5 speech tools

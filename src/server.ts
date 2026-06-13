@@ -40,7 +40,7 @@ export function createServer(env: Env): McpServer {
   // Group D — Votes (5 tools)
   registerVotacoesTools(server, baseUrl);
 
-  // Group E — Committees (5 tools)
+  // Group E — Committees (8 tools)
   registerComissoesTools(server, baseUrl);
 
   // Group F — Plenary (7 tools)
