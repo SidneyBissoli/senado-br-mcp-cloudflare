@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.SidneyBissoli/senado-br-mcp-cloudflare",
   "title": "Senado BR MCP",
-  "description": "MCP server for Brazilian Federal Senate open data: senators, bills, votes, committees, plenary sessions, vetoes, speeches and transcripts, plus administrative data (parliamentary quota/CEAPS, payroll, procurement and budget). 90 tools.",
+  "description": "Brazilian Federal Senate open data over MCP — legislative + administrative, 90 tools.",
   "version": "2.2.0",
   "websiteUrl": "https://senado-br-mcp.sidneybissoli.workers.dev",
   "repository": {
