@@ -2,7 +2,7 @@
 
 MCP server for **Brazilian Senate open data** running on Cloudflare Workers with Streamable HTTP transport.
 
-Provides **89 tools** organized into 18 groups covering the **legislative** domain (senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes, reference data, citizen participation via e-Cidadania, speeches and stenographic transcripts, blocs and leadership, federal legislation, committee voting) and the **administrative** domain (CEAPS parliamentary quota expenses, housing allowance, civil servants and payroll, overtime, interns, procurement contracts, biddings, outsourced staff, petty-cash funds). Connects to three sources: the [legislative open data API](https://legis.senado.leg.br/dadosabertos/), the [administrative open data API](https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html) and the e-Cidadania portal.
+Provides **90 tools** organized into 19 groups covering the **legislative** domain (senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes, reference data, citizen participation via e-Cidadania, speeches and stenographic transcripts, blocs and leadership, federal legislation, committee voting) and the **administrative** domain (CEAPS parliamentary quota expenses, housing allowance, civil servants and payroll, overtime, interns, procurement contracts, biddings, outsourced staff, petty-cash funds, budget execution and own revenues). Connects to three sources: the [legislative open data API](https://legis.senado.leg.br/dadosabertos/), the [administrative open data API](https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html) and the e-Cidadania portal.
 
 > **v2.1.0:** all tools that consumed endpoints marked *deprecated* upstream (the legacy `/materia/*` family and `/senador/{codigo}/votacoes`) were migrated to the v3 `/processo` and `/votacao` APIs, keeping tool names and output keys stable.
 >
@@ -268,6 +268,7 @@ Used by Groups O, P, Q, R via `admFetch` (no `.json` suffix; HTTP 404 treated as
 | `/api/v1/contratacoes/empresas` | `senado_empresas_contratadas` (~13 MB, requires filter) |
 | `/api/v1/contratacoes/{atas_registro_preco,notas_empenho,menores_aprendizes}` | `senado_contratacoes_lista` |
 | `/api/v1/supridos/{ano}` (+ atosConcessao, empenhos, movimentacoes, transacoes) | `senado_suprimento_fundos` |
+| `senado.gov.br/bi-arqs/Arquimedes/Financeiro/{Despesa,Receitas}SenadoDadosAbertos.json` | `senado_execucao_orcamentaria` (daily JSON feeds, Brazilian decimal strings normalized) |
 
 ### e-Cidadania (HTML scraping + internal REST)
 
@@ -483,7 +484,13 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 |------|-------------|
 | `senado_suprimento_fundos` | Petty-cash advances by year: recipients, concession acts, commitments, movements, card transactions |
 
-**Total: 89 tools**
+### Group S — Orçamento do Senado (1 tool)
+
+| Tool | Description |
+|------|-------------|
+| `senado_execucao_orcamentaria` | Budget execution since 2013 (allocation, committed/settled/paid) and own revenues since 2012 (forecast vs collected) — aggregated by year, action, expense group, source or revenue origin |
+
+**Total: 90 tools**
 
 ## Project Structure
 
@@ -522,7 +529,8 @@ src/
     ├── senadores-admin.ts   # Group O — 4 admin senator tools (CEAPS, housing)
     ├── servidores.ts        # Group P — 5 personnel tools
     ├── contratacoes.ts      # Group Q — 6 procurement tools
-    └── supridos.ts          # Group R — 1 petty-cash tool
+    ├── supridos.ts          # Group R — 1 petty-cash tool
+    └── orcamento-senado.ts  # Group S — 1 budget execution tool
 tests/                    # Vitest unit tests mirroring src/ (parsers, cache, throttle, auth, utils)
 ```
 

@@ -22,6 +22,7 @@ import { registerSenadoresAdminTools } from "./tools/senadores-admin.js";
 import { registerContratacoesTools } from "./tools/contratacoes.js";
 import { registerServidoresTools } from "./tools/servidores.js";
 import { registerSupridosTools } from "./tools/supridos.js";
+import { registerOrcamentoSenadoTools } from "./tools/orcamento-senado.js";
 import type { Env } from "./types.js";
 
 export function createServer(env: Env): McpServer {
@@ -74,6 +75,21 @@ export function createServer(env: Env): McpServer {
 
   // Group N — Taquigrafia (2 tools)
   registerTaquigrafiaTools(server, baseUrl);
+
+  // Group O — Senadores/Administrativo (4 tools)
+  registerSenadoresAdminTools(server, admBaseUrl);
+
+  // Group P — Servidores / Gestão de Pessoas (5 tools)
+  registerServidoresTools(server, admBaseUrl);
+
+  // Group Q — Contratações (6 tools)
+  registerContratacoesTools(server, admBaseUrl);
+
+  // Group R — Suprimento de Fundos (1 tool)
+  registerSupridosTools(server, admBaseUrl);
+
+  // Group S — Orçamento do Senado (1 tool)
+  registerOrcamentoSenadoTools(server);
 
   return server;
 }
