@@ -20,6 +20,8 @@ import { registerVotacaoComissaoTools } from "./tools/votacao-comissao.js";
 import { registerTaquigrafiaTools } from "./tools/taquigrafia.js";
 import { registerSenadoresAdminTools } from "./tools/senadores-admin.js";
 import { registerContratacoesTools } from "./tools/contratacoes.js";
+import { registerServidoresTools } from "./tools/servidores.js";
+import { registerSupridosTools } from "./tools/supridos.js";
 import type { Env } from "./types.js";
 
 export function createServer(env: Env): McpServer {
