@@ -620,7 +620,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
         evitarConsenso: z.boolean().optional().default(true).describe("Evita temas com >85%"),
         minimoParticipacao: z.number().int().min(0).optional().default(500).describe("Mínimo de votos/apoios"),
         apenasEmTramitacao: z.boolean().optional().default(true).describe("Apenas matérias em tramitação"),
-      }).optional(),
+      }).optional().describe("Critérios de seleção do tema (polarização, consenso, participação mínima, tramitação)"),
     },
     async (params) => {
       try {

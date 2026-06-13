@@ -4,6 +4,7 @@
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { registerReferenciaTools } from "./tools/referencia.js";
 import { registerSenadoresTools } from "./tools/senadores.js";
 import { registerMateriasTools } from "./tools/materias.js";
@@ -30,6 +31,31 @@ export function createServer(env: Env): McpServer {
     name: "senado-br-mcp",
     version: "2.2.0",
   });
+
+  // Every tool here only reads upstream open data — no writes, no side effects — and
+  // reaches external systems (Senate APIs / e-Cidadania) whose data is an open, changing
+  // set; and every tool returns a JSON object via toolResult(). Rather than repeat that
+  // metadata at 90 call sites, wrap the group modules' `server.tool(name, desc, shape, cb)`
+  // calls and route them through registerTool() with shared annotations and a permissive
+  // object outputSchema. toolResult() supplies the matching structuredContent.
+  const outputSchema = z.object({}).passthrough();
+  const registerTool = server.registerTool.bind(server);
+  (server as { tool: unknown }).tool = (
+    name: string,
+    description: string,
+    shape: Record<string, unknown>,
+    cb: unknown,
+  ) =>
+    registerTool(
+      name,
+      {
+        description,
+        inputSchema: shape as never,
+        outputSchema: outputSchema as never,
+        annotations: { readOnlyHint: true, openWorldHint: true },
+      },
+      cb as never,
+    );
 
   const baseUrl = env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
   const admBaseUrl = env.SENADO_ADM_BASE_URL || "https://adm.senado.gov.br/adm-dadosabertos";

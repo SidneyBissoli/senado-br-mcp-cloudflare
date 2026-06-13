@@ -26,8 +26,17 @@ export function errorFrom(e: unknown, fallbackMessage: string) {
 }
 
 export function toolResult(data: unknown) {
+  // Tools advertise an outputSchema (a permissive object schema), so the SDK requires a
+  // `structuredContent` object on every non-error result. All callers pass a plain object;
+  // the wrap is a safety net for the rare array/primitive payload (structuredContent must
+  // be an object).
+  const structuredContent =
+    data !== null && typeof data === "object" && !Array.isArray(data)
+      ? (data as Record<string, unknown>)
+      : { result: data };
   return {
     content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+    structuredContent,
   };
 }
 
