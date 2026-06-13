@@ -108,7 +108,7 @@ export async function upstreamFetch(
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": "senado-br-mcp/2.1.0",
+          "User-Agent": "senado-br-mcp/2.2.0",
         },
         signal: controller.signal,
       });

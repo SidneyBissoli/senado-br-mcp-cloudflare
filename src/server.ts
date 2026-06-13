@@ -27,7 +27,7 @@ import type { Env } from "./types.js";
 export function createServer(env: Env): McpServer {
   const server = new McpServer({
     name: "senado-br-mcp",
-    version: "2.1.0",
+    version: "2.2.0",
   });
 
   const baseUrl = env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";

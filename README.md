@@ -2,9 +2,11 @@
 
 MCP server for **Brazilian Senate open data** running on Cloudflare Workers with Streamable HTTP transport.
 
-Provides **73 tools** organized into 14 groups covering senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes (with amendments, rapporteurships and deadlines), reference data, citizen participation (e-Cidadania), speeches and stenographic transcripts, parliamentary blocs and leadership, budget amendments, federal legislation, and committee voting. Connects directly to the [Senado Federal Dados Abertos API](https://legis.senado.leg.br/dadosabertos/) and the e-Cidadania portal.
+Provides **89 tools** organized into 18 groups covering the **legislative** domain (senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes, reference data, citizen participation via e-Cidadania, speeches and stenographic transcripts, blocs and leadership, federal legislation, committee voting) and the **administrative** domain (CEAPS parliamentary quota expenses, housing allowance, civil servants and payroll, overtime, interns, procurement contracts, biddings, outsourced staff, petty-cash funds). Connects to three sources: the [legislative open data API](https://legis.senado.leg.br/dadosabertos/), the [administrative open data API](https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html) and the e-Cidadania portal.
 
 > **v2.1.0:** all tools that consumed endpoints marked *deprecated* upstream (the legacy `/materia/*` family and `/senador/{codigo}/votacoes`) were migrated to the v3 `/processo` and `/votacao` APIs, keeping tool names and output keys stable.
+>
+> **v2.2.0:** adds the administrative domain (groups O, P, Q, R — 16 tools) consuming `adm.senado.gov.br`. Large datasets (CEAPS ≈ 10 MB/year, payroll ≈ 5.5 MB/month) are fetched once, cached, and filtered/aggregated inside the Worker — tools never return raw dumps.
 
 ## Architecture
 
@@ -246,6 +248,27 @@ Used by Groups B, C, D. Dates must be in **ISO format** (`YYYY-MM-DD`) — tools
 | `/processo/prazo` | `senado_prazos_processo` |
 | `/processo/{siglas,assuntos,classes,destinos,entes,tipos-*}` | `senado_tabelas_processo` (12 reference tables) |
 
+### Administrative API (adm.senado.gov.br/adm-dadosabertos, flat snake_case JSON)
+
+Used by Groups O, P, Q, R via `admFetch` (no `.json` suffix; HTTP 404 treated as empty collection). Base URL configurable via `SENADO_ADM_BASE_URL`.
+
+| Upstream path | Used by |
+|---------------|---------|
+| `/api/v1/senadores/despesas_ceaps/{ano}` | `senado_ceaps` (~10 MB/year, cached + aggregated in-Worker) |
+| `/api/v1/senadores/{auxilio-moradia,escritorios,aposentados}` | `senado_auxilio_moradia`, `senado_escritorios_apoio`, `senado_senadores_aposentados` |
+| `/api/v1/servidores/servidores/{ativos,efetivos,comissionados,inativos}` | `senado_servidores` |
+| `/api/v1/servidores/remuneracoes/{ano}/{mes}` | `senado_remuneracoes_servidores` (~5.5 MB/month) |
+| `/api/v1/servidores/horas-extras/{ano}/{mes}` | `senado_horas_extras` |
+| `/api/v1/servidores/quantitativos/*`, `/previsao-aposentadoria`, `/api/v1/senadores/quantitativos/senadores` | `senado_quantitativos_pessoal` |
+| `/api/v1/servidores/{estagiarios,pensionistas,lotacoes,cargos}` | `senado_pessoal_listas` |
+| `/api/v1/contratacoes/contratos` (+ `/{id}/aditivos`) | `senado_contratos`, `senado_contratacao_detalhe` |
+| `/api/v1/contratacoes/{tipo}/{id}/{itens,pagamentos,garantias}` | `senado_contratacao_detalhe` |
+| `/api/v1/contratacoes/licitacoes` | `senado_licitacoes` |
+| `/api/v1/contratacoes/terceirizados` | `senado_terceirizados` |
+| `/api/v1/contratacoes/empresas` | `senado_empresas_contratadas` (~13 MB, requires filter) |
+| `/api/v1/contratacoes/{atas_registro_preco,notas_empenho,menores_aprendizes}` | `senado_contratacoes_lista` |
+| `/api/v1/supridos/{ano}` (+ atosConcessao, empenhos, movimentacoes, transacoes) | `senado_suprimento_fundos` |
+
 ### e-Cidadania (HTML scraping + internal REST)
 
 List tools use internal REST APIs (`restcolecaomaismateria`, `restcolecaomaisideia`, `restcolecaomaisaudiencia`) that return clean JSON. Detail tools scrape HTML with CSS-class-targeted regex.
@@ -424,7 +447,43 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_notas_taquigraficas` | Official transcripts of plenary sessions or committee meetings — summary mode with excerpts, full-text mode paginated in blocks, speaker filter |
 | `senado_videos_taquigrafia` | Video/audio units per session or meeting, with speaker and media links |
 
-**Total: 73 tools**
+### Group O — Senadores/Administrativo (4 tools)
+
+| Tool | Description |
+|------|-------------|
+| `senado_ceaps` | CEAPS parliamentary quota expenses by year — aggregated by senator, expense type, month or supplier, or itemized detail; filters by senator/month/type/supplier |
+| `senado_auxilio_moradia` | Senators receiving housing allowance or occupying functional apartments |
+| `senado_escritorios_apoio` | Senators' state support offices with address and phone |
+| `senado_senadores_aposentados` | Retired ex-senators (IPC/PSSC) with pension amounts |
+
+### Group P — Servidores / Gestão de Pessoas (5 tools)
+
+| Tool | Description |
+|------|-------------|
+| `senado_servidores` | Civil servants by status (active/effective/commissioned/inactive), filterable by name, unit, position |
+| `senado_remuneracoes_servidores` | Monthly payroll — summary by payroll type or per-person composition with computed gross |
+| `senado_horas_extras` | Overtime payments by month with totals |
+| `senado_quantitativos_pessoal` | Headcounts: workforce, commissioned positions, retirement forecast, senator quantities |
+| `senado_pessoal_listas` | Interns, pensioners, organizational units, position names |
+
+### Group Q — Contratações (6 tools)
+
+| Tool | Description |
+|------|-------------|
+| `senado_contratos` | Contracts with server-side filters: supplier, CNPJ, year, number, object, labor |
+| `senado_contratacao_detalhe` | Items, payments, guarantees, amendments or activations of a contract/ata/empenho |
+| `senado_licitacoes` | Biddings by number or object text |
+| `senado_terceirizados` | Outsourced collaborators by name, company or unit |
+| `senado_empresas_contratadas` | Companies contracting with the Senate (requires name/CNPJ filter) |
+| `senado_contratacoes_lista` | Price-registration atas, commitment notes, young apprentices |
+
+### Group R — Suprimento de Fundos (1 tool)
+
+| Tool | Description |
+|------|-------------|
+| `senado_suprimento_fundos` | Petty-cash advances by year: recipients, concession acts, commitments, movements, card transactions |
+
+**Total: 89 tools**
 
 ## Project Structure
 
@@ -459,7 +518,11 @@ src/
     ├── orcamento.ts         # Group K — 2 budget tools
     ├── legislacao.ts        # Group L — 3 federal law tools
     ├── votacao-comissao.ts  # Group M — 3 committee voting tools
-    └── taquigrafia.ts       # Group N — 2 stenographic record tools
+    ├── taquigrafia.ts       # Group N — 2 stenographic record tools
+    ├── senadores-admin.ts   # Group O — 4 admin senator tools (CEAPS, housing)
+    ├── servidores.ts        # Group P — 5 personnel tools
+    ├── contratacoes.ts      # Group Q — 6 procurement tools
+    └── supridos.ts          # Group R — 1 petty-cash tool
 tests/                    # Vitest unit tests mirroring src/ (parsers, cache, throttle, auth, utils)
 ```
 
@@ -467,7 +530,8 @@ tests/                    # Vitest unit tests mirroring src/ (parsers, cache, th
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `SENADO_BASE_URL` | No | `https://legis.senado.leg.br/dadosabertos` | Senate API base URL |
+| `SENADO_BASE_URL` | No | `https://legis.senado.leg.br/dadosabertos` | Legislative API base URL |
+| `SENADO_ADM_BASE_URL` | No | `https://adm.senado.gov.br/adm-dadosabertos` | Administrative API base URL |
 | `ALLOWED_ORIGIN` | No | `*` | CORS allowed origin |
 | `API_KEY` | No (secret) | — | When set, requires `Authorization: Bearer <key>` on all requests except `/health`, `/metrics`, and CORS preflight |
 | `CACHE_KV` | Yes (binding) | — | KV namespace for L2 cache |

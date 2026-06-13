@@ -20,7 +20,7 @@ async function fetchPage(path: string): Promise<string> {
     const resp = await fetch(url, {
       headers: {
         Accept: "text/html",
-        "User-Agent": "senado-br-mcp/2.1.0",
+        "User-Agent": "senado-br-mcp/2.2.0",
       },
       signal: controller.signal,
     });
@@ -48,7 +48,7 @@ async function fetchEcidadaniaJson(endpoint: string): Promise<any[]> {
   const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
   try {
     const resp = await fetch(url, {
-      headers: { Accept: "application/json", "User-Agent": "senado-br-mcp/2.1.0" },
+      headers: { Accept: "application/json", "User-Agent": "senado-br-mcp/2.2.0" },
       signal: controller.signal,
     });
     clearTimeout(timeout);

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-MCP server for Brazilian Senate open data (Senado Federal Dados Abertos API + e-Cidadania portal), running on Cloudflare Workers with Streamable HTTP transport. Currently 73 tools across 14 group modules. Tool names, descriptions, and error messages are user-facing in Portuguese (pt-BR) — keep them that way.
+MCP server for Brazilian Senate open data (Senado Federal Dados Abertos API + e-Cidadania portal), running on Cloudflare Workers with Streamable HTTP transport. Currently 89 tools across 18 group modules, spanning the legislative API (legis.senado.leg.br/dadosabertos), the administrative API (adm.senado.gov.br/adm-dadosabertos — CEAPS, payroll, contracts; spec at /v3/api-docs there) and e-Cidadania. Tool names, descriptions, and error messages are user-facing in Portuguese (pt-BR) — keep them that way.
 
 The upstream OpenAPI spec lives at `https://legis.senado.leg.br/dadosabertos/v3/api-docs` (save it to the gitignored `.api-spec/` for analysis). 42 endpoints there are marked deprecated — mostly the `/materia/*` family. Do NOT add tools on deprecated endpoints; this repo already migrated off them (tools kept their names but call `/processo` and `/votacao`, bridging legacy IDs via the `codigoMateria` query param). Before writing a parser for a new endpoint, smoke-test the live response shape — wrapper names and casing (legacy PascalCase vs v3 camelCase) often differ from the spec.
 
@@ -44,6 +44,7 @@ return toolResult(shapedData);
 
 **Two upstream API styles** coexist:
 - Legacy endpoints (e.g. `/senador/...`, `/comissao/...`, `/plenario/...`, `/taquigrafia/...`): PascalCase nested responses with wrapper objects (strip via `stripWrapper`/`firstArrayDeep` from `plenario.ts`), dates as `YYYYMMDD`.
+- Administrative endpoints (`adm.senado.gov.br`, via `admFetch` in `src/throttle/adm.ts`): flat snake_case JSON, no `.json` suffix, 404 means empty collection. Large datasets (CEAPS ~10 MB/year, payroll ~5.5 MB/month) use `admFetchLarge` (20 MB guard) and are cached by coarse key (e.g. year only) then filtered/aggregated per call in the Worker — never returned raw.
 - v3 endpoints (`/votacao`, `/processo` and sub-resources): flat camelCase JSON, dates must be ISO `YYYY-MM-DD` (tools accept `YYYYMMDD` and convert via `toISODate`/`ensureISODate`). They accept `codigoMateria` as a bridge from legacy matéria codes.
 
 **Catalog size discipline**: reference-table lookups are consolidated into enum-param tools (`senado_tabelas_processo`, `senado_tabelas_plenario`, `senado_senador_historico`) instead of one tool per table — every extra tool costs context in every MCP client session. Large responses (transcripts, document lists, search results) get `limite`/pagination params with a default cap and an `aviso` field when truncated.

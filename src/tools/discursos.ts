@@ -114,7 +114,7 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
                 method: "GET",
                 headers: {
                   Accept: "text/plain, application/json",
-                  "User-Agent": "senado-br-mcp/2.1.0",
+                  "User-Agent": "senado-br-mcp/2.2.0",
                 },
                 signal: controller.signal,
               });

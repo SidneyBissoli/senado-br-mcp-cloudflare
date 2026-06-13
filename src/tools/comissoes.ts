@@ -1,7 +1,8 @@
 /**
- * Group E — Committees (5 tools)
+ * Group E — Committees (8 tools)
  * senado_listar_comissoes, senado_obter_comissao, senado_membros_comissao,
- * senado_reunioes_comissao, senado_agenda_comissoes
+ * senado_reunioes_comissao, senado_agenda_comissoes, senado_reuniao_comissao,
+ * senado_requerimentos_cpi, senado_distribuicao_materias
  *
  * Endpoints:
  *   /comissao/lista/colegiados  — list all active committees
@@ -349,7 +350,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
             const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
             try {
               const resp = await fetch(url, {
-                headers: { Accept: "application/json", "User-Agent": "senado-br-mcp/2.1.0" },
+                headers: { Accept: "application/json", "User-Agent": "senado-br-mcp/2.2.0" },
                 signal: controller.signal,
               });
               clearTimeout(timeout);
