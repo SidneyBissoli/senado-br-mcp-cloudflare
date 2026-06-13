@@ -1,5 +1,7 @@
 # senado-br-mcp (Cloudflare Workers)
 
+[![smithery badge](https://smithery.ai/badge/sidneybissoli/senado-br-mcp-cloudflare)](https://smithery.ai/servers/sidneybissoli/senado-br-mcp-cloudflare)
+
 MCP server for **Brazilian Senate open data** running on Cloudflare Workers with Streamable HTTP transport.
 
 Provides **90 tools** organized into 19 groups covering the **legislative** domain (senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes, reference data, citizen participation via e-Cidadania, speeches and stenographic transcripts, blocs and leadership, federal legislation, committee voting) and the **administrative** domain (CEAPS parliamentary quota expenses, housing allowance, civil servants and payroll, overtime, interns, procurement contracts, biddings, outsourced staff, petty-cash funds, budget execution and own revenues). Connects to three sources: the [legislative open data API](https://legis.senado.leg.br/dadosabertos/), the [administrative open data API](https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html) and the e-Cidadania portal.
