@@ -17,6 +17,7 @@ import { registerComposicaoTools } from "./tools/composicao.js";
 import { registerOrcamentoTools } from "./tools/orcamento.js";
 import { registerLegislacaoTools } from "./tools/legislacao.js";
 import { registerVotacaoComissaoTools } from "./tools/votacao-comissao.js";
+import { registerTaquigrafiaTools } from "./tools/taquigrafia.js";
 import type { Env } from "./types.js";
 
 export function createServer(env: Env): McpServer {
@@ -65,6 +66,9 @@ export function createServer(env: Env): McpServer {
 
   // Group M — Committee Voting (2 tools)
   registerVotacaoComissaoTools(server, baseUrl);
+
+  // Group N — Taquigrafia (2 tools)
+  registerTaquigrafiaTools(server, baseUrl);
 
   return server;
 }
