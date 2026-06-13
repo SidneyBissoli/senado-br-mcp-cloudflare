@@ -33,9 +33,9 @@ export function createServer(env: Env): McpServer {
     websiteUrl: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
     icons: [
       {
-        src: "https://senado.sidneybissoli.com/icon.svg",
-        mimeType: "image/svg+xml",
-        sizes: ["any"],
+        src: "https://senado.sidneybissoli.com/icon.jpg",
+        mimeType: "image/jpeg",
+        sizes: ["512x512"],
       },
     ],
   });

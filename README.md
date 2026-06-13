@@ -589,3 +589,9 @@ npx @modelcontextprotocol/inspector https://senado.sidneybissoli.com/mcp
 ## License
 
 MIT
+
+## Credits
+
+Icon: *"Amanhecer no Congresso Nacional"* — photograph of the Brazilian National
+Congress, used under a Creative Commons license. (If you are the author, open an
+issue so we can add full attribution / the license link.)

@@ -4,3 +4,8 @@ dist/
 .dev.vars
 docs/
 .api-spec/
+
+# Working image files — the served icon is base64-inlined in src/icon.ts
+imagem-senado.jpg
+icon.jpg
+icon-512.jpg
