@@ -9,6 +9,8 @@ Provides **90 tools** organized into 19 groups covering the **legislative** doma
 > **v2.1.0:** all tools that consumed endpoints marked *deprecated* upstream (the legacy `/materia/*` family and `/senador/{codigo}/votacoes`) were migrated to the v3 `/processo` and `/votacao` APIs, keeping tool names and output keys stable.
 >
 > **v2.2.0:** adds the administrative domain (groups O, P, Q, R — 16 tools) consuming `adm.senado.gov.br`. Large datasets (CEAPS ≈ 10 MB/year, payroll ≈ 5.5 MB/month) are fetched once, cached, and filtered/aggregated inside the Worker — tools never return raw dumps.
+>
+> **v2.3.0:** every tool now declares MCP annotations (`readOnlyHint`, `openWorldHint`) and a structured-output schema; canonical endpoint moved to the custom domain `https://senado.sidneybissoli.com/mcp` (the `*.workers.dev` URL still works as a fallback).
 
 ## Architecture
 
@@ -92,7 +94,8 @@ npm run typecheck    # tsc --noEmit
 
 ```bash
 npm run deploy
-# Deploys to https://senado-br-mcp.sidneybissoli.workers.dev
+# Serves at https://senado.sidneybissoli.com (custom domain) and
+# https://senado-br-mcp.sidneybissoli.workers.dev (workers.dev fallback)
 ```
 
 ## Endpoints
@@ -556,7 +559,7 @@ Add to your MCP configuration:
 {
   "mcpServers": {
     "senado-br": {
-      "url": "https://senado-br-mcp.sidneybissoli.workers.dev/mcp"
+      "url": "https://senado.sidneybissoli.com/mcp"
     }
   }
 }
@@ -568,7 +571,7 @@ If `API_KEY` is configured, add the auth header:
 {
   "mcpServers": {
     "senado-br": {
-      "url": "https://senado-br-mcp.sidneybissoli.workers.dev/mcp",
+      "url": "https://senado.sidneybissoli.com/mcp",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }
@@ -580,7 +583,7 @@ If `API_KEY` is configured, add the auth header:
 ### MCP Inspector
 
 ```bash
-npx @modelcontextprotocol/inspector https://senado-br-mcp.sidneybissoli.workers.dev/mcp
+npx @modelcontextprotocol/inspector https://senado.sidneybissoli.com/mcp
 ```
 
 ## License

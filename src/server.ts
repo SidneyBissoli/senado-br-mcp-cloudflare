@@ -29,11 +29,11 @@ import type { Env } from "./types.js";
 export function createServer(env: Env): McpServer {
   const server = new McpServer({
     name: "senado-br-mcp",
-    version: "2.2.0",
+    version: "2.3.0",
     websiteUrl: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
     icons: [
       {
-        src: "https://senado-br-mcp.sidneybissoli.workers.dev/icon.svg",
+        src: "https://senado.sidneybissoli.com/icon.svg",
         mimeType: "image/svg+xml",
         sizes: ["any"],
       },
