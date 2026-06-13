@@ -2,7 +2,9 @@
 
 MCP server for **Brazilian Senate open data** running on Cloudflare Workers with Streamable HTTP transport.
 
-Provides **53 tools** organized into 13 groups covering senators, bills, votes, committees, plenary sessions, legislative processes, reference data, citizen participation (e-Cidadania), speeches, parliamentary blocs and leadership, budget amendments, federal legislation, and committee voting. Connects directly to the [Senado Federal Dados Abertos API](https://legis.senado.leg.br/dadosabertos/) and the e-Cidadania portal.
+Provides **70 tools** organized into 14 groups covering senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes (with amendments, rapporteurships and deadlines), reference data, citizen participation (e-Cidadania), speeches and stenographic transcripts, parliamentary blocs and leadership, budget amendments, federal legislation, and committee voting. Connects directly to the [Senado Federal Dados Abertos API](https://legis.senado.leg.br/dadosabertos/) and the e-Cidadania portal.
+
+> **v2.1.0:** all tools that consumed endpoints marked *deprecated* upstream (the legacy `/materia/*` family and `/senador/{codigo}/votacoes`) were migrated to the v3 `/processo` and `/votacao` APIs, keeping tool names and output keys stable.
 
 ## Architecture
 
@@ -183,23 +185,30 @@ The server consumes two classes of upstream endpoints from the Senado API:
 
 ### Legacy endpoints (`.json` suffix, PascalCase responses)
 
-Used by Groups A, B, H, I, J, K, L, M and parts of D/E/F. The `.json` suffix is appended automatically by `upstream.ts`.
+Used by Groups A, E, F, H, I, J, K, L, M, N. The `.json` suffix is appended automatically by `upstream.ts`. None of these is marked deprecated upstream.
 
 | Upstream path | Used by |
 |---------------|---------|
 | `/senador/lista/atual` | `senado_listar_senadores` |
+| `/senador/lista/legislatura/{legislatura}` | `senado_listar_senadores` (param `legislatura`) |
 | `/senador/{codigo}` | `senado_obter_senador`, `senado_senador_detail` |
-| `/senador/{codigo}/votacoes` | `senado_votacoes_senador` |
-| `/materia/pesquisa/lista` | `senado_buscar_materias` |
-| `/materia/{codigo}` | `senado_obter_materia`, `senado_tramitacao_materia` |
-| `/materia/textos/{codigo}` | `senado_textos_materia` |
-| `/materia/votacoes/{codigo}` | `senado_votos_materia` |
+| `/senador/{codigo}/licencas`, `/comissoes`, `/cargos`, `/historicoAcademico` | `senado_senador_historico` |
+| `/senador/afastados` | `senado_senadores_afastados` |
+| `/senador/{codigo}/apartes` | `senado_apartes_senador` |
 | `/comissao/lista/colegiados` | `senado_listar_comissoes` (+ sigla-to-code resolution) |
 | `/comissao/{codigo}` | `senado_obter_comissao` (numeric code, not sigla) |
 | `/composicao/comissao/{codigo}` | `senado_membros_comissao` |
 | `/comissao/agenda/{data}` | `senado_agenda_comissoes` |
 | `/comissao/agenda/{dataInicio}/{dataFim}` | `senado_reunioes_comissao` |
-| `/plenario/agenda/dia/{data}` | `senado_agenda_plenario` |
+| `/plenario/agenda/dia/{data}`, `/agenda/mes/{data}`, `/agenda/cn/...` | `senado_agenda_plenario` |
+| `/plenario/resultado/{data}`, `/resultado/cn/{data}`, `/resultado/mes/{data}` | `senado_resultado_plenario` |
+| `/plenario/resultado/veto/{codigo}` (+ `/materia/`, `/dispositivo/`) | `senado_resultado_veto` |
+| `/plenario/votacao/orientacaoBancada/{data}` (+ período) | `senado_orientacao_bancada` |
+| `/plenario/encontro/{codigo}` (+ `/pauta`, `/resultado`, `/resumo`) | `senado_encontro_plenario` |
+| `/plenario/tiposSessao`, `/lista/tiposComparecimento`, `/lista/legislaturas` | `senado_tabelas_plenario` |
+| `/materia/vetos/{ano}`, `/vetos/aposrcn`, `/vetos/antesrcn`, `/vetos/encerrados` | `senado_vetos` |
+| `/taquigrafia/notas/{sessao\|reuniao}/{id}` | `senado_notas_taquigraficas` |
+| `/taquigrafia/videos/{sessao\|reuniao}/{id}` | `senado_videos_taquigrafia` |
 | `/senador/{codigo}/discursos` | `senado_discursos_senador` |
 | `/plenario/lista/discursos/{dataInicio}/{dataFim}` | `senado_discursos_plenario` |
 | `/discurso/texto-integral/{codigo}` | `senado_discurso_texto` (plain text, fetched directly) |
@@ -216,16 +225,23 @@ Used by Groups A, B, H, I, J, K, L, M and parts of D/E/F. The `.json` suffix is 
 | `/legislacao/tiposNorma` | `senado_tipos_norma` |
 | `/votacaoComissao/comissao/{sigla}` | `senado_votacao_comissao` |
 | `/votacaoComissao/parlamentar/{codigo}` | `senado_votacao_comissao_senador` |
+| `/votacaoComissao/materia/{sigla}/{numero}/{ano}` | `senado_votacao_comissao_materia` |
+| `/autor/lista/atual` | `senado_autores_atuais` |
 
-### New v3 endpoints (flat JSON arrays/objects, camelCase)
+### v3 endpoints (flat JSON arrays/objects, camelCase)
 
-Used by Groups C, D (D1/D2/D3/D5). Dates must be in **ISO format** (`YYYY-MM-DD`).
+Used by Groups B, C, D. Dates must be in **ISO format** (`YYYY-MM-DD`) — tools accept `YYYYMMDD` and convert. The `codigoMateria` query param bridges legacy matéria codes to v3 processes.
 
 | Upstream path | Used by |
 |---------------|---------|
-| `/votacao` | `senado_listar_votacoes`, `senado_votacoes_recentes`, `senado_obter_votacao`, `senado_search_votacoes` |
-| `/processo` | `senado_search_processos` |
-| `/processo/{id}` | `senado_obter_processo` |
+| `/votacao` | `senado_listar_votacoes`, `senado_votacoes_recentes`, `senado_obter_votacao`, `senado_search_votacoes`, `senado_votos_materia`, `senado_votacoes_senador` |
+| `/processo` | `senado_search_processos`, `senado_buscar_materias` |
+| `/processo/{id}` | `senado_obter_processo`, `senado_obter_materia`, `senado_tramitacao_materia` |
+| `/processo/documento` | `senado_textos_materia` |
+| `/processo/emenda` | `senado_emendas_processo` |
+| `/processo/relatoria` | `senado_relatorias_processo`, `senado_obter_materia` (rapporteur) |
+| `/processo/prazo` | `senado_prazos_processo` |
+| `/processo/{siglas,assuntos,classes,destinos,entes,tipos-*}` | `senado_tabelas_processo` (12 reference tables) |
 
 ### e-Cidadania (HTML scraping + internal REST)
 
@@ -271,31 +287,38 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_partidos` | Parties with current Senate representation |
 | `senado_ufs` | States with count of sitting senators |
 
-### Group A — Senators (5 tools)
+### Group A — Senators (7 tools)
 
 | Tool | Description |
 |------|-------------|
 | `senado_listar_senadores` | List sitting senators, filter by state and party |
 | `senado_buscar_senador_por_nome` | Search senators by name (Unicode-normalized fuzzy match) |
 | `senado_obter_senador` | Detailed senator info: bio, mandates, committees |
-| `senado_votacoes_senador` | How a senator voted on each matter (by year/period) |
+| `senado_votacoes_senador` | How a senator voted on each matter (via v3 `/votacao`) |
 | `senado_senador_detail` | Aggregated detail: mandates, affiliations, profession |
+| `senado_senador_historico` | Licenses, committee memberships, positions or academic history (`tipo` enum) |
+| `senado_senadores_afastados` | Senators currently out of office |
 
-### Group B — Bills/Matters (4 tools)
+### Group B — Bills/Matters (4 tools, v3 backend)
 
 | Tool | Description |
 |------|-------------|
-| `senado_buscar_materias` | Search bills by type, number, year, keyword, author, rapporteur |
-| `senado_obter_materia` | Full bill details: summary, authorship, status, rapporteur |
-| `senado_tramitacao_materia` | Chronological bill processing history |
-| `senado_textos_materia` | Available bill texts (initial, substitute, final) with download URLs |
+| `senado_buscar_materias` | Search bills by type, number, year, keyword, author (via v3 `/processo`) |
+| `senado_obter_materia` | Full bill details: summary, authorship, status, rapporteur, deliberation, generated norm |
+| `senado_tramitacao_materia` | Chronological processing history (informes legislativos), paginated |
+| `senado_textos_materia` | Documents filed on a bill with download URLs, newest first |
 
-### Group C — Processes (2 tools)
+### Group C — Processes (7 tools)
 
 | Tool | Description |
 |------|-------------|
 | `senado_search_processos` | Search legislative processes (complementary to bill search) |
 | `senado_obter_processo` | Full details of a specific legislative process |
+| `senado_emendas_processo` | Amendments filed on a process, with decisions |
+| `senado_relatorias_processo` | Rapporteurships by process, matter, rapporteur or committee |
+| `senado_prazos_processo` | Regimental/constitutional deadlines |
+| `senado_autores_atuais` | Authors of processes in tramitation, ranked by output |
+| `senado_tabelas_processo` | 12 reference tables (siglas, assuntos, classes, tipos-*) via `tabela` enum |
 
 ### Group D — Votes (5 tools)
 
@@ -304,7 +327,7 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_listar_votacoes` | Plenary votes by year, filterable by month/period. Uses the `/votacao` endpoint with ISO dates. |
 | `senado_votacoes_recentes` | Most recent plenary votes (last N days) |
 | `senado_obter_votacao` | Vote details with individual senator roll call. Accepts `codigoSessao` (plenary session code). |
-| `senado_votos_materia` | Voting results for a specific bill (via legacy `/materia/votacoes/{codigo}`) |
+| `senado_votos_materia` | Voting results for a specific bill (via v3 `/votacao?codigoMateria`), optional nominal roll call |
 | `senado_search_votacoes` | Flexible vote search by process, bill, senator, period |
 
 ### Group E — Committees (5 tools)
@@ -317,11 +340,17 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_reunioes_comissao` | Committee meetings from `/comissao/agenda` filtered by sigla. Handles cross-year date ranges automatically. |
 | `senado_agenda_comissoes` | Committee meeting schedule for a specific date |
 
-### Group F — Plenary (1 tool)
+### Group F — Plenary (7 tools)
 
 | Tool | Description |
 |------|-------------|
-| `senado_agenda_plenario` | Plenary session schedule via `/plenario/agenda/dia/{data}` |
+| `senado_agenda_plenario` | Plenary schedule — by day, month or Congress (escopo dia/mes/cn) |
+| `senado_resultado_plenario` | Session results: items deliberated, opinions, outcomes (SF/CN/month) |
+| `senado_orientacao_bancada` | Party leadership voting instructions per vote, with tallies |
+| `senado_vetos` | Presidential vetoes by year or tramitation status |
+| `senado_resultado_veto` | Nominal veto vote results (by veto, vetoed bill or device) |
+| `senado_encontro_plenario` | Legislative session detail, agenda items, results or summary |
+| `senado_tabelas_plenario` | Session types, attendance types, legislatures list |
 
 ### Group G — e-Cidadania (11 tools)
 
@@ -339,7 +368,7 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_ecidadania_eventos_populares` | Events with most citizen comments and questions |
 | `senado_ecidadania_sugerir_tema_enquete` | Suggests monthly poll topics based on configurable criteria |
 
-### Group I — Speeches (4 tools)
+### Group I — Speeches (5 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -347,6 +376,7 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_discursos_plenario` | All plenary speeches in a date range |
 | `senado_discurso_texto` | Full text of a specific speech (plain-text endpoint) |
 | `senado_tipos_uso_palavra` | Available speech types ("tipos de uso da palavra") |
+| `senado_apartes_senador` | Interventions (apartes) by a senator in others' speeches |
 
 ### Group J — Blocs & Leadership (5 tools)
 
@@ -373,14 +403,22 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | `senado_obter_legislacao` | Details of a specific federal norm |
 | `senado_tipos_norma` | Available norm types (LEI, DEC, LCP, EMC, etc.) |
 
-### Group M — Committee Voting (2 tools)
+### Group M — Committee Voting (3 tools)
 
 | Tool | Description |
 |------|-------------|
 | `senado_votacao_comissao` | Votes held in a specific committee, filterable by period |
 | `senado_votacao_comissao_senador` | A senator's committee votes, filterable by committee and period |
+| `senado_votacao_comissao_materia` | Committee votes on a specific bill (sigla/numero/ano) |
 
-**Total: 53 tools**
+### Group N — Taquigrafia (2 tools)
+
+| Tool | Description |
+|------|-------------|
+| `senado_notas_taquigraficas` | Official transcripts of plenary sessions or committee meetings — summary mode with excerpts, full-text mode paginated in blocks, speaker filter |
+| `senado_videos_taquigrafia` | Video/audio units per session or meeting, with speaker and media links |
+
+**Total: 70 tools**
 
 ## Project Structure
 
@@ -403,18 +441,19 @@ src/
 │   └── validation.ts     # toolResult, toolError, errorFrom, buildParams, ensureArray helpers
 └── tools/
     ├── referencia.ts        # Group H — 4 reference/metadata tools
-    ├── senadores.ts         # Group A — 5 senator tools
-    ├── materias.ts          # Group B — 4 bill/matter tools
-    ├── processos.ts         # Group C — 2 process tools
+    ├── senadores.ts         # Group A — 7 senator tools
+    ├── materias.ts          # Group B — 4 bill/matter tools (v3 backend)
+    ├── processos.ts         # Group C — 7 process tools
     ├── votacoes.ts          # Group D — 5 vote tools
     ├── comissoes.ts         # Group E — 5 committee tools
-    ├── plenario.ts          # Group F — 1 plenary tool
+    ├── plenario.ts          # Group F — 7 plenary tools
     ├── ecidadania.ts        # Group G — 11 e-Cidadania tools
-    ├── discursos.ts         # Group I — 4 speech tools
+    ├── discursos.ts         # Group I — 5 speech tools
     ├── composicao.ts        # Group J — 5 bloc/leadership tools
     ├── orcamento.ts         # Group K — 2 budget tools
     ├── legislacao.ts        # Group L — 3 federal law tools
-    └── votacao-comissao.ts  # Group M — 2 committee voting tools
+    ├── votacao-comissao.ts  # Group M — 3 committee voting tools
+    └── taquigrafia.ts       # Group N — 2 stenographic record tools
 tests/                    # Vitest unit tests mirroring src/ (parsers, cache, throttle, auth, utils)
 ```
 
