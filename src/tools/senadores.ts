@@ -53,6 +53,24 @@ export function parseSenadorDetalhe(dados: any) {
   };
 }
 
+/**
+ * Extract a senator's own vote from a v3 /votacao item.
+ * Returns the legacy senado_votacoes_senador output shape.
+ */
+export function parseVotoSenador(v: any, codigoSenador: number) {
+  const voto = ensureArray(v.votos).find(
+    (vt: any) => vt.codigoParlamentar === codigoSenador,
+  ) as any;
+  return {
+    codigoVotacao: v.codigoSessaoVotacao || v.codigoSessao || 0,
+    data: v.dataSessao ? String(v.dataSessao).split("T")[0] : "",
+    materia: v.identificacao || (v.sigla ? `${v.sigla} ${v.numero}/${v.ano}` : ""),
+    descricao: v.descricaoVotacao || null,
+    voto: voto?.descricaoVotoParlamentar || voto?.siglaVotoParlamentar || "",
+    resultado: v.resultadoVotacao || null,
+  };
+}
+
 export function extractParlamentares(response: any): any[] {
   const list =
     response?.ListaParlamentarEmExercicio?.Parlamentares?.Parlamentar ??
@@ -145,11 +163,10 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
     },
   );
 
-  // A4. senado_votacoes_senador
-  // Note: /senador/{codigo}/votacoes is deprecated in the API, but we keep it for backward compatibility
+  // A4. senado_votacoes_senador (migrated to v3 /votacao?codigoParlamentar — legacy endpoint deprecated)
   server.tool(
     "senado_votacoes_senador",
-    "Lista votações de um senador específico, mostrando como o senador votou em cada matéria.",
+    "Lista votações nominais de um senador, mostrando como votou em cada matéria. Sem período informado, usa o ano corrente.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
       ano: z.number().int().min(1900).max(2100).optional().describe("Ano das votações"),
@@ -158,33 +175,31 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const qp = buildParams({
-          ano: params.ano,
-          dataInicio: params.dataInicio,
-          dataFim: params.dataFim,
-        });
+        let di: string;
+        let df: string;
+        if (params.dataInicio && params.dataFim) {
+          di = `${params.dataInicio.slice(0, 4)}-${params.dataInicio.slice(4, 6)}-${params.dataInicio.slice(6, 8)}`;
+          df = `${params.dataFim.slice(0, 4)}-${params.dataFim.slice(4, 6)}-${params.dataFim.slice(6, 8)}`;
+        } else {
+          const ano = params.ano ?? new Date().getFullYear();
+          di = `${ano}-01-01`;
+          df = `${ano}-12-31`;
+        }
+        const qp = {
+          codigoParlamentar: String(params.codigoSenador),
+          dataInicio: di,
+          dataFim: df,
+        };
         const response = await cachedFetch(
           "senado_votacoes_senador",
-          { codigo: params.codigoSenador, ...qp },
+          qp,
           CACHE_DYNAMIC,
-          () => upstreamFetch(`/senador/${params.codigoSenador}/votacoes`, qp, baseUrl),
+          () => upstreamFetch("/votacao", qp, baseUrl),
         );
-        const r = response as any;
-        const votacoes = ensureArray(
-          r?.VotacaoParlamentar?.Parlamentar?.Votacoes?.Votacao ??
-          r?.VotacoesParlamentar?.Votacoes?.Votacao,
-        );
-        const votos = votacoes.map((v: any) => ({
-          codigoVotacao: parseInt(v.CodigoSessaoVotacao || v.CodigoVotacao || "0"),
-          data: v.DataSessao || v.Data || "",
-          materia:
-            v.IdentificacaoMateria?.DescricaoIdentificacaoMateria ||
-            `${v.SiglaMateria || ""} ${v.NumeroMateria || ""}/${v.AnoMateria || ""}`.trim(),
-          descricao: v.DescricaoVotacao || null,
-          voto: v.DescricaoVoto || v.SiglaDescricaoVoto || "",
-          resultado: v.Resultado || null,
-        }));
-        return toolResult({ count: votos.length, votos });
+        const votos = ensureArray(response)
+          .map((v: any) => parseVotoSenador(v, params.codigoSenador))
+          .sort((a, b) => b.data.localeCompare(a.data));
+        return toolResult({ periodo: { dataInicio: di, dataFim: df }, count: votos.length, votos });
       } catch (e) {
         return errorFrom(e, "Erro ao obter votações do senador");
       }

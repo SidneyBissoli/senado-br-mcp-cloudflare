@@ -151,12 +151,13 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
     },
   );
 
-  // D4. senado_votos_materia (uses old /materia/votacoes/{codigo} endpoint)
+  // D4. senado_votos_materia (migrated to v3 /votacao?codigoMateria — legacy endpoint deprecated)
   server.tool(
     "senado_votos_materia",
-    "Obtém resultado de votações de uma matéria, incluindo placar e votos nominais quando disponíveis.",
+    "Obtém resultado de votações de uma matéria, incluindo placar e, opcionalmente, votos nominais de cada senador.",
     {
       codigoMateria: z.number().int().positive().describe("Código único da matéria"),
+      incluirVotos: z.boolean().optional().default(false).describe("Incluir votos nominais de cada senador"),
     },
     async (params) => {
       try {
@@ -164,20 +165,11 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
           "senado_votos_materia",
           { codigo: params.codigoMateria },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(`/materia/votacoes/${params.codigoMateria}`, {}, baseUrl),
+          () => upstreamFetch("/votacao", { codigoMateria: String(params.codigoMateria) }, baseUrl),
         );
-        const r = response as any;
-        const votacoes = ensureArray(
-          r?.VotacaoMateria?.Materia?.Votacoes?.Votacao ?? r?.Votacoes?.Votacao,
-        ).map((v: any) => ({
-          codigoVotacao: parseInt(v.CodigoSessaoVotacao || v.CodigoVotacao || "0"),
-          data: v.DataSessao || v.Data || "",
-          descricao: v.DescricaoVotacao || v.Descricao || null,
-          resultado: v.DescricaoResultado || v.Resultado || null,
-          totalSim: v.TotalVotosSim ? parseInt(v.TotalVotosSim) : null,
-          totalNao: v.TotalVotosNao ? parseInt(v.TotalVotosNao) : null,
-          totalAbstencao: v.TotalVotosAbstencao ? parseInt(v.TotalVotosAbstencao) : null,
-        }));
+        const votacoes = ensureArray(response).map((v: any) =>
+          parseVotacaoItem(v, params.incluirVotos ?? false),
+        );
         return toolResult({ codigoMateria: params.codigoMateria, count: votacoes.length, votacoes });
       } catch (e) {
         return errorFrom(e, "Erro ao obter votações da matéria");

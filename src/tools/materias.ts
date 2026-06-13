@@ -3,73 +3,147 @@
  * senado_buscar_materias, senado_obter_materia, senado_tramitacao_materia,
  * senado_textos_materia
  * Note: senado_votos_materia is registered in votacoes.ts (Group D) as D4.
+ *
+ * Migrated to the v3 /processo API — the legacy /materia/* endpoints are
+ * deprecated upstream. Tool names and output keys remain stable; codigoMateria
+ * is still the primary input (v3 accepts it as a bridge parameter).
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { toolResult, toolError, errorFrom, buildParams, ensureArray, safeInt } from "../utils/validation.js";
 import { CACHE_ON_DEMAND, CACHE_DYNAMIC } from "../types.js";
 
-export function parseMateriaResumo(materia: any) {
-  const id = materia.IdentificacaoMateria || materia;
+/** Parse a /processo search result item (flat camelCase). */
+export function parseProcessoResumo(p: any) {
+  const m = typeof p.identificacao === "string" ? p.identificacao.match(/^(\S+)\s+(\d+)\/(\d{4})/) : null;
   return {
-    codigo: parseInt(id.CodigoMateria || materia.CodigoMateria || "0"),
-    sigla: id.SiglaSubtipoMateria || materia.SiglaMateria || "",
-    numero: parseInt(id.NumeroMateria || materia.NumeroMateria || "0"),
-    ano: parseInt(id.AnoMateria || materia.AnoMateria || "0"),
-    ementa: materia.EmentaMateria || materia.Ementa || null,
-    autor: materia.AutorPrincipal?.NomeAutor || materia.Autor || null,
-    situacao: materia.SituacaoAtual?.DescricaoSituacao || materia.Situacao || null,
-    dataApresentacao: materia.DataApresentacao || null,
-    url: materia.UrlDetalheMateria || null,
+    codigo: p.codigoMateria ?? null,
+    idProcesso: p.id ?? null,
+    sigla: p.sigla || (m ? m[1] : ""),
+    numero: safeInt(p.numero ?? (m ? m[2] : 0)),
+    ano: safeInt(p.ano ?? (m ? m[3] : 0)),
+    identificacao: p.identificacao || null,
+    ementa: p.ementa || null,
+    autor: p.autoria || null,
+    situacao: p.situacaoAtual || null,
+    dataApresentacao: p.dataApresentacao || null,
+    tramitando: p.tramitando === "Sim" || p.tramitando === "S" ? true
+      : p.tramitando === "Não" || p.tramitando === "N" ? false : null,
+    url: p.urlDocumento || null,
   };
 }
 
-export function parseMateriaDetalhe(dados: any) {
-  const mat = dados.Materia || dados;
-  const id = mat.IdentificacaoMateria || {};
-  const db = mat.DadosBasicosMateria || {};
-  const sit = mat.SituacaoAtual || {};
-  const aut = mat.Autoria || {};
-  let relator = null;
-  const rel = mat.Relator || sit.Relator;
-  if (rel) {
-    relator = { nome: rel.NomeRelator || rel.NomeParlamentar || "", partido: rel.SiglaPartido || null, uf: rel.UfRelator || null };
-  }
+/** Parse a /processo/{id} detail response (does not include ementa — that comes from search). */
+export function parseProcessoDetalhe(det: any) {
+  const autuacoes = ensureArray(det.autuacoes);
+  const autorPrincipal = ensureArray(det.autoriaIniciativa)[0];
+  const deliberacao = det.deliberacao && Object.keys(det.deliberacao).length > 0 ? {
+    data: det.deliberacao.data || null,
+    tipo: det.deliberacao.tipoDeliberacao || det.deliberacao.siglaTipo || null,
+    destino: det.deliberacao.destino || null,
+  } : null;
+  const normaGerada = det.normaGerada && Object.keys(det.normaGerada).length > 0 ? det.normaGerada : null;
   return {
-    codigo: parseInt(id.CodigoMateria || "0"),
-    sigla: id.SiglaSubtipoMateria || "",
-    numero: parseInt(id.NumeroMateria || "0"),
-    ano: parseInt(id.AnoMateria || "0"),
-    ementa: db.EmentaMateria || null,
-    ementaDetalhada: db.ExplicacaoEmentaMateria || null,
-    autor: aut.Autor?.[0]?.NomeAutor || aut.AutorPrincipal?.NomeAutor || null,
-    tipoAutor: aut.Autor?.[0]?.TipoAutor || null,
-    situacao: sit.DescricaoSituacao || null,
-    localAtual: sit.Local?.NomeLocal || sit.NomeLocal || null,
-    dataApresentacao: db.DataApresentacao || null,
-    dataUltimaAtualizacao: mat.DataUltimaAtualizacao || null,
-    indexacao: db.IndexacaoMateria || null,
-    url: id.UrlDetalheMateria || null,
-    relator,
+    codigo: det.codigoMateria ?? null,
+    idProcesso: det.id ?? null,
+    sigla: det.sigla || "",
+    numero: safeInt(det.numero),
+    ano: safeInt(det.ano),
+    identificacao: det.identificacao || null,
+    apelido: det.apelido || null,
+    autor: autorPrincipal?.autor || null,
+    tipoAutor: autorPrincipal?.descricaoTipo || null,
+    situacao: det.situacaoAtual || null,
+    localAtual: autuacoes[0]?.nomeEnteControleAtual || null,
+    dataApresentacao: det.documento?.dataApresentacao || det.dataInicioEfetivo || null,
+    dataUltimaAtualizacao: det.dataSituacaoAtual || null,
+    indexacao: typeof det.documento?.indexacao === "string" ? det.documento.indexacao.trim() : null,
+    url: det.documento?.url || null,
+    tramitando: det.tramitando === "Sim" || det.tramitando === "S" ? true
+      : det.tramitando === "Não" || det.tramitando === "N" ? false : null,
+    classificacoes: ensureArray(det.classificacoes).map((c: any) => c.descricaoHierarquia || c.descricao).filter(Boolean),
+    deliberacao,
+    normaGerada,
   };
+}
+
+/** Pick the current rapporteur from /processo/relatoria results (or the most recent one). */
+export function pickRelatorAtual(relatorias: any[]) {
+  const list = ensureArray(relatorias);
+  if (list.length === 0) return null;
+  const atual = list.find((r: any) => !r.dataDestituicao) ??
+    list.slice().sort((a: any, b: any) =>
+      String(b.dataDesignacao || "").localeCompare(String(a.dataDesignacao || "")))[0];
+  return {
+    nome: atual.nomeParlamentar || atual.nomeCompleto || "",
+    partido: atual.siglaPartidoParlamentar || null,
+    uf: atual.ufParlamentar || null,
+    tipo: atual.descricaoTipoRelator || null,
+    comissao: atual.siglaColegiado || null,
+    dataDesignacao: atual.dataDesignacao || null,
+    dataDestituicao: atual.dataDestituicao || null,
+  };
+}
+
+/** Flatten autuacoes[].informesLegislativos into a chronological tramitação list. */
+export function parseInformesTramitacao(det: any) {
+  const informes: any[] = [];
+  for (const aut of ensureArray(det.autuacoes)) {
+    for (const inf of ensureArray((aut as any).informesLegislativos)) {
+      informes.push({
+        data: inf.data || "",
+        local: inf.colegiado?.nome || inf.enteAdministrativo?.nome || null,
+        descricao: inf.descricao || null,
+      });
+    }
+  }
+  informes.sort((a, b) => String(a.data).localeCompare(String(b.data)));
+  return informes;
+}
+
+/** Parse a /processo/documento item. */
+export function parseDocumentoProcesso(d: any) {
+  return {
+    tipo: d.descricaoTipo || d.siglaTipo || "Documento",
+    formato: d.siglaTipo || null,
+    identificacao: d.identificacao || null,
+    data: d.dataDocumento || null,
+    autoria: d.autoria || null,
+    url: d.urlDocumento || "",
+  };
+}
+
+/** Resolve codigoMateria → processo summary item via /processo?codigoMateria=. */
+async function resolveProcesso(codigoMateria: number, baseUrl: string): Promise<any> {
+  const response = await cachedFetch(
+    "_processo_por_materia",
+    { codigoMateria },
+    CACHE_ON_DEMAND,
+    () => upstreamFetch("/processo", { codigoMateria: String(codigoMateria) }, baseUrl),
+  );
+  const item = ensureArray(response)[0];
+  if (!item || !(item as any).id) {
+    throw new Error(`Matéria ${codigoMateria} não encontrada na API de processos`);
+  }
+  return item;
 }
 
 export function registerMateriasTools(server: McpServer, baseUrl: string) {
   // B1. senado_buscar_materias
   server.tool(
     "senado_buscar_materias",
-    "Busca matérias legislativas por diversos critérios: tipo (PEC, PL, PLP, MPV), número, ano, palavras-chave, autor ou relator.",
+    "Busca matérias legislativas por tipo (PEC, PL, PLP, MPV), número, ano, palavras-chave, autor ou situação de tramitação. Informe pelo menos um critério.",
     {
       sigla: z.string().optional().describe("Tipo: PEC, PL, PLP, MPV, PDL, PRS, etc."),
       numero: z.number().int().positive().optional().describe("Número da matéria"),
       ano: z.number().int().min(1900).max(2100).optional().describe("Ano da matéria"),
-      palavraChave: z.string().optional().describe("Busca na ementa"),
+      palavraChave: z.string().optional().describe("Termo livre buscado nas palavras-chave do processo"),
       autorNome: z.string().optional().describe("Nome do autor"),
-      relatorNome: z.string().optional().describe("Nome do relator"),
       tramitando: z.boolean().optional().describe("Apenas em tramitação"),
+      limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de resultados (padrão: 100)"),
     },
     async (params) => {
       try {
@@ -77,19 +151,25 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
           sigla: params.sigla?.toUpperCase(),
           numero: params.numero,
           ano: params.ano,
-          palavraChave: params.palavraChave,
-          nomeAutor: params.autorNome,
-          nomeRelator: params.relatorNome,
+          termo: params.palavraChave,
+          autor: params.autorNome,
           tramitando: params.tramitando !== undefined ? (params.tramitando ? "S" : "N") : undefined,
         });
+        if (Object.keys(qp).length === 0) {
+          return toolError("É obrigatório informar pelo menos um critério de busca.");
+        }
         const response = await cachedFetch("senado_buscar_materias", qp, CACHE_ON_DEMAND, () =>
-          upstreamFetch("/materia/pesquisa/lista", qp, baseUrl),
+          upstreamFetch("/processo", qp, baseUrl),
         );
-        const r = response as any;
-        const materias = ensureArray(
-          r?.PesquisaBasicaMateria?.Materias?.Materia ?? r?.ListaMaterias?.Materias?.Materia,
-        ).map(parseMateriaResumo);
-        return toolResult({ count: materias.length, materias });
+        const todos = ensureArray(response).map(parseProcessoResumo);
+        const limite = params.limite ?? 100;
+        const materias = todos.slice(0, limite);
+        return toolResult({
+          count: materias.length,
+          total: todos.length,
+          ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} resultados. Refine a busca ou aumente o limite.` } : {}),
+          materias,
+        });
       } catch (e) {
         return errorFrom(e, "Erro na busca de matérias");
       }
@@ -99,20 +179,33 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
   // B2. senado_obter_materia
   server.tool(
     "senado_obter_materia",
-    "Obtém detalhes completos de uma matéria legislativa, incluindo ementa, autoria, situação atual e relator.",
+    "Obtém detalhes completos de uma matéria legislativa, incluindo ementa, autoria, situação atual, relator, deliberação e norma gerada.",
     {
       codigoMateria: z.number().int().positive().describe("Código único da matéria"),
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const [resumo, relatoriasRes] = await Promise.all([
+          resolveProcesso(params.codigoMateria, baseUrl),
+          cachedFetch(
+            "_processo_relatoria",
+            { codigoMateria: params.codigoMateria },
+            CACHE_ON_DEMAND,
+            () => upstreamFetch("/processo/relatoria", { codigoMateria: String(params.codigoMateria) }, baseUrl),
+          ).catch(() => null),
+        ]);
+        const detalheRes = await cachedFetch(
           "senado_obter_materia",
-          { codigo: params.codigoMateria },
+          { idProcesso: resumo.id },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(`/materia/${params.codigoMateria}`, {}, baseUrl),
+          () => upstreamFetch(`/processo/${resumo.id}`, {}, baseUrl),
         );
-        const dados = (response as any).DetalheMateria || response;
-        return toolResult(parseMateriaDetalhe(dados));
+        const detalhe = parseProcessoDetalhe(detalheRes as any);
+        return toolResult({
+          ...detalhe,
+          ementa: resumo.ementa || null,
+          relator: pickRelatorAtual(ensureArray(relatoriasRes)),
+        });
       } catch (e) {
         return errorFrom(e, "Matéria não encontrada");
       }
@@ -122,31 +215,31 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
   // B3. senado_tramitacao_materia
   server.tool(
     "senado_tramitacao_materia",
-    "Obtém histórico de tramitação de uma matéria, mostrando todas as movimentações em ordem cronológica.",
+    "Obtém histórico de tramitação de uma matéria (informes legislativos), em ordem cronológica.",
     {
       codigoMateria: z.number().int().positive().describe("Código único da matéria"),
+      limite: z.number().int().min(1).max(1000).optional().default(100).describe("Máximo de eventos retornados — mantém os mais recentes (padrão: 100)"),
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const resumo = await resolveProcesso(params.codigoMateria, baseUrl);
+        const detalheRes = await cachedFetch(
           "senado_tramitacao_materia",
-          { codigo: params.codigoMateria },
+          { idProcesso: resumo.id },
           CACHE_DYNAMIC,
-          () => upstreamFetch(`/materia/${params.codigoMateria}`, {}, baseUrl),
+          () => upstreamFetch(`/processo/${resumo.id}`, {}, baseUrl),
         );
-        const dados =
-          (response as any).DetalheMateria?.Materia ||
-          (response as any).Materia ||
-          response;
-        const tramitacoes = ensureArray(
-          dados?.Tramitacoes?.Tramitacao ?? dados?.HistoricoTramitacao?.Tramitacao,
-        ).map((t: any) => ({
-          data: t.DataTramitacao || t.Data || "",
-          local: t.Local?.NomeLocal || t.DescricaoLocal || null,
-          situacao: t.Situacao?.DescricaoSituacao || t.DescricaoSituacao || null,
-          descricao: t.TextoTramitacao || t.Descricao || null,
-        }));
-        return toolResult({ codigoMateria: params.codigoMateria, count: tramitacoes.length, tramitacoes });
+        const todas = parseInformesTramitacao(detalheRes as any);
+        const limite = params.limite ?? 100;
+        const tramitacoes = todas.length > limite ? todas.slice(-limite) : todas;
+        return toolResult({
+          codigoMateria: params.codigoMateria,
+          idProcesso: resumo.id,
+          count: tramitacoes.length,
+          total: todas.length,
+          ...(todas.length > limite ? { aviso: `Exibindo os ${limite} eventos mais recentes de ${todas.length}.` } : {}),
+          tramitacoes,
+        });
       } catch (e) {
         return errorFrom(e, "Erro ao obter tramitação");
       }
@@ -156,9 +249,10 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
   // B4. senado_textos_materia
   server.tool(
     "senado_textos_materia",
-    "Obtém textos disponíveis de uma matéria (inicial, substitutivo, final) com URLs para download.",
+    "Lista documentos apresentados numa matéria (texto inicial, emendas, pareceres, requerimentos) com URLs para download, dos mais recentes aos mais antigos.",
     {
       codigoMateria: z.number().int().positive().describe("Código único da matéria"),
+      limite: z.number().int().min(1).max(500).optional().default(50).describe("Máximo de documentos retornados (padrão: 50)"),
     },
     async (params) => {
       try {
@@ -166,18 +260,20 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
           "senado_textos_materia",
           { codigo: params.codigoMateria },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(`/materia/textos/${params.codigoMateria}`, {}, baseUrl),
+          () => upstreamFetch("/processo/documento", { codigoMateria: String(params.codigoMateria) }, baseUrl),
         );
-        const r = response as any;
-        const textos = ensureArray(
-          r?.TextoMateria?.Materia?.Textos?.Texto ?? r?.Textos?.Texto,
-        ).map((t: any) => ({
-          tipo: t.TipoTexto?.DescricaoTipoTexto || t.DescricaoTipoTexto || "Texto",
-          data: t.DataTexto || null,
-          url: t.UrlTexto || "",
-          formato: t.FormatoTexto || t.TipoDocumento || null,
-        }));
-        return toolResult({ codigoMateria: params.codigoMateria, count: textos.length, textos });
+        const todos = ensureArray(response)
+          .map(parseDocumentoProcesso)
+          .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")));
+        const limite = params.limite ?? 50;
+        const textos = todos.slice(0, limite);
+        return toolResult({
+          codigoMateria: params.codigoMateria,
+          count: textos.length,
+          total: todos.length,
+          ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} documentos.` } : {}),
+          textos,
+        });
       } catch (e) {
         return errorFrom(e, "Erro ao obter textos");
       }

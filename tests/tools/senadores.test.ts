@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares } from "../../src/tools/senadores.js";
+import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador } from "../../src/tools/senadores.js";
 
 describe("parseSenadorResumo", () => {
   it("parses full parlamentar object", () => {
@@ -186,5 +186,43 @@ describe("name search with diacritics normalization", () => {
     const name = "ROGÉRIO CARVALHO";
     expect(normalize(name).includes(normalize("rogério"))).toBe(true);
     expect(normalize(name).includes(normalize("ROGERIO"))).toBe(true);
+  });
+});
+
+describe("parseVotoSenador", () => {
+  const votacao = {
+    codigoSessao: 64512,
+    codigoSessaoVotacao: 7244,
+    dataSessao: "2024-03-12T00:00:00",
+    identificacao: "PL 123/2024",
+    descricaoVotacao: "Votação nominal do PL 123/2024",
+    resultadoVotacao: "Aprovado",
+    votos: [
+      { codigoParlamentar: 5672, descricaoVotoParlamentar: "Sim" },
+      { codigoParlamentar: 9999, descricaoVotoParlamentar: "Não" },
+    ],
+  };
+
+  it("extracts the senator's own vote", () => {
+    const result = parseVotoSenador(votacao, 5672);
+    expect(result.codigoVotacao).toBe(7244);
+    expect(result.data).toBe("2024-03-12");
+    expect(result.materia).toBe("PL 123/2024");
+    expect(result.voto).toBe("Sim");
+    expect(result.resultado).toBe("Aprovado");
+  });
+
+  it("returns empty voto when the senator is not in the roll call", () => {
+    const result = parseVotoSenador(votacao, 1234);
+    expect(result.voto).toBe("");
+    expect(result.materia).toBe("PL 123/2024");
+  });
+
+  it("builds materia from sigla/numero/ano when identificacao is missing", () => {
+    const result = parseVotoSenador(
+      { sigla: "PEC", numero: "45", ano: 2019, votos: [] },
+      1,
+    );
+    expect(result.materia).toBe("PEC 45/2019");
   });
 });
