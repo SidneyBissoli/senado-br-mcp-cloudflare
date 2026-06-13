@@ -3,6 +3,16 @@ main = "src/index.ts"
 compatibility_date = "2025-02-18"
 compatibility_flags = ["nodejs_compat"]
 
+# Keep the *.workers.dev URL alive alongside the custom domain (it's the URL
+# currently registered with the MCP registries / Smithery / clients).
+workers_dev = true
+
+# Custom domain — Cloudflare provisions the DNS record and TLS cert on deploy.
+# MCP endpoint: https://senado.sidneybissoli.com/mcp
+[[routes]]
+pattern = "senado.sidneybissoli.com"
+custom_domain = true
+
 [vars]
 SENADO_BASE_URL = "https://legis.senado.leg.br/dadosabertos"
 SENADO_ADM_BASE_URL = "https://adm.senado.gov.br/adm-dadosabertos"
