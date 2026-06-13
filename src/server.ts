@@ -30,6 +30,14 @@ export function createServer(env: Env): McpServer {
   const server = new McpServer({
     name: "senado-br-mcp",
     version: "2.2.0",
+    websiteUrl: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
+    icons: [
+      {
+        src: "https://senado-br-mcp.sidneybissoli.workers.dev/icon.svg",
+        mimeType: "image/svg+xml",
+        sizes: ["any"],
+      },
+    ],
   });
 
   // Every tool here only reads upstream open data — no writes, no side effects — and
