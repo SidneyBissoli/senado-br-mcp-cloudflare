@@ -79,7 +79,7 @@ describe("upstreamFetch", () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse({}, 200, { "content-length": "10000000" }),
     );
-    await expect(upstreamFetch("/big")).rejects.toThrow("2 MB");
+    await expect(upstreamFetch("/big")).rejects.toThrow("5 MB");
   });
 
   it("throws on invalid JSON response", async () => {

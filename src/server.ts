@@ -18,6 +18,8 @@ import { registerOrcamentoTools } from "./tools/orcamento.js";
 import { registerLegislacaoTools } from "./tools/legislacao.js";
 import { registerVotacaoComissaoTools } from "./tools/votacao-comissao.js";
 import { registerTaquigrafiaTools } from "./tools/taquigrafia.js";
+import { registerSenadoresAdminTools } from "./tools/senadores-admin.js";
+import { registerContratacoesTools } from "./tools/contratacoes.js";
 import type { Env } from "./types.js";
 
 export function createServer(env: Env): McpServer {
@@ -27,6 +29,7 @@ export function createServer(env: Env): McpServer {
   });
 
   const baseUrl = env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
+  const admBaseUrl = env.SENADO_ADM_BASE_URL || "https://adm.senado.gov.br/adm-dadosabertos";
 
   // Group H — Reference/metadata (4 tools)
   registerReferenciaTools(server, baseUrl);

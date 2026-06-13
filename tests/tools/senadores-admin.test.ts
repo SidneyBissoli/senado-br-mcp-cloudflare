@@ -1,0 +1,74 @@
+import { describe, it, expect } from "vitest";
+import { filtrarCeaps, agregarCeaps, parseCeapsItem } from "../../src/tools/senadores-admin.js";
+
+const DESPESAS = [
+  { id: 1, mes: 7, codSenador: 5953, nomeSenador: "FABIANO CONTARATO", tipoDespesa: "Locomoção, hospedagem, alimentação", cpfCnpj: "17.895.646/0001-87", fornecedor: "UBER DO BRASIL", data: "2025-07-21", detalhamento: "Transporte", valorReembolsado: 50.02 },
+  { id: 2, mes: 7, codSenador: 5953, nomeSenador: "FABIANO CONTARATO", tipoDespesa: "Divulgação da atividade parlamentar", cpfCnpj: "11.111.111/0001-11", fornecedor: "GRAFICA ABC", data: "2025-07-22", detalhamento: "Impressos", valorReembolsado: 1000 },
+  { id: 3, mes: 8, codSenador: 1234, nomeSenador: "OUTRO SENADOR", tipoDespesa: "Locomoção, hospedagem, alimentação", cpfCnpj: "17.895.646/0001-87", fornecedor: "UBER DO BRASIL", data: "2025-08-01", detalhamento: "Transporte", valorReembolsado: 75.5 },
+];
+
+describe("filtrarCeaps", () => {
+  it("filters by month", () => {
+    expect(filtrarCeaps(DESPESAS, { mes: 7 })).toHaveLength(2);
+  });
+
+  it("filters by senator code", () => {
+    expect(filtrarCeaps(DESPESAS, { codSenador: 1234 })).toHaveLength(1);
+  });
+
+  it("filters by senator name with accent-insensitive partial match", () => {
+    expect(filtrarCeaps(DESPESAS, { nomeSenador: "contarato" })).toHaveLength(2);
+  });
+
+  it("filters by expense type and supplier", () => {
+    expect(filtrarCeaps(DESPESAS, { tipoDespesa: "locomoção" })).toHaveLength(2);
+    expect(filtrarCeaps(DESPESAS, { fornecedor: "uber" })).toHaveLength(2);
+  });
+
+  it("combines filters", () => {
+    expect(filtrarCeaps(DESPESAS, { fornecedor: "uber", mes: 8 })).toHaveLength(1);
+  });
+
+  it("returns all when no filters", () => {
+    expect(filtrarCeaps(DESPESAS, {})).toHaveLength(3);
+  });
+});
+
+describe("agregarCeaps", () => {
+  it("aggregates by senator with totals sorted desc", () => {
+    const result = agregarCeaps(DESPESAS, (d) => d.codSenador, (d) => ({ senador: d.nomeSenador }));
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({ chave: 5953, senador: "FABIANO CONTARATO", total: 1050.02, despesas: 2 });
+    expect(result[1]).toMatchObject({ chave: 1234, total: 75.5, despesas: 1 });
+  });
+
+  it("aggregates by expense type", () => {
+    const result = agregarCeaps(DESPESAS, (d) => d.tipoDespesa);
+    const locomocao = result.find((r) => String(r.chave).startsWith("Locomoção"));
+    expect(locomocao?.total).toBe(125.52);
+    expect(locomocao?.despesas).toBe(2);
+  });
+
+  it("ignores non-numeric values", () => {
+    const result = agregarCeaps([{ codSenador: 1, valorReembolsado: "x" }], (d) => d.codSenador);
+    expect(result[0].total).toBe(0);
+    expect(result[0].despesas).toBe(1);
+  });
+});
+
+describe("parseCeapsItem", () => {
+  it("trims a raw item to the detail shape", () => {
+    const result = parseCeapsItem(DESPESAS[0]);
+    expect(result).toEqual({
+      mes: 7,
+      data: "2025-07-21",
+      senador: "FABIANO CONTARATO",
+      codSenador: 5953,
+      tipoDespesa: "Locomoção, hospedagem, alimentação",
+      fornecedor: "UBER DO BRASIL",
+      cnpjCpf: "17.895.646/0001-87",
+      detalhamento: "Transporte",
+      valor: 50.02,
+    });
+  });
+});

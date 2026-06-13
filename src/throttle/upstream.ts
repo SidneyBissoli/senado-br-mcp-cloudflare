@@ -27,21 +27,33 @@ export class UpstreamError extends Error {
   }
 }
 
+export interface UpstreamOptions {
+  /** Skip the automatic `.json` suffix (the adm API does not use it). */
+  noJsonSuffix?: boolean;
+  /** Override the response size guard (bytes). Use for known-large datasets. */
+  maxSize?: number;
+  /** Return [] instead of throwing on HTTP 404 (APIs that 404 on empty collections). */
+  treat404AsEmpty?: boolean;
+}
+
 /**
  * Fetch from the Senado API upstream.
  * @param path - Relative path (e.g., "/senador/lista/atual")
  * @param params - Query parameters
  * @param baseUrl - Override base URL (from env)
+ * @param options - Per-call behavior overrides
  */
 export async function upstreamFetch(
   path: string,
   params: Record<string, string> = {},
   baseUrl?: string,
+  options: UpstreamOptions = {},
 ): Promise<unknown> {
   const base = baseUrl || SENADO_BASE_URL_DEFAULT;
+  const maxSize = options.maxSize ?? MAX_RESPONSE_SIZE;
 
   // Build URL with sorted query params
-  const url = new URL(`${base}${path}.json`);
+  const url = new URL(`${base}${path}${options.noJsonSuffix ? "" : ".json"}`);
   const sortedKeys = Object.keys(params).sort();
   for (const key of sortedKeys) {
     if (params[key] !== undefined && params[key] !== "") {
@@ -120,6 +132,12 @@ export async function upstreamFetch(
         break;
       }
 
+      if (response.status === 404 && options.treat404AsEmpty) {
+        incr("upstreamCalls");
+        log("upstream", path, 404, Date.now() - startTime, attempt);
+        return [];
+      }
+
       if (!response.ok) {
         throw new UpstreamError(
           `[${path}] Upstream retornou HTTP ${response.status}`,
@@ -130,18 +148,18 @@ export async function upstreamFetch(
 
       // Check response size via Content-Length header
       const contentLength = response.headers.get("content-length");
-      if (contentLength && parseInt(contentLength, 10) > MAX_RESPONSE_SIZE) {
+      if (contentLength && parseInt(contentLength, 10) > maxSize) {
         throw new UpstreamError(
-          `[${path}] Resposta upstream excede o limite de 2 MB`,
+          `[${path}] Resposta upstream excede o limite de ${Math.round(maxSize / 1024 / 1024)} MB`,
           413,
           false,
         );
       }
 
       const text = await response.text();
-      if (text.length > MAX_RESPONSE_SIZE) {
+      if (text.length > maxSize) {
         throw new UpstreamError(
-          `[${path}] Resposta upstream excede o limite de 2 MB`,
+          `[${path}] Resposta upstream excede o limite de ${Math.round(maxSize / 1024 / 1024)} MB`,
           413,
           false,
         );

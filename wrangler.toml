@@ -5,6 +5,7 @@ compatibility_flags = ["nodejs_compat"]
 
 [vars]
 SENADO_BASE_URL = "https://legis.senado.leg.br/dadosabertos"
+SENADO_ADM_BASE_URL = "https://adm.senado.gov.br/adm-dadosabertos"
 ALLOWED_ORIGIN = "*"
 
 [[kv_namespaces]]
