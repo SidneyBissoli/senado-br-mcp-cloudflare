@@ -90,7 +90,7 @@ npm run typecheck    # tsc --noEmit
 
 ```bash
 npm run deploy
-# Deploys to https://senado-br-mcp.<your-subdomain>.workers.dev
+# Deploys to https://senado-br-mcp.sidneybissoli.workers.dev
 ```
 
 ## Endpoints
@@ -554,7 +554,7 @@ Add to your MCP configuration:
 {
   "mcpServers": {
     "senado-br": {
-      "url": "https://senado-br-mcp.<your-subdomain>.workers.dev/mcp"
+      "url": "https://senado-br-mcp.sidneybissoli.workers.dev/mcp"
     }
   }
 }
@@ -566,7 +566,7 @@ If `API_KEY` is configured, add the auth header:
 {
   "mcpServers": {
     "senado-br": {
-      "url": "https://senado-br-mcp.<your-subdomain>.workers.dev/mcp",
+      "url": "https://senado-br-mcp.sidneybissoli.workers.dev/mcp",
       "headers": {
         "Authorization": "Bearer <your-api-key>"
       }
@@ -578,7 +578,7 @@ If `API_KEY` is configured, add the auth header:
 ### MCP Inspector
 
 ```bash
-npx @modelcontextprotocol/inspector https://senado-br-mcp.<your-subdomain>.workers.dev/mcp
+npx @modelcontextprotocol/inspector https://senado-br-mcp.sidneybissoli.workers.dev/mcp
 ```
 
 ## License
