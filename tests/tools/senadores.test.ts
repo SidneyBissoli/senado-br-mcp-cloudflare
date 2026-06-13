@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador } from "../../src/tools/senadores.js";
+import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador, parseLicenca, parseComissaoMembro, parseCargoSenador } from "../../src/tools/senadores.js";
 
 describe("parseSenadorResumo", () => {
   it("parses full parlamentar object", () => {
@@ -224,5 +224,52 @@ describe("parseVotoSenador", () => {
       1,
     );
     expect(result.materia).toBe("PEC 45/2019");
+  });
+});
+
+describe("parseLicenca", () => {
+  it("parses a licença entry", () => {
+    const result = parseLicenca({
+      Codigo: "24703",
+      DataInicio: "2025-10-20",
+      DataFim: "2025-11-19",
+      DescricaoFinalidade: "Licença particular",
+    });
+    expect(result.codigo).toBe(24703);
+    expect(result.dataInicio).toBe("2025-10-20");
+    expect(result.descricao).toBe("Licença particular");
+  });
+});
+
+describe("parseComissaoMembro", () => {
+  it("parses a committee membership", () => {
+    const result = parseComissaoMembro({
+      IdentificacaoComissao: {
+        CodigoComissao: "2040",
+        SiglaComissao: "CRA",
+        NomeComissao: "Comissão de Agricultura",
+        SiglaCasaComissao: "SF",
+      },
+      DescricaoParticipacao: "Titular",
+      DataInicio: "2023-03-01",
+    });
+    expect(result.codigo).toBe(2040);
+    expect(result.sigla).toBe("CRA");
+    expect(result.participacao).toBe("Titular");
+    expect(result.dataFim).toBeNull();
+  });
+});
+
+describe("parseCargoSenador", () => {
+  it("parses a committee position", () => {
+    const result = parseCargoSenador({
+      IdentificacaoComissao: { SiglaComissao: "FPE", NomeComissao: "Frente Parlamentar", SiglaCasaComissao: "SF" },
+      DescricaoCargo: "Presidente",
+      DataInicio: "2023-04-01",
+      DataFim: "2025-01-31",
+    });
+    expect(result.comissao).toBe("FPE");
+    expect(result.cargo).toBe("Presidente");
+    expect(result.dataFim).toBe("2025-01-31");
   });
 });

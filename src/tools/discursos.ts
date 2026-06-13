@@ -1,7 +1,7 @@
 /**
- * Group I — Speeches (4 tools)
+ * Group I — Speeches (5 tools)
  * senado_discursos_senador, senado_discursos_plenario,
- * senado_discurso_texto, senado_tipos_uso_palavra
+ * senado_discurso_texto, senado_tipos_uso_palavra, senado_apartes_senador
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -178,6 +178,41 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
         return toolResult({ count: tipos.length, tipos });
       } catch (e) {
         return errorFrom(e, "Erro ao obter tipos de uso da palavra");
+      }
+    },
+  );
+
+  // I5. senado_apartes_senador
+  server.tool(
+    "senado_apartes_senador",
+    "Lista apartes (intervenções em discursos de outros parlamentares) feitos por um senador, filtráveis por período e casa legislativa.",
+    {
+      codigoSenador: z.number().int().positive().describe("Código único do senador"),
+      casa: z.string().optional().describe("Casa legislativa (SF=Senado, CN=Congresso)"),
+      dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
+      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
+    },
+    async (params) => {
+      try {
+        const qp: Record<string, string> = {};
+        if (params.casa) qp.casa = params.casa;
+        if (params.dataInicio) qp.dataInicio = params.dataInicio;
+        if (params.dataFim) qp.dataFim = params.dataFim;
+
+        const response = await cachedFetch(
+          "senado_apartes_senador",
+          { codigo: params.codigoSenador, ...qp },
+          CACHE_DYNAMIC,
+          () => upstreamFetch(`/senador/${params.codigoSenador}/apartes`, qp, baseUrl),
+        );
+        const r = response as any;
+        const apartes = ensureArray(
+          r?.ApartesParlamentar?.Parlamentar?.Apartes?.Aparte ??
+          r?.Apartes?.Aparte,
+        ).map(parseDiscursoResumo);
+        return toolResult({ codigoSenador: params.codigoSenador, count: apartes.length, apartes });
+      } catch (e) {
+        return errorFrom(e, "Erro ao obter apartes do senador");
       }
     },
   );

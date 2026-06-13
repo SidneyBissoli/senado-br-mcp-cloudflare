@@ -1,7 +1,8 @@
 /**
- * Group A — Senators (5 tools)
+ * Group A — Senators (7 tools)
  * senado_listar_senadores, senado_buscar_senador_por_nome, senado_obter_senador,
- * senado_votacoes_senador, senado_senador_detail
+ * senado_votacoes_senador, senado_senador_detail, senado_senador_historico,
+ * senado_senadores_afastados
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -74,8 +75,46 @@ export function parseVotoSenador(v: any, codigoSenador: number) {
 export function extractParlamentares(response: any): any[] {
   const list =
     response?.ListaParlamentarEmExercicio?.Parlamentares?.Parlamentar ??
-    response?.ListaParlamentarLegislatura?.Parlamentares?.Parlamentar;
+    response?.ListaParlamentarLegislatura?.Parlamentares?.Parlamentar ??
+    response?.AfastamentoAtual?.Parlamentares?.Parlamentar;
   return ensureArray(list);
+}
+
+/** Parse a senator leave-of-absence (licença) entry. */
+export function parseLicenca(l: any) {
+  return {
+    codigo: parseInt(l.Codigo || "0") || null,
+    dataInicio: l.DataInicio || null,
+    dataFim: l.DataFim || l.DataFimPrevista || null,
+    descricao: l.DescricaoFinalidade || l.Descricao || l.TipoAfastamento?.Descricao || null,
+  };
+}
+
+/** Parse a committee membership entry from /senador/{codigo}/comissoes. */
+export function parseComissaoMembro(c: any) {
+  const id = c.IdentificacaoComissao || {};
+  return {
+    codigo: parseInt(id.CodigoComissao || "0") || null,
+    sigla: id.SiglaComissao || null,
+    nome: id.NomeComissao || null,
+    casa: id.SiglaCasaComissao || null,
+    participacao: c.DescricaoParticipacao || null,
+    dataInicio: c.DataInicio || null,
+    dataFim: c.DataFim || null,
+  };
+}
+
+/** Parse a committee position entry from /senador/{codigo}/cargos. */
+export function parseCargoSenador(c: any) {
+  const id = c.IdentificacaoComissao || {};
+  return {
+    comissao: id.SiglaComissao || null,
+    nomeComissao: id.NomeComissao || null,
+    casa: id.SiglaCasaComissao || null,
+    cargo: c.DescricaoCargo || c.Cargo?.DescricaoCargo || null,
+    dataInicio: c.DataInicio || null,
+    dataFim: c.DataFim || null,
+  };
 }
 
 export function registerSenadoresTools(server: McpServer, baseUrl: string) {
@@ -262,6 +301,72 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
         });
       } catch (e) {
         return errorFrom(e, "Erro ao obter detalhes do senador");
+      }
+    },
+  );
+
+  // A6. senado_senador_historico
+  server.tool(
+    "senado_senador_historico",
+    "Histórico funcional de um senador: licenças oficiais, comissões das quais é membro, cargos ocupados em comissões ou histórico acadêmico.",
+    {
+      codigoSenador: z.number().int().positive().describe("Código único do senador"),
+      tipo: z.enum(["licencas", "comissoes", "cargos", "historico-academico"]).describe("Qual histórico consultar"),
+    },
+    async (params) => {
+      try {
+        const paths: Record<string, string> = {
+          "licencas": `/senador/${params.codigoSenador}/licencas`,
+          "comissoes": `/senador/${params.codigoSenador}/comissoes`,
+          "cargos": `/senador/${params.codigoSenador}/cargos`,
+          "historico-academico": `/senador/${params.codigoSenador}/historicoAcademico`,
+        };
+        const response = await cachedFetch(
+          "senado_senador_historico",
+          { codigo: params.codigoSenador, tipo: params.tipo },
+          CACHE_ON_DEMAND,
+          () => upstreamFetch(paths[params.tipo], {}, baseUrl),
+        );
+        const r = response as any;
+        let itens: any[];
+        switch (params.tipo) {
+          case "licencas":
+            itens = ensureArray(r?.LicencaParlamentar?.Parlamentar?.Licencas?.Licenca).map(parseLicenca);
+            break;
+          case "comissoes":
+            itens = ensureArray(r?.MembroComissaoParlamentar?.Parlamentar?.MembroComissoes?.Comissao).map(parseComissaoMembro);
+            break;
+          case "cargos":
+            itens = ensureArray(r?.CargoParlamentar?.Parlamentar?.Cargos?.Cargo).map(parseCargoSenador);
+            break;
+          default: {
+            const p = r?.HistoricoAcademicoParlamentar?.Parlamentar;
+            itens = ensureArray(p?.HistoricoAcademico?.Curso ?? p?.Cursos?.Curso);
+            break;
+          }
+        }
+        return toolResult({ codigoSenador: params.codigoSenador, tipo: params.tipo, count: itens.length, itens });
+      } catch (e) {
+        return errorFrom(e, "Erro ao obter histórico do senador");
+      }
+    },
+  );
+
+  // A7. senado_senadores_afastados
+  server.tool(
+    "senado_senadores_afastados",
+    "Lista os senadores atualmente afastados (fora de exercício), com partido e UF.",
+    {},
+    async () => {
+      try {
+        const response = await cachedFetch("senado_senadores_afastados", {}, CACHE_SEMI_STATIC, () =>
+          upstreamFetch("/senador/afastados", {}, baseUrl),
+        );
+        const senadores = extractParlamentares(response).map(parseSenadorResumo)
+          .map((s) => ({ ...s, emExercicio: false }));
+        return toolResult({ count: senadores.length, senadores });
+      } catch (e) {
+        return errorFrom(e, "Erro ao listar senadores afastados");
       }
     },
   );
