@@ -1,6 +1,7 @@
 /**
- * Group M — VotacaoComissao / Committee Voting (2 tools)
- * senado_votacao_comissao, senado_votacao_comissao_senador
+ * Group M — VotacaoComissao / Committee Voting (3 tools)
+ * senado_votacao_comissao, senado_votacao_comissao_senador,
+ * senado_votacao_comissao_materia
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -99,6 +100,49 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
         return toolResult({ codigoSenador: params.codigoSenador, count: votacoes.length, votacoes });
       } catch (e) {
         return errorFrom(e, "Erro ao obter votos do senador em comissões");
+      }
+    },
+  );
+
+  // M3. senado_votacao_comissao_materia
+  server.tool(
+    "senado_votacao_comissao_materia",
+    "Lista votações de uma matéria específica nas comissões, identificada por sigla, número e ano (ex: PL 2630/2020).",
+    {
+      sigla: z.string().min(2).describe("Sigla do tipo da proposição (ex: PL, PEC)"),
+      numero: z.number().int().positive().describe("Número da proposição"),
+      ano: z.number().int().min(1900).max(2100).describe("Ano da proposição"),
+      comissao: z.string().optional().describe("Sigla da comissão para filtrar"),
+      dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
+      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
+    },
+    async (params) => {
+      try {
+        const sigla = params.sigla.toUpperCase();
+        const qp = buildParams({
+          comissao: params.comissao?.toUpperCase(),
+          dataInicio: params.dataInicio,
+          dataFim: params.dataFim,
+        });
+        const response = await cachedFetch(
+          "senado_votacao_comissao_materia",
+          { sigla, numero: params.numero, ano: params.ano, ...qp },
+          CACHE_DYNAMIC,
+          () => upstreamFetch(`/votacaoComissao/materia/${sigla}/${params.numero}/${params.ano}`, qp, baseUrl),
+        );
+        const r = response as any;
+        const votacoes = ensureArray(
+          r?.VotacoesComissao?.Votacoes?.Votacao ??
+          r?.VotacaoComissaoMateria?.Votacoes?.Votacao ??
+          r?.Votacoes?.Votacao,
+        ).map(parseVotacaoComissao);
+        return toolResult({
+          materia: `${sigla} ${params.numero}/${params.ano}`,
+          count: votacoes.length,
+          votacoes,
+        });
+      } catch (e) {
+        return errorFrom(e, "Erro ao obter votações da matéria em comissões");
       }
     },
   );

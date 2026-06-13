@@ -23,7 +23,7 @@ import type { Env } from "./types.js";
 export function createServer(env: Env): McpServer {
   const server = new McpServer({
     name: "senado-br-mcp",
-    version: "2.0.0",
+    version: "2.1.0",
   });
 
   const baseUrl = env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
@@ -31,7 +31,7 @@ export function createServer(env: Env): McpServer {
   // Group H — Reference/metadata (4 tools)
   registerReferenciaTools(server, baseUrl);
 
-  // Group A — Senators (5 tools)
+  // Group A — Senators (7 tools)
   registerSenadoresTools(server, baseUrl);
 
   // Group B — Bills (4 tools; votos_materia is registered in Group D)
@@ -43,16 +43,16 @@ export function createServer(env: Env): McpServer {
   // Group E — Committees (5 tools)
   registerComissoesTools(server, baseUrl);
 
-  // Group F — Plenary (1 tool)
+  // Group F — Plenary (7 tools)
   registerPlenarioTools(server, baseUrl);
 
-  // Group C — Processes (2 tools)
+  // Group C — Processes (7 tools)
   registerProcessosTools(server, baseUrl);
 
   // Group G — e-Cidadania (11 tools)
   registerECidadaniaTools(server, baseUrl);
 
-  // Group I — Speeches (4 tools)
+  // Group I — Speeches (5 tools)
   registerDiscursosTools(server, baseUrl);
 
   // Group J — Blocs & Leadership (5 tools)
@@ -64,7 +64,7 @@ export function createServer(env: Env): McpServer {
   // Group L — Federal Law (3 tools)
   registerLegislacaoTools(server, baseUrl);
 
-  // Group M — Committee Voting (2 tools)
+  // Group M — Committee Voting (3 tools)
   registerVotacaoComissaoTools(server, baseUrl);
 
   // Group N — Taquigrafia (2 tools)
