@@ -24,12 +24,14 @@ import { registerContratacoesTools } from "./tools/contratacoes.js";
 import { registerServidoresTools } from "./tools/servidores.js";
 import { registerSupridosTools } from "./tools/supridos.js";
 import { registerOrcamentoSenadoTools } from "./tools/orcamento-senado.js";
+import { registerPrompts } from "./prompts.js";
+import { registerResources } from "./resources.js";
 import type { Env } from "./types.js";
 
 export function createServer(env: Env): McpServer {
   const server = new McpServer({
     name: "senado-br-mcp",
-    version: "3.0.0",
+    version: "3.1.0",
     websiteUrl: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
     icons: [
       {
@@ -124,6 +126,11 @@ export function createServer(env: Env): McpServer {
 
   // Group S — Orçamento do Senado (1 tool)
   registerOrcamentoSenadoTools(server);
+
+  // MCP prompts (4 reusable pt-BR workflow templates) and resources (5 static
+  // context docs/tables) — advertised as the `prompts` and `resources` capabilities.
+  registerPrompts(server);
+  registerResources(server);
 
   return server;
 }
