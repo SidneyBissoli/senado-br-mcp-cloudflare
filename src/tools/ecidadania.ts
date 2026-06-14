@@ -573,7 +573,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G8. senado_ecidadania_sugerir_tema_enquete
   server.tool(
     "senado_ecidadania_sugerir_tema_enquete",
-    "Analisa consultas e ideias do e-Cidadania e sugere temas para enquete mensal. Retorna `{ criteriosAplicados, totalAnalisados, count, sugestoes }` (até 10), cada sugestão com `tipo` (`consulta`/`ideia`), `id`, `titulo`, `motivo`, `metricas` (participação/polarização) e `url`, ordenadas por participação. Critérios opcionais em `criterios`: `evitarPolarizacao`/`evitarConsenso` (padrão true), `minimoParticipacao` (padrão 500), `apenasEmTramitacao`. Para investigar uma sugestão, use `senado_ecidadania_obter_consulta` ou `senado_ecidadania_obter_ideia` conforme o `tipo`.",
+    "Sugere temas para uma enquete pública mensal (seleção de pauta): analisa as consultas e ideias do e-Cidadania e elege as de maior engajamento cidadão, filtrando por polarização/consenso e participação mínima. Retorna `{ criteriosAplicados, totalAnalisados, count, sugestoes }` (até 10), cada sugestão com `tipo` (`consulta`/`ideia`), `id`, `titulo`, `motivo`, `metricas` (participação/polarização) e `url`, ordenadas por participação. Critérios opcionais em `criterios`: `evitarPolarizacao`/`evitarConsenso` (padrão true), `minimoParticipacao` (padrão 500), `apenasEmTramitacao`. Para investigar uma sugestão, use `senado_ecidadania_obter_consulta` ou `senado_ecidadania_obter_ideia` conforme o `tipo`.",
     {
       criterios: z.object({
         evitarPolarizacao: z.boolean().optional().default(true).describe("Evita temas com ~50/50"),

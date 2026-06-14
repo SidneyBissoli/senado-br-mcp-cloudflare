@@ -39,10 +39,11 @@ export function registerOrcamentoTools(server: McpServer, baseUrl: string) {
   // K1. senado_orcamento_parlamentar (tipo: emendas | oficios)
   server.tool(
     "senado_orcamento_parlamentar",
-    "Consulta dados de emendas orçamentárias do Senado pelo parâmetro `tipo` (padrão `emendas`). " +
+    "Lista emendas parlamentares dos senadores ao orçamento da União (e os ofícios de apoio a elas), conforme `tipo` (padrão `emendas`). " +
       "`tipo: emendas` → `{ tipo, count, emendas }`, cada item com `codigo`, `numero`, `ano`, `tipo`, `autor`, `valor` e `descricao`. " +
       "`tipo: oficios` → `{ tipo, count, oficios }`, cada item com `codigo`, `numero`, `data`, `tipo`, `descricao` e `situacao` (ofícios de apoio às emendas). " +
-      "Não recebe outros parâmetros.",
+      "Não recebe outros parâmetros; `count` é 0 e a lista vem vazia quando não há registros. " +
+      "Use para as emendas dos parlamentares ao orçamento federal — para a execução do orçamento interno do próprio Senado (despesas/receitas) use `senado_execucao_orcamentaria`.",
     {
       tipo: z.enum(["emendas", "oficios"]).optional().default("emendas").describe("emendas (lotes de emendas) ou oficios (ofícios de apoio)"),
     },

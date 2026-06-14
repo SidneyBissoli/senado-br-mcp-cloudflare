@@ -196,7 +196,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P4. senado_pessoal_tabelas (quantitativos agregados + listas nominais sob um só enum)
   server.tool(
     "senado_pessoal_tabelas",
-    "Tabelas de pessoal do Senado conforme o parâmetro `tabela`. Quantitativos agregados: `pessoal` (força de trabalho por classe/escolaridade), `cargos-funcoes` (cargos em comissão e funções de confiança), `previsao-aposentadoria`, `senadores`. Listas nominais: `estagiarios` (ativos), `pensionistas`, `lotacoes` (setores), `cargos` (nomes de cargos). Retorna `{ tabela, count, total, aviso?, registros[] }` com os registros brutos, limitados por `limite` (padrão 100, máx 2000). O `filtro` textual opcional casa contra qualquer campo do registro. Para o cadastro nominal de servidores efetivos/comissionados use `senado_servidores`.",
+    "Tabelas de pessoal do Senado conforme o parâmetro `tabela`. Quantitativos agregados: `pessoal` (força de trabalho por classe/escolaridade), `cargos-funcoes` (cargos em comissão e funções de confiança), `previsao-aposentadoria`, `senadores`. Listas nominais: `estagiarios` (ativos), `pensionistas`, `lotacoes` (setores), `cargos` (nomes de cargos). Retorna `{ tabela, count, total, aviso?, registros[] }` — registros agregados (nos quantitativos) ou nominais (nas listas), conforme a `tabela`, limitados por `limite` (padrão 100, máx 2000); `count` 0 e lista vazia quando a tabela não tem registros. O `filtro` textual opcional casa contra qualquer campo do registro. Para o cadastro nominal de servidores efetivos/comissionados use `senado_servidores`.",
     {
       tabela: z.enum([
         "pessoal", "cargos-funcoes", "previsao-aposentadoria", "senadores",
