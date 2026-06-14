@@ -29,7 +29,7 @@ import { registerResources } from "./resources.js";
 import { instrumentTool } from "./instrument.js";
 import type { Env } from "./types.js";
 
-export function createServer(env: Env): McpServer {
+export function createServer(env: Env, ctx?: ExecutionContext): McpServer {
   const server = new McpServer({
     name: "senado-br-mcp",
     version: "3.1.0",
@@ -94,8 +94,8 @@ export function createServer(env: Env): McpServer {
   // Group C — Processes (5 tools)
   registerProcessosTools(server, baseUrl);
 
-  // Group G — e-Cidadania (8 tools)
-  registerECidadaniaTools(server, baseUrl);
+  // Group G — e-Cidadania (8 tools) — reads from D1 (env) and write-through detail (ctx)
+  registerECidadaniaTools(server, baseUrl, env, ctx);
 
   // Group I — Speeches (3 tools)
   registerDiscursosTools(server, baseUrl);
