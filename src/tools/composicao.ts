@@ -84,7 +84,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
   // J2. senado_obter_bloco
   server.tool(
     "senado_obter_bloco",
-    "Obtém detalhes de um bloco parlamentar específico pelo seu código. Retorna um objeto com `codigo`, `nome`, `nomeApelido`, `dataCriacao`, `dataExtincao` e `partidos` (array com `sigla`, `nome`, `dataAdesao`). Obtenha o parâmetro `codigo` primeiro via `senado_listar_blocos`.",
+    "Obtém detalhes de um bloco parlamentar específico pelo seu código. Retorna um objeto com `codigo`, `nome`, `nomeApelido`, `dataCriacao`, `dataExtincao` e `partidos` (array com `sigla`, `nome`, `dataAdesao`); `dataExtincao` é `null` para blocos vigentes. Obtenha o parâmetro `codigo` primeiro via `senado_listar_blocos`; código inexistente retorna erro (\"Bloco parlamentar não encontrado\").",
     {
       codigo: z.number().int().positive().describe("Código do bloco parlamentar"),
     },

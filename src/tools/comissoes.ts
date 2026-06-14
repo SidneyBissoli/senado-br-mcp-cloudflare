@@ -321,7 +321,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // fetches directly and maps empty to an empty list.
   server.tool(
     "senado_requerimentos_cpi",
-    "Lista requerimentos de uma CPI (Comissão Parlamentar de Inquérito) em atividade, pela `siglaCpi`, com paginação por `pagina` (padrão: 0). Retorna `{ siglaCpi, pagina, count, requerimentos }`, onde `requerimentos` é a lista crua de itens da página; CPIs sem requerimentos retornam lista vazia. Descubra as siglas via `senado_listar_comissoes` com `tipo=cpi`.",
+    "Lista requerimentos de uma CPI (Comissão Parlamentar de Inquérito) em atividade, pela `siglaCpi`, com paginação por `pagina` (índice baseado em 0, definido pelo upstream). Retorna `{ siglaCpi, pagina, count, requerimentos }`, onde `requerimentos` é a lista de registros brutos da página (campos conforme a API: tipicamente número, data, ementa, autor e situação do requerimento). `count` é o tamanho da página; uma página além do total retorna `count` 0 — use isso para saber que as páginas acabaram. CPIs sem requerimentos retornam lista vazia. Descubra as siglas via `senado_listar_comissoes` com `tipo=cpi`.",
     {
       siglaCpi: z.string().min(3).describe("Sigla da CPI (ex: CPIVD, CPIPED)"),
       pagina: z.number().int().min(0).optional().default(0).describe("Página da lista (padrão: 0)"),
