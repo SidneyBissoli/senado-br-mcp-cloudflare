@@ -9,3 +9,7 @@ docs/
 imagem-senado.jpg
 icon.jpg
 icon-512.jpg
+
+# Debug screenshots (registry UIs, etc.)
+*.png
+naming.png
