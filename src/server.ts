@@ -26,6 +26,7 @@ import { registerSupridosTools } from "./tools/supridos.js";
 import { registerOrcamentoSenadoTools } from "./tools/orcamento-senado.js";
 import { registerPrompts } from "./prompts.js";
 import { registerResources } from "./resources.js";
+import { instrumentTool } from "./instrument.js";
 import type { Env } from "./types.js";
 
 export function createServer(env: Env): McpServer {
@@ -45,11 +46,13 @@ export function createServer(env: Env): McpServer {
   // Every tool here only reads upstream open data — no writes, no side effects — and
   // reaches external systems (Senate APIs / e-Cidadania) whose data is an open, changing
   // set; and every tool returns a JSON object via toolResult(). Rather than repeat that
-  // metadata at 90 call sites, wrap the group modules' `server.tool(name, desc, shape, cb)`
+  // metadata at every call site, wrap the group modules' `server.tool(name, desc, shape, cb)`
   // calls and route them through registerTool() with shared annotations and a permissive
-  // object outputSchema. toolResult() supplies the matching structuredContent.
+  // object outputSchema. toolResult() supplies the matching structuredContent. The callback
+  // is also wrapped with instrumentTool() so every invocation is counted per tool.
   const outputSchema = z.object({}).passthrough();
   const registerTool = server.registerTool.bind(server);
+  const analytics = env.SENADO_ANALYTICS;
   (server as { tool: unknown }).tool = (
     name: string,
     description: string,
@@ -64,7 +67,7 @@ export function createServer(env: Env): McpServer {
         outputSchema: outputSchema as never,
         annotations: { readOnlyHint: true, openWorldHint: true },
       },
-      cb as never,
+      instrumentTool(name, cb as never, analytics) as never,
     );
 
   const baseUrl = env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
