@@ -21,3 +21,10 @@ ALLOWED_ORIGIN = "*"
 [[kv_namespaces]]
 binding = "CACHE_KV"
 id = "11b79fb8338e4687a332b96124390882"
+
+# Tool-call telemetry — per-tool selection counts, queried via the AE SQL API.
+# The dataset is created on first writeDataPoint; Analytics Engine must be enabled
+# for the account. See instrument.ts for the (privacy-scoped) schema.
+[[analytics_engine_datasets]]
+binding = "SENADO_ANALYTICS"
+dataset = "senado_mcp_tool_calls"

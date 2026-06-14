@@ -4,6 +4,9 @@ export interface Env {
   SENADO_BASE_URL?: string;
   SENADO_ADM_BASE_URL?: string;
   API_KEY?: string;
+  // Tool-call telemetry (per-tool selection counts). Optional so local dev and
+  // tests run without the binding; recordToolCall() degrades to a no-op when absent.
+  SENADO_ANALYTICS?: AnalyticsEngineDataset;
 }
 
 export interface CacheCategory {
