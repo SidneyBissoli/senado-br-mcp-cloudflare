@@ -53,7 +53,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q1. senado_contratos
   server.tool(
     "senado_contratos",
-    "Busca contratos administrativos do Senado por fornecedor, CNPJ, ano, número ou objeto. Filtros aplicados pela própria API.",
+    "Busca contratos administrativos do Senado por fornecedor, CNPJ, ano, número, objeto ou mão de obra (filtros aplicados pela API upstream). Retorna `{ count, total, contratos }`, onde cada item traz `id`, `numero`, `objeto`, `empresa {nome, cnpj}`, `subEspecie`, `dataAssinatura`, `vigencia` e `unidadeGestora`. Limitado a `limite` itens (padrão 50, máx 500), com `aviso` quando há truncamento. Use o `id` retornado em `senado_contratacao_detalhe` para itens, pagamentos, garantias ou aditivos.",
     {
       fornecedor: z.string().optional().describe("Nome do fornecedor (busca parcial)"),
       cnpj: z.string().optional().describe("CNPJ/CPF exato do fornecedor"),
@@ -94,7 +94,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q2. senado_contratacao_detalhe
   server.tool(
     "senado_contratacao_detalhe",
-    "Detalhes de uma contratação (contrato, ata de registro de preço ou nota de empenho): itens, pagamentos, garantias, aditivos ou acionamentos.",
+    "Detalha uma seção específica de uma contratação (contrato, ata de registro de preço ou nota de empenho): `itens`, `pagamentos`, `garantias`, `aditivos` (só `contratos`) ou `acionamentos` (só `atas_registro_preco`). Retorna `{ id, tipo, secao, count, total, itens }` com os registros brutos da seção, limitados a `limite` (padrão 100, máx 500). Obtenha o `id` antes via `senado_contratos` ou `senado_contratacoes_lista`; combinações de seção/tipo inválidas retornam erro.",
     {
       id: z.number().int().positive().describe("ID da contratação (campo 'id' das listas de contratos/atas/empenhos)"),
       tipo: z.enum(["contratos", "atas_registro_preco", "notas_empenho"]).optional().default("contratos").describe("Tipo da contratação"),
@@ -139,7 +139,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q3. senado_licitacoes
   server.tool(
     "senado_licitacoes",
-    "Busca licitações do Senado por número ou texto do objeto.",
+    "Busca licitações do Senado por número exato (ex: `19/2018`) ou texto do objeto. Retorna `{ count, total, licitacoes }` com os registros brutos da API administrativa, limitados a `limite` (padrão 50, máx 500). Exige ao menos `numero` ou `objeto` (sem filtro retorna erro). Para o contrato resultante de uma licitação, use `senado_contratos`.",
     {
       numero: z.string().optional().describe("Número exato da licitação (ex: 19/2018)"),
       objeto: z.string().optional().describe("Texto no objeto da licitação"),
@@ -173,7 +173,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q4. senado_terceirizados
   server.tool(
     "senado_terceirizados",
-    "Lista colaboradores terceirizados do Senado, filtráveis por nome, empresa ou lotação.",
+    "Lista colaboradores terceirizados do Senado, filtráveis (busca parcial, sem acento) por nome, empresa contratada ou lotação. Retorna `{ count, total, terceirizados }`, cada item com `nome`, `cpf`, `situacao`, `empresa`, `lotacao` e `numeroContrato`. A lista completa é baixada e filtrada no Worker; resultados limitados a `limite` (padrão 50, máx 500), com `aviso` ao truncar. Para a empresa contratante e seus contratos, use `senado_empresas_contratadas`.",
     {
       nome: z.string().optional().describe("Nome do colaborador (busca parcial)"),
       empresa: z.string().optional().describe("Nome da empresa contratada (busca parcial)"),
@@ -205,7 +205,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q5. senado_empresas_contratadas
   server.tool(
     "senado_empresas_contratadas",
-    "Busca empresas que contratam com o Senado, com seus contratos, atas e empenhos. Exige filtro por nome ou CNPJ (a base completa é grande).",
+    "Busca empresas que contratam com o Senado por nome (mín. 3 caracteres) ou CNPJ/CPF (busca parcial). Retorna `{ count, total, empresas }`, cada item com `id`, `nome`, `cnpj`, `contratos` (até 30 números), `totalContratos`, `totalAtas` e `totalNotasEmpenho`. Exige `nome` ou `cnpj` (a base completa é grande); limitado a `limite` (padrão 20, máx 100). Use o `id`/número de contrato em `senado_contratos` ou `senado_contratacao_detalhe` para o detalhamento.",
     {
       nome: z.string().min(3).optional().describe("Nome da empresa (busca parcial, mín. 3 caracteres)"),
       cnpj: z.string().optional().describe("CNPJ/CPF (busca parcial)"),
@@ -250,7 +250,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q6. senado_contratacoes_lista
   server.tool(
     "senado_contratacoes_lista",
-    "Lista atas de registro de preço, notas de empenho ou menores aprendizes do Senado, com filtro textual.",
+    "Lista, conforme `tipo`, atas de registro de preço, notas de empenho ou menores aprendizes do Senado, com filtro textual opcional aplicado no Worker sobre todos os campos. Retorna `{ tipo, count, total, registros }`; para atas/empenhos cada registro segue o formato de contrato (`id`, `numero`, `objeto`, `empresa`...), menores aprendizes vêm brutos. Limitado a `limite` (padrão 50, máx 500), com `aviso` ao truncar. Para aprofundar uma ata/empenho, use o `id` em `senado_contratacao_detalhe`.",
     {
       tipo: z.enum(["atas_registro_preco", "notas_empenho", "menores_aprendizes"]).describe("Qual lista consultar"),
       filtro: z.string().optional().describe("Filtro textual (empresa, objeto, etc.)"),

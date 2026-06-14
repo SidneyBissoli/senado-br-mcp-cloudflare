@@ -59,7 +59,7 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
   // N1. senado_notas_taquigraficas
   server.tool(
     "senado_notas_taquigraficas",
-    "Notas taquigráficas (transcrição oficial) de sessões plenárias ou reuniões de comissão. Modo 'resumo' lista os blocos com trechos; modo 'texto' retorna a transcrição integral de até 20 blocos por chamada. Use 'orador' para localizar falas de alguém.",
+    "Obtém as notas taquigráficas (transcrição oficial) de uma sessão plenária ou reunião de comissão. Retorna `{ id, tipo, sessao, data, totalBlocos, blocos }`: no modo `resumo` (padrão) cada bloco traz `sequencia`, `dataInicio/Fim`, `trecho` (primeiros 200 chars), `caracteres` e `linkAudio`; no modo `texto` traz o `texto` integral de no máx. 20 blocos por chamada (controle a janela com `sequenciaInicio`/`sequenciaFim`) e inclui `intervalo`. Obtenha o `id` da sessão via `senado_agenda_plenario`/`senado_resultado_plenario` ou da reunião via `senado_reuniao_comissao`; use `orador` para filtrar blocos por nome e `senado_videos_taquigrafia` para a mídia.",
     {
       id: z.number().int().positive().describe("Código da sessão plenária ou da reunião de comissão"),
       tipo: z.enum(["sessao", "reuniao"]).optional().default("sessao").describe("sessao = plenário (padrão); reuniao = comissão"),
@@ -114,7 +114,7 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
   // N2. senado_videos_taquigrafia
   server.tool(
     "senado_videos_taquigrafia",
-    "Lista os vídeos e áudios (unidades descritivas) de uma sessão plenária ou reunião de comissão, com orador, descrição e links de mídia.",
+    "Lista os vídeos e áudios (unidades descritivas) de uma sessão plenária ou reunião de comissão. Retorna `{ id, tipo, count, videos }`, onde cada item traz `codigo`, `data`, `descricao`, `orador`, `duracaoSegundos`, e links `urlVideo`, `urlAudio`, `urlThumbnail`. Obtenha o `id` da sessão via `senado_agenda_plenario`/`senado_resultado_plenario` ou da reunião via `senado_reuniao_comissao`; use `orador` para filtrar pelo nome de quem fala e `senado_notas_taquigraficas` para a transcrição textual correspondente.",
     {
       id: z.number().int().positive().describe("Código da sessão plenária ou da reunião de comissão"),
       tipo: z.enum(["sessao", "reuniao"]).optional().default("sessao").describe("sessao = plenário (padrão); reuniao = comissão"),

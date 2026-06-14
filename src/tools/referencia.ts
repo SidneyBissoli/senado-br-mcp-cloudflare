@@ -55,7 +55,7 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
   // H1. senado_legislatura_atual
   server.tool(
     "senado_legislatura_atual",
-    "Retorna informações sobre a legislatura vigente, incluindo número, período e datas de início/fim.",
+    "Retorna a legislatura federal vigente. Não recebe parâmetros e responde um objeto `{ numero, periodo, dataInicio, dataFim }` (período no formato `AAAA-AAAA` e datas ISO), derivado da lista de senadores em exercício; usa fallback para a 57ª legislatura (2023-2027) se o cálculo falhar. Use para obter o número/anos da legislatura corrente antes de filtrar buscas; veja `senado_listar_senadores` para o detalhamento dos parlamentares.",
     {},
     async () => {
       try {
@@ -84,7 +84,7 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
   // H2/B5. senado_tipos_materia
   server.tool(
     "senado_tipos_materia",
-    "Lista os tipos de matérias legislativas válidos com sigla, nome completo e descrição. Útil para usar em buscas.",
+    "Lista os tipos de matérias legislativas válidos (tabela de referência fixa). Não recebe parâmetros e responde `{ count, tipos }`, onde cada item de `tipos` traz `sigla` (ex.: `PEC`, `PL`, `MPV`), `nome` completo e `descricao`. Use para descobrir a `sigla` correta de tipo de matéria antes de chamar `senado_buscar_materias` ou `senado_search_processos`.",
     {},
     async () => toolResult({ count: TIPOS_MATERIA.length, tipos: TIPOS_MATERIA }),
   );
@@ -92,7 +92,7 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
   // H3. senado_partidos
   server.tool(
     "senado_partidos",
-    "Lista partidos com representação atual no Senado, incluindo sigla, nome completo e número de senadores.",
+    "Lista os partidos com representação atual no Senado. Não recebe parâmetros e responde `{ count, totalSenadores, partidos }`, com `partidos` ordenado por bancada decrescente e cada item trazendo `sigla`, `nome` e `senadores` (contagem). Derivado da lista de senadores em exercício; para a relação nominal de parlamentares use `senado_listar_senadores` e para blocos partidários veja `senado_listar_blocos`.",
     {},
     async () => {
       try {
@@ -117,7 +117,7 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
   // H4. senado_ufs
   server.tool(
     "senado_ufs",
-    "Lista unidades federativas com número de senadores atualmente em exercício por estado.",
+    "Lista as 27 unidades federativas com a contagem de senadores em exercício por estado. Não recebe parâmetros e responde `{ count, totalSenadores, ufs }`, onde cada item de `ufs` traz `sigla`, `nome` e `senadores` (0 quando não há parlamentar em exercício no momento). Use para obter a `sigla` de UF válida ao filtrar `senado_listar_senadores` ou outras buscas por estado.",
     {},
     async () => {
       try {

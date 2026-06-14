@@ -59,7 +59,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
   // J1. senado_listar_blocos
   server.tool(
     "senado_listar_blocos",
-    "Lista os blocos parlamentares do Senado e seus partidos membros.",
+    "Lista todos os blocos parlamentares do Senado e seus partidos membros. Retorna `{ count, blocos }`, onde cada bloco traz `codigo`, `nome`, `nomeApelido`, `dataCriacao`, `dataExtincao` e a lista `partidos` (cada um com `sigla`, `nome`, `dataAdesao`). Use para descobrir o `codigo` de um bloco e depois detalhá-lo via `senado_obter_bloco`; para lideranças use `senado_liderancas`.",
     {},
     async () => {
       try {
@@ -84,7 +84,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
   // J2. senado_obter_bloco
   server.tool(
     "senado_obter_bloco",
-    "Obtém detalhes de um bloco parlamentar específico, incluindo partidos membros.",
+    "Obtém detalhes de um bloco parlamentar específico pelo seu código. Retorna um objeto com `codigo`, `nome`, `nomeApelido`, `dataCriacao`, `dataExtincao` e `partidos` (array com `sigla`, `nome`, `dataAdesao`). Obtenha o parâmetro `codigo` primeiro via `senado_listar_blocos`.",
     {
       codigo: z.number().int().positive().describe("Código do bloco parlamentar"),
     },
@@ -108,7 +108,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
   // J3. senado_liderancas
   server.tool(
     "senado_liderancas",
-    "Lista as lideranças do Senado e do Congresso Nacional (líderes, vice-líderes, etc.).",
+    "Lista as lideranças do Senado e do Congresso Nacional (líderes, vice-líderes etc.). Retorna `{ count, liderancas }`, cada item com `tipo`, `descricao`, `unidadeLideranca` e `parlamentar` (`codigo`, `nome`, `partido`, `uf`). Filtre por `casa` (SF/CN), `codigoParlamentar`, `vigente` (S/N) ou `siglaTipoLideranca`; sem filtros retorna todas. Para a composição de blocos use `senado_listar_blocos`.",
     {
       casa: z.string().optional().describe("Casa legislativa (SF=Senado, CN=Congresso)"),
       codigoParlamentar: z.number().int().optional().describe("Código do parlamentar"),
@@ -144,7 +144,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
   // J4. senado_mesa_senado
   server.tool(
     "senado_mesa_senado",
-    "Lista os membros da Mesa Diretora do Senado Federal (presidente, vice-presidentes, secretários).",
+    "Lista os membros da Mesa Diretora do Senado Federal (presidente, vice-presidentes, secretários). Retorna `{ mesa: \"Senado Federal\", count, membros }`, cada membro com `cargo`, `codigo`, `nome`, `partido` e `uf`. Não requer parâmetros. Para a Mesa do Congresso Nacional use `senado_mesa_congresso`.",
     {},
     async () => {
       try {
@@ -169,7 +169,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
   // J5. senado_mesa_congresso
   server.tool(
     "senado_mesa_congresso",
-    "Lista os membros da Mesa Diretora do Congresso Nacional.",
+    "Lista os membros da Mesa Diretora do Congresso Nacional. Retorna `{ mesa: \"Congresso Nacional\", count, membros }`, cada membro com `cargo`, `codigo`, `nome`, `partido` e `uf`. Não requer parâmetros. Para a Mesa exclusiva do Senado Federal use `senado_mesa_senado`.",
     {},
     async () => {
       try {

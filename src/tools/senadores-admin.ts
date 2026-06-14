@@ -71,7 +71,7 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
   // O1. senado_ceaps
   server.tool(
     "senado_ceaps",
-    "Despesas da Cota para Exercício da Atividade Parlamentar (CEAPS) dos senadores. Modos agregados (por senador, tipo de despesa, mês ou fornecedor) ou detalhe das despesas individuais. Filtre por senador, mês, tipo ou fornecedor.",
+    "Despesas da Cota para Exercício da Atividade Parlamentar (CEAPS) dos senadores em um ano. Retorna `{ ano, modo, totalDespesas, valorTotal, ... }`: nos modos agregados (`por-senador`/`por-tipo`/`por-mes`/`por-fornecedor`, padrão `por-senador`) traz `agregado[]` ordenado por `total` desc com `chave`, `total` e `despesas` (contagem); em `modo='detalhe'` traz `despesas[]` (mês, data, senador, tipoDespesa, fornecedor, cnpjCpf, valor). Filtre por `mes`, `codSenador`, `nomeSenador`, `tipoDespesa` ou `fornecedor` (busca parcial); `limite` cap 100 com `aviso` ao truncar. Obtenha `codSenador` via `senado_listar_senadores`.",
     {
       ano: z.number().int().min(2008).max(2100).describe("Ano das despesas"),
       modo: z.enum(["por-senador", "por-tipo", "por-mes", "por-fornecedor", "detalhe"]).optional().default("por-senador").describe("Agregação ou detalhe (padrão: por-senador)"),
@@ -134,7 +134,7 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
   // O2. senado_auxilio_moradia
   server.tool(
     "senado_auxilio_moradia",
-    "Lista senadores que recebem auxílio-moradia ou ocupam imóvel funcional em Brasília.",
+    "Lista senadores que recebem auxílio-moradia ou ocupam imóvel funcional em Brasília. Retorna `{ count, senadores }`, onde cada item traz `nome`, `uf`, `partido`, `auxilioMoradia` e `imovelFuncional`. Não requer parâmetros e cobre apenas a legislatura atual; para gastos com cota parlamentar use `senado_ceaps`.",
     {},
     async () => {
       try {
@@ -158,7 +158,7 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
   // O3. senado_escritorios_apoio
   server.tool(
     "senado_escritorios_apoio",
-    "Lista escritórios de apoio dos senadores nos estados, com endereço e telefone.",
+    "Lista escritórios de apoio dos senadores nos estados, com endereço e telefone. Retorna `{ count, escritorios }`, cada item com `senador`, `uf`, `partido`, `setor`, `endereco` e `telefone`. Filtre opcionalmente por `uf` (sigla, ex: SP) e/ou `nome` do senador (busca parcial); sem filtros lista todos. Para dados gerais do senador use `senado_listar_senadores`.",
     {
       uf: z.string().max(2).optional().describe("Filtrar por estado (ex: SP)"),
       nome: z.string().optional().describe("Filtrar por nome do senador (busca parcial)"),
@@ -193,7 +193,7 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
   // O4. senado_senadores_aposentados
   server.tool(
     "senado_senadores_aposentados",
-    "Lista ex-senadores aposentados pelos planos de previdência do Congresso (IPC/PSSC), com remuneração.",
+    "Lista ex-senadores aposentados pelos planos de previdência do Congresso (IPC/PSSC), com remuneração. Retorna `{ count, aposentados }`, cada item com `nome`, `tipo` (plano), `dataInicial` da aposentadoria e `remuneracao`. Não requer parâmetros; cobre apenas ex-parlamentares aposentados. Para remuneração de servidores ativos use `senado_remuneracoes_servidores`.",
     {},
     async () => {
       try {

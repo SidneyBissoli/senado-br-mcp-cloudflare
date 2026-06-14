@@ -39,7 +39,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E1. senado_listar_comissoes
   server.tool(
     "senado_listar_comissoes",
-    "Lista comissões do Senado. Pode filtrar por tipo (permanente, temporária, CPI, mista) e status (ativa/inativa).",
+    "Lista comissões (colegiados) ativas do Senado, com filtros por `tipo` (permanente, temporaria, cpi, mista) e `ativa`. Retorna `{ count, comissoes }`, cada item com `codigo`, `sigla`, `nome`, `tipo`, `casa` e `ativa`. O endpoint só traz comissões ativas, logo `ativa=false` resulta em lista vazia. Use para descobrir a `sigla` exigida por `senado_obter_comissao`, `senado_membros_comissao` e `senado_reunioes_comissao`.",
     {
       tipo: z.enum(["permanente", "temporaria", "cpi", "mista"]).optional().describe("Tipo: permanente, temporaria, cpi, mista"),
       ativa: z.boolean().optional().describe("Apenas comissões ativas"),
@@ -83,7 +83,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E2. senado_obter_comissao
   server.tool(
     "senado_obter_comissao",
-    "Obtém detalhes de uma comissão, incluindo presidente, vice-presidente e finalidade.",
+    "Obtém detalhes de uma comissão pela `sigla`. Retorna um objeto com `codigo`, `sigla`, `nome`, `finalidade`, `presidente` e `vicePresidente` (cada um com `nome`, `codigo`, `bancada`) e os totais `totalMembros`, `titulares` e `suplentes`. A sigla é resolvida internamente para código numérico; descubra-a via `senado_listar_comissoes`. Para a composição completa de membros use `senado_membros_comissao`.",
     {
       sigla: z.string().min(2).describe("Sigla da comissão (ex: CCJ, CAE)"),
     },
@@ -130,7 +130,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E3. senado_membros_comissao
   server.tool(
     "senado_membros_comissao",
-    "Lista membros atuais de uma comissão, incluindo cargo (presidente, vice, titular, suplente).",
+    "Lista os membros da última composição de uma comissão pela `sigla`. Retorna `{ sigla, count, membros }`, cada membro com `codigo`, `nome`, `tipoVaga` (titular/suplente), `ativo` e `dataInicio`. Obtenha a `sigla` via `senado_listar_comissoes`. Para presidente, vice e totais resumidos use `senado_obter_comissao`.",
     {
       sigla: z.string().min(2).describe("Sigla da comissão"),
     },
@@ -163,7 +163,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E4. senado_reunioes_comissao
   server.tool(
     "senado_reunioes_comissao",
-    "Lista reuniões agendadas ou realizadas de uma comissão, com data, hora, local e pauta.",
+    "Lista reuniões de uma comissão (pela `sigla`) num intervalo `dataInicio`/`dataFim` (YYYYMMDD); sem datas, usa os últimos 30 dias. Retorna `{ sigla, periodo, count, reunioes }`, cada reunião com `codigo`, `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. Intervalos entre anos são divididos por ano internamente. Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` retornado em `senado_reuniao_comissao` para os detalhes da pauta.",
     {
       sigla: z.string().min(2).describe("Sigla da comissão"),
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
@@ -235,7 +235,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E5. senado_agenda_comissoes
   server.tool(
     "senado_agenda_comissoes",
-    "Obtém agenda de reuniões das comissões do Senado. Pode filtrar por data e comissão específica.",
+    "Obtém a agenda de reuniões de todas as comissões numa data (`data` YYYYMMDD; padrão: hoje), com filtro opcional `siglaComissao`. Retorna `{ data, siglaComissao, count, reunioes }`, cada reunião com `codigo`, `comissao` (`sigla`, `nome`), `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. Para o histórico de uma única comissão por período use `senado_reunioes_comissao`; para detalhes de uma reunião use `senado_reuniao_comissao` com o `codigo`.",
     {
       data: z.string().regex(/^\d{8}$/).optional().describe("Data específica (YYYYMMDD)"),
       siglaComissao: z.string().min(2).optional().describe("Filtrar por comissão específica"),
@@ -274,7 +274,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E6. senado_reuniao_comissao
   server.tool(
     "senado_reuniao_comissao",
-    "Detalhes de uma reunião de comissão: partes da pauta, itens apreciados, presidente, situação e links de pauta/resultado/ata. O código vem da agenda de comissões.",
+    "Detalha uma reunião de comissão pelo `codigoReuniao`. Retorna um objeto com `codigo`, `titulo`, `comissao`, `data`, `hora`, `local`, `situacao`, `realizada`, `secreta`, `presidente`, links `urlPauta`/`urlResultado`/`urlAta` e `partes` (cada parte com `evento` e `itens` apreciados: `identificacao`, `ementa`, `relator`, `resultado`). Obtenha o `codigoReuniao` em `senado_agenda_comissoes` ou `senado_reunioes_comissao`.",
     {
       codigoReuniao: z.number().int().positive().describe("Código da reunião (campo 'codigo' na agenda de comissões)"),
     },
@@ -331,7 +331,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // fetches directly and maps empty to an empty list.
   server.tool(
     "senado_requerimentos_cpi",
-    "Lista requerimentos de uma CPI (Comissão Parlamentar de Inquérito) em atividade, paginados. Use senado_listar_comissoes com tipo=cpi para descobrir as siglas.",
+    "Lista requerimentos de uma CPI (Comissão Parlamentar de Inquérito) em atividade, pela `siglaCpi`, com paginação por `pagina` (padrão: 0). Retorna `{ siglaCpi, pagina, count, requerimentos }`, onde `requerimentos` é a lista crua de itens da página; CPIs sem requerimentos retornam lista vazia. Descubra as siglas via `senado_listar_comissoes` com `tipo=cpi`.",
     {
       siglaCpi: z.string().min(3).describe("Sigla da CPI (ex: CPIVD, CPIPED)"),
       pagina: z.number().int().min(0).optional().default(0).describe("Página da lista (padrão: 0)"),
@@ -396,7 +396,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E8. senado_distribuicao_materias
   server.tool(
     "senado_distribuicao_materias",
-    "Estatísticas de distribuição de matérias numa comissão: quantas matérias cada parlamentar tem como autor (autoria) ou como relator (relatoria). Útil para medir carga de trabalho legislativo.",
+    "Estatísticas de distribuição de matérias numa comissão (pela `siglaComissao`), por `tipo`: autoria (matérias por autor; padrão) ou relatoria (matérias relatadas); `codigoParlamentar` filtra apenas em autoria. Retorna `{ siglaComissao, tipo, count, parlamentares }` ordenado por `quantidade` desc, cada item com `codigo`, `nome`, `partido`, `uf` e `quantidade`. Útil para medir carga de trabalho legislativo; obtenha a sigla via `senado_listar_comissoes`.",
     {
       siglaComissao: z.string().min(2).describe("Sigla da comissão (ex: CCJ, CAE)"),
       tipo: z.enum(["autoria", "relatoria"]).optional().default("autoria").describe("autoria = matérias de autoria por parlamentar (padrão); relatoria = matérias relatadas"),

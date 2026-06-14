@@ -26,7 +26,7 @@ export function registerSupridosTools(server: McpServer, admBaseUrl: string) {
   // R1. senado_suprimento_fundos
   server.tool(
     "senado_suprimento_fundos",
-    "Suprimento de fundos do Senado (adiantamentos a supridos): relação anual de supridos, atos de concessão, empenhos, movimentações ou transações de cartão corporativo.",
+    "Suprimento de fundos do Senado (adiantamentos a supridos): relação anual de supridos, atos de concessão, empenhos, movimentações ou transações de cartão corporativo, conforme `tipo`. Retorna `{ ano, tipo, count, total, registros }` (snake_case da API administrativa), filtrável por `filtro` textual e limitado por `limite` (padrão 100, máx 500); ao truncar, inclui `aviso`. Informe o `ano` (>=2010); use os mesmos códigos administrativos vistos em `senado_contratacoes_lista` ou `senado_execucao_orcamentaria` para cruzar gastos.",
     {
       ano: z.number().int().min(2010).max(2100).describe("Ano de referência"),
       tipo: z.enum(["supridos", "atos-concessao", "empenhos", "movimentacoes", "transacoes"]).optional().default("supridos").describe("Qual relação consultar (padrão: supridos)"),

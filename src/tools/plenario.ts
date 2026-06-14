@@ -123,7 +123,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F1. senado_agenda_plenario
   server.tool(
     "senado_agenda_plenario",
-    "Obtém agenda de sessões de plenário (Senado ou Congresso Nacional), por dia ou mês, incluindo pauta com matérias a serem votadas.",
+    "Obtém a agenda de sessões de plenário (Senado ou Congresso Nacional), por dia ou mês, com a pauta de matérias a votar. Retorna `{ data, escopo, count, sessoes }`, onde cada sessão traz `codigo`, `data`, `hora`, `tipo`, `situacao` e `pauta` (matéria, ementa, relator). Use `escopo` dia/mes/cn; sem `data` assume hoje. Para o resultado já apreciado use `senado_resultado_plenario`; detalhes de uma sessão via `senado_encontro_plenario`.",
     {
       data: z.string().regex(/^\d{8}$/).optional().describe("Data específica (YYYYMMDD; padrão: hoje)"),
       escopo: z.enum(["dia", "mes", "cn"]).optional().default("dia").describe("dia = SF+CN no dia; mes = mês inteiro; cn = plenário do Congresso"),
@@ -181,7 +181,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F2. senado_resultado_plenario
   server.tool(
     "senado_resultado_plenario",
-    "Resultado das sessões plenárias numa data: itens de pauta apreciados, pareceres e resultados. Escopo: Senado (sf), Congresso (cn) ou mês inteiro (mes).",
+    "Resultado das sessões plenárias numa data: itens de pauta apreciados, pareceres e resultados. Retorna `{ data, escopo, count, sessoes }`, com cada sessão trazendo `codigoSessao`, `numeroSessao`, `data`, `hora`, `tipo`, `casa` e `itens` (`codigoMateria`, `identificacao`, `ementa`, `resultado`, `parecer`). `escopo`: sf (Senado), cn (Congresso) ou mes (resumo do mês). Para a pauta prévia use `senado_agenda_plenario`; orientação de bancada via `senado_orientacao_bancada`.",
     {
       data: z.string().regex(/^\d{8}$/).describe("Data da sessão (YYYYMMDD); para escopo=mes, qualquer dia do mês"),
       escopo: z.enum(["sf", "cn", "mes"]).optional().default("sf").describe("sf = Senado no dia; cn = Congresso no dia; mes = resumo do mês"),
@@ -208,7 +208,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F3. senado_orientacao_bancada
   server.tool(
     "senado_orientacao_bancada",
-    "Orientação de bancada nas votações de plenário: como cada liderança partidária orientou o voto, com placar da votação. Essencial para análise de disciplina partidária.",
+    "Orientação de bancada nas votações de plenário: como cada liderança partidária orientou o voto, com placar — essencial para análise de disciplina partidária. Retorna `{ count, votacoes }`, com cada votação trazendo `codigoVotacao`, `descricao`, `materia`, `dataInicio`, `sessao`, totais (`totalSim`, `totalNao`, `totalAbstencao`, `obstrucoes`) e `orientacoes` (`partido`, `voto`). Informe `data` (um dia) ou o período `dataInicio`/`dataFim`. Para o resultado das sessões use `senado_resultado_plenario`.",
     {
       data: z.string().regex(/^\d{8}$/).optional().describe("Data da sessão (YYYYMMDD)"),
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início do período (YYYYMMDD)"),
@@ -239,7 +239,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F4. senado_vetos
   server.tool(
     "senado_vetos",
-    "Lista vetos presidenciais em apreciação pelo Congresso Nacional — por ano ou por status de tramitação.",
+    "Lista vetos presidenciais em apreciação pelo Congresso Nacional, por ano ou por status de tramitação. Retorna `{ count, total, aviso?, vetos }`, com cada veto trazendo `codigo`, `identificacao`, `ementa`, `emTramitacao`, `materiaVetada` e `dataLimiteVotacao`. `limite` controla o corte (padrão 100; `aviso` indica truncagem). Informe `ano` OU `status` (tramitando/antes-rcn/encerrados). Para o resultado da votação de um veto use `senado_resultado_veto`.",
     {
       ano: z.number().int().min(1990).max(2100).optional().describe("Vetos do ano informado"),
       status: z.enum(["tramitando", "antes-rcn", "encerrados"]).optional().describe("tramitando = pós-RCN 1/2013 em tramitação (padrão); antes-rcn = anteriores à RCN; encerrados = tramitação encerrada"),
@@ -276,7 +276,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F5. senado_resultado_veto
   server.tool(
     "senado_resultado_veto",
-    "Resultado da votação nominal de um veto presidencial — pelo código do veto, da matéria vetada ou do dispositivo (em vetos parciais).",
+    "Resultado da votação nominal de um veto presidencial. Retorna `{ codigo, tipo, resultado }`, onde `resultado` é o objeto bruto (já sem wrappers) com os dados da votação. Informe `codigo` e `tipo`: veto (código do veto, padrão), materia (código do projeto vetado) ou dispositivo (dispositivo de veto parcial). Obtenha o código do veto via `senado_vetos`.",
     {
       codigo: z.number().int().positive().describe("Código do veto, da matéria ou do dispositivo, conforme o tipo"),
       tipo: z.enum(["veto", "materia", "dispositivo"]).optional().default("veto").describe("veto = código do veto (padrão); materia = código do projeto vetado; dispositivo = dispositivo de veto parcial"),
@@ -302,7 +302,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F6. senado_encontro_plenario
   server.tool(
     "senado_encontro_plenario",
-    "Detalhes de um encontro legislativo (sessão de plenário): dados gerais, pauta, resultado ou resumo. O código vem da agenda ou do resultado do plenário.",
+    "Detalhes de um encontro legislativo (sessão de plenário): dados gerais, pauta, resultado ou resumo. Retorna `{ codigo, secao, encontro }`, onde `encontro` é o objeto da sessão (ou array, quando há vários). Escolha `secao`: detalhes (padrão), pauta, resultado ou resumo. Obtenha o `codigo` via `senado_agenda_plenario` ou `senado_resultado_plenario`.",
     {
       codigo: z.number().int().positive().describe("Código do encontro/sessão"),
       secao: z.enum(["detalhes", "pauta", "resultado", "resumo"]).optional().default("detalhes").describe("Qual seção do encontro consultar"),
@@ -332,7 +332,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F7. senado_tabelas_plenario
   server.tool(
     "senado_tabelas_plenario",
-    "Tabelas de referência do plenário: tipos de sessão, tipos de comparecimento em votações e lista de legislaturas com sessões legislativas.",
+    "Tabelas de referência do plenário para resolver códigos e domínios. Retorna `{ tabela, count, total, linhas }` com as linhas da tabela escolhida em `tabela`: tipos-sessao, tipos-comparecimento ou legislaturas. `filtro` faz busca textual e `limite` corta o resultado (padrão 100). Use para interpretar campos como `tipo` retornados por `senado_agenda_plenario` e `senado_resultado_plenario`.",
     {
       tabela: z.enum(["tipos-sessao", "tipos-comparecimento", "legislaturas"]).describe("Tabela de referência a consultar"),
       filtro: z.string().optional().describe("Filtro textual"),

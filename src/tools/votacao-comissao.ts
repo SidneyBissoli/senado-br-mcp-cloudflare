@@ -38,7 +38,7 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
   // M1. senado_votacao_comissao
   server.tool(
     "senado_votacao_comissao",
-    "Lista votações realizadas numa comissão específica, com filtro por período.",
+    "Lista votações realizadas numa comissão específica, com filtro opcional por período (`dataInicio`/`dataFim`, YYYYMMDD). Retorna `{ siglaComissao, count, votacoes }`, onde cada votação traz `codigo`, `data`, `comissao`, `materia`, `descricao`, `resultado`, totais (`totalSim`/`totalNao`/`totalAbstencao`) e a lista `votos` (senador, partido e voto). Sem paginação. Obtenha siglas de comissão via `senado_listar_comissoes`; para votos de um senador use `senado_votacao_comissao_senador`.",
     {
       siglaComissao: z.string().min(2).describe("Sigla da comissão (ex: CCJ, CAE)"),
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
@@ -72,7 +72,7 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
   // M2. senado_votacao_comissao_senador
   server.tool(
     "senado_votacao_comissao_senador",
-    "Lista os votos de um senador em comissões, com filtro por comissão e período.",
+    "Lista os votos de um senador em comissões, com filtros opcionais por `comissao` (sigla) e período (`dataInicio`/`dataFim`, YYYYMMDD). Retorna `{ codigoSenador, count, votacoes }`, cada votação com `codigo`, `data`, `comissao`, `materia`, `resultado`, totais e a lista `votos`. Sem paginação. Obtenha o `codigoSenador` via `senado_buscar_senador_por_nome` ou `senado_listar_senadores`; para todas as votações de uma comissão use `senado_votacao_comissao`.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
       comissao: z.string().optional().describe("Sigla da comissão para filtrar"),
@@ -107,7 +107,7 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
   // M3. senado_votacao_comissao_materia
   server.tool(
     "senado_votacao_comissao_materia",
-    "Lista votações de uma matéria específica nas comissões, identificada por sigla, número e ano (ex: PL 2630/2020).",
+    "Lista votações de uma matéria específica nas comissões, identificada por `sigla`, `numero` e `ano` (ex: PL 2630/2020), com filtros opcionais por `comissao` e período (YYYYMMDD). Retorna `{ materia, count, votacoes }`, cada votação com `codigo`, `data`, `comissao`, `descricao`, `resultado`, totais e a lista `votos`. Sem paginação. Identifique a proposição via `senado_buscar_materias`; para votações no plenário (não em comissões) use `senado_votos_materia`.",
     {
       sigla: z.string().min(2).describe("Sigla do tipo da proposição (ex: PL, PEC)"),
       numero: z.number().int().positive().describe("Número da proposição"),

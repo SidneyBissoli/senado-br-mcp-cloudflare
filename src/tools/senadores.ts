@@ -121,7 +121,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
   // A1. senado_listar_senadores
   server.tool(
     "senado_listar_senadores",
-    "Lista senadores em exercício ou de uma legislatura específica. Pode filtrar por UF e partido.",
+    "Lista senadores em exercício ou de uma legislatura específica, opcionalmente filtrados por UF e partido. Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`. Use `emExercicio` (padrão `true`) ou `legislatura` para escolher o conjunto; `uf`/`partido` filtram localmente. Use `codigo` em `senado_obter_senador` ou `senado_votacoes_senador`; se só tiver o nome, prefira `senado_buscar_senador_por_nome`.",
     {
       emExercicio: z.boolean().optional().default(true).describe("Filtrar apenas senadores em exercício"),
       legislatura: z.number().int().min(1).optional().describe("Número da legislatura (ex: 57 para 2023-2027)"),
@@ -155,7 +155,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
   // A2. senado_buscar_senador_por_nome
   server.tool(
     "senado_buscar_senador_por_nome",
-    "Busca senadores por nome (útil quando não se tem o código). Retorna lista de senadores correspondentes.",
+    "Busca senadores atuais por nome (correspondência parcial, ignorando acentos e maiúsculas), útil quando não se tem o código. Retorna `{ count, senadores }` com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`. Pesquisa apenas entre os senadores em exercício; use o `codigo` retornado em `senado_obter_senador`, `senado_senador_detail` ou `senado_votacoes_senador`. Para senadores fora de exercício veja `senado_senadores_afastados`.",
     {
       nome: z.string().min(2).describe("Nome ou parte do nome do senador"),
     },
@@ -182,7 +182,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
   // A3. senado_obter_senador
   server.tool(
     "senado_obter_senador",
-    "Obtém informações detalhadas de um senador específico, incluindo dados biográficos, mandatos e comissões.",
+    "Obtém o detalhe biográfico de um senador específico. Retorna um objeto com `codigo`, `nome`, `nomeCompleto`, `nomeCivil`, `sexo`, `dataNascimento`, `naturalidade`/`ufNaturalidade`, `partido`, `uf`, `foto`, `email` e a lista `mandatos` (`legislatura`, `uf`, `participacao`, `dataInicio`, `dataFim`). Requer `codigoSenador` — obtenha-o via `senado_buscar_senador_por_nome` ou `senado_listar_senadores`. Para filiações/profissão use `senado_senador_detail`; para licenças/comissões/cargos use `senado_senador_historico`.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador no sistema do Senado"),
     },
@@ -205,7 +205,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
   // A4. senado_votacoes_senador (migrated to v3 /votacao?codigoParlamentar — legacy endpoint deprecated)
   server.tool(
     "senado_votacoes_senador",
-    "Lista votações nominais de um senador, mostrando como votou em cada matéria. Sem período informado, usa o ano corrente.",
+    "Lista as votações nominais de um senador, mostrando como votou em cada matéria. Retorna `{ periodo, count, votos }`, cada voto com `codigoVotacao`, `data`, `materia`, `descricao`, `voto` e `resultado`, ordenados da mais recente para a mais antiga. Sem período usa o ano corrente; informe `ano` ou o par `dataInicio`/`dataFim` (YYYYMMDD). Requer `codigoSenador` (obtenha via `senado_buscar_senador_por_nome`); para detalhes de uma votação específica use `senado_obter_votacao`.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
       ano: z.number().int().min(1900).max(2100).optional().describe("Ano das votações"),
@@ -248,7 +248,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
   // A5. senado_senador_detail (NEW — aggregated view)
   server.tool(
     "senado_senador_detail",
-    "Visão agregada e enriquecida de um senador, combinando mandatos, filiações e profissão numa única chamada.",
+    "Visão agregada de um senador, combinando mandatos, filiações partidárias e profissões numa única chamada. Retorna `{ codigoSenador, mandatos, filiacoes, profissoes }`: `mandatos` (`legislatura`, `uf`, `participacao`, `dataInicio`, `dataFim`), `filiacoes` (`partido`, `nomePartido`, `dataFiliacao`, `dataDesfiliacao`) e `profissoes` (`nome`); seções indisponíveis no upstream voltam vazias. Requer `codigoSenador` (obtenha via `senado_buscar_senador_por_nome`). Para o detalhe biográfico básico use `senado_obter_senador`; para licenças/comissões/cargos use `senado_senador_historico`.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
     },
@@ -308,7 +308,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
   // A6. senado_senador_historico
   server.tool(
     "senado_senador_historico",
-    "Histórico funcional de um senador: licenças oficiais, comissões das quais é membro, cargos ocupados em comissões ou histórico acadêmico.",
+    "Histórico funcional de um senador conforme o parâmetro `tipo`: `licencas`, `comissoes`, `cargos` ou `historico-academico`. Retorna `{ codigoSenador, tipo, count, itens }`, onde a forma de cada item depende do `tipo` (licenças têm `dataInicio`/`dataFim`/`descricao`; comissões têm `sigla`/`nome`/`participacao`; cargos têm `comissao`/`cargo`/`datas`). Requer `codigoSenador` (obtenha via `senado_buscar_senador_por_nome`). Para dados biográficos use `senado_obter_senador` e para filiações/profissão `senado_senador_detail`.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
       tipo: z.enum(["licencas", "comissoes", "cargos", "historico-academico"]).describe("Qual histórico consultar"),
@@ -355,7 +355,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
   // A7. senado_senadores_afastados
   server.tool(
     "senado_senadores_afastados",
-    "Lista os senadores atualmente afastados (fora de exercício), com partido e UF.",
+    "Lista os senadores atualmente afastados (fora de exercício). Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio` (sempre `false`). Não requer parâmetros. Use `codigo` em `senado_obter_senador` para o detalhe; para os senadores em exercício use `senado_listar_senadores` e para localizar pelo nome `senado_buscar_senador_por_nome`.",
     {},
     async () => {
       try {

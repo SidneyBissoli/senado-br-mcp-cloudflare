@@ -124,7 +124,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C1. senado_search_processos
   server.tool(
     "senado_search_processos",
-    "Busca processos legislativos usando o endpoint de processos da API. Oferece parâmetros de busca diferentes/complementares ao senado_buscar_materias. É obrigatório informar pelo menos um parâmetro de busca.",
+    "Busca processos legislativos no endpoint v3 `/processo` (parâmetros complementares ao `senado_buscar_materias`). Retorna `{ count, processos }`, cada item com `id`, `codigoMateria`, `identificacao`, `ementa`, `tipoDocumento`, `dataApresentacao`, `autoria`, `tramitando` e `normaGerada`. É obrigatório ao menos um filtro (sigla, número, ano, autor ou período; janela de datas máx. 1 ano). Use o `id` retornado em `senado_obter_processo` para detalhes.",
     {
       sigla: z.string().optional().describe("Sigla do tipo de processo (ex: PL, PEC)"),
       numero: z.number().int().optional().describe("Número do processo"),
@@ -164,7 +164,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C2. senado_obter_processo
   server.tool(
     "senado_obter_processo",
-    "Obtém detalhes completos de um processo legislativo específico, incluindo tramitação.",
+    "Obtém detalhes completos de um processo legislativo específico pelo seu `id`. Retorna um objeto com `id`, `codigoMateria`, `identificacao`, `sigla`, `numero`, `ano`, `objetivo`, `ementa`, `tipoConteudo`, `dataApresentacao`, `autoria`, `indexacao`, `urlDocumento` e `tramitando`. Obtenha o `idProcesso` antes via `senado_search_processos` ou `senado_buscar_materias`; para emendas, relatorias ou prazos use as ferramentas `senado_*_processo` específicas.",
     {
       idProcesso: z.number().int().positive().describe("ID do processo legislativo"),
     },
@@ -186,7 +186,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C3. senado_emendas_processo
   server.tool(
     "senado_emendas_processo",
-    "Lista emendas apresentadas a um processo legislativo, com autoria, colegiado e decisões. Informe idProcesso ou codigoMateria.",
+    "Lista emendas apresentadas a um processo legislativo. Retorna `{ count, total, emendas }` (com `aviso` quando truncado), cada emenda com `id`, `identificacao`, `numero`, `tipo`, `autoria`, `data`, `colegiado`, `descricao`, `decisoes` e `url`. Informe pelo menos um filtro (`idProcesso`, `codigoMateria`, `codigoParlamentarAutor` ou período); `limite` padrão 100 (máx. 500). Obtenha o `idProcesso` via `senado_search_processos`.",
     {
       idProcesso: z.number().int().positive().optional().describe("ID do processo emendado"),
       codigoMateria: z.number().int().positive().optional().describe("Código legado da matéria emendada"),
@@ -228,7 +228,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C4. senado_relatorias_processo
   server.tool(
     "senado_relatorias_processo",
-    "Lista relatorias de processos legislativos — por processo, matéria, relator ou colegiado. Útil para saber quem relata o quê.",
+    "Lista relatorias de processos legislativos — por processo, matéria, relator, colegiado ou período. Retorna `{ count, total, relatorias }` (com `aviso` quando truncado), cada item com `idProcesso`, `processo`, `relator`, `partido`, `uf`, `tipoRelator`, `comissao`, `dataDesignacao`, `dataDestituicao` e `motivoEncerramento`. Exige ao menos um filtro; `limite` padrão 100 (máx. 500). Obtenha `idProcesso` via `senado_search_processos` ou `codigoParlamentar` via `senado_listar_senadores`.",
     {
       idProcesso: z.number().int().positive().optional().describe("ID do processo relatado"),
       codigoMateria: z.number().int().positive().optional().describe("Código legado da matéria"),
@@ -274,7 +274,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C5. senado_prazos_processo
   server.tool(
     "senado_prazos_processo",
-    "Lista prazos regimentais ou constitucionais de processos legislativos — por processo, matéria, vigência ou período.",
+    "Lista prazos regimentais ou constitucionais de processos legislativos — por processo, matéria, data de vigência ou período de início. Retorna `{ count, prazos }`, onde `prazos` é o array de prazos retornado pela API v3 `/processo/prazo` (sem paginação). Exige ao menos um filtro (`idProcesso`, `codigoMateria` ou período). Obtenha o `idProcesso` via `senado_search_processos`; tipos de prazo via `senado_tabelas_processo`.",
     {
       idProcesso: z.number().int().positive().optional().describe("ID do processo"),
       codigoMateria: z.number().int().positive().optional().describe("Código legado da matéria"),
@@ -308,7 +308,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C6. senado_autores_atuais
   server.tool(
     "senado_autores_atuais",
-    "Lista parlamentares autores de processos em tramitação, com a quantidade de matérias de cada um. Ordenado por produção.",
+    "Lista parlamentares autores de processos em tramitação, ordenados por produção (maior número de matérias primeiro). Retorna `{ count, total, autores }`, cada autor com `codigo`, `nome`, `tratamento`, `uf` e `quantidadeMaterias`. Filtros opcionais `uf` e `nome` (busca parcial sem acento); `limite` padrão 50 (máx. 1000). Use o `codigo` em `senado_obter_senador` ou `senado_search_processos` (codigoParlamentarAutor).",
     {
       uf: z.string().max(2).optional().describe("Filtrar por UF (ex: SP)"),
       nome: z.string().optional().describe("Filtrar por nome (busca parcial)"),
@@ -347,7 +347,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C7. senado_tabelas_processo (consolidated reference tables)
   server.tool(
     "senado_tabelas_processo",
-    "Consulta tabelas de referência do processo legislativo: siglas de proposições, assuntos, classes, destinos, entes, tipos de situação/decisão/autor/atualização/documento/prazo.",
+    "Consulta tabelas de referência do processo legislativo (parâmetro `tabela`): siglas, assuntos, classes, destinos, entes, tipos-situacao/decisao/autor/atualizacao/documento/conteudo-documento/prazo. Retorna `{ tabela, count, total, linhas }` com as linhas brutas da tabela escolhida; `filtro` textual opcional (sobre sigla/descrição) e `limite` padrão 200 (máx. 1000). Use para resolver códigos/siglas antes de filtrar em `senado_search_processos` e ferramentas afins.",
     {
       tabela: z.enum([
         "siglas", "assuntos", "classes", "destinos", "entes",

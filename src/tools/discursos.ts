@@ -31,7 +31,7 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
   // I1. senado_discursos_senador
   server.tool(
     "senado_discursos_senador",
-    "Lista discursos/pronunciamentos de um senador específico, filtráveis por período e casa legislativa.",
+    "Lista discursos/pronunciamentos de um senador específico, filtráveis por período e casa legislativa. Retorna `{ codigoSenador, count, discursos }`, cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `indexacao`, `url` e `nomeParlamentar` (sem texto integral). Obtenha o `codigoSenador` via `senado_buscar_senador_por_nome` ou `senado_listar_senadores`; use o `codigo` do discurso em `senado_discurso_texto` para o texto completo.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
       casa: z.string().optional().describe("Casa legislativa (SF=Senado, CN=Congresso)"),
@@ -66,7 +66,7 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
   // I2. senado_discursos_plenario
   server.tool(
     "senado_discursos_plenario",
-    "Lista todos os discursos realizados em plenário num período de datas.",
+    "Lista todos os discursos realizados em plenário num período de datas (`dataInicio`/`dataFim` obrigatórias, formato YYYYMMDD). Retorna `{ periodo, count, discursos }`, cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `url` e `nomeParlamentar`. Para discursos de um parlamentar específico use `senado_discursos_senador`; obtenha o texto integral com `senado_discurso_texto`.",
     {
       dataInicio: z.string().regex(/^\d{8}$/).describe("Data início (YYYYMMDD)"),
       dataFim: z.string().regex(/^\d{8}$/).describe("Data fim (YYYYMMDD)"),
@@ -95,7 +95,7 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
   // This endpoint returns plain text, not JSON. Use direct fetch with cachedFetch.
   server.tool(
     "senado_discurso_texto",
-    "Obtém o texto integral de um pronunciamento/discurso específico.",
+    "Obtém o texto integral de um pronunciamento/discurso específico. Retorna `{ codigoPronunciamento, texto }`, onde `texto` é o conteúdo completo do discurso (string). Obtenha o `codigoPronunciamento` primeiro via `senado_discursos_senador` ou `senado_discursos_plenario` (campo `codigo`).",
     {
       codigoPronunciamento: z.number().int().positive().describe("Código do pronunciamento"),
     },
@@ -157,7 +157,7 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
   // I4. senado_tipos_uso_palavra
   server.tool(
     "senado_tipos_uso_palavra",
-    "Lista os tipos de uso da palavra (tipos de discurso/pronunciamento) disponíveis no Senado.",
+    "Lista os tipos de uso da palavra (tipos de discurso/pronunciamento) disponíveis no Senado. Não requer parâmetros; retorna `{ count, tipos }`, cada item com `codigo` e `descricao`. Tabela de referência estática útil para interpretar o campo `tipoUsoPalavra` retornado por `senado_discursos_senador` e `senado_discursos_plenario`.",
     {},
     async () => {
       try {
@@ -185,7 +185,7 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
   // I5. senado_apartes_senador
   server.tool(
     "senado_apartes_senador",
-    "Lista apartes (intervenções em discursos de outros parlamentares) feitos por um senador, filtráveis por período e casa legislativa.",
+    "Lista apartes (intervenções em discursos de outros parlamentares) feitos por um senador, filtráveis por período e casa legislativa. Retorna `{ codigoSenador, count, apartes }`, cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `url` e `nomeParlamentar`. Obtenha o `codigoSenador` via `senado_buscar_senador_por_nome`; para pronunciamentos completos do parlamentar use `senado_discursos_senador`.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
       casa: z.string().optional().describe("Casa legislativa (SF=Senado, CN=Congresso)"),

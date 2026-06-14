@@ -401,7 +401,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G1. senado_ecidadania_listar_consultas
   server.tool(
     "senado_ecidadania_listar_consultas",
-    "Lista consultas públicas do e-Cidadania com votação cidadã sobre matérias em tramitação.",
+    "Lista consultas públicas do e-Cidadania, em que cidadãos votam sim/não sobre matérias em tramitação. Retorna `{ count, consultas }`, cada consulta com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status` e `url`; aceita filtro por `status` e `limite` (padrão 20). Para o detalhe de uma consulta chame `senado_ecidadania_obter_consulta` com o `id`; para recortes analíticos use `senado_ecidadania_consultas_consensuais` ou `senado_ecidadania_consultas_polarizadas`.",
     {
       status: z.enum(["aberta", "encerrada", "todas"]).optional().describe("Filtrar por status"),
       limite: z.number().int().min(1).max(100).optional().default(20).describe("Número máximo de resultados"),
@@ -422,7 +422,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G2. senado_ecidadania_obter_consulta
   server.tool(
     "senado_ecidadania_obter_consulta",
-    "Obtém detalhes de uma consulta pública específica, incluindo votos, autor e comentários.",
+    "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `comentarios`, `url` (campos como `comissao` e datas podem vir `null`). Obtenha o `id` antes via `senado_ecidadania_listar_consultas`, `senado_ecidadania_consultas_consensuais` ou `senado_ecidadania_consultas_polarizadas`.",
     { id: z.number().int().positive().describe("ID da consulta pública") },
     async (params) => {
       try {
@@ -437,7 +437,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G3. senado_ecidadania_consultas_consensuais
   server.tool(
     "senado_ecidadania_consultas_consensuais",
-    "Retorna consultas com alta concordância (>85% em uma direção), útil para identificar temas de consenso.",
+    "Identifica consultas públicas com alta concordância cidadã (consenso). Retorna `{ criterio, count, consultas }`, ordenadas pela maior concentração de votos em uma direção; filtra por `percentualMinimo` (padrão 85%), `minimoVotos` (padrão 1000) e `limite` (padrão 10). Para o detalhe de uma consulta use `senado_ecidadania_obter_consulta`; para o efeito oposto (temas divididos) use `senado_ecidadania_consultas_polarizadas`.",
     {
       percentualMinimo: z.number().int().min(50).max(100).optional().default(85).describe("Percentual mínimo em uma direção"),
       minimoVotos: z.number().int().min(0).optional().default(1000).describe("Mínimo de votos para considerar"),
@@ -463,7 +463,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G4. senado_ecidadania_consultas_polarizadas
   server.tool(
     "senado_ecidadania_consultas_polarizadas",
-    "Retorna consultas com votação equilibrada (~50/50), útil para identificar temas polarizados na sociedade.",
+    "Identifica consultas públicas com votação equilibrada (~50/50), úteis para mapear temas polarizados. Retorna `{ criterio, count, consultas }`, ordenadas da menor para a maior diferença sim/não; filtra por `margemPolarizacao` (padrão 15 pontos), `minimoVotos` (padrão 1000) e `limite` (padrão 10). Para o detalhe de uma consulta use `senado_ecidadania_obter_consulta`; para o efeito oposto (temas de consenso) use `senado_ecidadania_consultas_consensuais`.",
     {
       margemPolarizacao: z.number().int().min(0).max(50).optional().default(15).describe("Considera polarizado se diferença < este percentual"),
       minimoVotos: z.number().int().min(0).optional().default(1000).describe("Mínimo de votos para considerar"),
@@ -489,7 +489,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G5. senado_ecidadania_listar_ideias
   server.tool(
     "senado_ecidadania_listar_ideias",
-    "Lista ideias legislativas propostas por cidadãos no e-Cidadania.",
+    "Lista ideias legislativas propostas por cidadãos no portal e-Cidadania. Retorna `{ count, ideias }`, cada ideia com código, título, autor, número de apoios e status; resultado paginado (padrão 20 por página, ordenável por apoios, data ou comentários). Para o detalhe completo de uma ideia (texto, apoios, se virou projeto de lei) chame senado_ecidadania_obter_ideia com o código; para um ranking das mais apoiadas use senado_ecidadania_ideias_populares.",
     {
       status: z.enum(["aberta", "encerrada", "convertida", "todas"]).optional().describe("Filtrar por status"),
       ordenarPor: z.enum(["apoios", "data", "comentarios"]).optional().describe("Campo para ordenação"),
@@ -510,7 +510,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G6. senado_ecidadania_obter_ideia
   server.tool(
     "senado_ecidadania_obter_ideia",
-    "Obtém detalhes de uma ideia legislativa, incluindo descrição completa, apoios e se foi convertida em PL.",
+    "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `status`, `autor`, `comentarios`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). Obtenha o `id` antes via `senado_ecidadania_listar_ideias` ou `senado_ecidadania_ideias_populares`.",
     { id: z.number().int().positive().describe("ID da ideia legislativa") },
     async (params) => {
       try {
@@ -525,7 +525,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G7. senado_ecidadania_ideias_populares
   server.tool(
     "senado_ecidadania_ideias_populares",
-    "Retorna as ideias legislativas mais apoiadas pelos cidadãos.",
+    "Retorna o ranking das ideias legislativas mais apoiadas pelos cidadãos. Retorna `{ criterio, count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` e `url`, ordenadas por número de apoios (desc); `limite` padrão 10 e `apenasAbertas` padrão true (restringe a ideias com apoiamento em aberto). Para listar/filtrar todas as ideias use `senado_ecidadania_listar_ideias`; para o detalhe de uma ideia use `senado_ecidadania_obter_ideia`.",
     {
       limite: z.number().int().min(1).max(50).optional().default(10).describe("Número máximo de resultados"),
       apenasAbertas: z.boolean().optional().default(true).describe("Apenas ideias com apoiamento aberto"),
@@ -552,7 +552,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G8. senado_ecidadania_listar_eventos
   server.tool(
     "senado_ecidadania_listar_eventos",
-    "Lista eventos interativos (audiências públicas, sabatinas, lives) do e-Cidadania.",
+    "Lista eventos interativos do e-Cidadania (audiências públicas, sabatinas, lives). Retorna `{ count, eventos }`, cada evento com `id`, `titulo`, `data`, `hora`, `comissao` (sigla), `comentarios`, `status` (`agendado`/`encerrado`) e `url`; aceita filtro por `status`, por `comissao` (sigla) e `limite` (padrão 20). Para o detalhe completo de um evento use `senado_ecidadania_obter_evento`; para os mais comentados use `senado_ecidadania_eventos_populares`.",
     {
       status: z.enum(["agendado", "encerrado", "todos"]).optional().describe("Filtrar por status"),
       comissao: z.string().optional().describe("Sigla da comissão"),
@@ -571,7 +571,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G9. senado_ecidadania_obter_evento
   server.tool(
     "senado_ecidadania_obter_evento",
-    "Obtém detalhes de um evento interativo, incluindo pauta, convidados e link para vídeo.",
+    "Obtém o detalhe de um evento interativo do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao`, `data`, `hora`, `comissao` e `comissaoNomeCompleto`, `local`, `status`, `comentarios`, `url`, além de `pauta` (até 15 itens), `convidados` e `videoUrl` (embed do YouTube, quando houver). Obtenha o `id` antes via `senado_ecidadania_listar_eventos` ou `senado_ecidadania_eventos_populares`.",
     { id: z.number().int().positive().describe("ID do evento") },
     async (params) => {
       try {
@@ -586,7 +586,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G10. senado_ecidadania_eventos_populares
   server.tool(
     "senado_ecidadania_eventos_populares",
-    "Retorna eventos com mais comentários e perguntas dos cidadãos.",
+    "Retorna o ranking de eventos interativos com mais participação cidadã (comentários/perguntas). Retorna `{ criterio, count, eventos }`, cada evento com `id`, `titulo`, `data`, `hora`, `comissao`, `comentarios`, `status` e `url`, ordenados por número de comentários (desc); `limite` padrão 10 e `apenasAgendados` padrão false (true restringe a eventos ainda não realizados). Para listar/filtrar todos os eventos use `senado_ecidadania_listar_eventos`; para o detalhe de um evento use `senado_ecidadania_obter_evento`.",
     {
       limite: z.number().int().min(1).max(50).optional().default(10).describe("Número máximo de resultados"),
       apenasAgendados: z.boolean().optional().default(false).describe("Apenas eventos ainda não realizados"),
@@ -613,7 +613,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G11. senado_ecidadania_sugerir_tema_enquete
   server.tool(
     "senado_ecidadania_sugerir_tema_enquete",
-    "Analisa e sugere temas para enquete mensal baseado em critérios configuráveis. Evita temas muito polarizados ou com consenso total.",
+    "Analisa consultas e ideias do e-Cidadania e sugere temas para enquete mensal. Retorna `{ criteriosAplicados, totalAnalisados, count, sugestoes }` (até 10), cada sugestão com `tipo` (`consulta`/`ideia`), `id`, `titulo`, `motivo`, `metricas` (participação/polarização) e `url`, ordenadas por participação. Critérios opcionais em `criterios`: `evitarPolarizacao`/`evitarConsenso` (padrão true), `minimoParticipacao` (padrão 500), `apenasEmTramitacao`. Para investigar uma sugestão, use `senado_ecidadania_obter_consulta` ou `senado_ecidadania_obter_ideia` conforme o `tipo`.",
     {
       criterios: z.object({
         evitarPolarizacao: z.boolean().optional().default(true).describe("Evita temas com ~50/50"),

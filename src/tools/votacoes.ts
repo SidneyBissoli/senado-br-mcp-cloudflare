@@ -61,7 +61,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
   // D1. senado_listar_votacoes
   server.tool(
     "senado_listar_votacoes",
-    "Lista votações do plenário do Senado por ano, podendo filtrar por mês ou período específico.",
+    "Lista votações do plenário do Senado por ano, com filtro opcional por `mes` ou período (`dataInicio`/`dataFim`, YYYYMMDD). Retorna `{ ano, count, votacoes }`, onde cada item traz `codigoSessao`, `codigoVotacao`, `data`, `materia`, `codigoMateria`, `resultado`, `totalSim`/`totalNao`/`totalAbstencao` e `secreta` (sem votos nominais). Use `senado_obter_votacao` com o `codigoSessao` para os votos de cada senador, ou `senado_search_votacoes` para critérios combinados.",
     {
       ano: z.number().int().min(1900).max(2100).describe("Ano das votações (obrigatório)"),
       mes: z.number().int().min(1).max(12).optional().describe("Mês (1-12)"),
@@ -100,7 +100,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
   // D2. senado_votacoes_recentes
   server.tool(
     "senado_votacoes_recentes",
-    "Obtém as votações mais recentes do plenário (últimos N dias). Útil para acompanhar atividade legislativa recente.",
+    "Obtém as votações mais recentes do plenário nos últimos `dias` (padrão 7, máx 365). Retorna `{ periodo, count, votacoes }` ordenadas da mais recente para a mais antiga; cada item traz `codigoSessao`, `data`, `materia`, `resultado` e placar (`totalSim`/`totalNao`/`totalAbstencao`), sem votos nominais. Para acompanhar atividade recente; use `senado_obter_votacao` para detalhar uma votação ou `senado_listar_votacoes` para um ano/mês específico.",
     {
       dias: z.number().int().min(1).max(365).optional().default(7).describe("Quantidade de dias (padrão: 7)"),
     },
@@ -129,7 +129,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
   // D3. senado_obter_votacao
   server.tool(
     "senado_obter_votacao",
-    "Obtém detalhes de uma votação específica, incluindo votos nominais de cada senador. Use codigoSessao (código da sessão plenária) para buscar todas as votações daquela sessão.",
+    "Obtém detalhes de uma votação pelo `codigoVotacao` (que é o `codigoSessao` da sessão plenária), incluindo votos nominais. Retorna o objeto da votação (placar, `resultado`, `secreta`) com `votos[]` (`codigoSenador`, `nomeSenador`, `partido`, `uf`, `voto`); se a sessão tiver várias votações, retorna `{ codigoSessao, count, votacoes }`. Obtenha o `codigoSessao` via `senado_listar_votacoes`, `senado_votacoes_recentes` ou `senado_search_votacoes` antes de chamar.",
     {
       codigoVotacao: z.number().int().positive().describe("Código único da votação (codigoSessao da sessão plenária)"),
     },
@@ -154,7 +154,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
   // D4. senado_votos_materia (migrated to v3 /votacao?codigoMateria — legacy endpoint deprecated)
   server.tool(
     "senado_votos_materia",
-    "Obtém resultado de votações de uma matéria, incluindo placar e, opcionalmente, votos nominais de cada senador.",
+    "Obtém as votações de uma matéria pelo `codigoMateria`. Retorna `{ codigoMateria, count, votacoes }`, cada item com `data`, `descricao`, `resultado` e placar (`totalSim`/`totalNao`/`totalAbstencao`); com `incluirVotos: true` (padrão false) acrescenta `votos[]` (nome, partido, uf e voto de cada senador). Obtenha o `codigoMateria` via `senado_buscar_materias` ou `senado_obter_materia`.",
     {
       codigoMateria: z.number().int().positive().describe("Código único da matéria"),
       incluirVotos: z.boolean().optional().default(false).describe("Incluir votos nominais de cada senador"),
@@ -180,7 +180,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
   // D5. senado_search_votacoes (GET /votacao — flexible search)
   server.tool(
     "senado_search_votacoes",
-    "Busca votações por múltiplos critérios combinados: período, processo, matéria, parlamentar e tipo de voto. Mais flexível que senado_listar_votacoes.",
+    "Busca votações combinando critérios opcionais: período (`dataInicio`/`dataFim`, YYYYMMDD), `idProcesso`, `codigoMateria`, `sigla`/`numero`/`ano` da matéria, `codigoParlamentar` e `siglaVotoParlamentar`. Retorna `{ count, votacoes }` com `data`, `materia`, `resultado` e placar (sem votos nominais). Mais flexível que `senado_listar_votacoes`; use `senado_obter_votacao` para os votos nominais de uma votação encontrada.",
     {
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
       dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),

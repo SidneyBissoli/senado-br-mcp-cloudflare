@@ -46,7 +46,7 @@ export function registerLegislacaoTools(server: McpServer, baseUrl: string) {
   // L1. senado_buscar_legislacao
   server.tool(
     "senado_buscar_legislacao",
-    "Busca normas jurídicas federais (leis, decretos, etc.) por tipo, número, ano ou data. É obrigatório informar pelo menos um parâmetro.",
+    "Busca normas jurídicas federais (leis, decretos, etc.) por `tipo`, `numero`, `ano` ou `data`. Retorna `{ count, normas }`, cada norma com `codigo`, `tipo`, `numero`, `ano`, `data`, `ementa`, `situacao` e `url` do texto. É obrigatório informar ao menos um parâmetro, senão retorna erro. Use o `codigo` retornado em `senado_obter_legislacao` para o detalhe; consulte os tipos válidos em `senado_tipos_norma`.",
     {
       tipo: z.string().optional().describe("Tipo da norma (ex: LEI, DEC, LCP, EMC)"),
       numero: z.number().int().optional().describe("Número da norma"),
@@ -82,7 +82,7 @@ export function registerLegislacaoTools(server: McpServer, baseUrl: string) {
   // L2. senado_obter_legislacao
   server.tool(
     "senado_obter_legislacao",
-    "Obtém detalhes de uma norma jurídica federal específica.",
+    "Obtém os detalhes de uma norma jurídica federal específica pelo seu `codigo`. Retorna um objeto com `codigo`, `tipo`, `descricaoTipo`, `numero`, `ano`, `data`, `ementa`, `indexacao`, `situacao`, `origem`, `observacao` e `url` do texto integral. Obtenha o `codigo` primeiro via `senado_buscar_legislacao`.",
     {
       codigo: z.number().int().positive().describe("Código único da norma"),
     },
@@ -106,7 +106,7 @@ export function registerLegislacaoTools(server: McpServer, baseUrl: string) {
   // L3. senado_tipos_norma
   server.tool(
     "senado_tipos_norma",
-    "Lista os tipos de normas jurídicas federais disponíveis (LEI, DEC, LCP, EMC, etc.).",
+    "Lista os tipos de normas jurídicas federais disponíveis (LEI, DEC, LCP, EMC, etc.). Não requer parâmetros; retorna `{ count, tipos }`, cada tipo com `sigla` e `descricao`. Use para descobrir a `sigla` correta a passar no parâmetro `tipo` de `senado_buscar_legislacao`.",
     {},
     async () => {
       try {

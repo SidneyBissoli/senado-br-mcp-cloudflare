@@ -56,7 +56,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P1. senado_servidores
   server.tool(
     "senado_servidores",
-    "Lista servidores do Senado por situação (ativos, efetivos, comissionados ou inativos), com filtros por nome, lotação e cargo.",
+    "Lista servidores do Senado por `situacao` (ativos, efetivos, comissionados ou inativos), com filtros opcionais por `nome`, `lotacao` e `cargo`. Retorna `{ situacao, count, total, servidores[] }`, cada item com `nome`, `vinculo`, `situacao`, `cargo`, `funcao`, `lotacao`, `anoAdmissao` etc. Aplica `limite` (padrão 50, máx 500) e inclui `aviso` quando há truncamento — refine os filtros. Para remuneração use `senado_remuneracoes_servidores`; para estagiários/pensionistas use `senado_pessoal_listas`.",
     {
       situacao: z.enum(["ativos", "efetivos", "comissionados", "inativos"]).optional().default("ativos").describe("Qual lista consultar (padrão: ativos)"),
       nome: z.string().optional().describe("Nome do servidor (busca parcial)"),
@@ -94,7 +94,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P2. senado_remuneracoes_servidores
   server.tool(
     "senado_remuneracoes_servidores",
-    "Remunerações dos servidores do Senado num mês de referência. Modo 'resumo' agrega totais por tipo de folha; modo 'detalhe' lista a composição da remuneração (filtre por nome para evitar listas longas).",
+    "Remunerações dos servidores do Senado em `ano`/`mes` de referência (a partir de 2013). `modo=resumo` (padrão) retorna `{ ano, mes, totalRegistros, resumo[] }` agregado por `tipoFolha` com `registros`, `totalBruto` e `mediaBruta`; `modo=detalhe` retorna `{ count, total, remuneracoes[] }` com a composição individual (`remuneracaoBasica`, `vantagensPessoais`, `funcaoComissionada`, `horasExtras`, `bruto` etc.), limitada por `limite` (padrão 50, máx 500) com `aviso` se truncado. Filtre por `nome` ou `tipoFolha` no detalhe para evitar listas longas. Para o cadastro de servidores use `senado_servidores`.",
     {
       ano: z.number().int().min(2013).max(2100).describe("Ano de referência"),
       mes: z.number().int().min(1).max(12).describe("Mês de referência"),
@@ -154,7 +154,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P3. senado_horas_extras
   server.tool(
     "senado_horas_extras",
-    "Horas extras pagas a servidores do Senado num mês de referência, com valor e detalhamento.",
+    "Horas extras pagas a servidores do Senado em `ano`/`mes` de referência (a partir de 2013). Retorna `{ ano, mes, count, total, valorTotal, horasExtras[] }`, onde `valorTotal` soma o gasto do mês e cada item traz `nome`, `valorTotal`, `horasExtras`, `competencia` e `pagamento`. Filtro opcional por `nome` (busca parcial) e `limite` (padrão 100, máx 500). Para a remuneração completa do servidor use `senado_remuneracoes_servidores`.",
     {
       ano: z.number().int().min(2013).max(2100).describe("Ano de referência"),
       mes: z.number().int().min(1).max(12).describe("Mês de referência"),
@@ -196,7 +196,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P4. senado_quantitativos_pessoal
   server.tool(
     "senado_quantitativos_pessoal",
-    "Quantitativos de pessoal do Senado: força de trabalho por classe/escolaridade, cargos em comissão e funções de confiança, previsão de aposentadorias ou quantitativo de senadores.",
+    "Quantitativos de pessoal do Senado conforme a `tabela`: `pessoal` (força de trabalho por classe/escolaridade), `cargos-funcoes` (cargos em comissão e funções de confiança), `previsao-aposentadoria` ou `senadores`. Retorna `{ tabela, count, total, linhas[] }` com as linhas agregadas brutas da tabela escolhida, limitadas por `limite` (padrão 200, máx 2000). Para o cadastro nominal de servidores use `senado_servidores`; para listas de estagiários/pensionistas use `senado_pessoal_listas`.",
     {
       tabela: z.enum(["pessoal", "cargos-funcoes", "previsao-aposentadoria", "senadores"]).describe("Qual quantitativo consultar"),
       limite: z.number().int().min(1).max(2000).optional().default(200).describe("Máximo de linhas (padrão: 200)"),
@@ -231,7 +231,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P5. senado_pessoal_listas
   server.tool(
     "senado_pessoal_listas",
-    "Listas de pessoal do Senado: estagiários ativos, pensionistas, lotações (setores) ou nomes de cargos.",
+    "Listas de pessoal do Senado conforme o `tipo`: `estagiarios` (ativos), `pensionistas`, `lotacoes` (setores) ou `cargos` (nomes de cargos). Retorna `{ tipo, count, total, registros[] }` com os registros brutos da lista, limitados por `limite` (padrão 50, máx 500) e com `aviso` quando truncado. O `filtro` textual opcional casa contra qualquer campo do registro (nome, curso, setor). Para servidores efetivos/comissionados use `senado_servidores`; para contagens agregadas use `senado_quantitativos_pessoal`.",
     {
       tipo: z.enum(["estagiarios", "pensionistas", "lotacoes", "cargos"]).describe("Qual lista consultar"),
       filtro: z.string().optional().describe("Filtro textual (nome, curso, setor...)"),

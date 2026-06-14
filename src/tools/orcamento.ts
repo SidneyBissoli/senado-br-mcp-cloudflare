@@ -38,7 +38,7 @@ export function registerOrcamentoTools(server: McpServer, baseUrl: string) {
   // K1. senado_orcamento_emendas
   server.tool(
     "senado_orcamento_emendas",
-    "Lista lotes de emendas orçamentárias do Senado.",
+    "Lista lotes de emendas orçamentárias do Senado. Retorna `{ count, emendas }`, onde cada item traz `codigo`, `numero`, `ano`, `tipo`, `autor`, `valor` e `descricao`. Não requer parâmetros. Para os ofícios de apoio a essas emendas, use `senado_orcamento_oficios`.",
     {},
     async () => {
       try {
@@ -64,7 +64,7 @@ export function registerOrcamentoTools(server: McpServer, baseUrl: string) {
   // K2. senado_orcamento_oficios
   server.tool(
     "senado_orcamento_oficios",
-    "Lista ofícios de apoio a emendas orçamentárias.",
+    "Lista ofícios de apoio a emendas orçamentárias. Retorna `{ count, oficios }`, onde cada item traz `codigo`, `numero`, `data`, `tipo`, `descricao` e `situacao`. Não requer parâmetros. Para as emendas correspondentes, use `senado_orcamento_emendas`.",
     {},
     async () => {
       try {

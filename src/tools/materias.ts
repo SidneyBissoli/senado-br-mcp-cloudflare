@@ -135,7 +135,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
   // B1. senado_buscar_materias
   server.tool(
     "senado_buscar_materias",
-    "Busca matérias legislativas por tipo (PEC, PL, PLP, MPV), número, ano, palavras-chave, autor ou situação de tramitação. Informe pelo menos um critério.",
+    "Busca matérias legislativas por tipo (PEC, PL, PLP, MPV), número, ano, palavras-chave, autor ou situação de tramitação; informe ao menos um critério. Retorna `{ count, total, materias[] }`, cada item com `codigo` (codigoMateria), `sigla`, `numero`, `ano`, `ementa`, `autor`, `situacao` e `tramitando`. Use `codigo` em `senado_obter_materia`, `senado_tramitacao_materia` ou `senado_textos_materia`. `limite` padrão 100 (máx. 500); ao truncar inclui `aviso`.",
     {
       sigla: z.string().optional().describe("Tipo: PEC, PL, PLP, MPV, PDL, PRS, etc."),
       numero: z.number().int().positive().optional().describe("Número da matéria"),
@@ -179,7 +179,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
   // B2. senado_obter_materia
   server.tool(
     "senado_obter_materia",
-    "Obtém detalhes completos de uma matéria legislativa, incluindo ementa, autoria, situação atual, relator, deliberação e norma gerada.",
+    "Obtém detalhes completos de uma matéria pelo `codigoMateria`. Retorna um objeto com `identificacao`, `apelido`, `ementa`, `autor`, `situacao`, `localAtual`, `dataApresentacao`, `indexacao`, `classificacoes[]`, `tramitando`, `relator` (nome/partido/uf/comissão), `deliberacao` e `normaGerada` (quando houver). Obtenha o `codigoMateria` via `senado_buscar_materias`; para o histórico use `senado_tramitacao_materia` e para documentos `senado_textos_materia`.",
     {
       codigoMateria: z.number().int().positive().describe("Código único da matéria"),
     },
@@ -215,7 +215,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
   // B3. senado_tramitacao_materia
   server.tool(
     "senado_tramitacao_materia",
-    "Obtém histórico de tramitação de uma matéria (informes legislativos), em ordem cronológica.",
+    "Obtém o histórico de tramitação (informes legislativos) de uma matéria pelo `codigoMateria`, em ordem cronológica. Retorna `{ codigoMateria, idProcesso, count, total, tramitacoes[] }`, cada evento com `data`, `local` (colegiado/ente) e `descricao`. Obtenha o `codigoMateria` via `senado_buscar_materias`; para a situação atual e o relator use `senado_obter_materia`. `limite` padrão 100 (máx. 1000) mantém os mais recentes; ao truncar inclui `aviso`.",
     {
       codigoMateria: z.number().int().positive().describe("Código único da matéria"),
       limite: z.number().int().min(1).max(1000).optional().default(100).describe("Máximo de eventos retornados — mantém os mais recentes (padrão: 100)"),
@@ -249,7 +249,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
   // B4. senado_textos_materia
   server.tool(
     "senado_textos_materia",
-    "Lista documentos apresentados numa matéria (texto inicial, emendas, pareceres, requerimentos) com URLs para download, dos mais recentes aos mais antigos.",
+    "Lista documentos de uma matéria (texto inicial, emendas, pareceres, requerimentos) pelo `codigoMateria`, dos mais recentes aos mais antigos. Retorna `{ codigoMateria, count, total, textos[] }`, cada item com `tipo`, `formato`, `identificacao`, `data`, `autoria` e `url` para download. Obtenha o `codigoMateria` via `senado_buscar_materias`. `limite` padrão 50 (máx. 500); ao truncar inclui `aviso`.",
     {
       codigoMateria: z.number().int().positive().describe("Código único da matéria"),
       limite: z.number().int().min(1).max(500).optional().default(50).describe("Máximo de documentos retornados (padrão: 50)"),
