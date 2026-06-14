@@ -3,7 +3,7 @@
 [![smithery badge](https://smithery.ai/badge/sidneybissoli/senado-br-mcp-cloudflare)](https://smithery.ai/servers/sidneybissoli/senado-br-mcp-cloudflare)
 [![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
 
-MCP server for **Brazilian Senate open data** running on Cloudflare Workers with Streamable HTTP transport.
+A **public, hosted** MCP server for **Brazilian Senate open data**, running on Cloudflare Workers (Streamable HTTP). It is **already deployed and open access** — just point your MCP client at the hosted endpoint; **no installation, no account, no API key** required.
 
 Provides **65 tools** (plus **4 prompts** and **5 resources**) organized into 19 groups covering the **legislative** domain (senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes, reference data, citizen participation via e-Cidadania, speeches and stenographic transcripts, blocs and leadership, federal legislation, committee voting) and the **administrative** domain (CEAPS parliamentary quota expenses, housing allowance, civil servants and payroll, overtime, interns, procurement contracts, biddings, outsourced staff, petty-cash funds, budget execution and own revenues). Connects to three sources: the [legislative open data API](https://legis.senado.leg.br/dadosabertos/), the [administrative open data API](https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html) and the e-Cidadania portal.
 
@@ -16,6 +16,21 @@ Provides **65 tools** (plus **4 prompts** and **5 resources**) organized into 19
 > **v3.0.0:** consolidated 90 → 65 tools by merging near-duplicate tools into enum/secao/tipo parameters (e.g. reference tables → `senado_tabelas_referencia`; per-process sub-resources → `senado_processo_detalhe`; `senado_mesa` with a `casa` param; `senado_search_votacoes` absorbing the recent-votes/list tools). Breaking change: several tool names were removed or renamed.
 >
 > **v3.1.0:** adds the MCP **prompts** capability (4 reusable pt-BR workflow templates — CEAPS expenses, bill tracking, senator votes, e-Cidadania overview) and the **resources** capability (5 static context docs: usage guide, tool catalog, glossary, and the tipos-matéria / UFs reference tables). Ships a `LICENSE` file (MIT).
+
+## Use it (hosted — no setup)
+
+This is a **remote, hosted, open-access** server. To use it, point any MCP client at the Streamable
+HTTP endpoint — **no install, no account, no API key, no configuration**:
+
+```
+https://senado.sidneybissoli.com/mcp
+```
+
+- **One-click (LobeHub):** open the [server page](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare) and click **Install** (it pre-fills the endpoint).
+- **Claude Desktop / Claude Code** and other clients: see [Connecting MCP Clients](#connecting-mcp-clients).
+
+Everything below *Architecture* (Prerequisites, Setup, Deploy) is **only for optionally self-hosting your
+own instance** — it is **not** required to use this public server.
 
 ## Architecture
 
@@ -31,21 +46,26 @@ Provides **65 tools** (plus **4 prompts** and **5 resources**) organized into 19
 - **Observability:** Structured JSON logging + in-memory counters exposed at `/metrics`
 - **Tests:** Vitest unit tests for parsers, helpers, cache, throttle, and auth
 
-## Prerequisites
+## Self-hosting (optional)
+
+> **Not needed to use the server** — it is already hosted at `https://senado.sidneybissoli.com/mcp`
+> (open access). Follow this section only if you want to run your **own** private instance.
+
+### Prerequisites
 
 - Node.js 18+
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) v4+
 - Cloudflare account
 
-## Setup
+### Setup
 
-### 1. Install dependencies
+#### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Create KV namespace
+#### 2. Create KV namespace
 
 ```bash
 # Create the KV namespace
@@ -55,7 +75,7 @@ wrangler kv namespace create CACHE_KV
 # { binding = "CACHE_KV", id = "abc123..." }
 ```
 
-### 3. Configure wrangler.toml
+#### 3. Configure wrangler.toml
 
 Replace the placeholder KV namespace ID:
 
@@ -72,7 +92,7 @@ Optionally set `ALLOWED_ORIGIN` to restrict CORS:
 ALLOWED_ORIGIN = "https://your-app.example.com"
 ```
 
-### 4. (Optional) Enable authentication
+#### 4. (Optional) Enable authentication
 
 ```bash
 wrangler secret put API_KEY
@@ -80,7 +100,7 @@ wrangler secret put API_KEY
 # When API_KEY is not set, the server is open access.
 ```
 
-### 5. Local development
+#### 5. Local development
 
 ```bash
 npm run dev
@@ -88,7 +108,7 @@ npm run dev
 # The public MCP endpoint is https://senado.sidneybissoli.com/mcp
 ```
 
-### 6. Tests and typecheck
+#### 6. Tests and typecheck
 
 ```bash
 npm test             # run all tests once
@@ -96,7 +116,7 @@ npm run test:watch   # watch mode
 npm run typecheck    # tsc --noEmit
 ```
 
-### 7. Deploy
+#### 7. Deploy
 
 ```bash
 npm run deploy
