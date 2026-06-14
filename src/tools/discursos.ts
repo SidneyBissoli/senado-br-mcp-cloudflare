@@ -1,7 +1,8 @@
 /**
- * Group I — Speeches (5 tools)
- * senado_discursos_senador, senado_discursos_plenario,
- * senado_discurso_texto, senado_tipos_uso_palavra, senado_apartes_senador
+ * Group I — Speeches (3 tools)
+ * senado_discursos_senador (enum `tipo`: discursos | apartes), senado_discursos_plenario,
+ * senado_discurso_texto
+ * (a tabela de tipos de uso da palavra migrou para senado_tabelas_referencia em referencia.ts)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -9,7 +10,7 @@ import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolResult, errorFrom, ensureArray } from "../utils/validation.js";
-import { CACHE_DYNAMIC, CACHE_ON_DEMAND, CACHE_STATIC, UPSTREAM_TIMEOUT_MS } from "../types.js";
+import { CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
 
 /** Parse a speech summary from the senator or plenary speeches endpoint. */
 export function parseDiscursoResumo(d: any) {
@@ -28,18 +29,20 @@ export function parseDiscursoResumo(d: any) {
 }
 
 export function registerDiscursosTools(server: McpServer, baseUrl: string) {
-  // I1. senado_discursos_senador
+  // I1. senado_discursos_senador (tipo: discursos | apartes)
   server.tool(
     "senado_discursos_senador",
-    "Lista discursos/pronunciamentos de um senador específico, filtráveis por período e casa legislativa. Retorna `{ codigoSenador, count, discursos }`, cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `indexacao`, `url` e `nomeParlamentar` (sem texto integral). Obtenha o `codigoSenador` via `senado_buscar_senador_por_nome` ou `senado_listar_senadores`; use o `codigo` do discurso em `senado_discurso_texto` para o texto completo.",
+    "Lista pronunciamentos de um senador, filtráveis por período e casa legislativa. O parâmetro `tipo` (padrão `discursos`) escolhe entre `discursos` (pronunciamentos próprios) e `apartes` (intervenções em discursos de outros parlamentares). Retorna `{ codigoSenador, tipo, count, discursos }`, cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `indexacao`, `url` e `nomeParlamentar` (sem texto integral; para `tipo: apartes` os itens são apartes, com a mesma estrutura). Obtenha o `codigoSenador` via `senado_listar_senadores`; use o `codigo` do pronunciamento em `senado_discurso_texto` para o texto completo.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
+      tipo: z.enum(["discursos", "apartes"]).optional().default("discursos").describe("discursos (próprios) ou apartes (intervenções em discursos de outros)"),
       casa: z.string().optional().describe("Casa legislativa (SF=Senado, CN=Congresso)"),
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
       dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
     },
     async (params) => {
       try {
+        const tipo = params.tipo ?? "discursos";
         const qp: Record<string, string> = {};
         if (params.casa) qp.casa = params.casa;
         if (params.dataInicio) qp.dataInicio = params.dataInicio;
@@ -47,18 +50,19 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
 
         const response = await cachedFetch(
           "senado_discursos_senador",
-          { codigo: params.codigoSenador, ...qp },
+          { codigo: params.codigoSenador, tipo, ...qp },
           CACHE_DYNAMIC,
-          () => upstreamFetch(`/senador/${params.codigoSenador}/discursos`, qp, baseUrl),
+          () => upstreamFetch(`/senador/${params.codigoSenador}/${tipo}`, qp, baseUrl),
         );
         const r = response as any;
         const discursos = ensureArray(
-          r?.DiscursosParlamentar?.Parlamentar?.Pronunciamentos?.Pronunciamento ??
-          r?.Pronunciamentos?.Pronunciamento,
+          tipo === "apartes"
+            ? (r?.ApartesParlamentar?.Parlamentar?.Apartes?.Aparte ?? r?.Apartes?.Aparte)
+            : (r?.DiscursosParlamentar?.Parlamentar?.Pronunciamentos?.Pronunciamento ?? r?.Pronunciamentos?.Pronunciamento),
         ).map(parseDiscursoResumo);
-        return toolResult({ codigoSenador: params.codigoSenador, count: discursos.length, discursos });
+        return toolResult({ codigoSenador: params.codigoSenador, tipo, count: discursos.length, discursos });
       } catch (e) {
-        return errorFrom(e, "Erro ao obter discursos do senador");
+        return errorFrom(e, "Erro ao obter pronunciamentos do senador");
       }
     },
   );
@@ -150,69 +154,6 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
         return toolResult({ codigoPronunciamento: params.codigoPronunciamento, texto });
       } catch (e) {
         return errorFrom(e, "Erro ao obter texto do discurso");
-      }
-    },
-  );
-
-  // I4. senado_tipos_uso_palavra
-  server.tool(
-    "senado_tipos_uso_palavra",
-    "Lista os tipos de uso da palavra (tipos de discurso/pronunciamento) disponíveis no Senado. Não requer parâmetros; retorna `{ count, tipos }`, cada item com `codigo` e `descricao`. Tabela de referência estática útil para interpretar o campo `tipoUsoPalavra` retornado por `senado_discursos_senador` e `senado_discursos_plenario`.",
-    {},
-    async () => {
-      try {
-        const response = await cachedFetch(
-          "senado_tipos_uso_palavra",
-          {},
-          CACHE_STATIC,
-          () => upstreamFetch("/senador/lista/tiposUsoPalavra", {}, baseUrl),
-        );
-        const r = response as any;
-        const tipos = ensureArray(
-          r?.ListaTiposUsoPalavra?.TiposUsoPalavra?.TipoUsoPalavra ??
-          r?.TiposUsoPalavra?.TipoUsoPalavra,
-        ).map((t: any) => ({
-          codigo: t.Codigo || t.codigo || null,
-          descricao: t.Descricao || t.descricao || null,
-        }));
-        return toolResult({ count: tipos.length, tipos });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter tipos de uso da palavra");
-      }
-    },
-  );
-
-  // I5. senado_apartes_senador
-  server.tool(
-    "senado_apartes_senador",
-    "Lista apartes (intervenções em discursos de outros parlamentares) feitos por um senador, filtráveis por período e casa legislativa. Retorna `{ codigoSenador, count, apartes }`, cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `url` e `nomeParlamentar`. Obtenha o `codigoSenador` via `senado_buscar_senador_por_nome`; para pronunciamentos completos do parlamentar use `senado_discursos_senador`.",
-    {
-      codigoSenador: z.number().int().positive().describe("Código único do senador"),
-      casa: z.string().optional().describe("Casa legislativa (SF=Senado, CN=Congresso)"),
-      dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
-      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
-    },
-    async (params) => {
-      try {
-        const qp: Record<string, string> = {};
-        if (params.casa) qp.casa = params.casa;
-        if (params.dataInicio) qp.dataInicio = params.dataInicio;
-        if (params.dataFim) qp.dataFim = params.dataFim;
-
-        const response = await cachedFetch(
-          "senado_apartes_senador",
-          { codigo: params.codigoSenador, ...qp },
-          CACHE_DYNAMIC,
-          () => upstreamFetch(`/senador/${params.codigoSenador}/apartes`, qp, baseUrl),
-        );
-        const r = response as any;
-        const apartes = ensureArray(
-          r?.ApartesParlamentar?.Parlamentar?.Apartes?.Aparte ??
-          r?.Apartes?.Aparte,
-        ).map(parseDiscursoResumo);
-        return toolResult({ codigoSenador: params.codigoSenador, count: apartes.length, apartes });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter apartes do senador");
       }
     },
   );

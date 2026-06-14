@@ -14,24 +14,24 @@ describe("createServer", () => {
     const tools = (server as any)._registeredTools;
     expect(tools).toBeDefined();
     const names = Object.keys(tools);
-    expect(names.length).toBe(90);
+    expect(names.length).toBe(65);
   });
 
   it("registers at least one tool from every group", () => {
     const server = createServer(env as any);
     const names = Object.keys((server as any)._registeredTools);
     const representatives = [
-      "senado_legislatura_atual",       // H
+      "senado_tabelas_referencia",      // H
       "senado_listar_senadores",        // A
       "senado_buscar_materias",         // B
-      "senado_listar_votacoes",         // D
+      "senado_search_votacoes",         // D
       "senado_listar_comissoes",        // E
       "senado_agenda_plenario",         // F
       "senado_search_processos",        // C
       "senado_ecidadania_listar_ideias",// G
       "senado_discursos_senador",       // I
       "senado_listar_blocos",           // J
-      "senado_orcamento_emendas",       // K
+      "senado_orcamento_parlamentar",   // K
       "senado_buscar_legislacao",       // L
       "senado_votacao_comissao",        // M
       "senado_notas_taquigraficas",     // N

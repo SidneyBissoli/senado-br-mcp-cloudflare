@@ -1,7 +1,9 @@
 /**
- * Group A — Senators (7 tools)
- * senado_listar_senadores, senado_buscar_senador_por_nome, senado_obter_senador,
- * senado_votacoes_senador, senado_senador_detail, senado_senador_historico,
+ * Group A — Senators (5 tools)
+ * senado_listar_senadores (filtro `nome` absorve a antiga busca por nome),
+ * senado_obter_senador, senado_votacoes_senador,
+ * senado_senador_historico (tipo: licencas | comissoes | cargos | historico-academico |
+ *   filiacoes | profissoes — estes dois substituem o antigo senado_senador_detail),
  * senado_senadores_afastados
  */
 
@@ -117,14 +119,37 @@ export function parseCargoSenador(c: any) {
   };
 }
 
+/** Parse a party affiliation entry from /senador/{codigo}/filiacoes. */
+export function parseFiliacao(f: any) {
+  return {
+    partido: f.Partido?.SiglaPartido || f.SiglaPartido || "",
+    nomePartido: f.Partido?.NomePartido || f.NomePartido || "",
+    dataFiliacao: f.DataFiliacao || null,
+    dataDesfiliacao: f.DataDesfiliacao || null,
+  };
+}
+
+/** Parse a profession entry from /senador/{codigo}/profissao. */
+export function parseProfissao(p: any) {
+  return { nome: p.NomeProfissao || p.DescricaoProfissao || "" };
+}
+
+/** Case/accent-insensitive substring match against a senator's full or short name. */
+export function matchesNome(s: { nome: string; nomeCompleto: string }, nome: string): boolean {
+  const norm = (v: string) => v.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const alvo = norm(nome);
+  return norm(s.nomeCompleto).includes(alvo) || norm(s.nome).includes(alvo);
+}
+
 export function registerSenadoresTools(server: McpServer, baseUrl: string) {
-  // A1. senado_listar_senadores
+  // A1. senado_listar_senadores (filtro `nome` substitui a antiga busca por nome)
   server.tool(
     "senado_listar_senadores",
-    "Lista senadores em exercício ou de uma legislatura específica, opcionalmente filtrados por UF e partido. Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`. Use `emExercicio` (padrão `true`) ou `legislatura` para escolher o conjunto; `uf`/`partido` filtram localmente. Use `codigo` em `senado_obter_senador` ou `senado_votacoes_senador`; se só tiver o nome, prefira `senado_buscar_senador_por_nome`.",
+    "Lista senadores em exercício ou de uma legislatura específica, com filtros opcionais por `nome`, `uf` e `partido`. Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`. Use `emExercicio` (padrão `true`) ou `legislatura` para escolher o conjunto; `nome` faz correspondência parcial ignorando acentos/maiúsculas (use quando você só tem o nome e precisa do `codigo`); `uf`/`partido` filtram localmente. Use o `codigo` em `senado_obter_senador` ou `senado_votacoes_senador`. Para senadores fora de exercício veja `senado_senadores_afastados`.",
     {
       emExercicio: z.boolean().optional().default(true).describe("Filtrar apenas senadores em exercício"),
       legislatura: z.number().int().min(1).optional().describe("Número da legislatura (ex: 57 para 2023-2027)"),
+      nome: z.string().optional().describe("Nome ou parte do nome (busca parcial, sem acento)"),
       uf: z.string().max(2).optional().describe("Sigla do estado (ex: SP, RJ, MG)"),
       partido: z.string().optional().describe("Sigla do partido (ex: PT, PL, MDB)"),
     },
@@ -137,6 +162,9 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
           upstreamFetch(path, {}, baseUrl),
         );
         let senadores = extractParlamentares(response).map(parseSenadorResumo);
+        if (params.nome) {
+          senadores = senadores.filter((s) => matchesNome(s, params.nome!));
+        }
         if (params.uf) {
           const uf = params.uf.toUpperCase();
           senadores = senadores.filter((s) => s.uf.toUpperCase() === uf);
@@ -152,37 +180,10 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
     },
   );
 
-  // A2. senado_buscar_senador_por_nome
-  server.tool(
-    "senado_buscar_senador_por_nome",
-    "Busca senadores atuais por nome (correspondência parcial, ignorando acentos e maiúsculas), útil quando não se tem o código. Retorna `{ count, senadores }` com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`. Pesquisa apenas entre os senadores em exercício; use o `codigo` retornado em `senado_obter_senador`, `senado_senador_detail` ou `senado_votacoes_senador`. Para senadores fora de exercício veja `senado_senadores_afastados`.",
-    {
-      nome: z.string().min(2).describe("Nome ou parte do nome do senador"),
-    },
-    async (params) => {
-      try {
-        const response = await cachedFetch("_senadores_atuais_busca", {}, CACHE_SEMI_STATIC, () =>
-          upstreamFetch("/senador/lista/atual", {}, baseUrl),
-        );
-        const norm = params.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        const senadores = extractParlamentares(response)
-          .map(parseSenadorResumo)
-          .filter((s) => {
-            const full = s.nomeCompleto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            const short = s.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            return full.includes(norm) || short.includes(norm);
-          });
-        return toolResult({ count: senadores.length, senadores });
-      } catch (e) {
-        return errorFrom(e, "Erro na busca por nome");
-      }
-    },
-  );
-
-  // A3. senado_obter_senador
+  // A2. senado_obter_senador
   server.tool(
     "senado_obter_senador",
-    "Obtém o detalhe biográfico de um senador específico. Retorna um objeto com `codigo`, `nome`, `nomeCompleto`, `nomeCivil`, `sexo`, `dataNascimento`, `naturalidade`/`ufNaturalidade`, `partido`, `uf`, `foto`, `email` e a lista `mandatos` (`legislatura`, `uf`, `participacao`, `dataInicio`, `dataFim`). Requer `codigoSenador` — obtenha-o via `senado_buscar_senador_por_nome` ou `senado_listar_senadores`. Para filiações/profissão use `senado_senador_detail`; para licenças/comissões/cargos use `senado_senador_historico`.",
+    "Obtém o detalhe biográfico de um senador específico. Retorna um objeto com `codigo`, `nome`, `nomeCompleto`, `nomeCivil`, `sexo`, `dataNascimento`, `naturalidade`/`ufNaturalidade`, `partido`, `uf`, `foto`, `email` e a lista `mandatos` (`legislatura`, `uf`, `participacao`, `dataInicio`, `dataFim`). Requer `codigoSenador` — obtenha-o via `senado_listar_senadores` (filtro `nome`). Para filiações, profissões, licenças, comissões ou cargos use `senado_senador_historico` (parâmetro `tipo`).",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador no sistema do Senado"),
     },
@@ -205,7 +206,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
   // A4. senado_votacoes_senador (migrated to v3 /votacao?codigoParlamentar — legacy endpoint deprecated)
   server.tool(
     "senado_votacoes_senador",
-    "Lista as votações nominais de um senador, mostrando como votou em cada matéria. Retorna `{ periodo, count, votos }`, cada voto com `codigoVotacao`, `data`, `materia`, `descricao`, `voto` e `resultado`, ordenados da mais recente para a mais antiga. Sem período usa o ano corrente; informe `ano` ou o par `dataInicio`/`dataFim` (YYYYMMDD). Requer `codigoSenador` (obtenha via `senado_buscar_senador_por_nome`); para detalhes de uma votação específica use `senado_obter_votacao`.",
+    "Lista as votações nominais de um senador, mostrando como votou em cada matéria. Retorna `{ periodo, count, votos }`, cada voto com `codigoVotacao`, `data`, `materia`, `descricao`, `voto` e `resultado`, ordenados da mais recente para a mais antiga. Sem período usa o ano corrente; informe `ano` ou o par `dataInicio`/`dataFim` (YYYYMMDD). Requer `codigoSenador` (obtenha via `senado_listar_senadores`); para detalhes de uma votação específica use `senado_obter_votacao`.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
       ano: z.number().int().min(1900).max(2100).optional().describe("Ano das votações"),
@@ -245,73 +246,13 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
     },
   );
 
-  // A5. senado_senador_detail (NEW — aggregated view)
-  server.tool(
-    "senado_senador_detail",
-    "Visão agregada de um senador, combinando mandatos, filiações partidárias e profissões numa única chamada. Retorna `{ codigoSenador, mandatos, filiacoes, profissoes }`: `mandatos` (`legislatura`, `uf`, `participacao`, `dataInicio`, `dataFim`), `filiacoes` (`partido`, `nomePartido`, `dataFiliacao`, `dataDesfiliacao`) e `profissoes` (`nome`); seções indisponíveis no upstream voltam vazias. Requer `codigoSenador` (obtenha via `senado_buscar_senador_por_nome`). Para o detalhe biográfico básico use `senado_obter_senador`; para licenças/comissões/cargos use `senado_senador_historico`.",
-    {
-      codigoSenador: z.number().int().positive().describe("Código único do senador"),
-    },
-    async (params) => {
-      try {
-        const code = params.codigoSenador;
-        const [mandatosRes, filiacoesRes, profissaoRes] = await Promise.all([
-          cachedFetch("senador_mandatos", { code }, CACHE_ON_DEMAND, () =>
-            upstreamFetch(`/senador/${code}/mandatos`, {}, baseUrl),
-          ).catch(() => null),
-          cachedFetch("senador_filiacoes", { code }, CACHE_ON_DEMAND, () =>
-            upstreamFetch(`/senador/${code}/filiacoes`, {}, baseUrl),
-          ).catch(() => null),
-          cachedFetch("senador_profissao", { code }, CACHE_ON_DEMAND, () =>
-            upstreamFetch(`/senador/${code}/profissao`, {}, baseUrl),
-          ).catch(() => null),
-        ]);
-
-        const mandatos = mandatosRes
-          ? ensureArray((mandatosRes as any)?.MandatoParlamentar?.Parlamentar?.Mandatos?.Mandato ??
-              (mandatosRes as any)?.Mandatos?.Mandato)
-          : [];
-        const filiacoes = filiacoesRes
-          ? ensureArray((filiacoesRes as any)?.FiliacaoParlamentar?.Parlamentar?.Filiacoes?.Filiacao ??
-              (filiacoesRes as any)?.Filiacoes?.Filiacao)
-          : [];
-        const profissoes = profissaoRes
-          ? ensureArray((profissaoRes as any)?.ProfissaoParlamentar?.Parlamentar?.Profissoes?.Profissao ??
-              (profissaoRes as any)?.Profissoes?.Profissao)
-          : [];
-
-        return toolResult({
-          codigoSenador: code,
-          mandatos: mandatos.map((m: any) => ({
-            legislatura: parseInt(m.PrimeiraLegislaturaDoMandato?.NumeroLegislatura || m.NumeroLegislatura || "0"),
-            uf: m.UfParlamentar || "",
-            participacao: m.DescricaoParticipacao || "",
-            dataInicio: m.DataInicio || null,
-            dataFim: m.DataFim || null,
-          })),
-          filiacoes: filiacoes.map((f: any) => ({
-            partido: f.Partido?.SiglaPartido || f.SiglaPartido || "",
-            nomePartido: f.Partido?.NomePartido || f.NomePartido || "",
-            dataFiliacao: f.DataFiliacao || null,
-            dataDesfiliacao: f.DataDesfiliacao || null,
-          })),
-          profissoes: profissoes.map((p: any) => ({
-            nome: p.NomeProfissao || p.DescricaoProfissao || "",
-          })),
-        });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter detalhes do senador");
-      }
-    },
-  );
-
-  // A6. senado_senador_historico
+  // A4. senado_senador_historico (licencas | comissoes | cargos | historico-academico | filiacoes | profissoes)
   server.tool(
     "senado_senador_historico",
-    "Histórico funcional de um senador conforme o parâmetro `tipo`: `licencas`, `comissoes`, `cargos` ou `historico-academico`. Retorna `{ codigoSenador, tipo, count, itens }`, onde a forma de cada item depende do `tipo` (licenças têm `dataInicio`/`dataFim`/`descricao`; comissões têm `sigla`/`nome`/`participacao`; cargos têm `comissao`/`cargo`/`datas`). Requer `codigoSenador` (obtenha via `senado_buscar_senador_por_nome`). Para dados biográficos use `senado_obter_senador` e para filiações/profissão `senado_senador_detail`.",
+    "Histórico funcional de um senador conforme o parâmetro `tipo`. Valores: `licencas` (itens com `dataInicio`/`dataFim`/`descricao`), `comissoes` (`sigla`/`nome`/`casa`/`participacao`/datas), `cargos` (`comissao`/`cargo`/datas), `historico-academico` (cursos brutos), `filiacoes` (`partido`/`nomePartido`/`dataFiliacao`/`dataDesfiliacao`) e `profissoes` (`nome`). Retorna `{ codigoSenador, tipo, count, itens }`, com a forma de cada item dependente do `tipo`. Requer `codigoSenador` (obtenha via `senado_listar_senadores`). Para dados biográficos e mandatos use `senado_obter_senador`.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
-      tipo: z.enum(["licencas", "comissoes", "cargos", "historico-academico"]).describe("Qual histórico consultar"),
+      tipo: z.enum(["licencas", "comissoes", "cargos", "historico-academico", "filiacoes", "profissoes"]).describe("Qual histórico consultar"),
     },
     async (params) => {
       try {
@@ -320,6 +261,8 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
           "comissoes": `/senador/${params.codigoSenador}/comissoes`,
           "cargos": `/senador/${params.codigoSenador}/cargos`,
           "historico-academico": `/senador/${params.codigoSenador}/historicoAcademico`,
+          "filiacoes": `/senador/${params.codigoSenador}/filiacoes`,
+          "profissoes": `/senador/${params.codigoSenador}/profissao`,
         };
         const response = await cachedFetch(
           "senado_senador_historico",
@@ -339,6 +282,12 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
           case "cargos":
             itens = ensureArray(r?.CargoParlamentar?.Parlamentar?.Cargos?.Cargo).map(parseCargoSenador);
             break;
+          case "filiacoes":
+            itens = ensureArray(r?.FiliacaoParlamentar?.Parlamentar?.Filiacoes?.Filiacao ?? r?.Filiacoes?.Filiacao).map(parseFiliacao);
+            break;
+          case "profissoes":
+            itens = ensureArray(r?.ProfissaoParlamentar?.Parlamentar?.Profissoes?.Profissao ?? r?.Profissoes?.Profissao).map(parseProfissao);
+            break;
           default: {
             const p = r?.HistoricoAcademicoParlamentar?.Parlamentar;
             itens = ensureArray(p?.HistoricoAcademico?.Curso ?? p?.Cursos?.Curso);
@@ -355,7 +304,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
   // A7. senado_senadores_afastados
   server.tool(
     "senado_senadores_afastados",
-    "Lista os senadores atualmente afastados (fora de exercício). Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio` (sempre `false`). Não requer parâmetros. Use `codigo` em `senado_obter_senador` para o detalhe; para os senadores em exercício use `senado_listar_senadores` e para localizar pelo nome `senado_buscar_senador_por_nome`.",
+    "Lista os senadores atualmente afastados (fora de exercício). Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio` (sempre `false`). Não requer parâmetros. Use `codigo` em `senado_obter_senador` para o detalhe; para os senadores em exercício (e busca por nome) use `senado_listar_senadores`.",
     {},
     async () => {
       try {

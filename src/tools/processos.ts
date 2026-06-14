@@ -1,8 +1,8 @@
 /**
- * Group C — Processes (7 tools)
- * senado_search_processos, senado_obter_processo, senado_emendas_processo,
- * senado_relatorias_processo, senado_prazos_processo, senado_autores_atuais,
- * senado_tabelas_processo
+ * Group C — Processes (5 tools)
+ * senado_search_processos, senado_obter_processo,
+ * senado_processo_detalhe (enum `secao`: emendas | relatorias | prazos),
+ * senado_autores_atuais, senado_tabelas_processo
  *
  * All use the v3 /processo family (flat JSON, camelCase, ISO dates),
  * except /autor/lista/atual which still returns a legacy PascalCase wrapper.
@@ -164,7 +164,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C2. senado_obter_processo
   server.tool(
     "senado_obter_processo",
-    "Obtém detalhes completos de um processo legislativo específico pelo seu `id`. Retorna um objeto com `id`, `codigoMateria`, `identificacao`, `sigla`, `numero`, `ano`, `objetivo`, `ementa`, `tipoConteudo`, `dataApresentacao`, `autoria`, `indexacao`, `urlDocumento` e `tramitando`. Obtenha o `idProcesso` antes via `senado_search_processos` ou `senado_buscar_materias`; para emendas, relatorias ou prazos use as ferramentas `senado_*_processo` específicas.",
+    "Obtém detalhes completos de um processo legislativo específico pelo seu `id`. Retorna um objeto com `id`, `codigoMateria`, `identificacao`, `sigla`, `numero`, `ano`, `objetivo`, `ementa`, `tipoConteudo`, `dataApresentacao`, `autoria`, `indexacao`, `urlDocumento` e `tramitando`. Obtenha o `idProcesso` antes via `senado_search_processos` ou `senado_buscar_materias`; para emendas, relatorias ou prazos use `senado_processo_detalhe` (parâmetro `secao`).",
     {
       idProcesso: z.number().int().positive().describe("ID do processo legislativo"),
     },
@@ -183,124 +183,92 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
     },
   );
 
-  // C3. senado_emendas_processo
+  // C3. senado_processo_detalhe (secao: emendas | relatorias | prazos)
   server.tool(
-    "senado_emendas_processo",
-    "Lista emendas apresentadas a um processo legislativo. Retorna `{ count, total, emendas }` (com `aviso` quando truncado), cada emenda com `id`, `identificacao`, `numero`, `tipo`, `autoria`, `data`, `colegiado`, `descricao`, `decisoes` e `url`. Informe pelo menos um filtro (`idProcesso`, `codigoMateria`, `codigoParlamentarAutor` ou período); `limite` padrão 100 (máx. 500). Obtenha o `idProcesso` via `senado_search_processos`.",
+    "senado_processo_detalhe",
+    "Detalha um aspecto de processos legislativos conforme o parâmetro `secao`: " +
+      "`emendas` → emendas apresentadas (`id`, `identificacao`, `numero`, `tipo`, `autoria`, `data`, `colegiado`, `descricao`, `decisoes`, `url`; aceita filtro `codigoParlamentarAutor`); " +
+      "`relatorias` → relatorias designadas (`idProcesso`, `processo`, `relator`, `partido`, `uf`, `tipoRelator`, `comissao`, `dataDesignacao`, `dataDestituicao`, `motivoEncerramento`; aceita `codigoParlamentar`/`codigoColegiado`/`dataReferencia`); " +
+      "`prazos` → prazos regimentais/constitucionais (registros brutos da API; aceita `dataReferencia`). " +
+      "Todos aceitam `idProcesso` e/ou `codigoMateria` e período `dataInicio`/`dataFim` (YYYYMMDD ou ISO) — informe pelo menos um filtro. Retorna `{ secao, count, total, aviso?, itens }`, limitado a `limite` (padrão 100, máx. 500). " +
+      "Obtenha o `idProcesso` via `senado_search_processos`; tipos de prazo via `senado_tabelas_processo`.",
     {
-      idProcesso: z.number().int().positive().optional().describe("ID do processo emendado"),
-      codigoMateria: z.number().int().positive().optional().describe("Código legado da matéria emendada"),
-      codigoParlamentarAutor: z.number().int().optional().describe("Código do parlamentar autor da emenda"),
-      dataInicio: z.string().optional().describe("Emendas apresentadas a partir desta data (YYYYMMDD ou YYYY-MM-DD)"),
-      dataFim: z.string().optional().describe("Emendas apresentadas até esta data (YYYYMMDD ou YYYY-MM-DD)"),
-      limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de resultados (padrão: 100)"),
-    },
-    async (params) => {
-      try {
-        const qp = buildParams({
-          idProcesso: params.idProcesso,
-          codigoMateria: params.codigoMateria,
-          codigoParlamentarAutor: params.codigoParlamentarAutor,
-          dataInicio: ensureISODate(params.dataInicio),
-          dataFim: ensureISODate(params.dataFim),
-        });
-        if (Object.keys(qp).length === 0) {
-          return toolError("Informe pelo menos um filtro (idProcesso, codigoMateria, autor ou período).");
-        }
-        const response = await cachedFetch("senado_emendas_processo", qp, CACHE_ON_DEMAND, () =>
-          upstreamFetch("/processo/emenda", qp, baseUrl),
-        );
-        const todas = ensureArray(response).map(parseEmendaProcesso);
-        const limite = params.limite ?? 100;
-        const emendas = todas.slice(0, limite);
-        return toolResult({
-          count: emendas.length,
-          total: todas.length,
-          ...(todas.length > limite ? { aviso: `Exibindo ${limite} de ${todas.length} emendas.` } : {}),
-          emendas,
-        });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter emendas do processo");
-      }
-    },
-  );
-
-  // C4. senado_relatorias_processo
-  server.tool(
-    "senado_relatorias_processo",
-    "Lista relatorias de processos legislativos — por processo, matéria, relator, colegiado ou período. Retorna `{ count, total, relatorias }` (com `aviso` quando truncado), cada item com `idProcesso`, `processo`, `relator`, `partido`, `uf`, `tipoRelator`, `comissao`, `dataDesignacao`, `dataDestituicao` e `motivoEncerramento`. Exige ao menos um filtro; `limite` padrão 100 (máx. 500). Obtenha `idProcesso` via `senado_search_processos` ou `codigoParlamentar` via `senado_listar_senadores`.",
-    {
-      idProcesso: z.number().int().positive().optional().describe("ID do processo relatado"),
-      codigoMateria: z.number().int().positive().optional().describe("Código legado da matéria"),
-      codigoParlamentar: z.number().int().optional().describe("Código do parlamentar relator"),
-      codigoColegiado: z.number().int().optional().describe("Código do colegiado da relatoria"),
-      dataReferencia: z.string().optional().describe("Relatorias abertas nesta data (YYYYMMDD ou YYYY-MM-DD)"),
-      dataInicio: z.string().optional().describe("Designadas a partir desta data (YYYYMMDD ou YYYY-MM-DD)"),
-      dataFim: z.string().optional().describe("Designadas até esta data (YYYYMMDD ou YYYY-MM-DD)"),
-      limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de resultados (padrão: 100)"),
-    },
-    async (params) => {
-      try {
-        const qp = buildParams({
-          idProcesso: params.idProcesso,
-          codigoMateria: params.codigoMateria,
-          codigoParlamentar: params.codigoParlamentar,
-          codigoColegiado: params.codigoColegiado,
-          dataReferencia: ensureISODate(params.dataReferencia),
-          dataInicio: ensureISODate(params.dataInicio),
-          dataFim: ensureISODate(params.dataFim),
-        });
-        if (Object.keys(qp).length === 0) {
-          return toolError("Informe pelo menos um filtro (processo, matéria, relator, colegiado ou período).");
-        }
-        const response = await cachedFetch("senado_relatorias_processo", qp, CACHE_ON_DEMAND, () =>
-          upstreamFetch("/processo/relatoria", qp, baseUrl),
-        );
-        const todas = ensureArray(response).map(parseRelatoriaProcesso);
-        const limite = params.limite ?? 100;
-        const relatorias = todas.slice(0, limite);
-        return toolResult({
-          count: relatorias.length,
-          total: todas.length,
-          ...(todas.length > limite ? { aviso: `Exibindo ${limite} de ${todas.length} relatorias.` } : {}),
-          relatorias,
-        });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter relatorias");
-      }
-    },
-  );
-
-  // C5. senado_prazos_processo
-  server.tool(
-    "senado_prazos_processo",
-    "Lista prazos regimentais ou constitucionais de processos legislativos — por processo, matéria, data de vigência ou período de início. Retorna `{ count, prazos }`, onde `prazos` é o array de prazos retornado pela API v3 `/processo/prazo` (sem paginação). Exige ao menos um filtro (`idProcesso`, `codigoMateria` ou período). Obtenha o `idProcesso` via `senado_search_processos`; tipos de prazo via `senado_tabelas_processo`.",
-    {
+      secao: z.enum(["emendas", "relatorias", "prazos"]).describe("Qual aspecto detalhar: emendas, relatorias ou prazos"),
       idProcesso: z.number().int().positive().optional().describe("ID do processo"),
       codigoMateria: z.number().int().positive().optional().describe("Código legado da matéria"),
-      dataReferencia: z.string().optional().describe("Prazos vigentes nesta data (YYYYMMDD ou YYYY-MM-DD)"),
-      dataInicio: z.string().optional().describe("Prazos iniciados a partir desta data (YYYYMMDD ou YYYY-MM-DD)"),
-      dataFim: z.string().optional().describe("Prazos iniciados até esta data (YYYYMMDD ou YYYY-MM-DD)"),
+      codigoParlamentarAutor: z.number().int().optional().describe("secao=emendas: código do parlamentar autor"),
+      codigoParlamentar: z.number().int().optional().describe("secao=relatorias: código do parlamentar relator"),
+      codigoColegiado: z.number().int().optional().describe("secao=relatorias: código do colegiado"),
+      dataReferencia: z.string().optional().describe("secao=relatorias/prazos: vigentes nesta data (YYYYMMDD ou YYYY-MM-DD)"),
+      dataInicio: z.string().optional().describe("A partir desta data (YYYYMMDD ou YYYY-MM-DD)"),
+      dataFim: z.string().optional().describe("Até esta data (YYYYMMDD ou YYYY-MM-DD)"),
+      limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de resultados (padrão: 100)"),
     },
     async (params) => {
       try {
-        const qp = buildParams({
-          idProcesso: params.idProcesso,
-          codigoMateria: params.codigoMateria,
-          dataReferencia: ensureISODate(params.dataReferencia),
-          dataInicio: ensureISODate(params.dataInicio),
-          dataFim: ensureISODate(params.dataFim),
-        });
-        if (Object.keys(qp).length === 0) {
-          return toolError("Informe pelo menos um filtro (processo, matéria ou período).");
+        const di = ensureISODate(params.dataInicio);
+        const df = ensureISODate(params.dataFim);
+        const dref = ensureISODate(params.dataReferencia);
+        const limite = params.limite ?? 100;
+
+        let path: string;
+        let qp: Record<string, string>;
+        let mapper: (x: any) => any;
+        if (params.secao === "relatorias") {
+          path = "/processo/relatoria";
+          qp = buildParams({
+            idProcesso: params.idProcesso,
+            codigoMateria: params.codigoMateria,
+            codigoParlamentar: params.codigoParlamentar,
+            codigoColegiado: params.codigoColegiado,
+            dataReferencia: dref,
+            dataInicio: di,
+            dataFim: df,
+          });
+          mapper = parseRelatoriaProcesso;
+        } else if (params.secao === "prazos") {
+          path = "/processo/prazo";
+          qp = buildParams({
+            idProcesso: params.idProcesso,
+            codigoMateria: params.codigoMateria,
+            dataReferencia: dref,
+            dataInicio: di,
+            dataFim: df,
+          });
+          mapper = (x: any) => x;
+        } else {
+          path = "/processo/emenda";
+          qp = buildParams({
+            idProcesso: params.idProcesso,
+            codigoMateria: params.codigoMateria,
+            codigoParlamentarAutor: params.codigoParlamentarAutor,
+            dataInicio: di,
+            dataFim: df,
+          });
+          mapper = parseEmendaProcesso;
         }
-        const response = await cachedFetch("senado_prazos_processo", qp, CACHE_ON_DEMAND, () =>
-          upstreamFetch("/processo/prazo", qp, baseUrl),
+
+        if (Object.keys(qp).length === 0) {
+          return toolError("Informe pelo menos um filtro (idProcesso, codigoMateria ou período).");
+        }
+
+        const response = await cachedFetch(
+          "senado_processo_detalhe",
+          { secao: params.secao, ...qp },
+          CACHE_ON_DEMAND,
+          () => upstreamFetch(path, qp, baseUrl),
         );
-        const prazos = ensureArray(response);
-        return toolResult({ count: prazos.length, prazos });
+        const todos = ensureArray(response).map(mapper);
+        const itens = todos.slice(0, limite);
+        return toolResult({
+          secao: params.secao,
+          count: itens.length,
+          total: todos.length,
+          ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} registros.` } : {}),
+          itens,
+        });
       } catch (e) {
-        return errorFrom(e, "Erro ao obter prazos");
+        return errorFrom(e, "Erro ao obter detalhe do processo");
       }
     },
   );

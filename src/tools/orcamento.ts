@@ -1,9 +1,10 @@
 /**
- * Group K — Orçamento / Budget (2 tools)
- * senado_orcamento_emendas, senado_orcamento_oficios
+ * Group K — Orçamento / Budget (1 tool)
+ * senado_orcamento_parlamentar (enum `tipo`: emendas | oficios)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolResult, errorFrom, ensureArray } from "../utils/validation.js";
@@ -35,13 +36,34 @@ export function parseOficio(o: any) {
 }
 
 export function registerOrcamentoTools(server: McpServer, baseUrl: string) {
-  // K1. senado_orcamento_emendas
+  // K1. senado_orcamento_parlamentar (tipo: emendas | oficios)
   server.tool(
-    "senado_orcamento_emendas",
-    "Lista lotes de emendas orçamentárias do Senado. Retorna `{ count, emendas }`, onde cada item traz `codigo`, `numero`, `ano`, `tipo`, `autor`, `valor` e `descricao`. Não requer parâmetros. Para os ofícios de apoio a essas emendas, use `senado_orcamento_oficios`.",
-    {},
-    async () => {
+    "senado_orcamento_parlamentar",
+    "Consulta dados de emendas orçamentárias do Senado pelo parâmetro `tipo` (padrão `emendas`). " +
+      "`tipo: emendas` → `{ tipo, count, emendas }`, cada item com `codigo`, `numero`, `ano`, `tipo`, `autor`, `valor` e `descricao`. " +
+      "`tipo: oficios` → `{ tipo, count, oficios }`, cada item com `codigo`, `numero`, `data`, `tipo`, `descricao` e `situacao` (ofícios de apoio às emendas). " +
+      "Não recebe outros parâmetros.",
+    {
+      tipo: z.enum(["emendas", "oficios"]).optional().default("emendas").describe("emendas (lotes de emendas) ou oficios (ofícios de apoio)"),
+    },
+    async (params) => {
       try {
+        const tipo = params.tipo ?? "emendas";
+        if (tipo === "oficios") {
+          const response = await cachedFetch(
+            "senado_orcamento_oficios",
+            {},
+            CACHE_SEMI_STATIC,
+            () => upstreamFetch("/orcamento/oficios", {}, baseUrl),
+          );
+          const r = response as any;
+          const oficios = ensureArray(
+            r?.OrcamentoOficios?.Oficios?.Oficio ??
+            r?.Oficios?.Oficio ??
+            r?.ListaOficios?.Oficios?.Oficio,
+          ).map(parseOficio);
+          return toolResult({ tipo, count: oficios.length, oficios });
+        }
         const response = await cachedFetch(
           "senado_orcamento_emendas",
           {},
@@ -54,35 +76,9 @@ export function registerOrcamentoTools(server: McpServer, baseUrl: string) {
           r?.Emendas?.Emenda ??
           r?.ListaEmendas?.Emendas?.Emenda,
         ).map(parseEmenda);
-        return toolResult({ count: emendas.length, emendas });
+        return toolResult({ tipo, count: emendas.length, emendas });
       } catch (e) {
-        return errorFrom(e, "Erro ao obter emendas orçamentárias");
-      }
-    },
-  );
-
-  // K2. senado_orcamento_oficios
-  server.tool(
-    "senado_orcamento_oficios",
-    "Lista ofícios de apoio a emendas orçamentárias. Retorna `{ count, oficios }`, onde cada item traz `codigo`, `numero`, `data`, `tipo`, `descricao` e `situacao`. Não requer parâmetros. Para as emendas correspondentes, use `senado_orcamento_emendas`.",
-    {},
-    async () => {
-      try {
-        const response = await cachedFetch(
-          "senado_orcamento_oficios",
-          {},
-          CACHE_SEMI_STATIC,
-          () => upstreamFetch("/orcamento/oficios", {}, baseUrl),
-        );
-        const r = response as any;
-        const oficios = ensureArray(
-          r?.OrcamentoOficios?.Oficios?.Oficio ??
-          r?.Oficios?.Oficio ??
-          r?.ListaOficios?.Oficios?.Oficio,
-        ).map(parseOficio);
-        return toolResult({ count: oficios.length, oficios });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter ofícios orçamentários");
+        return errorFrom(e, "Erro ao obter dados orçamentários");
       }
     },
   );
