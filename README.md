@@ -80,7 +80,8 @@ wrangler secret put API_KEY
 
 ```bash
 npm run dev
-# Server runs at http://localhost:8787
+# Dev server runs locally on port 8787 (local only).
+# The public MCP endpoint is https://senado.sidneybissoli.com/mcp
 ```
 
 ### 6. Tests and typecheck
