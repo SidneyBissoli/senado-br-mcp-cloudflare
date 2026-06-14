@@ -94,7 +94,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q2. senado_contratacao_detalhe
   server.tool(
     "senado_contratacao_detalhe",
-    "Detalha uma seção específica de uma contratação (contrato, ata de registro de preço ou nota de empenho): `itens`, `pagamentos`, `garantias`, `aditivos` (só `contratos`) ou `acionamentos` (só `atas_registro_preco`). Retorna `{ id, tipo, secao, count, total, itens }` com os registros brutos da seção, limitados a `limite` (padrão 100, máx 500). Obtenha o `id` antes via `senado_contratos` ou `senado_contratacoes_lista`; combinações de seção/tipo inválidas retornam erro.",
+    "Detalha uma seção específica de uma contratação. O `tipo` indica a natureza do registro: `contratos` (contrato firmado), `atas_registro_preco` (ata de registro de preço — compromisso de preços para compras futuras) ou `notas_empenho` (nota de empenho — reserva orçamentária do gasto). A `secao` escolhe o aspecto: `itens`, `pagamentos`, `garantias`, `aditivos` (só `contratos`) ou `acionamentos` (só `atas_registro_preco`). Retorna `{ id, tipo, secao, count, total, itens }` com os registros brutos da seção (campos conforme a API administrativa), limitados a `limite` (padrão 100, máx 500); seção sem registros retorna `count` 0 e `itens` vazio. Obtenha o `id` antes via `senado_contratos` ou `senado_contratacoes_lista`; combinações de seção/tipo inválidas retornam erro.",
     {
       id: z.number().int().positive().describe("ID da contratação (campo 'id' das listas de contratos/atas/empenhos)"),
       tipo: z.enum(["contratos", "atas_registro_preco", "notas_empenho"]).optional().default("contratos").describe("Tipo da contratação"),
@@ -250,7 +250,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q6. senado_contratacoes_lista
   server.tool(
     "senado_contratacoes_lista",
-    "Lista, conforme `tipo`, atas de registro de preço, notas de empenho ou menores aprendizes do Senado, com filtro textual opcional aplicado no Worker sobre todos os campos. Retorna `{ tipo, count, total, registros }`; para atas/empenhos cada registro segue o formato de contrato (`id`, `numero`, `objeto`, `empresa`...), menores aprendizes vêm brutos. Limitado a `limite` (padrão 50, máx 500), com `aviso` ao truncar. Para aprofundar uma ata/empenho, use o `id` em `senado_contratacao_detalhe`.",
+    "Lista, conforme `tipo`, atas de registro de preço, notas de empenho ou menores aprendizes do Senado, com filtro textual opcional aplicado no Worker sobre todos os campos. Retorna `{ tipo, count, total, registros }`; para `atas_registro_preco`/`notas_empenho` cada registro segue o formato de contrato (`id`, `numero`, `objeto`, `empresa`, `subEspecie`, `vigencia`...), enquanto `menores_aprendizes` vêm como registros brutos da API (campos não normalizados). Limitado a `limite` (padrão 50, máx 500), com `aviso` ao truncar; `tipo` sem registros retorna lista vazia. Para aprofundar uma ata/empenho, use o `id` em `senado_contratacao_detalhe`.",
     {
       tipo: z.enum(["atas_registro_preco", "notas_empenho", "menores_aprendizes"]).describe("Qual lista consultar"),
       filtro: z.string().optional().describe("Filtro textual (empresa, objeto, etc.)"),

@@ -315,7 +315,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C7. senado_tabelas_processo (consolidated reference tables)
   server.tool(
     "senado_tabelas_processo",
-    "Consulta tabelas de referência do processo legislativo (parâmetro `tabela`): siglas, assuntos, classes, destinos, entes, tipos-situacao/decisao/autor/atualizacao/documento/conteudo-documento/prazo. Retorna `{ tabela, count, total, linhas }` com as linhas brutas da tabela escolhida; `filtro` textual opcional (sobre sigla/descrição) e `limite` padrão 200 (máx. 1000). Use para resolver códigos/siglas antes de filtrar em `senado_search_processos` e ferramentas afins.",
+    "Consulta tabelas de referência do processo legislativo (parâmetro `tabela`): siglas, assuntos, classes, destinos, entes, tipos-situacao/decisao/autor/atualizacao/documento/conteudo-documento/prazo. Retorna `{ tabela, count, total, linhas }` com as linhas brutas da tabela escolhida — cada linha traz tipicamente um código/sigla e a descrição do domínio (campos conforme a API). `filtro` textual opcional (sobre sigla/descrição) e `limite` padrão 200 (máx. 1000); `count` 0 quando o filtro não casa. Use para resolver códigos/siglas antes de filtrar em `senado_search_processos` e ferramentas afins.",
     {
       tabela: z.enum([
         "siglas", "assuntos", "classes", "destinos", "entes",

@@ -137,8 +137,8 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
     "Dados administrativos dos senadores conforme o parâmetro `tipo`: " +
       "`auxilio-moradia` → `{ tipo, count, senadores }` (`nome`, `uf`, `partido`, `auxilioMoradia`, `imovelFuncional`; legislatura atual). " +
       "`escritorios-apoio` → `{ tipo, count, escritorios }` (`senador`, `uf`, `partido`, `setor`, `endereco`, `telefone`). " +
-      "`aposentados` → `{ tipo, count, aposentados }` ex-senadores aposentados (IPC/PSSC) com `nome`, `tipo` do plano, `dataInicial`, `remuneracao`. " +
-      "Filtros opcionais `uf` e `nome` (busca parcial) aplicam-se a auxilio-moradia e escritorios-apoio; `nome` também filtra aposentados. Para gastos de cota use `senado_ceaps`.",
+      "`aposentados` → `{ tipo, count, aposentados }` ex-senadores aposentados pelos planos de previdência do Congresso (IPC e PSSC), com `nome`, `tipo` do plano, `dataInicial`, `remuneracao`. " +
+      "Filtros opcionais `uf` e `nome` (busca parcial) aplicam-se a auxilio-moradia e escritorios-apoio; `nome` também filtra aposentados. Cada `tipo` retorna `count` 0 e lista vazia quando não há registros. Para gastos de cota parlamentar use `senado_ceaps`.",
     {
       tipo: z.enum(["auxilio-moradia", "escritorios-apoio", "aposentados"]).describe("Qual dado administrativo consultar"),
       uf: z.string().max(2).optional().describe("Filtrar por estado (auxilio-moradia/escritorios-apoio)"),
