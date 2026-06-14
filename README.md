@@ -26,8 +26,17 @@ HTTP endpoint — **no install, no account, no API key, no configuration**:
 https://senado.sidneybissoli.com/mcp
 ```
 
-- **One-click (LobeHub):** open the [server page](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare) and click **Install** (it pre-fills the endpoint).
-- **Claude Desktop / Claude Code** and other clients: see [Connecting MCP Clients](#connecting-mcp-clients).
+### Install (any client)
+
+For clients that launch MCP servers as a command — and for one-command setup — use the
+[`mcp-remote`](https://www.npmjs.com/package/mcp-remote) bridge. **No build, no config, no key:**
+
+```bash
+npx -y mcp-remote https://senado.sidneybissoli.com/mcp
+```
+
+- **One-click (LobeHub):** open the [server page](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare) and click **Install**.
+- **Native remote URL** (Claude Desktop/Code and other Streamable-HTTP clients): see [Connecting MCP Clients](#connecting-mcp-clients).
 
 Everything below *Architecture* (Prerequisites, Setup, Deploy) is **only for optionally self-hosting your
 own instance** — it is **not** required to use this public server.
@@ -603,16 +612,14 @@ Add to your MCP configuration:
 }
 ```
 
-If `API_KEY` is configured, add the auth header:
+For command-based clients (or any client without native remote support), use the `mcp-remote` bridge:
 
 ```json
 {
   "mcpServers": {
     "senado-br": {
-      "url": "https://senado.sidneybissoli.com/mcp",
-      "headers": {
-        "Authorization": "Bearer <your-api-key>"
-      }
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://senado.sidneybissoli.com/mcp"]
     }
   }
 }
