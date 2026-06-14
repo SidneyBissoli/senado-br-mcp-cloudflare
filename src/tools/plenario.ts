@@ -181,7 +181,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F2. senado_resultado_plenario
   server.tool(
     "senado_resultado_plenario",
-    "Resultado das sessões plenárias numa data: itens de pauta apreciados, pareceres e resultados. Retorna `{ data, escopo, count, sessoes }`, com cada sessão trazendo `codigoSessao`, `numeroSessao`, `data`, `hora`, `tipo`, `casa` e `itens` (`codigoMateria`, `identificacao`, `ementa`, `resultado`, `parecer`). `escopo`: sf (Senado), cn (Congresso) ou mes (resumo do mês). Para a pauta prévia use `senado_agenda_plenario`; orientação de bancada via `senado_orientacao_bancada`.",
+    "Resultado das sessões plenárias numa data: itens de pauta apreciados, pareceres e resultados. Retorna `{ data, escopo, count, sessoes }` (todas as sessões da data, sem paginação), com cada sessão trazendo `codigoSessao`, `numeroSessao`, `data`, `hora`, `tipo`, `casa` e `itens` (`codigoMateria`, `identificacao`, `ementa`, `resultado`, `parecer` — `resultado`/`parecer` podem vir `null` em itens ainda não deliberados). Sem sessão na data, `count` é 0 e `sessoes` vem vazio. `escopo`: sf (Senado), cn (Congresso) ou mes (resumo do mês). Para a pauta prévia use `senado_agenda_plenario`; orientação de bancada via `senado_orientacao_bancada`.",
     {
       data: z.string().regex(/^\d{8}$/).describe("Data da sessão (YYYYMMDD); para escopo=mes, qualquer dia do mês"),
       escopo: z.enum(["sf", "cn", "mes"]).optional().default("sf").describe("sf = Senado no dia; cn = Congresso no dia; mes = resumo do mês"),
@@ -276,7 +276,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F5. senado_resultado_veto
   server.tool(
     "senado_resultado_veto",
-    "Resultado da votação nominal de um veto presidencial. Retorna `{ codigo, tipo, resultado }`, onde `resultado` é o objeto bruto (já sem wrappers) com os dados da votação. Informe `codigo` e `tipo`: veto (código do veto, padrão), materia (código do projeto vetado) ou dispositivo (dispositivo de veto parcial). Obtenha o código do veto via `senado_vetos`.",
+    "Resultado da votação nominal de um veto presidencial. Retorna `{ codigo, tipo, resultado }`, onde `resultado` é o objeto bruto da API (já sem wrappers), com campos variáveis conforme o veto — tipicamente identificação do veto, sessão/data, placar e situação da apreciação; pode vir objeto vazio quando o veto ainda não foi votado, e a chamada retorna erro se o `codigo` não existir. Informe `codigo` e `tipo`: veto (código do veto, padrão), materia (código do projeto vetado) ou dispositivo (dispositivo de veto parcial). Obtenha o código do veto via `senado_vetos`.",
     {
       codigo: z.number().int().positive().describe("Código do veto, da matéria ou do dispositivo, conforme o tipo"),
       tipo: z.enum(["veto", "materia", "dispositivo"]).optional().default("veto").describe("veto = código do veto (padrão); materia = código do projeto vetado; dispositivo = dispositivo de veto parcial"),
@@ -302,7 +302,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F6. senado_encontro_plenario
   server.tool(
     "senado_encontro_plenario",
-    "Detalhes de um encontro legislativo (sessão de plenário): dados gerais, pauta, resultado ou resumo. Retorna `{ codigo, secao, encontro }`, onde `encontro` é o objeto da sessão (ou array, quando há vários). Escolha `secao`: detalhes (padrão), pauta, resultado ou resumo. Obtenha o `codigo` via `senado_agenda_plenario` ou `senado_resultado_plenario`.",
+    "Detalhes de um encontro legislativo (sessão de plenário). Retorna `{ codigo, secao, encontro }`, onde `encontro` é o objeto bruto da API (ou array, quando o upstream traz vários) cujos campos variam conforme a `secao` escolhida: `detalhes` (padrão) traz dados gerais da sessão (tipo, data, situação, presença); `pauta` traz as matérias previstas; `resultado` traz os itens apreciados e seus resultados; `resumo` traz uma síntese. `encontro` pode vir vazio se a seção não tiver dados, e a chamada retorna erro se o `codigo` não existir. Obtenha o `codigo` via `senado_agenda_plenario` ou `senado_resultado_plenario`.",
     {
       codigo: z.number().int().positive().describe("Código do encontro/sessão"),
       secao: z.enum(["detalhes", "pauta", "resultado", "resumo"]).optional().default("detalhes").describe("Qual seção do encontro consultar"),
