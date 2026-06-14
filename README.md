@@ -5,7 +5,7 @@
 
 MCP server for **Brazilian Senate open data** running on Cloudflare Workers with Streamable HTTP transport.
 
-Provides **65 tools** organized into 19 groups covering the **legislative** domain (senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes, reference data, citizen participation via e-Cidadania, speeches and stenographic transcripts, blocs and leadership, federal legislation, committee voting) and the **administrative** domain (CEAPS parliamentary quota expenses, housing allowance, civil servants and payroll, overtime, interns, procurement contracts, biddings, outsourced staff, petty-cash funds, budget execution and own revenues). Connects to three sources: the [legislative open data API](https://legis.senado.leg.br/dadosabertos/), the [administrative open data API](https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html) and the e-Cidadania portal.
+Provides **65 tools** (plus **4 prompts** and **5 resources**) organized into 19 groups covering the **legislative** domain (senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes, reference data, citizen participation via e-Cidadania, speeches and stenographic transcripts, blocs and leadership, federal legislation, committee voting) and the **administrative** domain (CEAPS parliamentary quota expenses, housing allowance, civil servants and payroll, overtime, interns, procurement contracts, biddings, outsourced staff, petty-cash funds, budget execution and own revenues). Connects to three sources: the [legislative open data API](https://legis.senado.leg.br/dadosabertos/), the [administrative open data API](https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html) and the e-Cidadania portal.
 
 > **v2.1.0:** all tools that consumed endpoints marked *deprecated* upstream (the legacy `/materia/*` family and `/senador/{codigo}/votacoes`) were migrated to the v3 `/processo` and `/votacao` APIs, keeping tool names and output keys stable.
 >
@@ -14,6 +14,8 @@ Provides **65 tools** organized into 19 groups covering the **legislative** doma
 > **v2.3.0:** every tool now declares MCP annotations (`readOnlyHint`, `openWorldHint`) and a structured-output schema; canonical endpoint moved to the custom domain `https://senado.sidneybissoli.com/mcp` (the `*.workers.dev` URL still works as a fallback).
 >
 > **v3.0.0:** consolidated 90 → 65 tools by merging near-duplicate tools into enum/secao/tipo parameters (e.g. reference tables → `senado_tabelas_referencia`; per-process sub-resources → `senado_processo_detalhe`; `senado_mesa` with a `casa` param; `senado_search_votacoes` absorbing the recent-votes/list tools). Breaking change: several tool names were removed or renamed.
+>
+> **v3.1.0:** adds the MCP **prompts** capability (4 reusable pt-BR workflow templates — CEAPS expenses, bill tracking, senator votes, e-Cidadania overview) and the **resources** capability (5 static context docs: usage guide, tool catalog, glossary, and the tipos-matéria / UFs reference tables). Ships a `LICENSE` file (MIT).
 
 ## Architecture
 
@@ -478,6 +480,29 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 
 **Total: 65 tools**
 
+### Prompts (4)
+
+Reusable pt-BR workflow templates (MCP `prompts` capability), defined in `src/prompts.ts`:
+
+| Prompt | Args | What it guides |
+| --- | --- | --- |
+| `senado_gastos_senador` | `senador`, `ano` | Resolve o senador e agrega/detalha despesas CEAPS. |
+| `senado_tramitacao_materia` | `sigla`, `numero`, `ano` | Obtém situação atual + histórico de tramitação da matéria. |
+| `senado_votos_senador` | `senador`, `periodo?` | Lista os votos nominais do senador no período. |
+| `senado_panorama_ecidadania` | — | Consolida consultas (consenso/polarização), ideias e eventos populares. |
+
+### Resources (5)
+
+Static context documents/tables (MCP `resources` capability), defined in `src/resources.ts`:
+
+| URI | Type | Content |
+| --- | --- | --- |
+| `senado://guia` | markdown | Visão geral e qual ferramenta usar por objetivo. |
+| `senado://catalogo` | markdown | As 65 ferramentas agrupadas por domínio. |
+| `senado://glossario` | markdown | Siglas e termos do Senado (PEC, CEAPS, CCJ, RCN…). |
+| `senado://tabelas/tipos-materia` | json | Tipos de proposição (sigla/nome/descrição). |
+| `senado://tabelas/ufs` | json | As 27 unidades federativas. |
+
 ## Project Structure
 
 ```
@@ -531,6 +556,18 @@ tests/                    # Vitest unit tests mirroring src/ (parsers, cache, th
 | `CACHE_KV` | Yes (binding) | — | KV namespace for L2 cache |
 
 ## Connecting MCP Clients
+
+This is a **remote** server (Streamable HTTP, no install, open access) — point any MCP client at
+`https://senado.sidneybissoli.com/mcp`. Besides 65 tools, it exposes **prompts** (ready-made pt-BR
+workflows: `senado_gastos_senador`, `senado_tramitacao_materia`, `senado_votos_senador`,
+`senado_panorama_ecidadania`) and **resources** (`senado://guia`, `senado://catalogo`,
+`senado://glossario`, `senado://tabelas/tipos-materia`, `senado://tabelas/ufs`).
+
+### One-click (LobeHub)
+
+Install from the LobeHub marketplace — open the
+[server page](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare) and click **Install**
+(it pre-fills the remote endpoint, no config needed).
 
 ### Claude Desktop / Claude Code
 
