@@ -75,4 +75,11 @@ export default {
     logger.info("request", { method: request.method, path: url.pathname, status: response.status, ms });
     return response;
   },
+
+  // Cron-triggered refresh of the e-Cidadania lists into D1 (P2). Stub for now —
+  // step 3 will implement the scrape -> upsert(current) + append-on-change(history)
+  // pipeline with the anomaly guard (never overwrite current with a bad run).
+  async scheduled(_controller: ScheduledController, _env: Env, _ctx: ExecutionContext): Promise<void> {
+    logger.info("scheduled_noop", { note: "e-Cidadania Cron handler not yet implemented (P2 step 3)" });
+  },
 } satisfies ExportedHandler<Env>;
