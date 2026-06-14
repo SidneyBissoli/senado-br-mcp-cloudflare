@@ -29,7 +29,7 @@ import type { Env } from "./types.js";
 export function createServer(env: Env): McpServer {
   const server = new McpServer({
     name: "senado-br-mcp",
-    version: "2.3.0",
+    version: "3.0.0",
     websiteUrl: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
     icons: [
       {
@@ -68,52 +68,52 @@ export function createServer(env: Env): McpServer {
   const baseUrl = env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
   const admBaseUrl = env.SENADO_ADM_BASE_URL || "https://adm.senado.gov.br/adm-dadosabertos";
 
-  // Group H — Reference/metadata (4 tools)
+  // Group H — Reference/metadata (1 tool — enum `tabela`)
   registerReferenciaTools(server, baseUrl);
 
-  // Group A — Senators (7 tools)
+  // Group A — Senators (5 tools)
   registerSenadoresTools(server, baseUrl);
 
-  // Group B — Bills (4 tools; votos_materia is registered in Group D)
+  // Group B — Bills (2 tools; votos_materia is registered in Group D)
   registerMateriasTools(server, baseUrl);
 
-  // Group D — Votes (5 tools)
+  // Group D — Votes (3 tools)
   registerVotacoesTools(server, baseUrl);
 
-  // Group E — Committees (8 tools)
+  // Group E — Committees (7 tools)
   registerComissoesTools(server, baseUrl);
 
   // Group F — Plenary (7 tools)
   registerPlenarioTools(server, baseUrl);
 
-  // Group C — Processes (7 tools)
+  // Group C — Processes (5 tools)
   registerProcessosTools(server, baseUrl);
 
-  // Group G — e-Cidadania (11 tools)
+  // Group G — e-Cidadania (8 tools)
   registerECidadaniaTools(server, baseUrl);
 
-  // Group I — Speeches (5 tools)
+  // Group I — Speeches (3 tools)
   registerDiscursosTools(server, baseUrl);
 
-  // Group J — Blocs & Leadership (5 tools)
+  // Group J — Blocs & Leadership (4 tools)
   registerComposicaoTools(server, baseUrl);
 
-  // Group K — Budget (2 tools)
+  // Group K — Budget (1 tool — enum `tipo`)
   registerOrcamentoTools(server, baseUrl);
 
-  // Group L — Federal Law (3 tools)
+  // Group L — Federal Law (2 tools)
   registerLegislacaoTools(server, baseUrl);
 
-  // Group M — Committee Voting (3 tools)
+  // Group M — Committee Voting (1 tool — enum `por`)
   registerVotacaoComissaoTools(server, baseUrl);
 
   // Group N — Taquigrafia (2 tools)
   registerTaquigrafiaTools(server, baseUrl);
 
-  // Group O — Senadores/Administrativo (4 tools)
+  // Group O — Senadores/Administrativo (2 tools)
   registerSenadoresAdminTools(server, admBaseUrl);
 
-  // Group P — Servidores / Gestão de Pessoas (5 tools)
+  // Group P — Servidores / Gestão de Pessoas (4 tools)
   registerServidoresTools(server, admBaseUrl);
 
   // Group Q — Contratações (6 tools)

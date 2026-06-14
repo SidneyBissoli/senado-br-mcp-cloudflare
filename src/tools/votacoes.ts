@@ -1,10 +1,10 @@
 /**
- * Group D — Votes (5 tools)
- * senado_listar_votacoes, senado_votacoes_recentes, senado_obter_votacao,
- * senado_votos_materia, senado_search_votacoes
+ * Group D — Votes (3 tools)
+ * senado_obter_votacao, senado_votos_materia, senado_search_votacoes
  *
- * D1/D2/D3/D5 use the /votacao endpoint (new API, camelCase, ISO dates).
- * D4 uses the old /materia/votacoes/{codigo} endpoint (PascalCase).
+ * Todos usam o endpoint /votacao (API nova, camelCase, datas ISO), exceto votos_materia
+ * que faz a ponte por codigoMateria. search_votacoes absorve o que eram listar_votacoes
+ * (janela por ano/mês via dataInicio/dataFim) e votacoes_recentes (parâmetro `dias`).
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -12,7 +12,7 @@ import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
-import { CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
+import { CACHE_ON_DEMAND } from "../types.js";
 
 /** Convert YYYYMMDD → YYYY-MM-DD (required by /votacao endpoint). */
 export function toISODate(yyyymmdd: string): string {
@@ -58,78 +58,10 @@ export function parseVotacaoItem(v: any, includeVotos = false) {
 }
 
 export function registerVotacoesTools(server: McpServer, baseUrl: string) {
-  // D1. senado_listar_votacoes
-  server.tool(
-    "senado_listar_votacoes",
-    "Lista votações do plenário do Senado por ano, com filtro opcional por `mes` ou período (`dataInicio`/`dataFim`, YYYYMMDD). Retorna `{ ano, count, votacoes }`, onde cada item traz `codigoSessao`, `codigoVotacao`, `data`, `materia`, `codigoMateria`, `resultado`, `totalSim`/`totalNao`/`totalAbstencao` e `secreta` (sem votos nominais). Use `senado_obter_votacao` com o `codigoSessao` para os votos de cada senador, ou `senado_search_votacoes` para critérios combinados.",
-    {
-      ano: z.number().int().min(1900).max(2100).describe("Ano das votações (obrigatório)"),
-      mes: z.number().int().min(1).max(12).optional().describe("Mês (1-12)"),
-      dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
-      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
-    },
-    async (params) => {
-      try {
-        let di: string;
-        let df: string;
-        if (params.dataInicio && params.dataFim) {
-          di = toISODate(params.dataInicio);
-          df = toISODate(params.dataFim);
-        } else if (params.mes) {
-          di = `${params.ano}-${String(params.mes).padStart(2, "0")}-01`;
-          df = `${params.ano}-${String(params.mes).padStart(2, "0")}-${lastDayOfMonth(params.ano, params.mes)}`;
-        } else {
-          di = `${params.ano}-01-01`;
-          df = `${params.ano}-12-31`;
-        }
-        const qp = { dataInicio: di, dataFim: df };
-        const response = await cachedFetch(
-          "senado_listar_votacoes",
-          { ano: params.ano, ...qp },
-          CACHE_DYNAMIC,
-          () => upstreamFetch("/votacao", qp, baseUrl),
-        );
-        const votacoes = ensureArray(response).map((v: any) => parseVotacaoItem(v));
-        return toolResult({ ano: params.ano, count: votacoes.length, votacoes });
-      } catch (e) {
-        return errorFrom(e, "Erro ao listar votações");
-      }
-    },
-  );
-
-  // D2. senado_votacoes_recentes
-  server.tool(
-    "senado_votacoes_recentes",
-    "Obtém as votações mais recentes do plenário nos últimos `dias` (padrão 7, máx 365). Retorna `{ periodo, count, votacoes }` ordenadas da mais recente para a mais antiga; cada item traz `codigoSessao`, `data`, `materia`, `resultado` e placar (`totalSim`/`totalNao`/`totalAbstencao`), sem votos nominais. Para acompanhar atividade recente; use `senado_obter_votacao` para detalhar uma votação ou `senado_listar_votacoes` para um ano/mês específico.",
-    {
-      dias: z.number().int().min(1).max(365).optional().default(7).describe("Quantidade de dias (padrão: 7)"),
-    },
-    async (params) => {
-      try {
-        const hoje = new Date();
-        const inicio = new Date(hoje);
-        inicio.setDate(inicio.getDate() - (params.dias ?? 7));
-        const qp = { dataInicio: formatISO(inicio), dataFim: formatISO(hoje) };
-        const response = await cachedFetch(
-          "senado_votacoes_recentes",
-          { dias: params.dias, ...qp },
-          CACHE_DYNAMIC,
-          () => upstreamFetch("/votacao", qp, baseUrl),
-        );
-        const votacoes = ensureArray(response)
-          .map((v: any) => parseVotacaoItem(v))
-          .sort((a, b) => b.data.localeCompare(a.data));
-        return toolResult({ periodo: { dias: params.dias ?? 7, ...qp }, count: votacoes.length, votacoes });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter votações recentes");
-      }
-    },
-  );
-
   // D3. senado_obter_votacao
   server.tool(
     "senado_obter_votacao",
-    "Obtém detalhes de uma votação pelo `codigoVotacao` (que é o `codigoSessao` da sessão plenária), incluindo votos nominais. Retorna o objeto da votação (placar, `resultado`, `secreta`) com `votos[]` (`codigoSenador`, `nomeSenador`, `partido`, `uf`, `voto`); se a sessão tiver várias votações, retorna `{ codigoSessao, count, votacoes }`. Obtenha o `codigoSessao` via `senado_listar_votacoes`, `senado_votacoes_recentes` ou `senado_search_votacoes` antes de chamar.",
+    "Obtém detalhes de uma votação pelo `codigoVotacao` (que é o `codigoSessao` da sessão plenária), incluindo votos nominais. Retorna o objeto da votação (placar, `resultado`, `secreta`) com `votos[]` (`codigoSenador`, `nomeSenador`, `partido`, `uf`, `voto`); se a sessão tiver várias votações, retorna `{ codigoSessao, count, votacoes }`. Obtenha o `codigoSessao` via `senado_search_votacoes` antes de chamar.",
     {
       codigoVotacao: z.number().int().positive().describe("Código único da votação (codigoSessao da sessão plenária)"),
     },
@@ -177,11 +109,12 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
     },
   );
 
-  // D5. senado_search_votacoes (GET /votacao — flexible search)
+  // D5. senado_search_votacoes (GET /votacao — busca/listagem flexível do plenário)
   server.tool(
     "senado_search_votacoes",
-    "Busca votações combinando critérios opcionais: período (`dataInicio`/`dataFim`, YYYYMMDD), `idProcesso`, `codigoMateria`, `sigla`/`numero`/`ano` da matéria, `codigoParlamentar` e `siglaVotoParlamentar`. Retorna `{ count, votacoes }` com `data`, `materia`, `resultado` e placar (sem votos nominais). Mais flexível que `senado_listar_votacoes`; use `senado_obter_votacao` para os votos nominais de uma votação encontrada.",
+    "Busca e lista votações do plenário combinando critérios opcionais. Janela temporal: informe `dias` (últimos N dias, 1-365) para atividade recente, OU `dataInicio`/`dataFim` (YYYYMMDD) para um período arbitrário — para um ano inteiro use `dataInicio: \"AAAA0101\"` e `dataFim: \"AAAA1231\"`. Demais filtros: `idProcesso`, `codigoMateria`, `sigla`/`numero`/`ano` da matéria, `codigoParlamentar` e `siglaVotoParlamentar`. Retorna `{ count, votacoes }` ordenadas da mais recente para a mais antiga; cada item traz `codigoSessao`, `data`, `materia`, `codigoMateria`, `resultado` e placar (`totalSim`/`totalNao`/`totalAbstencao`), sem votos nominais. Use `senado_obter_votacao` com o `codigoSessao` para os votos de cada senador.",
     {
+      dias: z.number().int().min(1).max(365).optional().describe("Janela: votações dos últimos N dias (ignorado se dataInicio/dataFim forem informados)"),
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
       dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
       idProcesso: z.number().int().optional().describe("ID do processo legislativo"),
@@ -194,9 +127,18 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
+        let di = params.dataInicio ? toISODate(params.dataInicio) : undefined;
+        let df = params.dataFim ? toISODate(params.dataFim) : undefined;
+        if (params.dias && !di && !df) {
+          const hoje = new Date();
+          const inicio = new Date(hoje);
+          inicio.setDate(inicio.getDate() - params.dias);
+          di = formatISO(inicio);
+          df = formatISO(hoje);
+        }
         const qp = buildParams({
-          dataInicio: params.dataInicio ? toISODate(params.dataInicio) : undefined,
-          dataFim: params.dataFim ? toISODate(params.dataFim) : undefined,
+          dataInicio: di,
+          dataFim: df,
           idProcesso: params.idProcesso,
           codigoMateria: params.codigoMateria,
           sigla: params.sigla,
@@ -208,7 +150,9 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
         const response = await cachedFetch("senado_search_votacoes", qp, CACHE_ON_DEMAND, () =>
           upstreamFetch("/votacao", qp, baseUrl),
         );
-        const votacoes = ensureArray(response).map((v: any) => parseVotacaoItem(v));
+        const votacoes = ensureArray(response)
+          .map((v: any) => parseVotacaoItem(v))
+          .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
         return toolResult({ count: votacoes.length, votacoes });
       } catch (e) {
         return errorFrom(e, "Erro na busca de votações");

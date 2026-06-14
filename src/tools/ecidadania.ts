@@ -1,6 +1,10 @@
 /**
- * Group G — e-Cidadania (11 tools)
+ * Group G — e-Cidadania (8 tools)
  * Web scraping via fetch + regex (no cheerio — Workers compatible)
+ *
+ * Consolidações v3: consultas_consensuais + consultas_polarizadas → consultas_analise
+ * (enum `modo`); os rankings ideias_populares / eventos_populares viram `ordenarPor`
+ * nos respectivos listar_*.
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -401,7 +405,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G1. senado_ecidadania_listar_consultas
   server.tool(
     "senado_ecidadania_listar_consultas",
-    "Lista consultas públicas do e-Cidadania, em que cidadãos votam sim/não sobre matérias em tramitação. Retorna `{ count, consultas }`, cada consulta com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status` e `url`; aceita filtro por `status` e `limite` (padrão 20). Para o detalhe de uma consulta chame `senado_ecidadania_obter_consulta` com o `id`; para recortes analíticos use `senado_ecidadania_consultas_consensuais` ou `senado_ecidadania_consultas_polarizadas`.",
+    "Lista consultas públicas do e-Cidadania, em que cidadãos votam sim/não sobre matérias em tramitação. Retorna `{ count, consultas }`, cada consulta com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status` e `url`; aceita filtro por `status` e `limite` (padrão 20). Para o detalhe de uma consulta chame `senado_ecidadania_obter_consulta` com o `id`; para recortes analíticos (consenso/polarização) use `senado_ecidadania_consultas_analise`.",
     {
       status: z.enum(["aberta", "encerrada", "todas"]).optional().describe("Filtrar por status"),
       limite: z.number().int().min(1).max(100).optional().default(20).describe("Número máximo de resultados"),
@@ -422,7 +426,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G2. senado_ecidadania_obter_consulta
   server.tool(
     "senado_ecidadania_obter_consulta",
-    "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `comentarios`, `url` (campos como `comissao` e datas podem vir `null`). Obtenha o `id` antes via `senado_ecidadania_listar_consultas`, `senado_ecidadania_consultas_consensuais` ou `senado_ecidadania_consultas_polarizadas`.",
+    "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `comentarios`, `url` (campos como `comissao` e datas podem vir `null`). Obtenha o `id` antes via `senado_ecidadania_listar_consultas` ou `senado_ecidadania_consultas_analise`.",
     { id: z.number().int().positive().describe("ID da consulta pública") },
     async (params) => {
       try {
@@ -434,54 +438,47 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
     },
   );
 
-  // G3. senado_ecidadania_consultas_consensuais
+  // G3. senado_ecidadania_consultas_analise (modo: consenso | polarizada)
   server.tool(
-    "senado_ecidadania_consultas_consensuais",
-    "Identifica consultas públicas com alta concordância cidadã (consenso). Retorna `{ criterio, count, consultas }`, ordenadas pela maior concentração de votos em uma direção; filtra por `percentualMinimo` (padrão 85%), `minimoVotos` (padrão 1000) e `limite` (padrão 10). Para o detalhe de uma consulta use `senado_ecidadania_obter_consulta`; para o efeito oposto (temas divididos) use `senado_ecidadania_consultas_polarizadas`.",
+    "senado_ecidadania_consultas_analise",
+    "Analisa consultas públicas do e-Cidadania por grau de concordância cidadã, conforme `modo`: " +
+      "`consenso` → consultas com alta concentração de votos numa direção, ordenadas da maior para a menor concentração; usa `percentualMinimo` (padrão 85%). " +
+      "`polarizada` → consultas com votação equilibrada (~50/50), ordenadas da menor para a maior diferença sim/não; usa `margemPolarizacao` (padrão 15 pontos). " +
+      "Ambos os modos aceitam `minimoVotos` (padrão 1000) e `limite` (padrão 10). Retorna `{ modo, criterio, count, consultas }`. " +
+      "Para o detalhe de uma consulta use `senado_ecidadania_obter_consulta`.",
     {
-      percentualMinimo: z.number().int().min(50).max(100).optional().default(85).describe("Percentual mínimo em uma direção"),
+      modo: z.enum(["consenso", "polarizada"]).optional().default("consenso").describe("consenso (alta concordância) ou polarizada (~50/50)"),
+      percentualMinimo: z.number().int().min(50).max(100).optional().default(85).describe("Modo consenso: percentual mínimo numa direção"),
+      margemPolarizacao: z.number().int().min(0).max(50).optional().default(15).describe("Modo polarizada: considera polarizado se diferença ≤ este percentual"),
       minimoVotos: z.number().int().min(0).optional().default(1000).describe("Mínimo de votos para considerar"),
       limite: z.number().int().min(1).max(50).optional().default(10).describe("Número máximo de resultados"),
     },
     async (params) => {
       try {
+        const modo = params.modo ?? "consenso";
+        const minimoVotos = params.minimoVotos ?? 1000;
+        const limite = params.limite ?? 10;
         const all = await cachedFetch("ecidadania_consultas_full", {}, CACHE_DYNAMIC, () =>
           listarConsultasInternal({ limite: 100 }),
         );
-        const filtered = (all as ConsultaResumo[])
-          .filter((c) => c.totalVotos >= (params.minimoVotos ?? 1000) && Math.max(c.percentualSim, c.percentualNao) >= (params.percentualMinimo ?? 85))
-          .sort((a, b) => Math.max(b.percentualSim, b.percentualNao) - Math.max(a.percentualSim, a.percentualNao))
-          .slice(0, params.limite);
-        return toolResult({
-          criterio: `>${params.percentualMinimo}% em uma direção, mínimo ${params.minimoVotos} votos`,
-          count: filtered.length, consultas: filtered,
-        });
-      } catch (e) { return ecidadaniaError(e); }
-    },
-  );
-
-  // G4. senado_ecidadania_consultas_polarizadas
-  server.tool(
-    "senado_ecidadania_consultas_polarizadas",
-    "Identifica consultas públicas com votação equilibrada (~50/50), úteis para mapear temas polarizados. Retorna `{ criterio, count, consultas }`, ordenadas da menor para a maior diferença sim/não; filtra por `margemPolarizacao` (padrão 15 pontos), `minimoVotos` (padrão 1000) e `limite` (padrão 10). Para o detalhe de uma consulta use `senado_ecidadania_obter_consulta`; para o efeito oposto (temas de consenso) use `senado_ecidadania_consultas_consensuais`.",
-    {
-      margemPolarizacao: z.number().int().min(0).max(50).optional().default(15).describe("Considera polarizado se diferença < este percentual"),
-      minimoVotos: z.number().int().min(0).optional().default(1000).describe("Mínimo de votos para considerar"),
-      limite: z.number().int().min(1).max(50).optional().default(10).describe("Número máximo de resultados"),
-    },
-    async (params) => {
-      try {
-        const all = await cachedFetch("ecidadania_consultas_full", {}, CACHE_DYNAMIC, () =>
-          listarConsultasInternal({ limite: 100 }),
-        );
-        const filtered = (all as ConsultaResumo[])
-          .filter((c) => c.totalVotos >= (params.minimoVotos ?? 1000) && Math.abs(c.percentualSim - c.percentualNao) <= (params.margemPolarizacao ?? 15))
-          .sort((a, b) => Math.abs(a.percentualSim - a.percentualNao) - Math.abs(b.percentualSim - b.percentualNao))
-          .slice(0, params.limite);
-        return toolResult({
-          criterio: `Diferença sim/não < ${params.margemPolarizacao}%, mínimo ${params.minimoVotos} votos`,
-          count: filtered.length, consultas: filtered,
-        });
+        let filtered: ConsultaResumo[];
+        let criterio: string;
+        if (modo === "polarizada") {
+          const margem = params.margemPolarizacao ?? 15;
+          filtered = (all as ConsultaResumo[])
+            .filter((c) => c.totalVotos >= minimoVotos && Math.abs(c.percentualSim - c.percentualNao) <= margem)
+            .sort((a, b) => Math.abs(a.percentualSim - a.percentualNao) - Math.abs(b.percentualSim - b.percentualNao))
+            .slice(0, limite);
+          criterio = `Diferença sim/não ≤ ${margem}%, mínimo ${minimoVotos} votos`;
+        } else {
+          const percentualMinimo = params.percentualMinimo ?? 85;
+          filtered = (all as ConsultaResumo[])
+            .filter((c) => c.totalVotos >= minimoVotos && Math.max(c.percentualSim, c.percentualNao) >= percentualMinimo)
+            .sort((a, b) => Math.max(b.percentualSim, b.percentualNao) - Math.max(a.percentualSim, a.percentualNao))
+            .slice(0, limite);
+          criterio = `≥${percentualMinimo}% numa direção, mínimo ${minimoVotos} votos`;
+        }
+        return toolResult({ modo, criterio, count: filtered.length, consultas: filtered });
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -489,7 +486,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G5. senado_ecidadania_listar_ideias
   server.tool(
     "senado_ecidadania_listar_ideias",
-    "Lista ideias legislativas propostas por cidadãos no portal e-Cidadania. Retorna `{ count, ideias }`, cada ideia com código, título, autor, número de apoios e status; resultado paginado (padrão 20 por página, ordenável por apoios, data ou comentários). Para o detalhe completo de uma ideia (texto, apoios, se virou projeto de lei) chame senado_ecidadania_obter_ideia com o código; para um ranking das mais apoiadas use senado_ecidadania_ideias_populares.",
+    "Lista ideias legislativas propostas por cidadãos no portal e-Cidadania. Retorna `{ count, ideias }`, cada ideia com código, título, autor, número de apoios e status; resultado paginado (padrão 20 por página, ordenável por apoios, data ou comentários). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`, opcionalmente `status: \"aberta\"`). Para o detalhe completo de uma ideia (texto, apoios, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o código.",
     {
       status: z.enum(["aberta", "encerrada", "convertida", "todas"]).optional().describe("Filtrar por status"),
       ordenarPor: z.enum(["apoios", "data", "comentarios"]).optional().describe("Campo para ordenação"),
@@ -510,7 +507,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G6. senado_ecidadania_obter_ideia
   server.tool(
     "senado_ecidadania_obter_ideia",
-    "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `status`, `autor`, `comentarios`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). Obtenha o `id` antes via `senado_ecidadania_listar_ideias` ou `senado_ecidadania_ideias_populares`.",
+    "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `status`, `autor`, `comentarios`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
     { id: z.number().int().positive().describe("ID da ideia legislativa") },
     async (params) => {
       try {
@@ -522,48 +519,38 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
     },
   );
 
-  // G7. senado_ecidadania_ideias_populares
-  server.tool(
-    "senado_ecidadania_ideias_populares",
-    "Retorna o ranking das ideias legislativas mais apoiadas pelos cidadãos. Retorna `{ criterio, count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` e `url`, ordenadas por número de apoios (desc); `limite` padrão 10 e `apenasAbertas` padrão true (restringe a ideias com apoiamento em aberto). Para listar/filtrar todas as ideias use `senado_ecidadania_listar_ideias`; para o detalhe de uma ideia use `senado_ecidadania_obter_ideia`.",
-    {
-      limite: z.number().int().min(1).max(50).optional().default(10).describe("Número máximo de resultados"),
-      apenasAbertas: z.boolean().optional().default(true).describe("Apenas ideias com apoiamento aberto"),
-    },
-    async (params) => {
-      try {
-        const ideias = await cachedFetch("ecidadania_ideias_pop", params, CACHE_DYNAMIC, () =>
-          listarIdeiasInternal({
-            status: params.apenasAbertas ? "aberta" : "todas",
-            ordenarPor: "apoios",
-            ordem: "desc",
-            limite: (params.limite ?? 10) * 2,
-          }),
-        );
-        const result = (ideias as IdeiaResumo[]).slice(0, params.limite);
-        return toolResult({
-          criterio: params.apenasAbertas ? "Ideias abertas mais apoiadas" : "Todas as ideias mais apoiadas",
-          count: result.length, ideias: result,
-        });
-      } catch (e) { return ecidadaniaError(e); }
-    },
-  );
-
-  // G8. senado_ecidadania_listar_eventos
+  // G7. senado_ecidadania_listar_eventos
   server.tool(
     "senado_ecidadania_listar_eventos",
-    "Lista eventos interativos do e-Cidadania (audiências públicas, sabatinas, lives). Retorna `{ count, eventos }`, cada evento com `id`, `titulo`, `data`, `hora`, `comissao` (sigla), `comentarios`, `status` (`agendado`/`encerrado`) e `url`; aceita filtro por `status`, por `comissao` (sigla) e `limite` (padrão 20). Para o detalhe completo de um evento use `senado_ecidadania_obter_evento`; para os mais comentados use `senado_ecidadania_eventos_populares`.",
+    "Lista eventos interativos do e-Cidadania (audiências públicas, sabatinas, lives). Retorna `{ count, eventos }`, cada evento com `id`, `titulo`, `data`, `hora`, `comissao` (sigla), `comentarios`, `status` (`agendado`/`encerrado`) e `url`; aceita filtro por `status`, por `comissao` (sigla) e `limite` (padrão 20). Para um ranking dos mais comentados, ordene por comentários (`ordenarPor: \"comentarios\"`, `ordem: \"desc\"`). Para o detalhe completo de um evento use `senado_ecidadania_obter_evento`.",
     {
       status: z.enum(["agendado", "encerrado", "todos"]).optional().describe("Filtrar por status"),
       comissao: z.string().optional().describe("Sigla da comissão"),
+      ordenarPor: z.enum(["data", "comentarios"]).optional().describe("Ordenar por data ou número de comentários"),
+      ordem: z.enum(["asc", "desc"]).optional().default("desc").describe("Ordem (padrão desc)"),
       limite: z.number().int().min(1).max(100).optional().default(20).describe("Número máximo de resultados"),
     },
     async (params) => {
       try {
-        const eventos = await cachedFetch("ecidadania_eventos", params, CACHE_DYNAMIC, () =>
-          listarEventosInternal(params),
-        );
-        return toolResult({ count: (eventos as EventoResumo[]).length, eventos });
+        const limite = params.limite ?? 20;
+        const ordem = params.ordem ?? "desc";
+        const todos = (await cachedFetch(
+          "ecidadania_eventos",
+          { status: params.status, comissao: params.comissao },
+          CACHE_DYNAMIC,
+          () => listarEventosInternal({ status: params.status, comissao: params.comissao, limite: 100 }),
+        )) as EventoResumo[];
+        let eventos = [...todos];
+        if (params.ordenarPor === "comentarios") {
+          eventos.sort((a, b) => (ordem === "asc" ? a.comentarios - b.comentarios : b.comentarios - a.comentarios));
+        } else if (params.ordenarPor === "data") {
+          eventos.sort((a, b) => {
+            const da = a.data || "", db = b.data || "";
+            return ordem === "asc" ? da.localeCompare(db) : db.localeCompare(da);
+          });
+        }
+        eventos = eventos.slice(0, limite);
+        return toolResult({ count: eventos.length, eventos });
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -571,7 +558,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
   // G9. senado_ecidadania_obter_evento
   server.tool(
     "senado_ecidadania_obter_evento",
-    "Obtém o detalhe de um evento interativo do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao`, `data`, `hora`, `comissao` e `comissaoNomeCompleto`, `local`, `status`, `comentarios`, `url`, além de `pauta` (até 15 itens), `convidados` e `videoUrl` (embed do YouTube, quando houver). Obtenha o `id` antes via `senado_ecidadania_listar_eventos` ou `senado_ecidadania_eventos_populares`.",
+    "Obtém o detalhe de um evento interativo do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao`, `data`, `hora`, `comissao` e `comissaoNomeCompleto`, `local`, `status`, `comentarios`, `url`, além de `pauta` (até 15 itens), `convidados` e `videoUrl` (embed do YouTube, quando houver). Obtenha o `id` antes via `senado_ecidadania_listar_eventos`.",
     { id: z.number().int().positive().describe("ID do evento") },
     async (params) => {
       try {
@@ -583,34 +570,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
     },
   );
 
-  // G10. senado_ecidadania_eventos_populares
-  server.tool(
-    "senado_ecidadania_eventos_populares",
-    "Retorna o ranking de eventos interativos com mais participação cidadã (comentários/perguntas). Retorna `{ criterio, count, eventos }`, cada evento com `id`, `titulo`, `data`, `hora`, `comissao`, `comentarios`, `status` e `url`, ordenados por número de comentários (desc); `limite` padrão 10 e `apenasAgendados` padrão false (true restringe a eventos ainda não realizados). Para listar/filtrar todos os eventos use `senado_ecidadania_listar_eventos`; para o detalhe de um evento use `senado_ecidadania_obter_evento`.",
-    {
-      limite: z.number().int().min(1).max(50).optional().default(10).describe("Número máximo de resultados"),
-      apenasAgendados: z.boolean().optional().default(false).describe("Apenas eventos ainda não realizados"),
-    },
-    async (params) => {
-      try {
-        const eventos = await cachedFetch("ecidadania_eventos_pop", params, CACHE_DYNAMIC, () =>
-          listarEventosInternal({
-            status: params.apenasAgendados ? "agendado" : "todos",
-            limite: (params.limite ?? 10) * 2,
-          }),
-        );
-        const sorted = (eventos as EventoResumo[])
-          .sort((a, b) => b.comentarios - a.comentarios)
-          .slice(0, params.limite);
-        return toolResult({
-          criterio: params.apenasAgendados ? "Eventos agendados mais comentados" : "Eventos mais comentados",
-          count: sorted.length, eventos: sorted,
-        });
-      } catch (e) { return ecidadaniaError(e); }
-    },
-  );
-
-  // G11. senado_ecidadania_sugerir_tema_enquete
+  // G8. senado_ecidadania_sugerir_tema_enquete
   server.tool(
     "senado_ecidadania_sugerir_tema_enquete",
     "Analisa consultas e ideias do e-Cidadania e sugere temas para enquete mensal. Retorna `{ criteriosAplicados, totalAnalisados, count, sugestoes }` (até 10), cada sugestão com `tipo` (`consulta`/`ideia`), `id`, `titulo`, `motivo`, `metricas` (participação/polarização) e `url`, ordenadas por participação. Critérios opcionais em `criterios`: `evitarPolarizacao`/`evitarConsenso` (padrão true), `minimoParticipacao` (padrão 500), `apenasEmTramitacao`. Para investigar uma sugestão, use `senado_ecidadania_obter_consulta` ou `senado_ecidadania_obter_ideia` conforme o `tipo`.",

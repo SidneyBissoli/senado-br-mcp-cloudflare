@@ -1,7 +1,7 @@
 /**
- * Group J — Composição / Blocs & Leadership (5 tools)
+ * Group J — Composição / Blocs & Leadership (4 tools)
  * senado_listar_blocos, senado_obter_bloco, senado_liderancas,
- * senado_mesa_senado, senado_mesa_congresso
+ * senado_mesa (enum `casa`: senado | congresso)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -141,52 +141,33 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
     },
   );
 
-  // J4. senado_mesa_senado
+  // J4. senado_mesa (casa: senado | congresso)
   server.tool(
-    "senado_mesa_senado",
-    "Lista os membros da Mesa Diretora do Senado Federal (presidente, vice-presidentes, secretários). Retorna `{ mesa: \"Senado Federal\", count, membros }`, cada membro com `cargo`, `codigo`, `nome`, `partido` e `uf`. Não requer parâmetros. Para a Mesa do Congresso Nacional use `senado_mesa_congresso`.",
-    {},
-    async () => {
+    "senado_mesa",
+    "Lista os membros da Mesa Diretora (presidente, vice-presidentes, secretários). O parâmetro `casa` (padrão `senado`) escolhe entre `senado` (Mesa do Senado Federal) e `congresso` (Mesa do Congresso Nacional). Retorna `{ casa, mesa, count, membros }`, cada membro com `cargo`, `codigo`, `nome`, `partido` e `uf`. Para lideranças partidárias use `senado_liderancas`.",
+    {
+      casa: z.enum(["senado", "congresso"]).optional().default("senado").describe("senado (Mesa do SF) ou congresso (Mesa do CN)"),
+    },
+    async (params) => {
       try {
+        const casa = params.casa ?? "senado";
+        const path = casa === "congresso" ? "/composicao/mesaCN" : "/composicao/mesaSF";
+        const rotulo = casa === "congresso" ? "Congresso Nacional" : "Senado Federal";
         const response = await cachedFetch(
-          "senado_mesa_senado",
-          {},
+          "senado_mesa",
+          { casa },
           CACHE_SEMI_STATIC,
-          () => upstreamFetch("/composicao/mesaSF", {}, baseUrl),
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const r = response as any;
         const membros = ensureArray(
           r?.MesaSF?.Cargos?.Cargo ??
-          r?.Cargos?.Cargo,
-        ).map(parseMembroMesa);
-        return toolResult({ mesa: "Senado Federal", count: membros.length, membros });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter Mesa do Senado");
-      }
-    },
-  );
-
-  // J5. senado_mesa_congresso
-  server.tool(
-    "senado_mesa_congresso",
-    "Lista os membros da Mesa Diretora do Congresso Nacional. Retorna `{ mesa: \"Congresso Nacional\", count, membros }`, cada membro com `cargo`, `codigo`, `nome`, `partido` e `uf`. Não requer parâmetros. Para a Mesa exclusiva do Senado Federal use `senado_mesa_senado`.",
-    {},
-    async () => {
-      try {
-        const response = await cachedFetch(
-          "senado_mesa_congresso",
-          {},
-          CACHE_SEMI_STATIC,
-          () => upstreamFetch("/composicao/mesaCN", {}, baseUrl),
-        );
-        const r = response as any;
-        const membros = ensureArray(
           r?.MesaCN?.Cargos?.Cargo ??
           r?.Cargos?.Cargo,
         ).map(parseMembroMesa);
-        return toolResult({ mesa: "Congresso Nacional", count: membros.length, membros });
+        return toolResult({ casa, mesa: rotulo, count: membros.length, membros });
       } catch (e) {
-        return errorFrom(e, "Erro ao obter Mesa do Congresso");
+        return errorFrom(e, "Erro ao obter Mesa Diretora");
       }
     },
   );

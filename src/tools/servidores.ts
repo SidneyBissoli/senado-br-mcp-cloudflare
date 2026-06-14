@@ -1,7 +1,7 @@
 /**
- * Group P — Servidores / Gestão de Pessoas (5 tools)
+ * Group P — Servidores / Gestão de Pessoas (4 tools)
  * senado_servidores, senado_remuneracoes_servidores, senado_horas_extras,
- * senado_quantitativos_pessoal, senado_pessoal_listas
+ * senado_pessoal_tabelas (funde os antigos quantitativos_pessoal + pessoal_listas)
  *
  * Consumes the ADMINISTRATIVE open data API. The remunerações dataset is
  * ~5.5 MB/month and the servidores lists are ~3 MB, so both use the raised
@@ -56,7 +56,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P1. senado_servidores
   server.tool(
     "senado_servidores",
-    "Lista servidores do Senado por `situacao` (ativos, efetivos, comissionados ou inativos), com filtros opcionais por `nome`, `lotacao` e `cargo`. Retorna `{ situacao, count, total, servidores[] }`, cada item com `nome`, `vinculo`, `situacao`, `cargo`, `funcao`, `lotacao`, `anoAdmissao` etc. Aplica `limite` (padrão 50, máx 500) e inclui `aviso` quando há truncamento — refine os filtros. Para remuneração use `senado_remuneracoes_servidores`; para estagiários/pensionistas use `senado_pessoal_listas`.",
+    "Lista servidores do Senado por `situacao` (ativos, efetivos, comissionados ou inativos), com filtros opcionais por `nome`, `lotacao` e `cargo`. Retorna `{ situacao, count, total, servidores[] }`, cada item com `nome`, `vinculo`, `situacao`, `cargo`, `funcao`, `lotacao`, `anoAdmissao` etc. Aplica `limite` (padrão 50, máx 500) e inclui `aviso` quando há truncamento — refine os filtros. Para remuneração use `senado_remuneracoes_servidores`; para estagiários/pensionistas/quantitativos use `senado_pessoal_tabelas`.",
     {
       situacao: z.enum(["ativos", "efetivos", "comissionados", "inativos"]).optional().default("ativos").describe("Qual lista consultar (padrão: ativos)"),
       nome: z.string().optional().describe("Nome do servidor (busca parcial)"),
@@ -193,73 +193,49 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
     },
   );
 
-  // P4. senado_quantitativos_pessoal
+  // P4. senado_pessoal_tabelas (quantitativos agregados + listas nominais sob um só enum)
   server.tool(
-    "senado_quantitativos_pessoal",
-    "Quantitativos de pessoal do Senado conforme a `tabela`: `pessoal` (força de trabalho por classe/escolaridade), `cargos-funcoes` (cargos em comissão e funções de confiança), `previsao-aposentadoria` ou `senadores`. Retorna `{ tabela, count, total, linhas[] }` com as linhas agregadas brutas da tabela escolhida, limitadas por `limite` (padrão 200, máx 2000). Para o cadastro nominal de servidores use `senado_servidores`; para listas de estagiários/pensionistas use `senado_pessoal_listas`.",
+    "senado_pessoal_tabelas",
+    "Tabelas de pessoal do Senado conforme o parâmetro `tabela`. Quantitativos agregados: `pessoal` (força de trabalho por classe/escolaridade), `cargos-funcoes` (cargos em comissão e funções de confiança), `previsao-aposentadoria`, `senadores`. Listas nominais: `estagiarios` (ativos), `pensionistas`, `lotacoes` (setores), `cargos` (nomes de cargos). Retorna `{ tabela, count, total, aviso?, registros[] }` com os registros brutos, limitados por `limite` (padrão 100, máx 2000). O `filtro` textual opcional casa contra qualquer campo do registro. Para o cadastro nominal de servidores efetivos/comissionados use `senado_servidores`.",
     {
-      tabela: z.enum(["pessoal", "cargos-funcoes", "previsao-aposentadoria", "senadores"]).describe("Qual quantitativo consultar"),
-      limite: z.number().int().min(1).max(2000).optional().default(200).describe("Máximo de linhas (padrão: 200)"),
+      tabela: z.enum([
+        "pessoal", "cargos-funcoes", "previsao-aposentadoria", "senadores",
+        "estagiarios", "pensionistas", "lotacoes", "cargos",
+      ]).describe("Qual tabela de pessoal consultar (quantitativo agregado ou lista nominal)"),
+      filtro: z.string().optional().describe("Filtro textual (nome, curso, setor...)"),
+      limite: z.number().int().min(1).max(2000).optional().default(100).describe("Máximo de registros (padrão: 100)"),
     },
     async (params) => {
       try {
-        const path = params.tabela === "senadores"
-          ? "/senadores/quantitativos/senadores"
-          : params.tabela === "previsao-aposentadoria"
-            ? "/servidores/previsao-aposentadoria"
-            : `/servidores/quantitativos/${params.tabela}`;
+        const QUANTITATIVOS: Record<string, string> = {
+          "pessoal": "/servidores/quantitativos/pessoal",
+          "cargos-funcoes": "/servidores/quantitativos/cargos-funcoes",
+          "previsao-aposentadoria": "/servidores/previsao-aposentadoria",
+          "senadores": "/senadores/quantitativos/senadores",
+        };
+        const isQuantitativo = params.tabela in QUANTITATIVOS;
+        const path = isQuantitativo ? QUANTITATIVOS[params.tabela] : `/servidores/${params.tabela}`;
         const response = await cachedFetch(
-          "senado_quantitativos_pessoal",
+          "senado_pessoal_tabelas",
           { tabela: params.tabela },
-          CACHE_STATIC,
+          isQuantitativo ? CACHE_STATIC : CACHE_SEMI_STATIC,
           () => admFetch(path, {}, admBaseUrl),
         );
-        const linhas = ensureArray(response);
-        const limite = params.limite ?? 200;
-        return toolResult({
-          tabela: params.tabela,
-          count: Math.min(linhas.length, limite),
-          total: linhas.length,
-          linhas: linhas.slice(0, limite),
-        });
-      } catch (e) {
-        return errorFrom(e, "Erro ao consultar quantitativos de pessoal");
-      }
-    },
-  );
-
-  // P5. senado_pessoal_listas
-  server.tool(
-    "senado_pessoal_listas",
-    "Listas de pessoal do Senado conforme o `tipo`: `estagiarios` (ativos), `pensionistas`, `lotacoes` (setores) ou `cargos` (nomes de cargos). Retorna `{ tipo, count, total, registros[] }` com os registros brutos da lista, limitados por `limite` (padrão 50, máx 500) e com `aviso` quando truncado. O `filtro` textual opcional casa contra qualquer campo do registro (nome, curso, setor). Para servidores efetivos/comissionados use `senado_servidores`; para contagens agregadas use `senado_quantitativos_pessoal`.",
-    {
-      tipo: z.enum(["estagiarios", "pensionistas", "lotacoes", "cargos"]).describe("Qual lista consultar"),
-      filtro: z.string().optional().describe("Filtro textual (nome, curso, setor...)"),
-      limite: z.number().int().min(1).max(500).optional().default(50).describe("Máximo de resultados (padrão: 50)"),
-    },
-    async (params) => {
-      try {
-        const response = await cachedFetch(
-          "senado_pessoal_listas",
-          { tipo: params.tipo },
-          CACHE_SEMI_STATIC,
-          () => admFetch(`/servidores/${params.tipo}`, {}, admBaseUrl),
-        );
-        let lista = ensureArray(response);
+        let registros = ensureArray(response);
         if (params.filtro) {
           const f = params.filtro;
-          lista = lista.filter((item: any) => matchesFiltro(JSON.stringify(item), f));
+          registros = registros.filter((item: any) => matchesFiltro(JSON.stringify(item), f));
         }
-        const limite = params.limite ?? 50;
+        const limite = params.limite ?? 100;
         return toolResult({
-          tipo: params.tipo,
-          count: Math.min(lista.length, limite),
-          total: lista.length,
-          ...(lista.length > limite ? { aviso: `Exibindo ${limite} de ${lista.length} registros.` } : {}),
-          registros: lista.slice(0, limite),
+          tabela: params.tabela,
+          count: Math.min(registros.length, limite),
+          total: registros.length,
+          ...(registros.length > limite ? { aviso: `Exibindo ${limite} de ${registros.length} registros.` } : {}),
+          registros: registros.slice(0, limite),
         });
       } catch (e) {
-        return errorFrom(e, "Erro ao consultar lista de pessoal");
+        return errorFrom(e, "Erro ao consultar tabela de pessoal");
       }
     },
   );

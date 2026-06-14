@@ -1,6 +1,6 @@
 /**
- * Group E — Committees (8 tools)
- * senado_listar_comissoes, senado_obter_comissao, senado_membros_comissao,
+ * Group E — Committees (7 tools)
+ * senado_listar_comissoes, senado_obter_comissao (enum `secao`: resumo | membros),
  * senado_reunioes_comissao, senado_agenda_comissoes, senado_reuniao_comissao,
  * senado_requerimentos_cpi, senado_distribuicao_materias
  *
@@ -39,7 +39,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E1. senado_listar_comissoes
   server.tool(
     "senado_listar_comissoes",
-    "Lista comissões (colegiados) ativas do Senado, com filtros por `tipo` (permanente, temporaria, cpi, mista) e `ativa`. Retorna `{ count, comissoes }`, cada item com `codigo`, `sigla`, `nome`, `tipo`, `casa` e `ativa`. O endpoint só traz comissões ativas, logo `ativa=false` resulta em lista vazia. Use para descobrir a `sigla` exigida por `senado_obter_comissao`, `senado_membros_comissao` e `senado_reunioes_comissao`.",
+    "Lista comissões (colegiados) ativas do Senado, com filtros por `tipo` (permanente, temporaria, cpi, mista) e `ativa`. Retorna `{ count, comissoes }`, cada item com `codigo`, `sigla`, `nome`, `tipo`, `casa` e `ativa`. O endpoint só traz comissões ativas, logo `ativa=false` resulta em lista vazia. Use para descobrir a `sigla` exigida por `senado_obter_comissao` e `senado_reunioes_comissao`.",
     {
       tipo: z.enum(["permanente", "temporaria", "cpi", "mista"]).optional().describe("Tipo: permanente, temporaria, cpi, mista"),
       ativa: z.boolean().optional().describe("Apenas comissões ativas"),
@@ -80,18 +80,40 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
     },
   );
 
-  // E2. senado_obter_comissao
+  // E2. senado_obter_comissao (secao: resumo | membros)
   server.tool(
     "senado_obter_comissao",
-    "Obtém detalhes de uma comissão pela `sigla`. Retorna um objeto com `codigo`, `sigla`, `nome`, `finalidade`, `presidente` e `vicePresidente` (cada um com `nome`, `codigo`, `bancada`) e os totais `totalMembros`, `titulares` e `suplentes`. A sigla é resolvida internamente para código numérico; descubra-a via `senado_listar_comissoes`. Para a composição completa de membros use `senado_membros_comissao`.",
+    "Obtém dados de uma comissão pela `sigla`, conforme `secao` (padrão `resumo`): " +
+      "`resumo` → `{ codigo, sigla, nome, finalidade, presidente, vicePresidente, totalMembros, titulares, suplentes }` (presidente/vice com `nome`/`codigo`/`bancada`). " +
+      "`membros` → `{ sigla, secao, count, membros }`, cada membro com `codigo`, `nome`, `tipoVaga` (titular/suplente), `ativo` e `dataInicio`. " +
+      "A sigla é resolvida internamente para código numérico; descubra-a via `senado_listar_comissoes`.",
     {
       sigla: z.string().min(2).describe("Sigla da comissão (ex: CCJ, CAE)"),
+      secao: z.enum(["resumo", "membros"]).optional().default("resumo").describe("resumo (mesa/totais) ou membros (composição completa)"),
     },
     async (params) => {
       try {
         const sigla = params.sigla.toUpperCase();
+        const secao = params.secao ?? "resumo";
         const codigo = await resolveComissaoCodigo(sigla, baseUrl);
         if (!codigo) return toolError(`Comissão com sigla "${sigla}" não encontrada.`);
+
+        if (secao === "membros") {
+          const response = await cachedFetch("senado_membros_comissao", { codigo }, CACHE_SEMI_STATIC, () =>
+            upstreamFetch(`/composicao/comissao/${codigo}`, {}, baseUrl),
+          );
+          const r = response as any;
+          const membros = ensureArray(
+            r?.UltimaComposicaoComissaoSf?.ComposicaoComissao?.Membros?.Membro,
+          ).map((m: any) => ({
+            codigo: parseInt(m.CodigoParlamentar || "0"),
+            nome: m.NomeMembro || "",
+            tipoVaga: m.TipoVaga || null,
+            ativo: m.IndicadorVagaAtiva === "Sim",
+            dataInicio: m.DataInicioMembroVaga || null,
+          }));
+          return toolResult({ sigla, secao, count: membros.length, membros });
+        }
 
         const response = await cachedFetch("senado_obter_comissao", { codigo }, CACHE_SEMI_STATIC, () =>
           upstreamFetch(`/comissao/${codigo}`, {}, baseUrl),
@@ -108,6 +130,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
 
         return toolResult({
           codigo: parseInt(colegiado.CodigoColegiado || "0"),
+          secao,
           sigla: colegiado.SiglaColegiado || sigla,
           nome: colegiado.NomeColegiado || "",
           finalidade: colegiado.Finalidade || null,
@@ -127,40 +150,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
     },
   );
 
-  // E3. senado_membros_comissao
-  server.tool(
-    "senado_membros_comissao",
-    "Lista os membros da última composição de uma comissão pela `sigla`. Retorna `{ sigla, count, membros }`, cada membro com `codigo`, `nome`, `tipoVaga` (titular/suplente), `ativo` e `dataInicio`. Obtenha a `sigla` via `senado_listar_comissoes`. Para presidente, vice e totais resumidos use `senado_obter_comissao`.",
-    {
-      sigla: z.string().min(2).describe("Sigla da comissão"),
-    },
-    async (params) => {
-      try {
-        const sigla = params.sigla.toUpperCase();
-        const codigo = await resolveComissaoCodigo(sigla, baseUrl);
-        if (!codigo) return toolError(`Comissão com sigla "${sigla}" não encontrada.`);
-
-        const response = await cachedFetch("senado_membros_comissao", { codigo }, CACHE_SEMI_STATIC, () =>
-          upstreamFetch(`/composicao/comissao/${codigo}`, {}, baseUrl),
-        );
-        const r = response as any;
-        const membros = ensureArray(
-          r?.UltimaComposicaoComissaoSf?.ComposicaoComissao?.Membros?.Membro,
-        ).map((m: any) => ({
-          codigo: parseInt(m.CodigoParlamentar || "0"),
-          nome: m.NomeMembro || "",
-          tipoVaga: m.TipoVaga || null,
-          ativo: m.IndicadorVagaAtiva === "Sim",
-          dataInicio: m.DataInicioMembroVaga || null,
-        }));
-        return toolResult({ sigla, count: membros.length, membros });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter membros da comissão");
-      }
-    },
-  );
-
-  // E4. senado_reunioes_comissao
+  // E3. senado_reunioes_comissao
   server.tool(
     "senado_reunioes_comissao",
     "Lista reuniões de uma comissão (pela `sigla`) num intervalo `dataInicio`/`dataFim` (YYYYMMDD); sem datas, usa os últimos 30 dias. Retorna `{ sigla, periodo, count, reunioes }`, cada reunião com `codigo`, `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. Intervalos entre anos são divididos por ano internamente. Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` retornado em `senado_reuniao_comissao` para os detalhes da pauta.",

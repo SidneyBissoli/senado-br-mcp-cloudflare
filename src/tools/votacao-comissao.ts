@@ -1,14 +1,13 @@
 /**
- * Group M — VotacaoComissao / Committee Voting (3 tools)
- * senado_votacao_comissao, senado_votacao_comissao_senador,
- * senado_votacao_comissao_materia
+ * Group M — VotacaoComissao / Committee Voting (1 tool)
+ * senado_votacao_comissao (enum `por`: comissao | senador | materia)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
 import { CACHE_DYNAMIC } from "../types.js";
 
 /** Parse a committee vote item. */
@@ -35,17 +34,78 @@ export function parseVotacaoComissao(v: any) {
 }
 
 export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string) {
-  // M1. senado_votacao_comissao
+  // M1. senado_votacao_comissao (por: comissao | senador | materia)
   server.tool(
     "senado_votacao_comissao",
-    "Lista votações realizadas numa comissão específica, com filtro opcional por período (`dataInicio`/`dataFim`, YYYYMMDD). Retorna `{ siglaComissao, count, votacoes }`, onde cada votação traz `codigo`, `data`, `comissao`, `materia`, `descricao`, `resultado`, totais (`totalSim`/`totalNao`/`totalAbstencao`) e a lista `votos` (senador, partido e voto). Sem paginação. Obtenha siglas de comissão via `senado_listar_comissoes`; para votos de um senador use `senado_votacao_comissao_senador`.",
+    "Lista votações em comissões. O parâmetro `por` (padrão `comissao`) define o eixo da consulta: " +
+      "`por: comissao` → exige `siglaComissao`; lista as votações daquela comissão. " +
+      "`por: senador` → exige `codigoSenador`; lista os votos do senador em comissões (filtro opcional `comissao`). " +
+      "`por: materia` → exige `sigla`, `numero` e `ano` (ex.: PL 2630/2020); lista as votações da proposição em comissões (filtro opcional `comissao`). " +
+      "Em todos os casos aceita período opcional `dataInicio`/`dataFim` (YYYYMMDD) e retorna `{ por, ...contexto, count, votacoes }`, cada votação com `codigo`, `data`, `comissao`, `materia`, `descricao`, `resultado`, totais (`totalSim`/`totalNao`/`totalAbstencao`) e `votos` (senador, partido, voto). Sem paginação. " +
+      "Obtenha siglas via `senado_listar_comissoes`, `codigoSenador` via `senado_listar_senadores`; para votações no plenário use `senado_votos_materia`.",
     {
-      siglaComissao: z.string().min(2).describe("Sigla da comissão (ex: CCJ, CAE)"),
+      por: z.enum(["comissao", "senador", "materia"]).optional().default("comissao").describe("Eixo da consulta: comissao, senador ou materia"),
+      siglaComissao: z.string().min(2).optional().describe("Sigla da comissão (obrigatório quando por=comissao; ex: CCJ, CAE)"),
+      codigoSenador: z.number().int().positive().optional().describe("Código do senador (obrigatório quando por=senador)"),
+      sigla: z.string().min(2).optional().describe("Sigla do tipo da proposição (obrigatório quando por=materia; ex: PL, PEC)"),
+      numero: z.number().int().positive().optional().describe("Número da proposição (obrigatório quando por=materia)"),
+      ano: z.number().int().min(1900).max(2100).optional().describe("Ano da proposição (obrigatório quando por=materia)"),
+      comissao: z.string().optional().describe("Sigla da comissão para filtrar (por=senador ou por=materia)"),
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
       dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
     },
     async (params) => {
       try {
+        const por = params.por ?? "comissao";
+
+        if (por === "senador") {
+          if (!params.codigoSenador) return toolError("Para por=senador, informe 'codigoSenador'.");
+          const qp = buildParams({
+            comissao: params.comissao?.toUpperCase(),
+            dataInicio: params.dataInicio,
+            dataFim: params.dataFim,
+          });
+          const response = await cachedFetch(
+            "senado_votacao_comissao_senador",
+            { codigo: params.codigoSenador, ...qp },
+            CACHE_DYNAMIC,
+            () => upstreamFetch(`/votacaoComissao/parlamentar/${params.codigoSenador}`, qp, baseUrl),
+          );
+          const r = response as any;
+          const votacoes = ensureArray(
+            r?.VotacaoComissaoParlamentar?.Votacoes?.Votacao ??
+            r?.Votacoes?.Votacao,
+          ).map(parseVotacaoComissao);
+          return toolResult({ por, codigoSenador: params.codigoSenador, count: votacoes.length, votacoes });
+        }
+
+        if (por === "materia") {
+          if (!params.sigla || !params.numero || !params.ano) {
+            return toolError("Para por=materia, informe 'sigla', 'numero' e 'ano'.");
+          }
+          const sigla = params.sigla.toUpperCase();
+          const qp = buildParams({
+            comissao: params.comissao?.toUpperCase(),
+            dataInicio: params.dataInicio,
+            dataFim: params.dataFim,
+          });
+          const response = await cachedFetch(
+            "senado_votacao_comissao_materia",
+            { sigla, numero: params.numero, ano: params.ano, ...qp },
+            CACHE_DYNAMIC,
+            () => upstreamFetch(`/votacaoComissao/materia/${sigla}/${params.numero}/${params.ano}`, qp, baseUrl),
+          );
+          const r = response as any;
+          const votacoes = ensureArray(
+            r?.VotacoesComissao?.Votacoes?.Votacao ??
+            r?.VotacaoComissaoMateria?.Votacoes?.Votacao ??
+            r?.Votacoes?.Votacao,
+          ).map(parseVotacaoComissao);
+          return toolResult({ por, materia: `${sigla} ${params.numero}/${params.ano}`, count: votacoes.length, votacoes });
+        }
+
+        // por === "comissao" (padrão)
+        if (!params.siglaComissao) return toolError("Para por=comissao, informe 'siglaComissao'.");
         const qp = buildParams({
           dataInicio: params.dataInicio,
           dataFim: params.dataFim,
@@ -62,87 +122,9 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
           r?.VotacaoComissao?.Votacoes?.Votacao ??
           r?.Votacoes?.Votacao,
         ).map(parseVotacaoComissao);
-        return toolResult({ siglaComissao: sigla, count: votacoes.length, votacoes });
+        return toolResult({ por, siglaComissao: sigla, count: votacoes.length, votacoes });
       } catch (e) {
-        return errorFrom(e, "Erro ao obter votações da comissão");
-      }
-    },
-  );
-
-  // M2. senado_votacao_comissao_senador
-  server.tool(
-    "senado_votacao_comissao_senador",
-    "Lista os votos de um senador em comissões, com filtros opcionais por `comissao` (sigla) e período (`dataInicio`/`dataFim`, YYYYMMDD). Retorna `{ codigoSenador, count, votacoes }`, cada votação com `codigo`, `data`, `comissao`, `materia`, `resultado`, totais e a lista `votos`. Sem paginação. Obtenha o `codigoSenador` via `senado_buscar_senador_por_nome` ou `senado_listar_senadores`; para todas as votações de uma comissão use `senado_votacao_comissao`.",
-    {
-      codigoSenador: z.number().int().positive().describe("Código único do senador"),
-      comissao: z.string().optional().describe("Sigla da comissão para filtrar"),
-      dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
-      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
-    },
-    async (params) => {
-      try {
-        const qp = buildParams({
-          comissao: params.comissao?.toUpperCase(),
-          dataInicio: params.dataInicio,
-          dataFim: params.dataFim,
-        });
-        const response = await cachedFetch(
-          "senado_votacao_comissao_senador",
-          { codigo: params.codigoSenador, ...qp },
-          CACHE_DYNAMIC,
-          () => upstreamFetch(`/votacaoComissao/parlamentar/${params.codigoSenador}`, qp, baseUrl),
-        );
-        const r = response as any;
-        const votacoes = ensureArray(
-          r?.VotacaoComissaoParlamentar?.Votacoes?.Votacao ??
-          r?.Votacoes?.Votacao,
-        ).map(parseVotacaoComissao);
-        return toolResult({ codigoSenador: params.codigoSenador, count: votacoes.length, votacoes });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter votos do senador em comissões");
-      }
-    },
-  );
-
-  // M3. senado_votacao_comissao_materia
-  server.tool(
-    "senado_votacao_comissao_materia",
-    "Lista votações de uma matéria específica nas comissões, identificada por `sigla`, `numero` e `ano` (ex: PL 2630/2020), com filtros opcionais por `comissao` e período (YYYYMMDD). Retorna `{ materia, count, votacoes }`, cada votação com `codigo`, `data`, `comissao`, `descricao`, `resultado`, totais e a lista `votos`. Sem paginação. Identifique a proposição via `senado_buscar_materias`; para votações no plenário (não em comissões) use `senado_votos_materia`.",
-    {
-      sigla: z.string().min(2).describe("Sigla do tipo da proposição (ex: PL, PEC)"),
-      numero: z.number().int().positive().describe("Número da proposição"),
-      ano: z.number().int().min(1900).max(2100).describe("Ano da proposição"),
-      comissao: z.string().optional().describe("Sigla da comissão para filtrar"),
-      dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
-      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
-    },
-    async (params) => {
-      try {
-        const sigla = params.sigla.toUpperCase();
-        const qp = buildParams({
-          comissao: params.comissao?.toUpperCase(),
-          dataInicio: params.dataInicio,
-          dataFim: params.dataFim,
-        });
-        const response = await cachedFetch(
-          "senado_votacao_comissao_materia",
-          { sigla, numero: params.numero, ano: params.ano, ...qp },
-          CACHE_DYNAMIC,
-          () => upstreamFetch(`/votacaoComissao/materia/${sigla}/${params.numero}/${params.ano}`, qp, baseUrl),
-        );
-        const r = response as any;
-        const votacoes = ensureArray(
-          r?.VotacoesComissao?.Votacoes?.Votacao ??
-          r?.VotacaoComissaoMateria?.Votacoes?.Votacao ??
-          r?.Votacoes?.Votacao,
-        ).map(parseVotacaoComissao);
-        return toolResult({
-          materia: `${sigla} ${params.numero}/${params.ano}`,
-          count: votacoes.length,
-          votacoes,
-        });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter votações da matéria em comissões");
+        return errorFrom(e, "Erro ao obter votações em comissões");
       }
     },
   );

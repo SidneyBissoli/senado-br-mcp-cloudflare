@@ -1,6 +1,7 @@
 /**
- * Group L — Legislação / Federal Law (3 tools)
- * senado_buscar_legislacao, senado_obter_legislacao, senado_tipos_norma
+ * Group L — Legislação / Federal Law (2 tools)
+ * senado_buscar_legislacao, senado_obter_legislacao
+ * (a tabela de tipos de norma migrou para senado_tabelas_referencia em referencia.ts)
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -8,7 +9,7 @@ import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
-import { CACHE_ON_DEMAND, CACHE_STATIC } from "../types.js";
+import { CACHE_ON_DEMAND } from "../types.js";
 
 /** Parse a legislation search result. */
 export function parseLegislacaoResumo(l: any) {
@@ -46,7 +47,7 @@ export function registerLegislacaoTools(server: McpServer, baseUrl: string) {
   // L1. senado_buscar_legislacao
   server.tool(
     "senado_buscar_legislacao",
-    "Busca normas jurídicas federais (leis, decretos, etc.) por `tipo`, `numero`, `ano` ou `data`. Retorna `{ count, normas }`, cada norma com `codigo`, `tipo`, `numero`, `ano`, `data`, `ementa`, `situacao` e `url` do texto. É obrigatório informar ao menos um parâmetro, senão retorna erro. Use o `codigo` retornado em `senado_obter_legislacao` para o detalhe; consulte os tipos válidos em `senado_tipos_norma`.",
+    "Busca normas jurídicas federais (leis, decretos, etc.) por `tipo`, `numero`, `ano` ou `data`. Retorna `{ count, normas }`, cada norma com `codigo`, `tipo`, `numero`, `ano`, `data`, `ementa`, `situacao` e `url` do texto. É obrigatório informar ao menos um parâmetro, senão retorna erro. Use o `codigo` retornado em `senado_obter_legislacao` para o detalhe; consulte os tipos válidos em `senado_tabelas_referencia` (`tabela: \"tipos-norma\"`).",
     {
       tipo: z.string().optional().describe("Tipo da norma (ex: LEI, DEC, LCP, EMC)"),
       numero: z.number().int().optional().describe("Número da norma"),
@@ -99,34 +100,6 @@ export function registerLegislacaoTools(server: McpServer, baseUrl: string) {
         return toolResult(parseLegislacaoDetalhe(norma));
       } catch (e) {
         return errorFrom(e, "Norma não encontrada");
-      }
-    },
-  );
-
-  // L3. senado_tipos_norma
-  server.tool(
-    "senado_tipos_norma",
-    "Lista os tipos de normas jurídicas federais disponíveis (LEI, DEC, LCP, EMC, etc.). Não requer parâmetros; retorna `{ count, tipos }`, cada tipo com `sigla` e `descricao`. Use para descobrir a `sigla` correta a passar no parâmetro `tipo` de `senado_buscar_legislacao`.",
-    {},
-    async () => {
-      try {
-        const response = await cachedFetch(
-          "senado_tipos_norma",
-          {},
-          CACHE_STATIC,
-          () => upstreamFetch("/legislacao/tiposNorma", {}, baseUrl),
-        );
-        const r = response as any;
-        const tipos = ensureArray(
-          r?.ListaTiposNorma?.TiposNorma?.TipoNorma ??
-          r?.TiposNorma?.TipoNorma,
-        ).map((t: any) => ({
-          sigla: t.Sigla || t.sigla || null,
-          descricao: t.Descricao || t.descricao || null,
-        }));
-        return toolResult({ count: tipos.length, tipos });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter tipos de norma");
       }
     },
   );

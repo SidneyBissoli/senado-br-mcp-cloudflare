@@ -1,7 +1,7 @@
 /**
- * Group O — Senadores/Administrativo (4 tools)
- * senado_ceaps, senado_auxilio_moradia, senado_escritorios_apoio,
- * senado_senadores_aposentados
+ * Group O — Senadores/Administrativo (2 tools)
+ * senado_ceaps,
+ * senado_senadores_admin (enum `tipo`: auxilio-moradia | escritorios-apoio | aposentados)
  *
  * Consumes the ADMINISTRATIVE open data API. The CEAPS dataset is ~10 MB per
  * year with no server-side filters, so the tool fetches once (cached by year)
@@ -131,84 +131,74 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
     },
   );
 
-  // O2. senado_auxilio_moradia
+  // O2. senado_senadores_admin (tipo: auxilio-moradia | escritorios-apoio | aposentados)
   server.tool(
-    "senado_auxilio_moradia",
-    "Lista senadores que recebem auxílio-moradia ou ocupam imóvel funcional em Brasília. Retorna `{ count, senadores }`, onde cada item traz `nome`, `uf`, `partido`, `auxilioMoradia` e `imovelFuncional`. Não requer parâmetros e cobre apenas a legislatura atual; para gastos com cota parlamentar use `senado_ceaps`.",
-    {},
-    async () => {
+    "senado_senadores_admin",
+    "Dados administrativos dos senadores conforme o parâmetro `tipo`: " +
+      "`auxilio-moradia` → `{ tipo, count, senadores }` (`nome`, `uf`, `partido`, `auxilioMoradia`, `imovelFuncional`; legislatura atual). " +
+      "`escritorios-apoio` → `{ tipo, count, escritorios }` (`senador`, `uf`, `partido`, `setor`, `endereco`, `telefone`). " +
+      "`aposentados` → `{ tipo, count, aposentados }` ex-senadores aposentados (IPC/PSSC) com `nome`, `tipo` do plano, `dataInicial`, `remuneracao`. " +
+      "Filtros opcionais `uf` e `nome` (busca parcial) aplicam-se a auxilio-moradia e escritorios-apoio; `nome` também filtra aposentados. Para gastos de cota use `senado_ceaps`.",
+    {
+      tipo: z.enum(["auxilio-moradia", "escritorios-apoio", "aposentados"]).describe("Qual dado administrativo consultar"),
+      uf: z.string().max(2).optional().describe("Filtrar por estado (auxilio-moradia/escritorios-apoio)"),
+      nome: z.string().optional().describe("Filtrar por nome do senador (busca parcial)"),
+    },
+    async (params) => {
       try {
+        if (params.tipo === "escritorios-apoio") {
+          const response = await cachedFetch("senado_escritorios_apoio", {}, CACHE_SEMI_STATIC, () =>
+            admFetch("/senadores/escritorios", {}, admBaseUrl),
+          );
+          let escritorios = ensureArray(response).map((e: any) => ({
+            senador: e.nome || "",
+            uf: e.estado || null,
+            partido: e.partido || null,
+            setor: e.setor || null,
+            endereco: e.endereco || null,
+            telefone: e.telefone || null,
+          }));
+          if (params.uf) {
+            const uf = params.uf.toUpperCase();
+            escritorios = escritorios.filter((e) => e.uf?.toUpperCase() === uf);
+          }
+          if (params.nome) escritorios = escritorios.filter((e) => norm(e.senador).includes(norm(params.nome!)));
+          return toolResult({ tipo: params.tipo, count: escritorios.length, escritorios });
+        }
+
+        if (params.tipo === "aposentados") {
+          const response = await cachedFetch("senado_senadores_aposentados", {}, CACHE_SEMI_STATIC, () =>
+            admFetch("/senadores/aposentados", {}, admBaseUrl),
+          );
+          let aposentados = ensureArray(response).map((a: any) => ({
+            nome: a.nome || "",
+            tipo: a.tipo || null,
+            dataInicial: a.dataInicial || null,
+            remuneracao: a.remuneracao ?? null,
+          }));
+          if (params.nome) aposentados = aposentados.filter((a) => norm(a.nome).includes(norm(params.nome!)));
+          return toolResult({ tipo: params.tipo, count: aposentados.length, aposentados });
+        }
+
+        // tipo === "auxilio-moradia"
         const response = await cachedFetch("senado_auxilio_moradia", {}, CACHE_SEMI_STATIC, () =>
           admFetch("/senadores/auxilio-moradia", {}, admBaseUrl),
         );
-        const senadores = ensureArray(response).map((s: any) => ({
+        let senadores = ensureArray(response).map((s: any) => ({
           nome: s.nomeParlamentar || "",
           uf: s.estadoEleito || null,
           partido: s.partidoEleito || null,
           auxilioMoradia: s.auxilioMoradia || null,
           imovelFuncional: s.imovelFuncional || null,
         }));
-        return toolResult({ count: senadores.length, senadores });
-      } catch (e) {
-        return errorFrom(e, "Erro ao consultar auxílio-moradia");
-      }
-    },
-  );
-
-  // O3. senado_escritorios_apoio
-  server.tool(
-    "senado_escritorios_apoio",
-    "Lista escritórios de apoio dos senadores nos estados, com endereço e telefone. Retorna `{ count, escritorios }`, cada item com `senador`, `uf`, `partido`, `setor`, `endereco` e `telefone`. Filtre opcionalmente por `uf` (sigla, ex: SP) e/ou `nome` do senador (busca parcial); sem filtros lista todos. Para dados gerais do senador use `senado_listar_senadores`.",
-    {
-      uf: z.string().max(2).optional().describe("Filtrar por estado (ex: SP)"),
-      nome: z.string().optional().describe("Filtrar por nome do senador (busca parcial)"),
-    },
-    async (params) => {
-      try {
-        const response = await cachedFetch("senado_escritorios_apoio", {}, CACHE_SEMI_STATIC, () =>
-          admFetch("/senadores/escritorios", {}, admBaseUrl),
-        );
-        let escritorios = ensureArray(response).map((e: any) => ({
-          senador: e.nome || "",
-          uf: e.estado || null,
-          partido: e.partido || null,
-          setor: e.setor || null,
-          endereco: e.endereco || null,
-          telefone: e.telefone || null,
-        }));
         if (params.uf) {
           const uf = params.uf.toUpperCase();
-          escritorios = escritorios.filter((e) => e.uf?.toUpperCase() === uf);
+          senadores = senadores.filter((s) => s.uf?.toUpperCase() === uf);
         }
-        if (params.nome) {
-          escritorios = escritorios.filter((e) => norm(e.senador).includes(norm(params.nome!)));
-        }
-        return toolResult({ count: escritorios.length, escritorios });
+        if (params.nome) senadores = senadores.filter((s) => norm(s.nome).includes(norm(params.nome!)));
+        return toolResult({ tipo: params.tipo, count: senadores.length, senadores });
       } catch (e) {
-        return errorFrom(e, "Erro ao consultar escritórios de apoio");
-      }
-    },
-  );
-
-  // O4. senado_senadores_aposentados
-  server.tool(
-    "senado_senadores_aposentados",
-    "Lista ex-senadores aposentados pelos planos de previdência do Congresso (IPC/PSSC), com remuneração. Retorna `{ count, aposentados }`, cada item com `nome`, `tipo` (plano), `dataInicial` da aposentadoria e `remuneracao`. Não requer parâmetros; cobre apenas ex-parlamentares aposentados. Para remuneração de servidores ativos use `senado_remuneracoes_servidores`.",
-    {},
-    async () => {
-      try {
-        const response = await cachedFetch("senado_senadores_aposentados", {}, CACHE_SEMI_STATIC, () =>
-          admFetch("/senadores/aposentados", {}, admBaseUrl),
-        );
-        const aposentados = ensureArray(response).map((a: any) => ({
-          nome: a.nome || "",
-          tipo: a.tipo || null,
-          dataInicial: a.dataInicial || null,
-          remuneracao: a.remuneracao ?? null,
-        }));
-        return toolResult({ count: aposentados.length, aposentados });
-      } catch (e) {
-        return errorFrom(e, "Erro ao consultar ex-senadores aposentados");
+        return errorFrom(e, "Erro ao consultar dados administrativos dos senadores");
       }
     },
   );

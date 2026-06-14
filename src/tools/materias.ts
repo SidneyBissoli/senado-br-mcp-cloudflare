@@ -1,7 +1,7 @@
 /**
- * Group B — Bills / Matérias Legislativas (4 tools)
- * senado_buscar_materias, senado_obter_materia, senado_tramitacao_materia,
- * senado_textos_materia
+ * Group B — Bills / Matérias Legislativas (2 tools)
+ * senado_buscar_materias,
+ * senado_obter_materia (enum `secao`: detalhe | tramitacao | textos)
  * Note: senado_votos_materia is registered in votacoes.ts (Group D) as D4.
  *
  * Migrated to the v3 /processo API — the legacy /materia/* endpoints are
@@ -135,7 +135,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
   // B1. senado_buscar_materias
   server.tool(
     "senado_buscar_materias",
-    "Busca matérias legislativas por tipo (PEC, PL, PLP, MPV), número, ano, palavras-chave, autor ou situação de tramitação; informe ao menos um critério. Retorna `{ count, total, materias[] }`, cada item com `codigo` (codigoMateria), `sigla`, `numero`, `ano`, `ementa`, `autor`, `situacao` e `tramitando`. Use `codigo` em `senado_obter_materia`, `senado_tramitacao_materia` ou `senado_textos_materia`. `limite` padrão 100 (máx. 500); ao truncar inclui `aviso`.",
+    "Busca matérias legislativas por tipo (PEC, PL, PLP, MPV), número, ano, palavras-chave, autor ou situação de tramitação; informe ao menos um critério. Retorna `{ count, total, materias[] }`, cada item com `codigo` (codigoMateria), `sigla`, `numero`, `ano`, `ementa`, `autor`, `situacao` e `tramitando`. Use `codigo` em `senado_obter_materia` (com `secao` = detalhe, tramitacao ou textos). `limite` padrão 100 (máx. 500); ao truncar inclui `aviso`.",
     {
       sigla: z.string().optional().describe("Tipo: PEC, PL, PLP, MPV, PDL, PRS, etc."),
       numero: z.number().int().positive().optional().describe("Número da matéria"),
@@ -176,15 +176,68 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
     },
   );
 
-  // B2. senado_obter_materia
+  // B2. senado_obter_materia (secao: detalhe | tramitacao | textos)
   server.tool(
     "senado_obter_materia",
-    "Obtém detalhes completos de uma matéria pelo `codigoMateria`. Retorna um objeto com `identificacao`, `apelido`, `ementa`, `autor`, `situacao`, `localAtual`, `dataApresentacao`, `indexacao`, `classificacoes[]`, `tramitando`, `relator` (nome/partido/uf/comissão), `deliberacao` e `normaGerada` (quando houver). Obtenha o `codigoMateria` via `senado_buscar_materias`; para o histórico use `senado_tramitacao_materia` e para documentos `senado_textos_materia`.",
+    "Obtém dados de uma matéria pelo `codigoMateria`, conforme `secao` (padrão `detalhe`): " +
+      "`detalhe` → objeto com `identificacao`, `apelido`, `ementa`, `autor`, `situacao`, `localAtual`, `dataApresentacao`, `indexacao`, `classificacoes[]`, `tramitando`, `relator` (nome/partido/uf/comissão), `deliberacao` e `normaGerada`. " +
+      "`tramitacao` → histórico de tramitação cronológico em `tramitacoes[]` (`data`, `local`, `descricao`), com `count`/`total` (mantém os mais recentes ao truncar). " +
+      "`textos` → documentos da matéria em `textos[]` (`tipo`, `formato`, `identificacao`, `data`, `autoria`, `url`), do mais recente ao mais antigo. " +
+      "`limite` aplica-se a tramitacao/textos (padrão 100 e 50; ao truncar inclui `aviso`). Obtenha o `codigoMateria` via `senado_buscar_materias`.",
     {
       codigoMateria: z.number().int().positive().describe("Código único da matéria"),
+      secao: z.enum(["detalhe", "tramitacao", "textos"]).optional().default("detalhe").describe("detalhe (situação/relator), tramitacao (histórico) ou textos (documentos)"),
+      limite: z.number().int().min(1).max(1000).optional().describe("Máximo de itens em tramitacao/textos (padrão: 100 tramitacao, 50 textos)"),
     },
     async (params) => {
       try {
+        const secao = params.secao ?? "detalhe";
+
+        if (secao === "tramitacao") {
+          const resumo = await resolveProcesso(params.codigoMateria, baseUrl);
+          const detalheRes = await cachedFetch(
+            "senado_tramitacao_materia",
+            { idProcesso: resumo.id },
+            CACHE_DYNAMIC,
+            () => upstreamFetch(`/processo/${resumo.id}`, {}, baseUrl),
+          );
+          const todas = parseInformesTramitacao(detalheRes as any);
+          const limite = params.limite ?? 100;
+          const tramitacoes = todas.length > limite ? todas.slice(-limite) : todas;
+          return toolResult({
+            codigoMateria: params.codigoMateria,
+            secao,
+            idProcesso: resumo.id,
+            count: tramitacoes.length,
+            total: todas.length,
+            ...(todas.length > limite ? { aviso: `Exibindo os ${limite} eventos mais recentes de ${todas.length}.` } : {}),
+            tramitacoes,
+          });
+        }
+
+        if (secao === "textos") {
+          const response = await cachedFetch(
+            "senado_textos_materia",
+            { codigo: params.codigoMateria },
+            CACHE_ON_DEMAND,
+            () => upstreamFetch("/processo/documento", { codigoMateria: String(params.codigoMateria) }, baseUrl),
+          );
+          const todos = ensureArray(response)
+            .map(parseDocumentoProcesso)
+            .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")));
+          const limite = params.limite ?? 50;
+          const textos = todos.slice(0, limite);
+          return toolResult({
+            codigoMateria: params.codigoMateria,
+            secao,
+            count: textos.length,
+            total: todos.length,
+            ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} documentos.` } : {}),
+            textos,
+          });
+        }
+
+        // secao === "detalhe" (padrão)
         const [resumo, relatoriasRes] = await Promise.all([
           resolveProcesso(params.codigoMateria, baseUrl),
           cachedFetch(
@@ -203,79 +256,12 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
         const detalhe = parseProcessoDetalhe(detalheRes as any);
         return toolResult({
           ...detalhe,
+          secao,
           ementa: resumo.ementa || null,
           relator: pickRelatorAtual(ensureArray(relatoriasRes)),
         });
       } catch (e) {
         return errorFrom(e, "Matéria não encontrada");
-      }
-    },
-  );
-
-  // B3. senado_tramitacao_materia
-  server.tool(
-    "senado_tramitacao_materia",
-    "Obtém o histórico de tramitação (informes legislativos) de uma matéria pelo `codigoMateria`, em ordem cronológica. Retorna `{ codigoMateria, idProcesso, count, total, tramitacoes[] }`, cada evento com `data`, `local` (colegiado/ente) e `descricao`. Obtenha o `codigoMateria` via `senado_buscar_materias`; para a situação atual e o relator use `senado_obter_materia`. `limite` padrão 100 (máx. 1000) mantém os mais recentes; ao truncar inclui `aviso`.",
-    {
-      codigoMateria: z.number().int().positive().describe("Código único da matéria"),
-      limite: z.number().int().min(1).max(1000).optional().default(100).describe("Máximo de eventos retornados — mantém os mais recentes (padrão: 100)"),
-    },
-    async (params) => {
-      try {
-        const resumo = await resolveProcesso(params.codigoMateria, baseUrl);
-        const detalheRes = await cachedFetch(
-          "senado_tramitacao_materia",
-          { idProcesso: resumo.id },
-          CACHE_DYNAMIC,
-          () => upstreamFetch(`/processo/${resumo.id}`, {}, baseUrl),
-        );
-        const todas = parseInformesTramitacao(detalheRes as any);
-        const limite = params.limite ?? 100;
-        const tramitacoes = todas.length > limite ? todas.slice(-limite) : todas;
-        return toolResult({
-          codigoMateria: params.codigoMateria,
-          idProcesso: resumo.id,
-          count: tramitacoes.length,
-          total: todas.length,
-          ...(todas.length > limite ? { aviso: `Exibindo os ${limite} eventos mais recentes de ${todas.length}.` } : {}),
-          tramitacoes,
-        });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter tramitação");
-      }
-    },
-  );
-
-  // B4. senado_textos_materia
-  server.tool(
-    "senado_textos_materia",
-    "Lista documentos de uma matéria (texto inicial, emendas, pareceres, requerimentos) pelo `codigoMateria`, dos mais recentes aos mais antigos. Retorna `{ codigoMateria, count, total, textos[] }`, cada item com `tipo`, `formato`, `identificacao`, `data`, `autoria` e `url` para download. Obtenha o `codigoMateria` via `senado_buscar_materias`. `limite` padrão 50 (máx. 500); ao truncar inclui `aviso`.",
-    {
-      codigoMateria: z.number().int().positive().describe("Código único da matéria"),
-      limite: z.number().int().min(1).max(500).optional().default(50).describe("Máximo de documentos retornados (padrão: 50)"),
-    },
-    async (params) => {
-      try {
-        const response = await cachedFetch(
-          "senado_textos_materia",
-          { codigo: params.codigoMateria },
-          CACHE_ON_DEMAND,
-          () => upstreamFetch("/processo/documento", { codigoMateria: String(params.codigoMateria) }, baseUrl),
-        );
-        const todos = ensureArray(response)
-          .map(parseDocumentoProcesso)
-          .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")));
-        const limite = params.limite ?? 50;
-        const textos = todos.slice(0, limite);
-        return toolResult({
-          codigoMateria: params.codigoMateria,
-          count: textos.length,
-          total: todos.length,
-          ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} documentos.` } : {}),
-          textos,
-        });
-      } catch (e) {
-        return errorFrom(e, "Erro ao obter textos");
       }
     },
   );
