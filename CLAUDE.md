@@ -11,7 +11,7 @@ The upstream OpenAPI spec lives at `https://legis.senado.leg.br/dadosabertos/v3/
 ## Commands
 
 ```bash
-npm run dev          # wrangler dev — local server at http://localhost:8787
+npm run dev          # wrangler dev — local server on port 8787
 npm run typecheck    # tsc --noEmit
 npm test             # vitest run (all tests)
 npm run test:watch   # vitest watch mode
