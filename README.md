@@ -1,6 +1,7 @@
 # senado-br-mcp (Cloudflare Workers)
 
 [![smithery badge](https://smithery.ai/badge/sidneybissoli/senado-br-mcp-cloudflare)](https://smithery.ai/servers/sidneybissoli/senado-br-mcp-cloudflare)
+[![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
 
 MCP server for **Brazilian Senate open data** running on Cloudflare Workers with Streamable HTTP transport.
 
