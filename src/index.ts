@@ -11,6 +11,7 @@ import type { Env } from "./types.js";
 import { logger } from "./utils/logger.js";
 import { incr, getMetrics } from "./metrics.js";
 import { ICON_JPEG_BASE64 } from "./icon.js";
+import { refreshEcidadania } from "./scraper/pipeline.js";
 
 /** Decoded once per isolate — server logo bytes referenced by serverInfo.icons. */
 const ICON_JPEG = Uint8Array.from(atob(ICON_JPEG_BASE64), (c) => c.charCodeAt(0));
@@ -74,5 +75,17 @@ export default {
     const ms = Date.now() - start;
     logger.info("request", { method: request.method, path: url.pathname, status: response.status, ms });
     return response;
+  },
+
+  // Cron-triggered refresh of the e-Cidadania highlight lists into D1 (P2). Scrapes the cheap
+  // REST lists and upserts current + appends history, guarded so an anomalous/errored run never
+  // overwrites the last good state. No HTML scraping in this path.
+  async scheduled(controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+    try {
+      const summaries = await refreshEcidadania(env);
+      logger.info("ecidadania_sync", { cron: controller.cron, summaries });
+    } catch (e) {
+      logger.error("ecidadania_sync_failed", { error: e instanceof Error ? e.message : String(e) });
+    }
   },
 } satisfies ExportedHandler<Env>;

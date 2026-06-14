@@ -17,6 +17,12 @@ custom_domain = true
 SENADO_BASE_URL = "https://legis.senado.leg.br/dadosabertos"
 SENADO_ADM_BASE_URL = "https://adm.senado.gov.br/adm-dadosabertos"
 ALLOWED_ORIGIN = "*"
+# e-Cidadania (P2): max age (minutes) before D1-backed reads flag possible staleness.
+# Generous vs the 2h Cron cadence; tune without code changes.
+ECIDADANIA_STALE_MAX_MIN = "360"
+# Anomaly guard: a Cron scrape returning < this % of the last good run's rows is treated as
+# anomalous and must NOT overwrite ecidadania_current (preserve last good state).
+ECIDADANIA_ANOMALY_MIN_PCT = "50"
 
 [[kv_namespaces]]
 binding = "CACHE_KV"
@@ -28,3 +34,16 @@ id = "11b79fb8338e4687a332b96124390882"
 [[analytics_engine_datasets]]
 binding = "SENADO_ANALYTICS"
 dataset = "senado_mcp_tool_calls"
+
+# e-Cidadania sovereign dataset (P2): scraped lists persisted here; tools read from D1
+# instead of scraping per call. Schema in migrations/0001_ecidadania_init.sql.
+[[d1_databases]]
+binding = "ECIDADANIA_DB"
+database_name = "senado-ecidadania"
+database_id = "6d23ebdb-92b1-4112-9a8b-0d1597c589d9"
+
+# Cron: refresh the e-Cidadania lists (cheap REST JSON only — no HTML scraping in the
+# scheduled path). Every 2h cuts staleness from ~12h to ~2h at negligible portal load;
+# history is append-on-change so storage stays near-zero. Adjust cadence here (deploy-time).
+[triggers]
+crons = ["0 */2 * * *"]
