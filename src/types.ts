@@ -12,6 +12,9 @@ export interface Env {
   ECIDADANIA_DB?: D1Database;
   // Max age (minutes, as string from wrangler vars) before D1-backed reads flag staleness.
   ECIDADANIA_STALE_MAX_MIN?: string;
+  // Anomaly guard: a Cron run is anomalous (and must not overwrite `current`) if it returns
+  // fewer than this % of the last good run's rows. String from wrangler vars; default 50.
+  ECIDADANIA_ANOMALY_MIN_PCT?: string;
 }
 
 export interface CacheCategory {

@@ -20,6 +20,9 @@ ALLOWED_ORIGIN = "*"
 # e-Cidadania (P2): max age (minutes) before D1-backed reads flag possible staleness.
 # Generous vs the 2h Cron cadence; tune without code changes.
 ECIDADANIA_STALE_MAX_MIN = "360"
+# Anomaly guard: a Cron scrape returning < this % of the last good run's rows is treated as
+# anomalous and must NOT overwrite ecidadania_current (preserve last good state).
+ECIDADANIA_ANOMALY_MIN_PCT = "50"
 
 [[kv_namespaces]]
 binding = "CACHE_KV"
