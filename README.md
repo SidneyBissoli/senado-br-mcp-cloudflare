@@ -49,6 +49,7 @@ own instance** — it is **not** required to use this public server.
 - **SDK:** `@modelcontextprotocol/sdk` 1.26.0+ (per-request McpServer instances)
 - **Validation:** Zod schemas for all tool inputs
 - **Caching:** 2-layer (L0 memory + L1 Cache API) with SHA-256 keying
+- **e-Cidadania store:** D1 database refreshed by a Cron Trigger (every 2h) — list tools read from D1 with a live-scrape fallback and a staleness flag; detail tools stay live with write-through (see [e-Cidadania](#e-cidadania-d1-backed-cron-refreshed))
 - **Rate limiting:** Token bucket — global (8 req/s) + per-client (2 req/s)
 - **Upstream throttle:** Max 6 concurrent requests, 10s timeout, retry with exponential backoff
 - **Auth:** Optional Bearer token (set the `API_KEY` secret; open access when unset). Constant-time comparison.
@@ -100,6 +101,27 @@ Optionally set `ALLOWED_ORIGIN` to restrict CORS:
 [vars]
 ALLOWED_ORIGIN = "https://your-app.example.com"
 ```
+
+The e-Cidadania pipeline needs a **D1 database** and a **Cron Trigger** (both already declared in `wrangler.toml` — replace the database ID):
+
+```toml
+[[d1_databases]]
+binding = "ECIDADANIA_DB"
+database_name = "senado-ecidadania"
+database_id = "YOUR_D1_DATABASE_ID_HERE"
+
+[triggers]
+crons = ["0 */2 * * *"]
+```
+
+Create the database (paste the returned ID above) and apply the schema:
+
+```bash
+npx wrangler d1 create senado-ecidadania
+npx wrangler d1 migrations apply senado-ecidadania --remote
+```
+
+The list tools fall back to live scraping when D1 is empty, so the server works before the first Cron run.
 
 #### 4. (Optional) Enable authentication
 
@@ -312,9 +334,21 @@ Used by Groups O, P, Q, R via `admFetch` (no `.json` suffix; HTTP 404 treated as
 | `/api/v1/supridos/{ano}` (+ atosConcessao, empenhos, movimentacoes, transacoes) | `senado_suprimento_fundos` |
 | `senado.gov.br/bi-arqs/Arquimedes/Financeiro/{Despesa,Receitas}SenadoDadosAbertos.json` | `senado_execucao_orcamentaria` (daily JSON feeds, Brazilian decimal strings normalized) |
 
-### e-Cidadania (HTML scraping + internal REST)
+### e-Cidadania (D1-backed, Cron-refreshed)
 
-List tools use internal REST APIs (`restcolecaomaismateria`, `restcolecaomaisideia`, `restcolecaomaisaudiencia`) that return clean JSON. Detail tools scrape HTML with CSS-class-targeted regex.
+The e-Cidadania **list** data (consultas, ideias, eventos) is persisted in a **D1 database** and refreshed by a **Cron Trigger** (`0 */2 * * *`) instead of being scraped on every call. The scheduled job (`src/scraper/pipeline.ts`) scrapes the internal REST highlight endpoints (`restcolecaomaismateria`, `restcolecaomaisideia`, `restcolecaomaisaudiencia` — the top ~5 per entity, **not** the full corpus; these endpoints have no pagination), then:
+
+- **upserts** `ecidadania_current` (one row per item — what the tools read),
+- **appends** `ecidadania_history` only when an item's `content_hash` changes (time-series-ready),
+- records each run in `ecidadania_scrape_runs`.
+
+An **anomaly guard** (`src/scraper/anomaly.ts`) ensures a failed or anomalous run (zero rows, or fewer than `ECIDADANIA_ANOMALY_MIN_PCT`% of the last good run) **never overwrites** the last good state.
+
+The **list / analysis tools** (`listar_*`, `consultas_analise`, `sugerir_tema_enquete`) read from D1 via `resolveList` (`src/scraper/store.ts`): D1-first, with a graceful **live-scrape fallback** when D1 is empty or stale (older than `ECIDADANIA_STALE_MAX_MIN` minutes). Every list response carries an additive `meta` (`fonte`, `lastScrapedAt`, `possivelDesatualizacao`) so callers always see the data's real age and never get stale data silently.
+
+The **detail tools** (`obter_*`) stay **live** (HTML scraped with CSS-class-targeted regex) for freshness, and write their richer payload through to `ecidadania_detalhe` fire-and-forget (deduped by `content_hash`), so detail history accrues without adding latency to the response.
+
+> The list endpoints track the portal's **highlighted** collections (a few items per entity) plus their time series — not the complete e-Cidadania corpus. Full-corpus ingestion via the paginated `/pesquisa*` HTML pages is a separate, deferred effort.
 
 ## Caching
 
@@ -536,7 +570,7 @@ Static context documents/tables (MCP `resources` capability), defined in `src/re
 
 ```
 src/
-├── index.ts              # Worker entrypoint (fetch handler)
+├── index.ts              # Worker entrypoint (fetch handler + scheduled/Cron handler)
 ├── server.ts             # McpServer factory (creates per-request instance)
 ├── auth.ts               # Optional Bearer token auth (constant-time compare)
 ├── metrics.ts            # In-memory counters served at /metrics
@@ -548,6 +582,12 @@ src/
 ├── throttle/
 │   ├── token-bucket.ts   # Token bucket rate limiter (global + per-client)
 │   └── upstream.ts       # Upstream fetch with concurrency limit, retry, timeout
+├── scraper/
+│   ├── ecidadania.ts     # Isolated e-Cidadania scraper (REST lists + regex HTML detail)
+│   ├── pipeline.ts       # Cron sync: scrape → upsert current + append-on-change history
+│   ├── anomaly.ts        # Run classification (anomalous run never overwrites current)
+│   └── store.ts          # D1 reads (resolveList + staleness) + detail write-through
+├── instrument.ts         # Per-tool call telemetry (in-memory + Analytics Engine)
 ├── utils/
 │   ├── logger.ts         # Structured JSON logging
 │   └── validation.ts     # toolResult, toolError, errorFrom, buildParams, ensureArray helpers
@@ -559,7 +599,7 @@ src/
     ├── votacoes.ts          # Group D — 3 vote tools
     ├── comissoes.ts         # Group E — 7 committee tools
     ├── plenario.ts          # Group F — 7 plenary tools
-    ├── ecidadania.ts        # Group G — 8 e-Cidadania tools
+    ├── ecidadania.ts        # Group G — 8 e-Cidadania tools (read from D1; see scraper/)
     ├── discursos.ts         # Group I — 3 speech tools
     ├── composicao.ts        # Group J — 4 bloc/leadership tools
     ├── orcamento.ts         # Group K — 1 budget tool
@@ -571,7 +611,9 @@ src/
     ├── contratacoes.ts      # Group Q — 6 procurement tools
     ├── supridos.ts          # Group R — 1 petty-cash tool
     └── orcamento-senado.ts  # Group S — 1 budget execution tool
-tests/                    # Vitest unit tests mirroring src/ (parsers, cache, throttle, auth, utils)
+migrations/               # D1 schema (0001 tables, 0002 indexes) for the e-Cidadania pipeline
+tests/                    # Vitest unit tests mirroring src/ (parsers, cache, throttle, auth, scraper,
+                          # pipeline/anomaly/store, plus e-Cidadania contract tests over real fixtures)
 ```
 
 ## Environment Variables
@@ -583,6 +625,10 @@ tests/                    # Vitest unit tests mirroring src/ (parsers, cache, th
 | `ALLOWED_ORIGIN` | No | `*` | CORS allowed origin |
 | `API_KEY` | No (secret) | — | When set, requires `Authorization: Bearer <key>` on all requests except `/health`, `/metrics`, and CORS preflight |
 | `CACHE_KV` | Yes (binding) | — | KV namespace for L2 cache |
+| `ECIDADANIA_DB` | Yes (binding) | — | D1 database for the e-Cidadania pipeline (list persistence + history) |
+| `ECIDADANIA_STALE_MAX_MIN` | No | `360` | Minutes before D1-backed e-Cidadania reads flag possible staleness and fall back to live |
+| `ECIDADANIA_ANOMALY_MIN_PCT` | No | `50` | A Cron run returning fewer than this % of the last good run's rows is anomalous and won't overwrite `current` |
+| `SENADO_ANALYTICS` | No (binding) | — | Analytics Engine dataset for per-tool call telemetry |
 
 ## Connecting MCP Clients
 
