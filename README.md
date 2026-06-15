@@ -1,7 +1,6 @@
 # senado-br-mcp (Cloudflare Workers)
 
 [![smithery badge](https://smithery.ai/badge/sidneybissoli/senado-br-mcp-cloudflare)](https://smithery.ai/servers/sidneybissoli/senado-br-mcp-cloudflare)
-[![Glama](https://glama.ai/mcp/servers/SidneyBissoli/senado-br-mcp-cloudflare/badge)](https://glama.ai/mcp/servers/SidneyBissoli/senado-br-mcp-cloudflare)
 [![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
 [![License: MIT](https://img.shields.io/github/license/SidneyBissoli/senado-br-mcp-cloudflare)](LICENSE)
 ![Tools](https://img.shields.io/badge/tools-65-2ea44f)
