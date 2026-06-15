@@ -49,6 +49,17 @@ export default {
       });
     }
 
+    // Glama connector ownership verification — public, served on the domain.
+    if (url.pathname === "/.well-known/glama.json") {
+      return new Response(
+        JSON.stringify({
+          $schema: "https://glama.ai/mcp/schemas/connector.json",
+          maintainers: [{ email: "sbissoli76@gmail.com" }],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     // CORS preflight never carries Authorization — skip auth
     if (request.method !== "OPTIONS") {
       const authResponse = await checkAuth(request, env.API_KEY);
