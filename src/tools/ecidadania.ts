@@ -14,6 +14,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { toolResult, toolError } from "../utils/validation.js";
+import { logger } from "../utils/logger.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 import type { Env } from "../types.js";
 import { resolveList, writeDetalheThrough } from "../scraper/store.js";
@@ -69,6 +70,9 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
     const retryable = e instanceof Error && "retryable" in e && typeof (e as any).retryable === "boolean"
       ? (e as any).retryable
       : false;
+    // Emit the same structured tool_error log the other tools get via errorFrom(); log the raw
+    // message (no suffix), but keep the reassuring suffix in the user-facing tool error.
+    logger.error("tool_error", { message: msg, retryable });
     return toolError(`${msg}. As demais funcionalidades (senadores, matérias, votações) continuam operacionais.`, retryable);
   }
 
