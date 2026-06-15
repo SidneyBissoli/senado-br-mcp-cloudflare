@@ -14,7 +14,9 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { toolResult, toolError } from "../utils/validation.js";
-import { CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
+import { CACHE_ON_DEMAND } from "../types.js";
+import type { Env } from "../types.js";
+import { resolveList, writeDetalheThrough } from "../scraper/store.js";
 import {
   ECIDADANIA_BASE,
   parseBrNum,
@@ -55,7 +57,13 @@ export {
 // Tool registration
 // ══════════════════════════════════════════════════════════════════════════
 
-export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
+export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env: Env, ctx?: ExecutionContext) {
+  const db = env.ECIDADANIA_DB;
+  const staleMaxMin = () => {
+    const n = parseInt(env.ECIDADANIA_STALE_MAX_MIN ?? "", 10);
+    return Number.isFinite(n) && n > 0 ? n : 360;
+  };
+
   function ecidadaniaError(e: unknown) {
     const msg = e instanceof Error ? e.message : "Erro ao acessar e-Cidadania";
     const retryable = e instanceof Error && "retryable" in e && typeof (e as any).retryable === "boolean"
@@ -75,12 +83,13 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
     },
     async (params) => {
       try {
-        const all = await cachedFetch("ecidadania_consultas", { p: params.pagina }, CACHE_DYNAMIC, () =>
-          listarConsultasInternal({ pagina: params.pagina, limite: 100 }),
+        const { items, meta } = await resolveList(db, "consultas", staleMaxMin(), () =>
+          listarConsultasInternal({ limite: 100 }),
         );
-        let filtered = all as ConsultaResumo[];
+        let filtered = items as ConsultaResumo[];
         if (params.status && params.status !== "todas") filtered = filtered.filter((c) => c.status === params.status);
-        return toolResult({ count: filtered.slice(0, params.limite).length, consultas: filtered.slice(0, params.limite) });
+        const out = filtered.slice(0, params.limite);
+        return toolResult({ count: out.length, consultas: out, meta });
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -95,6 +104,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
         const r = await cachedFetch("ecidadania_consulta", { id: params.id }, CACHE_ON_DEMAND, () =>
           obterConsultaInternal(params.id),
         );
+        writeDetalheThrough(db, ctx, "consultas", params.id, r as Record<string, unknown>);
         return toolResult(r);
       } catch (e) { return ecidadaniaError(e); }
     },
@@ -120,7 +130,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
         const modo = params.modo ?? "consenso";
         const minimoVotos = params.minimoVotos ?? 1000;
         const limite = params.limite ?? 10;
-        const all = await cachedFetch("ecidadania_consultas_full", {}, CACHE_DYNAMIC, () =>
+        const { items: all, meta } = await resolveList(db, "consultas", staleMaxMin(), () =>
           listarConsultasInternal({ limite: 100 }),
         );
         let filtered: ConsultaResumo[];
@@ -140,7 +150,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
             .slice(0, limite);
           criterio = `≥${percentualMinimo}% numa direção, mínimo ${minimoVotos} votos`;
         }
-        return toolResult({ modo, criterio, count: filtered.length, consultas: filtered });
+        return toolResult({ modo, criterio, count: filtered.length, consultas: filtered, meta });
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -158,10 +168,15 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
     },
     async (params) => {
       try {
-        const ideias = await cachedFetch("ecidadania_ideias", params, CACHE_DYNAMIC, () =>
-          listarIdeiasInternal(params),
+        const { items, meta } = await resolveList(db, "ideias", staleMaxMin(), () =>
+          listarIdeiasInternal({ limite: 100 }),
         );
-        return toolResult({ count: (ideias as IdeiaResumo[]).length, ideias });
+        let arr = items as IdeiaResumo[];
+        if (params.ordenarPor === "apoios") {
+          arr = [...arr].sort((a, b) => (params.ordem === "asc" ? a.apoios - b.apoios : b.apoios - a.apoios));
+        }
+        arr = arr.slice(0, params.limite ?? 20);
+        return toolResult({ count: arr.length, ideias: arr, meta });
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -176,6 +191,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
         const r = await cachedFetch("ecidadania_ideia", { id: params.id }, CACHE_ON_DEMAND, () =>
           obterIdeiaInternal(params.id),
         );
+        writeDetalheThrough(db, ctx, "ideias", params.id, r as Record<string, unknown>);
         return toolResult(r);
       } catch (e) { return ecidadaniaError(e); }
     },
@@ -196,23 +212,24 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
       try {
         const limite = params.limite ?? 20;
         const ordem = params.ordem ?? "desc";
-        const todos = (await cachedFetch(
-          "ecidadania_eventos",
-          { status: params.status, comissao: params.comissao },
-          CACHE_DYNAMIC,
-          () => listarEventosInternal({ status: params.status, comissao: params.comissao, limite: 100 }),
-        )) as EventoResumo[];
-        let eventos = [...todos];
+        const { items, meta } = await resolveList(db, "eventos", staleMaxMin(), () =>
+          listarEventosInternal({ limite: 100 }),
+        );
+        let eventos = (items as EventoResumo[]).filter((e) => {
+          if (params.status && params.status !== "todos" && e.status !== params.status) return false;
+          if (params.comissao && !e.comissao?.toUpperCase().includes(params.comissao.toUpperCase())) return false;
+          return true;
+        });
         if (params.ordenarPor === "comentarios") {
           eventos.sort((a, b) => (ordem === "asc" ? a.comentarios - b.comentarios : b.comentarios - a.comentarios));
         } else if (params.ordenarPor === "data") {
           eventos.sort((a, b) => {
-            const da = a.data || "", db = b.data || "";
-            return ordem === "asc" ? da.localeCompare(db) : db.localeCompare(da);
+            const da = a.data || "", dbb = b.data || "";
+            return ordem === "asc" ? da.localeCompare(dbb) : dbb.localeCompare(da);
           });
         }
         eventos = eventos.slice(0, limite);
-        return toolResult({ count: eventos.length, eventos });
+        return toolResult({ count: eventos.length, eventos, meta });
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -227,6 +244,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
         const r = await cachedFetch("ecidadania_evento", { id: params.id }, CACHE_ON_DEMAND, () =>
           obterEventoInternal(params.id),
         );
+        writeDetalheThrough(db, ctx, "eventos", params.id, r as Record<string, unknown>);
         return toolResult(r);
       } catch (e) { return ecidadaniaError(e); }
     },
@@ -251,14 +269,12 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
           minimoParticipacao: 500, apenasEmTramitacao: true,
         };
 
-        const [consultas, ideias] = await Promise.all([
-          cachedFetch("ecidadania_consultas_full", {}, CACHE_DYNAMIC, () =>
-            listarConsultasInternal({ limite: 50 }),
-          ) as Promise<ConsultaResumo[]>,
-          cachedFetch("ecidadania_ideias_sug", {}, CACHE_DYNAMIC, () =>
-            listarIdeiasInternal({ status: "aberta", limite: 50, ordenarPor: "apoios", ordem: "desc" }),
-          ) as Promise<IdeiaResumo[]>,
+        const [cRes, iRes] = await Promise.all([
+          resolveList(db, "consultas", staleMaxMin(), () => listarConsultasInternal({ limite: 100 })),
+          resolveList(db, "ideias", staleMaxMin(), () => listarIdeiasInternal({ limite: 100 })),
         ]);
+        const consultas = cRes.items as ConsultaResumo[];
+        const ideias = iRes.items as IdeiaResumo[];
 
         const sugestoes: any[] = [];
 
@@ -293,6 +309,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string) {
           totalAnalisados: consultas.length + ideias.length,
           count: sugestoes.length,
           sugestoes: sugestoes.slice(0, 10),
+          meta: { consultas: cRes.meta, ideias: iRes.meta },
         });
       } catch (e) { return ecidadaniaError(e); }
     },

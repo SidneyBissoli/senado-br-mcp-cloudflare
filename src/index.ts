@@ -59,8 +59,9 @@ export default {
       }
     }
 
-    // Create new McpServer per request (required by SDK 1.26.0+)
-    const server = createServer(env);
+    // Create new McpServer per request (required by SDK 1.26.0+). ctx enables the
+    // e-Cidadania detail write-through (fire-and-forget via ctx.waitUntil).
+    const server = createServer(env, ctx);
 
     const handler = createMcpHandler(server, {
       corsOptions: {
