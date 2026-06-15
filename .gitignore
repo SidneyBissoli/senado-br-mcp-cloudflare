@@ -3,6 +3,7 @@ dist/
 .wrangler/
 .dev.vars
 docs/
+prompts/
 .api-spec/
 
 # Working image files — the served icon is base64-inlined in src/icon.ts
