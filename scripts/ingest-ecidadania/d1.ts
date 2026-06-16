@@ -37,12 +37,31 @@ function queryD1<T = Record<string, unknown>>(sql: string, attempts = 2): T[] {
   throw lastErr;
 }
 
-/** entity_id -> content_hash for all current consultas rows. */
-export function readExistingHashes(): Map<number, string> {
-  const rows = queryD1<{ entity_id: number; content_hash: string }>(
-    "SELECT entity_id, content_hash FROM ecidadania_current WHERE entidade='consultas'",
+export interface ExistingRow {
+  id: number;
+  content_hash: string;
+  status: string;
+}
+
+/**
+ * All current consultas rows with id + content_hash + status (NOT payload — that would be ~12 MB).
+ * content_hash feeds the history diff (planEntitySync); status feeds the linger re-status (§2).
+ */
+export function readExistingMeta(): ExistingRow[] {
+  const rows = queryD1<{ entity_id: number; content_hash: string; status: string | null }>(
+    "SELECT entity_id, content_hash, status FROM ecidadania_current WHERE entidade='consultas'",
   );
-  return new Map(rows.map((r) => [Number(r.entity_id), String(r.content_hash)]));
+  return rows.map((r) => ({ id: Number(r.entity_id), content_hash: String(r.content_hash), status: String(r.status ?? "") }));
+}
+
+/** payload_json for specific consultas ids (targeted — only the rows being re-statused). */
+export function readPayloads(ids: number[]): Map<number, string> {
+  if (ids.length === 0) return new Map();
+  const list = ids.map((n) => String(Math.trunc(n))).join(",");
+  const rows = queryD1<{ entity_id: number; payload_json: string }>(
+    `SELECT entity_id, payload_json FROM ecidadania_current WHERE entidade='consultas' AND entity_id IN (${list})`,
+  );
+  return new Map(rows.map((r) => [Number(r.entity_id), String(r.payload_json)]));
 }
 
 /** rows_scraped of the most recent status='ok' corpus run, or null if there is no baseline yet. */

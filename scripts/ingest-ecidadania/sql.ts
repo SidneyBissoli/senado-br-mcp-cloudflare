@@ -56,10 +56,15 @@ export function runRowStmt(now: string, status: string, rowsScraped: number, row
  * returns to its original state), so this is all-or-nothing without it. The run row is last so it is
  * only recorded if every upsert/history statement applied. Upserts are idempotent (ON CONFLICT DO
  * UPDATE), so a retry after a failed apply is safe.
+ *
+ * `rowsScraped` is the CRAWLED count (the open-set size that the catastrophic floor compares against),
+ * passed explicitly because `annotated` also includes re-statused rows (§2) that were not crawled and
+ * must not inflate the run's rows_scraped baseline.
  */
 export function generateLoadSql(
   annotated: Array<{ rec: SyncRecord; changed: boolean }>,
   now: string,
+  rowsScraped: number,
   rowsChanged: number,
 ): string {
   const lines: string[] = [];
@@ -67,7 +72,7 @@ export function generateLoadSql(
     lines.push(upsertStmt(rec, now));
     if (changed) lines.push(historyStmt(rec, now));
   }
-  lines.push(runRowStmt(now, "ok", annotated.length, rowsChanged, null));
+  lines.push(runRowStmt(now, "ok", rowsScraped, rowsChanged, null));
   return lines.join("\n") + "\n";
 }
 
