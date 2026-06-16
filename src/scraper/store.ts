@@ -26,6 +26,20 @@ export function isStale(lastScrapedAt: string | null, maxMin: number, now: Date 
   return ageMin > maxMin;
 }
 
+/**
+ * Latest successful *full-refresh* timestamp for an entity. Only `status='ok'` runs count — this
+ * deliberately excludes the 2h `'ok-metrica'` highlight ticks that refresh ~5 hot consultas, so the
+ * freshness signal reflects the (weekly) corpus run rather than being inflated by the hot rows while
+ * the long tail is days old. Same `status='ok'` filter that protects the classifyRun baseline.
+ */
+export async function lastGoodRunAt(db: D1Database, entidade: Entidade): Promise<string | null> {
+  const r = await db
+    .prepare("SELECT run_at FROM ecidadania_scrape_runs WHERE entidade = ? AND status = 'ok' ORDER BY id DESC LIMIT 1")
+    .bind(entidade)
+    .first<{ run_at: string }>();
+  return r?.run_at ?? null;
+}
+
 /** Read all current rows for an entity; items are the parsed normalized payloads. */
 export async function readCurrent(
   db: D1Database,
@@ -47,6 +61,18 @@ export async function readCurrent(
 /**
  * Resolve a list with the D1-first / live-fallback policy above.
  * `liveScrape` is the existing live path (e.g. listarConsultasInternal).
+ *
+ * `opts.fallbackOnStale` (default true) controls what happens when D1 has rows but is stale:
+ *   - true  (ideias/eventos): try the live scrape, which returns the same full set the Cron uses —
+ *     no coverage loss; on live failure serve the stale D1 flagged.
+ *   - false (consultas full corpus): NEVER fall back to the live highlight scrape on mere staleness,
+ *     because that would collapse the full corpus back to the ~5-item highlight set (the original
+ *     coverage bug). Serve the corpus from D1 flagged (possivelDesatualizacao=true); the live path
+ *     is reserved for an empty/unavailable D1 (cold start).
+ *
+ * Freshness is taken from the latest `status='ok'` run (`lastGoodRunAt`) so the 2h `'ok-metrica'`
+ * highlight ticks can't mask a stale corpus; it falls back to the max row `scraped_at` only when no
+ * run row exists yet.
  */
 export async function resolveList(
   db: D1Database | undefined,
@@ -54,7 +80,9 @@ export async function resolveList(
   staleMaxMin: number,
   liveScrape: () => Promise<any[]>,
   now: Date = new Date(),
+  opts: { fallbackOnStale?: boolean } = {},
 ): Promise<{ items: any[]; meta: ReadMeta }> {
+  const fallbackOnStale = opts.fallbackOnStale ?? true;
   let d1Items: any[] = [];
   let lastScrapedAt: string | null = null;
 
@@ -62,13 +90,28 @@ export async function resolveList(
     try {
       const cur = await readCurrent(db, entidade);
       d1Items = cur.items;
-      lastScrapedAt = cur.lastScrapedAt;
+      const goodRunAt = await lastGoodRunAt(db, entidade);
+      // Corpus entities (fallbackOnStale:false) take freshness from the corpus 'ok' run ONLY: with no
+      // such run yet (cold start, lastGoodRunAt=NULL) we must NOT trust the row-max scraped_at — the 2h
+      // metric splice could have inserted fresh hot rows without a corpus run, which would falsely read
+      // as fresh. NULL → stale → the corpus is served flagged below. Other entities keep the row-max
+      // fallback (their 'ok' runs and rows advance together every 2h).
+      lastScrapedAt = fallbackOnStale ? (goodRunAt ?? cur.lastScrapedAt) : goodRunAt;
       if (d1Items.length > 0 && !isStale(lastScrapedAt, staleMaxMin, now)) {
         return { items: d1Items, meta: { fonte: "d1", lastScrapedAt, possivelDesatualizacao: false } };
       }
     } catch {
       // D1 read failed — treat as empty and fall back to live.
     }
+  }
+
+  // D1 has the corpus but is stale, and this entity must not collapse to the live highlight set:
+  // serve the (flagged) corpus rather than a tiny live sample.
+  if (!fallbackOnStale && d1Items.length > 0) {
+    return {
+      items: d1Items,
+      meta: { fonte: "d1-stale", lastScrapedAt, possivelDesatualizacao: true, motivo: "corpus-desatualizado" },
+    };
   }
 
   // D1 stale, empty, or unavailable → fall back to live (fresh).

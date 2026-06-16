@@ -352,7 +352,20 @@ The **list / analysis tools** (`listar_*`, `consultas_analise`, `sugerir_tema_en
 
 The **detail tools** (`obter_*`) stay **live** (HTML scraped with CSS-class-targeted regex) for freshness, and write their richer payload through to `ecidadania_detalhe` fire-and-forget (deduped by `content_hash`), so detail history accrues without adding latency to the response.
 
-> The list endpoints track the portal's **highlighted** collections (a few items per entity) plus their time series — not the complete e-Cidadania corpus. Full-corpus ingestion via the paginated `/pesquisa*` HTML pages is a separate, deferred effort.
+#### Full-corpus consultas ingestion (off-Worker, weekly)
+
+`consultas` covers the **complete** e-Cidadania set (all consultations, open and closed), not just the highlights. Three settled design decisions:
+
+1. **Decoupled ingestion.** The full corpus is acquired by an **off-Worker TypeScript job** (`scripts/ingest-ecidadania/`, run by a weekly GitHub Action — `.github/workflows/ingest-ecidadania.yml`) that paginates the HTML listing (`pesquisamateria?p=1..N`, the only full-coverage source) for ids + vote counts and **bulk-loads D1**; the Worker only reads. The brittle, long crawl is kept out of the request/Cron path.
+2. **Status from `/processo`, not HTML.** A consultation runs from presentation until the end of tramitação, so `status` is a function of the matter: **aberta ⟺ the `codigoMateria` is in the `/processo` `tramitando=S` set**, derived from robust JSON (never scraped). The list/analysis tools default to `status: aberta` (current opinion) and expose `todas` for the historical set.
+3. **Two reconciled cadences (one shared writer contract).** The job **reuses** `contentHash` + the `ConsultaResumo` builder + `classifyRun` from `src/scraper/`, so its rows are byte-identical to the Cron's. The weekly job owns the long tail; the **2h Cron** keeps the ~5 hot/open highlights fresh via a *targeted metric splice* (recorded as `ok-metrica`, bypassing the corpus `classifyRun` baseline). Corpus freshness (`possivelDesatualizacao`) is computed from the last `status='ok'` run and uses a larger window (`ECIDADANIA_CORPUS_STALE_MAX_MIN`), and a stale consultas corpus is served from D1 flagged rather than collapsing back to the live highlights.
+
+Write guards on the load: an **incomplete crawl** (any page failed) or an incomplete `/processo` status universe writes only an `erro` run row; even a complete crawl is rejected by a **catastrophic floor** (`ECIDADANIA_CORPUS_MIN_PCT`, default 80% of the last good corpus) to guard against a degraded page — overridable with `--force` / `INGEST_FORCE=1` for a legitimate large shrink. Run weekly via the Action, or manually:
+
+```bash
+CLOUDFLARE_API_TOKEN=… npm run ingest:ecidadania                 # writes scripts/ingest-ecidadania/out.sql
+npx wrangler d1 execute senado-ecidadania --remote --file=scripts/ingest-ecidadania/out.sql
+```
 
 ## Caching
 
@@ -454,9 +467,9 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 
 | Tool | Description |
 |------|-------------|
-| `senado_ecidadania_listar_consultas` | Consultas públicas com votação sim/não dos cidadãos |
+| `senado_ecidadania_listar_consultas` | Consultas públicas (conjunto completo, abertas e encerradas) com votação sim/não; filtro `status` (padrão `aberta`) |
 | `senado_ecidadania_obter_consulta` | Detalhe de uma consulta: votos, autor, relator, comentários |
-| `senado_ecidadania_consultas_analise` | Analisa consultas via `modo` enum: consenso (alta concordância) ou polarizada (~50/50) |
+| `senado_ecidadania_consultas_analise` | Analisa o conjunto completo via `modo` (consenso/polarizada); `status` padrão `aberta`, `todas` para histórico |
 | `senado_ecidadania_listar_ideias` | Ideias legislativas de cidadãos; ranking das mais apoiadas via `ordenarPor: apoios` |
 | `senado_ecidadania_obter_ideia` | Detalhe de uma ideia: texto, apoios, status de conversão em projeto |
 | `senado_ecidadania_listar_eventos` | Eventos interativos (audiências, sabatinas, lives); ranking dos mais comentados via `ordenarPor` |
@@ -587,10 +600,10 @@ src/
 │   ├── token-bucket.ts   # Token bucket rate limiter (global + per-client)
 │   └── upstream.ts       # Upstream fetch with concurrency limit, retry, timeout
 ├── scraper/
-│   ├── ecidadania.ts     # Isolated e-Cidadania scraper (REST lists + regex HTML detail)
-│   ├── pipeline.ts       # Cron sync: scrape → upsert current + append-on-change history
+│   ├── ecidadania.ts     # Isolated e-Cidadania scraper (REST lists + regex HTML detail; buildConsultaResumo)
+│   ├── pipeline.ts       # 2h Cron sync: ideias/eventos via syncEntity + consultas highlight metric splice
 │   ├── anomaly.ts        # Run classification (anomalous run never overwrites current)
-│   └── store.ts          # D1 reads (resolveList + staleness) + detail write-through
+│   └── store.ts          # D1 reads (resolveList + per-entity staleness, lastGoodRunAt) + detail write-through
 ├── instrument.ts         # Per-tool call telemetry (in-memory + Analytics Engine)
 ├── utils/
 │   ├── logger.ts         # Structured JSON logging
@@ -615,9 +628,18 @@ src/
     ├── contratacoes.ts      # Group Q — 6 procurement tools
     ├── supridos.ts          # Group R — 1 petty-cash tool
     └── orcamento-senado.ts  # Group S — 1 budget execution tool
+scripts/
+└── ingest-ecidadania/    # Off-Worker weekly full-corpus consultas ingestion (run via `npm run ingest:ecidadania`)
+    ├── index.ts          # Orchestrator: crawl → status (/processo) → normalize → guards → out.sql
+    ├── listing.ts        # Pure listing parser (parseConsultaListingPage, findLastPage)
+    ├── status.ts         # tramitando=S set from /processo → aberta/encerrada (deriveStatus)
+    ├── http.ts           # Polite fetch (retry/backoff) for the unattended crawl
+    ├── d1.ts             # D1 pre-reads (existing hashes, last good rows) via wrangler
+    └── sql.ts            # out.sql generation (mirrors SQL.upsert/SQL.history; reuses SyncRecord)
+.github/workflows/        # publish-mcp.yml (registry) + ingest-ecidadania.yml (weekly D1 corpus load)
 migrations/               # D1 schema (0001 tables, 0002 indexes) for the e-Cidadania pipeline
 tests/                    # Vitest unit tests mirroring src/ (parsers, cache, throttle, auth, scraper,
-                          # pipeline/anomaly/store, plus e-Cidadania contract tests over real fixtures)
+                          # pipeline/anomaly/store, listing/sql/highlights, plus e-Cidadania contract tests)
 ```
 
 ## Environment Variables
@@ -630,8 +652,11 @@ tests/                    # Vitest unit tests mirroring src/ (parsers, cache, th
 | `API_KEY` | No (secret) | — | When set, requires `Authorization: Bearer <key>` on all requests except `/health`, `/metrics`, and CORS preflight |
 | `CACHE_KV` | Yes (binding) | — | KV namespace for L2 cache |
 | `ECIDADANIA_DB` | Yes (binding) | — | D1 database for the e-Cidadania pipeline (list persistence + history) |
-| `ECIDADANIA_STALE_MAX_MIN` | No | `360` | Minutes before D1-backed e-Cidadania reads flag possible staleness and fall back to live |
-| `ECIDADANIA_ANOMALY_MIN_PCT` | No | `50` | A Cron run returning fewer than this % of the last good run's rows is anomalous and won't overwrite `current` |
+| `ECIDADANIA_STALE_MAX_MIN` | No | `360` | Minutes before D1-backed e-Cidadania reads (ideias/eventos) flag possible staleness and fall back to live |
+| `ECIDADANIA_CORPUS_STALE_MAX_MIN` | No | `14400` | Staleness window (minutes, ~10d) for the weekly full `consultas` corpus — served flagged, never collapsed to highlights |
+| `ECIDADANIA_ANOMALY_MIN_PCT` | No | `50` | A 2h Cron run (ideias/eventos) returning fewer than this % of the last good run's rows is anomalous and won't overwrite `current` |
+| `ECIDADANIA_CORPUS_MIN_PCT` | No | `80` | Catastrophic floor for the off-Worker corpus job: a complete crawl below this % of the last good corpus is rejected |
+| `CLOUDFLARE_API_TOKEN` | No (secret) | — | GitHub Actions secret (D1 edit scope) for the weekly corpus ingestion job; not used by the Worker |
 | `SENADO_ANALYTICS` | No (binding) | — | Analytics Engine dataset for per-tool call telemetry |
 
 ## Connecting MCP Clients

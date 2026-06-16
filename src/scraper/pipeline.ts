@@ -14,9 +14,11 @@
 import type { Env } from "../types.js";
 import { classifyRun, parseAnomalyMinPct, type RunStatus } from "./anomaly.js";
 import {
+  buildConsultaResumo,
   listarConsultasInternal,
   listarIdeiasInternal,
   listarEventosInternal,
+  type ConsultaResumo,
 } from "./ecidadania.js";
 
 export type Entidade = "consultas" | "ideias" | "eventos";
@@ -34,7 +36,10 @@ export interface SyncRecord {
 
 export interface RunSummary {
   entidade: Entidade;
-  status: RunStatus;
+  // 'ok' | 'anomalo' | 'erro' for syncEntity (ideias/eventos); 'ok-metrica' | 'erro-metrica' for the
+  // 2h consultas highlight refresh. The '-metrica' markers are intentionally NOT 'ok', so neither the
+  // classifyRun baseline nor the corpus freshness signal (both filter status='ok') picks them up.
+  status: RunStatus | "ok-metrica" | "erro-metrica";
   rowsScraped: number;
   rowsChanged: number;
   error?: string;
@@ -91,6 +96,8 @@ export function planEntitySync(
 
 const SQL = {
   existing: "SELECT entity_id, content_hash FROM ecidadania_current WHERE entidade = ?",
+  currentRow:
+    "SELECT content_hash, payload_json, status FROM ecidadania_current WHERE entidade = ? AND entity_id = ?",
   lastGood:
     "SELECT rows_scraped FROM ecidadania_scrape_runs WHERE entidade = ? AND status = 'ok' ORDER BY id DESC LIMIT 1",
   upsert:
@@ -144,14 +151,93 @@ export async function syncEntity(
   return { entidade, status, rowsScraped: records.length, rowsChanged };
 }
 
-/** Top-level Cron entry: refresh all three e-Cidadania highlight lists into D1. */
+/**
+ * 2h consultas refresh — TARGETED METRIC UPDATE of the ~5 REST "highlight" ids (P2.6, option b).
+ *
+ * The full consultas corpus is owned by the weekly off-Worker ingestion job; this 2h tick keeps the
+ * vote counts of the hot/open highlights fresh WITHOUT going through syncEntity/classifyRun. That is
+ * deliberate (it reconciles two writers into ecidadania_current, §6.5):
+ *   - It bypasses classifyRun: a 5-row run can't be compared against the ~thousands-row corpus
+ *     baseline, and must never write a 'consultas' status='ok' run (it would re-break the corpus
+ *     baseline and inflate the freshness signal). It records its run as 'ok-metrica' instead.
+ *   - It is a SPLICE: for an existing row it overwrites only the vote fields and preserves the
+ *     corpus-authoritative materia/ementa/status/url, so the content_hash only changes when the
+ *     votes actually move (history-on-change preserved; no source ping-pong between the two writers).
+ *   - A brand-new highlight not yet in the corpus is inserted fresh (status "aberta" — an active
+ *     highlight by construction); the next weekly corpus run reconciles its other fields.
+ */
+export async function refreshConsultasHighlights(db: D1Database, now: string): Promise<RunSummary> {
+  let highlights: ConsultaResumo[];
+  try {
+    highlights = await listarConsultasInternal({ limite: 100 });
+  } catch (e) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    await db.prepare(SQL.run).bind(now, "consultas", "erro-metrica", 0, 0, errMsg).run();
+    return { entidade: "consultas", status: "erro-metrica", rowsScraped: 0, rowsChanged: 0, error: errMsg };
+  }
+
+  const stmts = [];
+  let rowsChanged = 0;
+  for (const hl of highlights) {
+    const existing = await db
+      .prepare(SQL.currentRow)
+      .bind("consultas", hl.id)
+      .first<{ content_hash: string; payload_json: string; status: string | null }>();
+
+    // Existing corpus row → splice in fresh votes, keep corpus materia/ementa/status/url.
+    // No existing row → insert the REST highlight as-is (active by definition).
+    const item = existing
+      ? buildConsultaResumo({
+          id: hl.id,
+          materia: (JSON.parse(existing.payload_json) as ConsultaResumo).materia,
+          ementa: (JSON.parse(existing.payload_json) as ConsultaResumo).ementa,
+          votosSim: hl.votosSim,
+          votosNao: hl.votosNao,
+          totalVotos: hl.totalVotos,
+          status: (JSON.parse(existing.payload_json) as ConsultaResumo).status,
+          url: (JSON.parse(existing.payload_json) as ConsultaResumo).url,
+        })
+      : hl;
+
+    const payloadJson = JSON.stringify(item);
+    const hash = contentHash(payloadJson);
+    if (existing && existing.content_hash === hash) continue; // votes unchanged — skip
+
+    rowsChanged++;
+    stmts.push(
+      db.prepare(SQL.upsert).bind(
+        "consultas", hl.id, now, hash, item.url, payloadJson, item.status, item.totalVotos, null,
+      ),
+    );
+    stmts.push(db.prepare(SQL.history).bind("consultas", hl.id, now, hash, payloadJson));
+  }
+  stmts.push(db.prepare(SQL.run).bind(now, "consultas", "ok-metrica", highlights.length, rowsChanged, null));
+  await db.batch(stmts);
+
+  return { entidade: "consultas", status: "ok-metrica", rowsScraped: highlights.length, rowsChanged };
+}
+
+/**
+ * Top-level Cron entry (every 2h): refresh ideias/eventos via the full syncEntity path (their REST
+ * endpoint IS their full source), and consultas via the targeted highlight metric splice above.
+ * The weekly full consultas corpus is loaded separately by the off-Worker ingestion job.
+ */
 export async function refreshEcidadania(env: Env, now = new Date().toISOString()): Promise<RunSummary[]> {
   const db = env.ECIDADANIA_DB;
   if (!db) return [];
   const minPct = parseAnomalyMinPct(env.ECIDADANIA_ANOMALY_MIN_PCT);
-  const entidades: Entidade[] = ["consultas", "ideias", "eventos"];
   const summaries: RunSummary[] = [];
-  for (const entidade of entidades) {
+
+  // consultas: targeted highlight refresh (bypasses syncEntity/classifyRun — see above).
+  try {
+    summaries.push(await refreshConsultasHighlights(db, now));
+  } catch (e) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    summaries.push({ entidade: "consultas", status: "erro-metrica", rowsScraped: 0, rowsChanged: 0, error: errMsg });
+  }
+
+  // ideias/eventos: full syncEntity path with the anomaly guard.
+  for (const entidade of ["ideias", "eventos"] as Entidade[]) {
     let records: SyncRecord[] = [];
     let error: unknown;
     try {

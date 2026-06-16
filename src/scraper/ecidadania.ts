@@ -124,25 +124,62 @@ export interface ConsultaResumo {
   status: string; url: string;
 }
 
+/**
+ * Canonical `ConsultaResumo` builder — the single source of the object's field order and the
+ * percentual rounding. Both writers into `ecidadania_current` go through this so the JSON payload
+ * (and therefore `contentHash`) is byte-identical for identical inputs: the 2h highlight Cron
+ * (`listarConsultasInternal`, REST source) and the weekly full-corpus ingestion job (HTML listing
+ * source). Diverging field order or rounding here would make every row read as "changed" forever,
+ * bloating `ecidadania_history` and defeating change detection.
+ *
+ * `totalVotos` is taken from the caller when provided (the REST endpoint reports its own total,
+ * which may differ slightly from votosSim+votosNao) and otherwise derived as votosSim+votosNao.
+ * Percentuais are always derived here with `Math.round`.
+ */
+export function buildConsultaResumo(fields: {
+  id: number; materia?: string; ementa?: string;
+  votosSim: number; votosNao: number; totalVotos?: number;
+  status?: string; url?: string;
+}): ConsultaResumo {
+  const votosSim = fields.votosSim;
+  const votosNao = fields.votosNao;
+  const totalVotos = fields.totalVotos ?? votosSim + votosNao;
+  const percentualSim = totalVotos > 0 ? Math.round((votosSim / totalVotos) * 100) : 0;
+  const percentualNao = totalVotos > 0 ? Math.round((votosNao / totalVotos) * 100) : 0;
+  return {
+    id: fields.id,
+    materia: fields.materia || "",
+    ementa: fields.ementa || "",
+    votosSim,
+    votosNao,
+    totalVotos,
+    percentualSim,
+    percentualNao,
+    status: fields.status || "aberta",
+    url: fields.url || `${ECIDADANIA_BASE}/visualizacaomateria?id=${fields.id}`,
+  };
+}
+
 export async function listarConsultasInternal(params: { pagina?: number; limite?: number }): Promise<ConsultaResumo[]> {
   const { limite = 20 } = params;
   const data = await fetchEcidadaniaJson("/restcolecaomaismateria");
 
-  return data.slice(0, limite).map((item: any) => {
-    const votosSim = parseBrNum(String(item.votosFavor || "0"));
-    const votosNao = parseBrNum(String(item.votosContra || "0"));
-    const totalVotos = parseBrNum(String(item.totalVotos || "0"));
-    const percentualSim = totalVotos > 0 ? Math.round((votosSim / totalVotos) * 100) : 0;
-    const percentualNao = totalVotos > 0 ? Math.round((votosNao / totalVotos) * 100) : 0;
-    return {
+  // status is hardcoded "aberta" here because this path serves only the REST "highlight"
+  // collection (/restcolecaomais*), which lists active consultations by construction. Real
+  // per-item status for the full set is derived from /processo (tramitando) in the ingestion
+  // job, which is the source of truth. Edge case: a just-closed highlight may briefly show
+  // "aberta" until the next corpus run corrects it — acceptable on this cold-start/fallback path.
+  return data.slice(0, limite).map((item: any) =>
+    buildConsultaResumo({
       id: item.id,
       materia: item.identificacaoBasica || "",
       ementa: item.ementa || "",
-      votosSim, votosNao, totalVotos, percentualSim, percentualNao,
-      status: "aberta" as const,
-      url: `${ECIDADANIA_BASE}/visualizacaomateria?id=${item.id}`,
-    };
-  });
+      votosSim: parseBrNum(String(item.votosFavor || "0")),
+      votosNao: parseBrNum(String(item.votosContra || "0")),
+      totalVotos: parseBrNum(String(item.totalVotos || "0")),
+      status: "aberta",
+    }),
+  );
 }
 
 export async function obterConsultaInternal(id: number) {

@@ -1,0 +1,16 @@
+{
+  "comment": "Type-checks the off-Worker ingestion scripts. They run on Node (via tsx), not in the Worker, but import Workers-typed src/scraper modules — so both type sets are loaded. Separate from the root tsconfig (which is Worker-only and excludes scripts/).",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "types": ["node", "@cloudflare/workers-types"],
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "noEmit": true
+  },
+  "include": ["ingest-ecidadania/**/*.ts"]
+}
