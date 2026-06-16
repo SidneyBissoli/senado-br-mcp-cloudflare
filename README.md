@@ -354,10 +354,10 @@ The **detail tools** (`obter_*`) stay **live** (HTML scraped with CSS-class-targ
 
 #### Full-corpus consultas ingestion (off-Worker, weekly)
 
-`consultas` covers the **complete** e-Cidadania set (all consultations, open and closed), not just the highlights. Three settled design decisions:
+`consultas` covers the **full set of OPEN consultations** — every matter currently in tramitação (~7.7k), not just the ~5 highlights. Confirmed on the first run: the `pesquisamateria` listing is **in-tramitação-only**, so closed/historical consultations are **not** captured by this source (a pre-ingestion historical backfill is out of scope). Three settled design decisions:
 
-1. **Decoupled ingestion.** The full corpus is acquired by an **off-Worker TypeScript job** (`scripts/ingest-ecidadania/`, run by a weekly GitHub Action — `.github/workflows/ingest-ecidadania.yml`) that paginates the HTML listing (`pesquisamateria?p=1..N`, the only full-coverage source) for ids + vote counts and **bulk-loads D1**; the Worker only reads. The brittle, long crawl is kept out of the request/Cron path.
-2. **Status from `/processo`, not HTML.** A consultation runs from presentation until the end of tramitação, so `status` is a function of the matter: **aberta ⟺ the `codigoMateria` is in the `/processo` `tramitando=S` set**, derived from robust JSON (never scraped). The list/analysis tools default to `status: aberta` (current opinion) and expose `todas` for the historical set.
+1. **Decoupled ingestion.** The open set is acquired by an **off-Worker TypeScript job** (`scripts/ingest-ecidadania/`, run by a weekly GitHub Action — `.github/workflows/ingest-ecidadania.yml`) that paginates the HTML listing (`pesquisamateria?p=1..N`, the only full-coverage source for open consultations) for ids + vote counts and **bulk-loads D1**; the Worker only reads. The brittle, long crawl is kept out of the request/Cron path.
+2. **Status from `/processo`, not HTML.** A consultation runs from presentation until the end of tramitação, so `status` is a function of the matter: **aberta ⟺ the `codigoMateria` is in the `/processo` `tramitando=S` set**, derived from robust JSON (never scraped). The list/analysis tools default to `status: aberta`. Because the listing only yields open matters today, every ingested row is `aberta` — so `status: encerrada` returns ∅ and `status: todas` equals the open set; a follow-up will re-status rows whose matter has left tramitação (making `encerrada` truthful going forward).
 3. **Two reconciled cadences (one shared writer contract).** The job **reuses** `contentHash` + the `ConsultaResumo` builder + `classifyRun` from `src/scraper/`, so its rows are byte-identical to the Cron's. The weekly job owns the long tail; the **2h Cron** keeps the ~5 hot/open highlights fresh via a *targeted metric splice* (recorded as `ok-metrica`, bypassing the corpus `classifyRun` baseline). Corpus freshness (`possivelDesatualizacao`) is computed from the last `status='ok'` run and uses a larger window (`ECIDADANIA_CORPUS_STALE_MAX_MIN`), and a stale consultas corpus is served from D1 flagged rather than collapsing back to the live highlights.
 
 Write guards on the load: an **incomplete crawl** (any page failed) or an incomplete `/processo` status universe writes only an `erro` run row; even a complete crawl is rejected by a **catastrophic floor** (`ECIDADANIA_CORPUS_MIN_PCT`, default 80% of the last good corpus) to guard against a degraded page — overridable with `--force` / `INGEST_FORCE=1` for a legitimate large shrink. Run weekly via the Action, or manually:
@@ -467,9 +467,9 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 
 | Tool | Description |
 |------|-------------|
-| `senado_ecidadania_listar_consultas` | Consultas públicas (conjunto completo, abertas e encerradas) com votação sim/não; filtro `status` (padrão `aberta`) |
+| `senado_ecidadania_listar_consultas` | Consultas públicas (conjunto completo das **abertas** — matérias em tramitação) com votação sim/não; filtro `status` (padrão `aberta`) |
 | `senado_ecidadania_obter_consulta` | Detalhe de uma consulta: votos, autor, relator, comentários |
-| `senado_ecidadania_consultas_analise` | Analisa o conjunto completo via `modo` (consenso/polarizada); `status` padrão `aberta`, `todas` para histórico |
+| `senado_ecidadania_consultas_analise` | Analisa o conjunto completo de consultas **abertas** via `modo` (consenso/polarizada); `status` padrão `aberta` |
 | `senado_ecidadania_listar_ideias` | Ideias legislativas de cidadãos; ranking das mais apoiadas via `ordenarPor: apoios` |
 | `senado_ecidadania_obter_ideia` | Detalhe de uma ideia: texto, apoios, status de conversão em projeto |
 | `senado_ecidadania_listar_eventos` | Eventos interativos (audiências, sabatinas, lives); ranking dos mais comentados via `ordenarPor` |

@@ -90,9 +90,9 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G1. senado_ecidadania_listar_consultas
   server.tool(
     "senado_ecidadania_listar_consultas",
-    "Lista consultas públicas do e-Cidadania (conjunto completo do portal, abertas e encerradas), em que cidadãos votam sim/não sobre matérias. Retorna `{ count, consultas }`, cada consulta com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status` e `url`. O filtro `status` tem padrão `aberta` (opinião pública atual, matéria em tramitação); use `encerrada` para o registro histórico ou `todas` para o conjunto inteiro. Aceita `limite` (padrão 20). Para o detalhe de uma consulta chame `senado_ecidadania_obter_consulta` com o `id`; para recortes analíticos (consenso/polarização) use `senado_ecidadania_consultas_analise`.",
+    "Lista consultas públicas do e-Cidadania (conjunto completo das **abertas** — toda matéria em tramitação, ~7,7 mil), em que cidadãos votam sim/não. Retorna `{ count, consultas }`, cada consulta com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status` e `url`. Atualmente só consultas abertas são ingeridas (o portal lista apenas matérias em tramitação), então `status: encerrada` retorna vazio e `todas` equivale a `aberta`. Aceita `limite` (padrão 20). Para o detalhe de uma consulta chame `senado_ecidadania_obter_consulta` com o `id`; para recortes analíticos (consenso/polarização) use `senado_ecidadania_consultas_analise`.",
     {
-      status: z.enum(["aberta", "encerrada", "todas"]).optional().default("aberta").describe("Filtrar por status (padrão: aberta)"),
+      status: z.enum(["aberta", "encerrada", "todas"]).optional().default("aberta").describe("Filtrar por status (padrão: aberta). Hoje só há consultas abertas ingeridas: encerrada retorna vazio e todas == aberta até a inclusão do histórico."),
       limite: z.number().int().min(1).max(100).optional().default(20).describe("Número máximo de resultados"),
       pagina: z.number().int().min(1).optional().default(1).describe("Página de resultados"),
     },
@@ -131,15 +131,15 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G3. senado_ecidadania_consultas_analise (modo: consenso | polarizada)
   server.tool(
     "senado_ecidadania_consultas_analise",
-    "Analisa o conjunto completo de consultas públicas do e-Cidadania por grau de concordância cidadã, conforme `modo`: " +
+    "Analisa o conjunto completo de consultas públicas **abertas** (matérias em tramitação) do e-Cidadania por grau de concordância cidadã, conforme `modo`: " +
       "`consenso` → consultas com alta concentração de votos numa direção, ordenadas da maior para a menor concentração; usa `percentualMinimo` (padrão 85%). " +
       "`polarizada` → consultas com votação equilibrada (~50/50), ordenadas da menor para a maior diferença sim/não; usa `margemPolarizacao` (padrão 15 pontos). " +
-      "Por padrão analisa apenas consultas `aberta` (opinião atual); use `status: \"encerrada\"` para o histórico ou `\"todas\"` para o conjunto inteiro — não misture abertas e encerradas sem intenção (50/50 aberto = divisão hoje; 50/50 encerrado = divisão à época). " +
+      "Analisa apenas consultas `aberta` (opinião pública atual). Hoje só há consultas abertas ingeridas (o portal lista apenas matérias em tramitação), então `status: \"encerrada\"` retorna vazio e `\"todas\"` equivale a `aberta`. " +
       "Todos os modos aceitam `minimoVotos` (padrão 1000) e `limite` (padrão 10). Retorna `{ modo, criterio, count, consultas }`. " +
       "Para o detalhe de uma consulta use `senado_ecidadania_obter_consulta`.",
     {
       modo: z.enum(["consenso", "polarizada"]).optional().default("consenso").describe("consenso (alta concordância) ou polarizada (~50/50)"),
-      status: z.enum(["aberta", "encerrada", "todas"]).optional().default("aberta").describe("Recorte do conjunto (padrão: aberta = opinião atual)"),
+      status: z.enum(["aberta", "encerrada", "todas"]).optional().default("aberta").describe("Recorte do conjunto (padrão: aberta = opinião atual). Hoje só há abertas: encerrada retorna vazio e todas == aberta."),
       percentualMinimo: z.number().int().min(50).max(100).optional().default(85).describe("Modo consenso: percentual mínimo numa direção"),
       margemPolarizacao: z.number().int().min(0).max(50).optional().default(15).describe("Modo polarizada: considera polarizado se diferença ≤ este percentual"),
       minimoVotos: z.number().int().min(0).optional().default(1000).describe("Mínimo de votos para considerar"),
@@ -279,7 +279,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G8. senado_ecidadania_sugerir_tema_enquete
   server.tool(
     "senado_ecidadania_sugerir_tema_enquete",
-    "Sugere temas para uma enquete pública mensal (seleção de pauta): analisa as consultas e ideias do e-Cidadania e elege as de maior engajamento cidadão, filtrando por polarização/consenso e participação mínima. Retorna `{ criteriosAplicados, totalAnalisados, count, sugestoes }` (até 10), cada sugestão com `tipo` (`consulta`/`ideia`), `id`, `titulo`, `motivo`, `metricas` (participação/polarização) e `url`, ordenadas por participação. Critérios opcionais em `criterios`: `evitarPolarizacao`/`evitarConsenso` (padrão true), `minimoParticipacao` (padrão 500), `apenasEmTramitacao`. Para investigar uma sugestão, use `senado_ecidadania_obter_consulta` ou `senado_ecidadania_obter_ideia` conforme o `tipo`.",
+    "Sugere temas para uma enquete pública mensal (seleção de pauta): analisa o conjunto completo de consultas (abertas) e as ideias do e-Cidadania e elege as de maior engajamento cidadão, filtrando por polarização/consenso e participação mínima. Retorna `{ criteriosAplicados, totalAnalisados, count, sugestoes }` (até 10), cada sugestão com `tipo` (`consulta`/`ideia`), `id`, `titulo`, `motivo`, `metricas` (participação/polarização) e `url`, ordenadas por participação. Critérios opcionais em `criterios`: `evitarPolarizacao`/`evitarConsenso` (padrão true), `minimoParticipacao` (padrão 500), `apenasEmTramitacao` (padrão true → considera só consultas abertas, com base no status real). Para investigar uma sugestão, use `senado_ecidadania_obter_consulta` ou `senado_ecidadania_obter_ideia` conforme o `tipo`.",
     {
       criterios: z.object({
         evitarPolarizacao: z.boolean().optional().default(true).describe("Evita temas com ~50/50"),
