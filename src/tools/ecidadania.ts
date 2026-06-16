@@ -90,9 +90,9 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G1. senado_ecidadania_listar_consultas
   server.tool(
     "senado_ecidadania_listar_consultas",
-    "Lista consultas públicas do e-Cidadania (conjunto completo das **abertas** — toda matéria em tramitação, ~7,7 mil), em que cidadãos votam sim/não. Retorna `{ count, consultas }`, cada consulta com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status` e `url`. Atualmente só consultas abertas são ingeridas (o portal lista apenas matérias em tramitação), então `status: encerrada` retorna vazio e `todas` equivale a `aberta`. Aceita `limite` (padrão 20). Para o detalhe de uma consulta chame `senado_ecidadania_obter_consulta` com o `id`; para recortes analíticos (consenso/polarização) use `senado_ecidadania_consultas_analise`.",
+    "Lista consultas públicas do e-Cidadania (conjunto completo das **abertas** — toda matéria em tramitação, ~7,7 mil), em que cidadãos votam sim/não. Retorna `{ count, consultas }`, cada consulta com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status` e `url`. Toda consulta entra como `aberta`; quando a matéria sai de tramitação ela passa a `encerrada` (o conjunto `encerrada`/`todas` cresce com o tempo). Consultas encerradas antes da 1ª ingestão não são capturadas. Aceita `limite` (padrão 20). Para o detalhe de uma consulta chame `senado_ecidadania_obter_consulta` com o `id`; para recortes analíticos (consenso/polarização) use `senado_ecidadania_consultas_analise`.",
     {
-      status: z.enum(["aberta", "encerrada", "todas"]).optional().default("aberta").describe("Filtrar por status (padrão: aberta). Hoje só há consultas abertas ingeridas: encerrada retorna vazio e todas == aberta até a inclusão do histórico."),
+      status: z.enum(["aberta", "encerrada", "todas"]).optional().default("aberta").describe("Filtrar por status (padrão: aberta). encerrada lista consultas cuja matéria saiu de tramitação desde a ingestão (cresce com o tempo); fechadas antes da 1ª carga não são capturadas."),
       limite: z.number().int().min(1).max(100).optional().default(20).describe("Número máximo de resultados"),
       pagina: z.number().int().min(1).optional().default(1).describe("Página de resultados"),
     },
@@ -134,12 +134,12 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
     "Analisa o conjunto completo de consultas públicas **abertas** (matérias em tramitação) do e-Cidadania por grau de concordância cidadã, conforme `modo`: " +
       "`consenso` → consultas com alta concentração de votos numa direção, ordenadas da maior para a menor concentração; usa `percentualMinimo` (padrão 85%). " +
       "`polarizada` → consultas com votação equilibrada (~50/50), ordenadas da menor para a maior diferença sim/não; usa `margemPolarizacao` (padrão 15 pontos). " +
-      "Analisa apenas consultas `aberta` (opinião pública atual). Hoje só há consultas abertas ingeridas (o portal lista apenas matérias em tramitação), então `status: \"encerrada\"` retorna vazio e `\"todas\"` equivale a `aberta`. " +
+      "Analisa por padrão consultas `aberta` (opinião pública atual). Quando a matéria sai de tramitação a consulta passa a `encerrada`, então `status: \"encerrada\"`/`\"todas\"` cobrem o conjunto que foi encerrado desde a ingestão (cresce com o tempo); fechadas antes da 1ª carga não são capturadas. " +
       "Todos os modos aceitam `minimoVotos` (padrão 1000) e `limite` (padrão 10). Retorna `{ modo, criterio, count, consultas }`. " +
       "Para o detalhe de uma consulta use `senado_ecidadania_obter_consulta`.",
     {
       modo: z.enum(["consenso", "polarizada"]).optional().default("consenso").describe("consenso (alta concordância) ou polarizada (~50/50)"),
-      status: z.enum(["aberta", "encerrada", "todas"]).optional().default("aberta").describe("Recorte do conjunto (padrão: aberta = opinião atual). Hoje só há abertas: encerrada retorna vazio e todas == aberta."),
+      status: z.enum(["aberta", "encerrada", "todas"]).optional().default("aberta").describe("Recorte do conjunto (padrão: aberta = opinião atual). encerrada cobre consultas que saíram de tramitação desde a ingestão (cresce com o tempo); fechadas antes da 1ª carga não são capturadas."),
       percentualMinimo: z.number().int().min(50).max(100).optional().default(85).describe("Modo consenso: percentual mínimo numa direção"),
       margemPolarizacao: z.number().int().min(0).max(50).optional().default(15).describe("Modo polarizada: considera polarizado se diferença ≤ este percentual"),
       minimoVotos: z.number().int().min(0).optional().default(1000).describe("Mínimo de votos para considerar"),

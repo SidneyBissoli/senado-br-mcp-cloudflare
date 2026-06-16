@@ -29,7 +29,8 @@ import { buildTramitandoSet, deriveStatus } from "./status.js";
 import { ECIDADANIA_BASE, buildConsultaResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { classifyRun, parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
-import { readExistingHashes, readLastGoodRows } from "./d1.js";
+import { readExistingMeta, readPayloads, readLastGoodRows } from "./d1.js";
+import { selectRestatus, buildRestatusRecords } from "./restatus.js";
 import { generateLoadSql, generateRunOnlySql } from "./sql.js";
 
 const SENADO_BASE_URL = process.env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
@@ -146,11 +147,24 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // 5. Diff history vs existing hashes (reuse planEntitySync) and emit the load SQL.
-  const existing = readExistingHashes();
-  const { annotated, rowsChanged } = planEntitySync(records, existing);
-  writeFileSync(OUT_PATH, generateLoadSql(annotated, now, rowsChanged));
-  console.log(`[load] wrote ${OUT_PATH}: ${records.length} upserts, ${rowsChanged} changed (history), 1 ok run row`);
+  // 5. Linger re-status (§2): for stored rows NOT in this crawl, flip status by /processo membership
+  // (a matter that left tramitação → encerrada; never flip on mere listing-absence). The crawled rows
+  // were already restated above (their status came from deriveStatus). Only runs on a complete crawl,
+  // which is guaranteed here (the completeness gate already passed).
+  const existingMeta = readExistingMeta();
+  const crawledIds = new Set(records.map((r) => r.entityId));
+  const flips = selectRestatus(existingMeta, crawledIds, tramitando);
+  const restatusRecords = buildRestatusRecords(flips, readPayloads(flips.map((f) => f.id)));
+  const flippedEncerrada = restatusRecords.filter((r) => r.status === "encerrada").length;
+  console.log(`[restatus] ${restatusRecords.length} linhas re-statusadas (${flippedEncerrada} → encerrada)`);
+
+  // 6. Diff history vs existing hashes (reuse planEntitySync) and emit the load SQL. The run row's
+  // rows_scraped stays the CRAWLED count (the floor baseline); re-statused rows are extra upserts.
+  const existingHashes = new Map(existingMeta.map((r) => [r.id, r.content_hash]));
+  const allRecords = [...records, ...restatusRecords];
+  const { annotated, rowsChanged } = planEntitySync(allRecords, existingHashes);
+  writeFileSync(OUT_PATH, generateLoadSql(annotated, now, records.length, rowsChanged));
+  console.log(`[load] wrote ${OUT_PATH}: ${allRecords.length} upserts (${records.length} crawled + ${restatusRecords.length} re-status), ${rowsChanged} changed (history), 1 ok run row`);
   process.exit(0);
 }
 

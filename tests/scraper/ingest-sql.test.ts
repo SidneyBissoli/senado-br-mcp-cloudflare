@@ -40,7 +40,7 @@ describe("generateLoadSql", () => {
     { rec: rec(1, '{"id":1,"ementa":"a"}'), changed: true },
     { rec: rec(2, '{"id":2,"ementa":"b"}'), changed: false },
   ];
-  const sql = generateLoadSql(annotated, NOW, 1);
+  const sql = generateLoadSql(annotated, NOW, 2, 1);
 
   it("emits no explicit transaction control (D1 rejects BEGIN/COMMIT; --file is atomic)", () => {
     expect(sql).not.toContain("BEGIN TRANSACTION");
@@ -51,6 +51,15 @@ describe("generateLoadSql", () => {
     expect(sql.trimEnd().endsWith(");")).toBe(true);
     const lastStmt = sql.trimEnd().split("\n").pop() ?? "";
     expect(lastStmt).toContain("INSERT INTO ecidadania_scrape_runs");
+  });
+
+  it("records rows_scraped as the crawled count, not the upsert count (re-status rows excluded)", () => {
+    // 3 upserts written, but only 2 were crawled → run row must report 2, not 3.
+    const annotated3 = [...annotated, { rec: rec(3, '{"id":3,"ementa":"c"}'), changed: true }];
+    const s = generateLoadSql(annotated3, NOW, 2, 1);
+    expect(s.match(/INSERT INTO ecidadania_current/g)).toHaveLength(3);
+    const runLine = s.trimEnd().split("\n").pop() ?? "";
+    expect(runLine).toContain("'ok', 2,"); // rows_scraped=2
   });
 
   it("emits an upsert per record and history only for changed rows", () => {
