@@ -657,6 +657,7 @@ tests/                    # Vitest unit tests mirroring src/ (parsers, cache, th
 | `ECIDADANIA_ANOMALY_MIN_PCT` | No | `50` | A 2h Cron run (ideias/eventos) returning fewer than this % of the last good run's rows is anomalous and won't overwrite `current` |
 | `ECIDADANIA_CORPUS_MIN_PCT` | No | `80` | Catastrophic floor for the off-Worker corpus job: a complete crawl below this % of the last good corpus is rejected |
 | `CLOUDFLARE_API_TOKEN` | No (secret) | — | GitHub Actions secret (D1 edit scope) for the weekly corpus ingestion job; not used by the Worker |
+| `CLOUDFLARE_ACCOUNT_ID` | No (Actions var) | — | GitHub Actions repo variable so wrangler skips `/memberships` account auto-discovery (a D1-scoped token can't read it); required alongside `CLOUDFLARE_API_TOKEN` in the ingestion job |
 | `SENADO_ANALYTICS` | No (binding) | — | Analytics Engine dataset for per-tool call telemetry |
 
 ## Connecting MCP Clients
