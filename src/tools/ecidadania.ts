@@ -26,6 +26,7 @@ import {
   stripHtml,
   extractDate,
   extractTime,
+  buildConsultaResumo,
   listarConsultasInternal,
   obterConsultaInternal,
   listarIdeiasInternal,
@@ -46,6 +47,7 @@ export {
   stripHtml,
   extractDate,
   extractTime,
+  buildConsultaResumo,
   listarConsultasInternal,
   obterConsultaInternal,
   listarIdeiasInternal,
@@ -64,6 +66,15 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
     const n = parseInt(env.ECIDADANIA_STALE_MAX_MIN ?? "", 10);
     return Number.isFinite(n) && n > 0 ? n : 360;
   };
+  // consultas is a weekly full corpus, not a 2h set, so it gets a much larger staleness window —
+  // otherwise possivelDesatualizacao would trip ~6h after every weekly load. See store.resolveList.
+  const corpusStaleMaxMin = () => {
+    const n = parseInt(env.ECIDADANIA_CORPUS_STALE_MAX_MIN ?? "", 10);
+    return Number.isFinite(n) && n > 0 ? n : 14400; // ~10 days
+  };
+  // consultas must never collapse to the ~5-item live highlight scrape on staleness (that was the
+  // original coverage bug); serve the corpus from D1 instead. Live is reserved for an empty D1.
+  const CONSULTAS_RESOLVE = { fallbackOnStale: false } as const;
 
   function ecidadaniaError(e: unknown) {
     const msg = e instanceof Error ? e.message : "Erro ao acessar e-Cidadania";
@@ -79,19 +90,22 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G1. senado_ecidadania_listar_consultas
   server.tool(
     "senado_ecidadania_listar_consultas",
-    "Lista consultas públicas do e-Cidadania, em que cidadãos votam sim/não sobre matérias em tramitação. Retorna `{ count, consultas }`, cada consulta com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status` e `url`; aceita filtro por `status` e `limite` (padrão 20). Para o detalhe de uma consulta chame `senado_ecidadania_obter_consulta` com o `id`; para recortes analíticos (consenso/polarização) use `senado_ecidadania_consultas_analise`.",
+    "Lista consultas públicas do e-Cidadania (conjunto completo das **abertas** — toda matéria em tramitação, ~7,7 mil), em que cidadãos votam sim/não. Retorna `{ count, consultas }`, cada consulta com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status` e `url`. Atualmente só consultas abertas são ingeridas (o portal lista apenas matérias em tramitação), então `status: encerrada` retorna vazio e `todas` equivale a `aberta`. Aceita `limite` (padrão 20). Para o detalhe de uma consulta chame `senado_ecidadania_obter_consulta` com o `id`; para recortes analíticos (consenso/polarização) use `senado_ecidadania_consultas_analise`.",
     {
-      status: z.enum(["aberta", "encerrada", "todas"]).optional().describe("Filtrar por status"),
+      status: z.enum(["aberta", "encerrada", "todas"]).optional().default("aberta").describe("Filtrar por status (padrão: aberta). Hoje só há consultas abertas ingeridas: encerrada retorna vazio e todas == aberta até a inclusão do histórico."),
       limite: z.number().int().min(1).max(100).optional().default(20).describe("Número máximo de resultados"),
       pagina: z.number().int().min(1).optional().default(1).describe("Página de resultados"),
     },
     async (params) => {
       try {
-        const { items, meta } = await resolveList(db, "consultas", staleMaxMin(), () =>
-          listarConsultasInternal({ limite: 100 }),
+        const { items, meta } = await resolveList(
+          db, "consultas", corpusStaleMaxMin(),
+          () => listarConsultasInternal({ limite: 100 }),
+          undefined, CONSULTAS_RESOLVE,
         );
+        const status = params.status ?? "aberta";
         let filtered = items as ConsultaResumo[];
-        if (params.status && params.status !== "todas") filtered = filtered.filter((c) => c.status === params.status);
+        if (status !== "todas") filtered = filtered.filter((c) => c.status === status);
         const out = filtered.slice(0, params.limite);
         return toolResult({ count: out.length, consultas: out, meta });
       } catch (e) { return ecidadaniaError(e); }
@@ -117,13 +131,15 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G3. senado_ecidadania_consultas_analise (modo: consenso | polarizada)
   server.tool(
     "senado_ecidadania_consultas_analise",
-    "Analisa consultas públicas do e-Cidadania por grau de concordância cidadã, conforme `modo`: " +
+    "Analisa o conjunto completo de consultas públicas **abertas** (matérias em tramitação) do e-Cidadania por grau de concordância cidadã, conforme `modo`: " +
       "`consenso` → consultas com alta concentração de votos numa direção, ordenadas da maior para a menor concentração; usa `percentualMinimo` (padrão 85%). " +
       "`polarizada` → consultas com votação equilibrada (~50/50), ordenadas da menor para a maior diferença sim/não; usa `margemPolarizacao` (padrão 15 pontos). " +
-      "Ambos os modos aceitam `minimoVotos` (padrão 1000) e `limite` (padrão 10). Retorna `{ modo, criterio, count, consultas }`. " +
+      "Analisa apenas consultas `aberta` (opinião pública atual). Hoje só há consultas abertas ingeridas (o portal lista apenas matérias em tramitação), então `status: \"encerrada\"` retorna vazio e `\"todas\"` equivale a `aberta`. " +
+      "Todos os modos aceitam `minimoVotos` (padrão 1000) e `limite` (padrão 10). Retorna `{ modo, criterio, count, consultas }`. " +
       "Para o detalhe de uma consulta use `senado_ecidadania_obter_consulta`.",
     {
       modo: z.enum(["consenso", "polarizada"]).optional().default("consenso").describe("consenso (alta concordância) ou polarizada (~50/50)"),
+      status: z.enum(["aberta", "encerrada", "todas"]).optional().default("aberta").describe("Recorte do conjunto (padrão: aberta = opinião atual). Hoje só há abertas: encerrada retorna vazio e todas == aberta."),
       percentualMinimo: z.number().int().min(50).max(100).optional().default(85).describe("Modo consenso: percentual mínimo numa direção"),
       margemPolarizacao: z.number().int().min(0).max(50).optional().default(15).describe("Modo polarizada: considera polarizado se diferença ≤ este percentual"),
       minimoVotos: z.number().int().min(0).optional().default(1000).describe("Mínimo de votos para considerar"),
@@ -132,10 +148,16 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
     async (params) => {
       try {
         const modo = params.modo ?? "consenso";
+        const statusFiltro = params.status ?? "aberta";
         const minimoVotos = params.minimoVotos ?? 1000;
         const limite = params.limite ?? 10;
-        const { items: all, meta } = await resolveList(db, "consultas", staleMaxMin(), () =>
-          listarConsultasInternal({ limite: 100 }),
+        const { items, meta } = await resolveList(
+          db, "consultas", corpusStaleMaxMin(),
+          () => listarConsultasInternal({ limite: 100 }),
+          undefined, CONSULTAS_RESOLVE,
+        );
+        const all = (items as ConsultaResumo[]).filter(
+          (c) => statusFiltro === "todas" || c.status === statusFiltro,
         );
         let filtered: ConsultaResumo[];
         let criterio: string;
@@ -257,7 +279,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G8. senado_ecidadania_sugerir_tema_enquete
   server.tool(
     "senado_ecidadania_sugerir_tema_enquete",
-    "Sugere temas para uma enquete pública mensal (seleção de pauta): analisa as consultas e ideias do e-Cidadania e elege as de maior engajamento cidadão, filtrando por polarização/consenso e participação mínima. Retorna `{ criteriosAplicados, totalAnalisados, count, sugestoes }` (até 10), cada sugestão com `tipo` (`consulta`/`ideia`), `id`, `titulo`, `motivo`, `metricas` (participação/polarização) e `url`, ordenadas por participação. Critérios opcionais em `criterios`: `evitarPolarizacao`/`evitarConsenso` (padrão true), `minimoParticipacao` (padrão 500), `apenasEmTramitacao`. Para investigar uma sugestão, use `senado_ecidadania_obter_consulta` ou `senado_ecidadania_obter_ideia` conforme o `tipo`.",
+    "Sugere temas para uma enquete pública mensal (seleção de pauta): analisa o conjunto completo de consultas (abertas) e as ideias do e-Cidadania e elege as de maior engajamento cidadão, filtrando por polarização/consenso e participação mínima. Retorna `{ criteriosAplicados, totalAnalisados, count, sugestoes }` (até 10), cada sugestão com `tipo` (`consulta`/`ideia`), `id`, `titulo`, `motivo`, `metricas` (participação/polarização) e `url`, ordenadas por participação. Critérios opcionais em `criterios`: `evitarPolarizacao`/`evitarConsenso` (padrão true), `minimoParticipacao` (padrão 500), `apenasEmTramitacao` (padrão true → considera só consultas abertas, com base no status real). Para investigar uma sugestão, use `senado_ecidadania_obter_consulta` ou `senado_ecidadania_obter_ideia` conforme o `tipo`.",
     {
       criterios: z.object({
         evitarPolarizacao: z.boolean().optional().default(true).describe("Evita temas com ~50/50"),
@@ -274,10 +296,19 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         };
 
         const [cRes, iRes] = await Promise.all([
-          resolveList(db, "consultas", staleMaxMin(), () => listarConsultasInternal({ limite: 100 })),
+          resolveList(
+            db, "consultas", corpusStaleMaxMin(),
+            () => listarConsultasInternal({ limite: 100 }),
+            undefined, CONSULTAS_RESOLVE,
+          ),
           resolveList(db, "ideias", staleMaxMin(), () => listarIdeiasInternal({ limite: 100 })),
         ]);
-        const consultas = cRes.items as ConsultaResumo[];
+        // apenasEmTramitacao is now honored against the real /processo-derived status (aberta ⟺ em
+        // tramitação), so the criterion is no longer inert (§2.1 / §7).
+        const apenasEmTramitacao = criterios.apenasEmTramitacao ?? true;
+        const consultas = (cRes.items as ConsultaResumo[]).filter(
+          (c) => !apenasEmTramitacao || c.status === "aberta",
+        );
         const ideias = iRes.items as IdeiaResumo[];
 
         const sugestoes: any[] = [];

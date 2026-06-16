@@ -80,6 +80,66 @@ describe("resolveList", () => {
   });
 });
 
+/** Fake D1 that also answers the scrape_runs run_at query (lastGoodRunAt). */
+function fakeRunsD1(currentRows: Array<{ scraped_at: string; payload_json: string }>, goodRunAt: string | null) {
+  return {
+    prepare: (sql: string) => ({
+      bind: () => ({
+        async all() {
+          return sql.includes("ecidadania_current") ? { results: currentRows } : { results: [] };
+        },
+        async first() {
+          return sql.includes("ecidadania_scrape_runs") && goodRunAt ? { run_at: goodRunAt } : null;
+        },
+      }),
+    }),
+  } as unknown as D1Database;
+}
+
+describe("resolveList — consultas corpus (fallbackOnStale:false + lastGoodRunAt freshness)", () => {
+  it("serves flagged corpus on staleness WITHOUT calling live (no collapse to highlights)", async () => {
+    const live = vi.fn();
+    const db = fakeRunsD1([row(STALE, { id: 1 }), row(STALE, { id: 2 })], STALE);
+    const { items, meta } = await resolveList(db, "consultas", 360, live, NOW, { fallbackOnStale: false });
+    expect(items).toHaveLength(2);
+    expect(meta.fonte).toBe("d1-stale");
+    expect(meta.possivelDesatualizacao).toBe(true);
+    expect(meta.motivo).toBe("corpus-desatualizado");
+    expect(live).not.toHaveBeenCalled();
+  });
+
+  it("freshness comes from the corpus run_at, not the (fresh) hot-row scraped_at", async () => {
+    // Hot rows refreshed 30min ago by the 2h ok-metrica tick, but the weekly corpus run is stale.
+    const live = vi.fn();
+    const db = fakeRunsD1([row(FRESH, { id: 1 })], STALE);
+    const { meta } = await resolveList(db, "consultas", 360, live, NOW, { fallbackOnStale: false });
+    expect(meta.fonte).toBe("d1-stale"); // stale despite the fresh row, because run_at is old
+    expect(meta.lastScrapedAt).toBe(STALE);
+    expect(live).not.toHaveBeenCalled();
+  });
+
+  it("serves fresh D1 when the corpus run_at is recent (run_at preferred over row scraped_at)", async () => {
+    const live = vi.fn();
+    const db = fakeRunsD1([row(STALE, { id: 1 })], FRESH); // old rows, but a recent corpus run
+    const { meta } = await resolveList(db, "consultas", 360, live, NOW, { fallbackOnStale: false });
+    expect(meta.fonte).toBe("d1");
+    expect(meta.possivelDesatualizacao).toBe(false);
+    expect(meta.lastScrapedAt).toBe(FRESH);
+    expect(live).not.toHaveBeenCalled();
+  });
+
+  it("cold start (no corpus 'ok' run yet): serves current FLAGGED, never reports fresh, never crashes", async () => {
+    // Rows present with a fresh scraped_at (e.g. a metric-splice insert) but NO status='ok' corpus run.
+    const live = vi.fn();
+    const db = fakeRunsD1([row(FRESH, { id: 1 })], null);
+    const { items, meta } = await resolveList(db, "consultas", 360, live, NOW, { fallbackOnStale: false });
+    expect(items).toHaveLength(1); // serves the current rows
+    expect(meta.fonte).toBe("d1-stale");
+    expect(meta.possivelDesatualizacao).toBe(true); // flagged, NOT fresh
+    expect(live).not.toHaveBeenCalled();
+  });
+});
+
 function fakeWriteD1(existingHash: string | null) {
   const inserts: Array<{ sql: string; args: unknown[] }> = [];
   const db = {
