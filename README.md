@@ -1,6 +1,6 @@
 # Senado Brasil MCP Server (Cloudflare Workers)
 
-[![LobeHub](https://lobehub.com/badge/mcp-full/sidneybissoli-senado-br-mcp-cloudflare?theme=light)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
+[![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
 [![smithery badge](https://smithery.ai/badge/sidneybissoli/senado-br-mcp-cloudflare)](https://smithery.ai/servers/sidneybissoli/senado-br-mcp-cloudflare)
 [![GitHub stars](https://img.shields.io/github/stars/SidneyBissoli/senado-br-mcp-cloudflare?style=flat&logo=github)](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare)
