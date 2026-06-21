@@ -1,6 +1,7 @@
 {
   "identifier": "sidneybissoli-senado-br-mcp-cloudflare",
-  "name": "Senado BR MCP",
-  "description": "Brazilian Federal Senate open data over MCP — 65 tools, 4 prompts and 5 resources across the legislative process, Senate administration and the e-Cidadania portal. Cloudflare Workers, Streamable HTTP, no auth. Responses in pt-BR. MIT licensed.",
-  "version": "3.1.0"
+  "name": "Senado Federal BR - MCP",
+  "icon": "🏛️",
+  "version": "3.1.0",
+  "description": "Brazilian Federal Senate open data over MCP — 65 tools, 4 prompts and 5 resources across the legislative process, Senate administration and the e-Cidadania portal. Cloudflare Workers, Streamable HTTP, no auth. Responses in pt-BR. MIT licensed."
 }
