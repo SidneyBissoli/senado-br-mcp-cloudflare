@@ -1,11 +1,13 @@
 # Senado Brasil MCP Server (Cloudflare Workers)
 
+[![LobeHub](https://lobehub.com/badge/mcp-full/sidneybissoli-senado-br-mcp-cloudflare?theme=light)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
+[![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
 [![smithery badge](https://smithery.ai/badge/sidneybissoli/senado-br-mcp-cloudflare)](https://smithery.ai/servers/sidneybissoli/senado-br-mcp-cloudflare)
-[![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
-[![License: MIT](https://img.shields.io/github/license/SidneyBissoli/senado-br-mcp-cloudflare)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/SidneyBissoli/senado-br-mcp-cloudflare?style=flat&logo=github)](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare)
 ![Tools](https://img.shields.io/badge/tools-65-2ea44f)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-1f6feb)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)
+[![License: MIT](https://img.shields.io/github/license/SidneyBissoli/senado-br-mcp-cloudflare)](LICENSE)
 
 A **public, hosted** MCP server for **Brazilian Senate open data**, running on Cloudflare Workers (Streamable HTTP). It is **already deployed and open access** — just point your MCP client at the hosted endpoint; **no installation, no account, no API key** required.
 
