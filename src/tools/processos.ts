@@ -151,11 +151,20 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
         if (Object.keys(qp).length === 0) {
           return toolError("É obrigatório informar pelo menos um parâmetro de busca.");
         }
-        const response = await cachedFetch("senado_search_processos", qp, CACHE_ON_DEMAND, () =>
-          upstreamFetch("/processo", qp, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_search_processos",
+          qp,
+          CACHE_ON_DEMAND,
+          () => upstreamFetch("/processo", qp, baseUrl),
         );
         const processos = ensureArray(response).map(parseProcessoResumo);
-        return toolResult({ count: processos.length, processos });
+        const di = ensureISODate(params.dataInicioApresentacao);
+        const df = ensureISODate(params.dataFimApresentacao);
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/processo", {
+          reference_period: di && df ? `${di}/${df}` : params.ano ? String(params.ano) : di || df || undefined,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ count: processos.length, processos }, prov);
       } catch (e) {
         return errorFrom(e, "Erro na busca de processos");
       }

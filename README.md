@@ -422,7 +422,7 @@ Fields (per response — one tool, one source):
 | `attribution` | Ready-to-use citation string |
 | `license` | Source terms (Dados Abertos do Senado Federal) |
 
-`retrieved_at` fidelity is provided by the cache layer (`cachedFetchWithMeta`), which persists the fetch timestamp alongside the value. Tools carrying provenance today (pilot): `senado_obter_votacao`, `senado_votos_materia`, `senado_search_votacoes`, `senado_obter_materia`, `senado_obter_processo`. Tools marked **⊕** in the inventory below carry the envelope.
+`retrieved_at` fidelity is provided by the cache layer (`cachedFetchWithMeta`), which persists the fetch timestamp alongside the value. Tools carrying the envelope today (8): `senado_obter_votacao`, `senado_votos_materia`, `senado_search_votacoes`, `senado_votacoes_senador`, `senado_buscar_materias`, `senado_obter_materia`, `senado_search_processos`, `senado_obter_processo`. Tools marked **⊕** in the inventory below carry the envelope.
 
 ## Tool Inventory
 
@@ -438,7 +438,7 @@ Fields (per response — one tool, one source):
 |------|-------------|
 | `senado_listar_senadores` | Lista senadores em exercício/por legislatura, com filtros `nome` (busca parcial sem acento), `uf` e `partido` |
 | `senado_obter_senador` | Detalhe biográfico de um senador: bio, mandatos, partido, contato |
-| `senado_votacoes_senador` | Como um senador votou em cada matéria (via v3 `/votacao`) |
+| `senado_votacoes_senador` ⊕ | Como um senador votou em cada matéria (via v3 `/votacao`) |
 | `senado_senador_historico` | Histórico funcional via `tipo` enum: licencas, comissoes, cargos, historico-academico, filiacoes, profissoes |
 | `senado_senadores_afastados` | Senadores atualmente afastados (fora de exercício) |
 
@@ -446,14 +446,14 @@ Fields (per response — one tool, one source):
 
 | Tool | Description |
 |------|-------------|
-| `senado_buscar_materias` | Busca matérias por tipo, número, ano, palavra-chave, autor ou tramitação (via v3 `/processo`) |
+| `senado_buscar_materias` ⊕ | Busca matérias por tipo, número, ano, palavra-chave, autor ou tramitação (via v3 `/processo`) |
 | `senado_obter_materia` ⊕ | Dados de uma matéria via `secao` enum: detalhe (situação/relator), tramitacao (histórico) ou textos (documentos) |
 
 ### Group C — Processes (5 tools)
 
 | Tool | Description |
 |------|-------------|
-| `senado_search_processos` | Busca processos legislativos (complementar à busca de matérias) |
+| `senado_search_processos` ⊕ | Busca processos legislativos (complementar à busca de matérias) |
 | `senado_obter_processo` ⊕ | Detalhes completos de um processo legislativo específico |
 | `senado_processo_detalhe` | Aspecto de um processo via `secao` enum: emendas, relatorias ou prazos |
 | `senado_autores_atuais` | Parlamentares autores de processos em tramitação, ordenados por produção |

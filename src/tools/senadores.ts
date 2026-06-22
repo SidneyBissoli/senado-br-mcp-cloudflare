@@ -9,9 +9,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
 export function parseSenadorResumo(parlamentar: any) {
@@ -230,7 +231,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
           dataInicio: di,
           dataFim: df,
         };
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_votacoes_senador",
           qp,
           CACHE_DYNAMIC,
@@ -239,7 +240,15 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
         const votos = ensureArray(response)
           .map((v: any) => parseVotoSenador(v, params.codigoSenador))
           .sort((a, b) => b.data.localeCompare(a.data));
-        return toolResult({ periodo: { dataInicio: di, dataFim: df }, count: votos.length, votos });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
+          dataset_id: `codigoParlamentar=${params.codigoSenador}`,
+          reference_period: `${di}/${df}`,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance(
+          { periodo: { dataInicio: di, dataFim: df }, count: votos.length, votos },
+          prov,
+        );
       } catch (e) {
         return errorFrom(e, "Erro ao obter votações do senador");
       }

@@ -159,18 +159,25 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
         if (Object.keys(qp).length === 0) {
           return toolError("É obrigatório informar pelo menos um critério de busca.");
         }
-        const response = await cachedFetch("senado_buscar_materias", qp, CACHE_ON_DEMAND, () =>
-          upstreamFetch("/processo", qp, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_buscar_materias",
+          qp,
+          CACHE_ON_DEMAND,
+          () => upstreamFetch("/processo", qp, baseUrl),
         );
         const todos = ensureArray(response).map(parseProcessoResumo);
         const limite = params.limite ?? 100;
         const materias = todos.slice(0, limite);
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/processo", {
+          reference_period: params.ano ? String(params.ano) : undefined,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           count: materias.length,
           total: todos.length,
           ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} resultados. Refine a busca ou aumente o limite.` } : {}),
           materias,
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro na busca de matérias");
       }
