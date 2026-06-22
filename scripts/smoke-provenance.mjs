@@ -86,6 +86,27 @@ async function main() {
   console.log(
     `\n  retrieved_at preservado no cache-hit: ${first?.provenance?.retrieved_at === second?.provenance?.retrieved_at ? "SIM ✓" : "NÃO ✗"}`,
   );
+
+  // 3) Tools de busca/listagem recém-adicionadas — confirma envelope nível-1 não-vazio
+  const CORE = ["source", "source_url", "retrieved_at", "attribution"];
+  const extras = [
+    { name: "senado_buscar_materias", arguments: { sigla: "PEC", ano: 2023, limite: 3 } },
+    { name: "senado_search_processos", arguments: { sigla: "PL", ano: 2024 } },
+    { name: "senado_votacoes_senador", arguments: { codigoSenador: 5322, ano: 2024 } },
+  ];
+  console.log("\n■ Tools expandidas (envelope nível-1 não-vazio):");
+  for (const call of extras) {
+    try {
+      const p = structured(await rpc("tools/call", call))?.provenance;
+      const missing = CORE.filter((k) => !p?.[k]);
+      console.log(
+        `  ${call.name}: ${missing.length === 0 ? "OK ✓" : "FALTANDO " + missing.join(",") + " ✗"}` +
+          `  (source_url: ${p?.source_url || "—"})`,
+      );
+    } catch (e) {
+      console.log(`  ${call.name}: ERRO — ${e.message}`);
+    }
+  }
 }
 
 main().catch((e) => {
