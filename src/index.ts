@@ -7,6 +7,7 @@
 import { createMcpHandler } from "agents/mcp";
 import { checkAuth } from "./auth.js";
 import { createServer } from "./server.js";
+import { buildStatus } from "./status.js";
 import type { Env } from "./types.js";
 import { logger } from "./utils/logger.js";
 import { incr, getMetrics } from "./metrics.js";
@@ -46,6 +47,15 @@ export default {
       return new Response(JSON.stringify(getMetrics()), {
         status: 200,
         headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Status endpoint — public. Surfaces version + last-deploy metadata (Vetor C) so
+    // liveness and the current build are verifiable without the MCP handshake.
+    if (url.pathname === "/status") {
+      return new Response(JSON.stringify(buildStatus(env)), {
+        status: 200,
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
       });
     }
 

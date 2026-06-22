@@ -9,6 +9,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/SidneyBissoli/senado-br-mcp-cloudflare?style=flat&logo=github)](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/SidneyBissoli?logo=githubsponsors&label=Sponsor&color=db61a2)](https://github.com/sponsors/SidneyBissoli)
 [![License: MIT](https://img.shields.io/github/license/SidneyBissoli/senado-br-mcp-cloudflare)](LICENSE)
+[![Status](https://img.shields.io/website?url=https%3A%2F%2Fsenado.sidneybissoli.com%2Fhealth&up_message=online&down_message=offline&label=status)](https://senado.sidneybissoli.com/status)
 
 🇧🇷 [Leia em Português](README.pt-BR.md)
 
@@ -67,7 +68,8 @@ own instance** — it is **not** required to use this public server.
 - **Rate limiting:** Token bucket — global (8 req/s) + per-client (2 req/s)
 - **Upstream throttle:** Max 6 concurrent requests, 10s timeout, retry with exponential backoff
 - **Auth:** Optional Bearer token (set the `API_KEY` secret; open access when unset). Constant-time comparison.
-- **Observability:** Structured JSON logging + in-memory counters exposed at `/metrics`
+- **Observability:** Structured JSON logging + in-memory counters at `/metrics`; per-tool call telemetry (selection, error rate, cache-vs-live) in Cloudflare Analytics Engine, PII-free
+- **Liveness:** Runs on Cloudflare's own global network behind a custom domain — no third-party host that can go dark. Public `/health` and `/status` (version + last-deploy id/timestamp) make uptime and the current build verifiable; the **status** badge above pings the live endpoint
 - **Tests:** Vitest unit tests for parsers, helpers, cache, throttle, and auth
 
 ## Self-hosting (optional)
@@ -175,6 +177,7 @@ npm run deploy
 |------|---------|-------------|
 | `/mcp` | POST, GET, DELETE, OPTIONS | MCP Streamable HTTP endpoint (managed by `createMcpHandler`) |
 | `/health` | GET | Health check — returns `ok` (always public) |
+| `/status` | GET | JSON: `status`, `version`, and last-deploy metadata (`deploy.id`/`tag`/`timestamp`) — liveness + current build, no MCP handshake needed (always public) |
 | `/metrics` | GET | JSON counters: requests, tool calls, cache hits/misses, upstream calls/retries/errors, auth failures (always public) |
 
 ## MCP Request Examples

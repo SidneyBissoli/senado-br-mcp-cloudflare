@@ -22,6 +22,9 @@ export interface Env {
   // Catastrophic floor for the off-Worker corpus ingestion job: a *complete* crawl returning fewer
   // than this % of the last 'ok' corpus is rejected (degraded-page guard). String; default 80.
   ECIDADANIA_CORPUS_MIN_PCT?: string;
+  // Workers version_metadata binding (deploy id/tag/timestamp). Optional so tests/local dev
+  // run without it; GET /status omits the deploy block when absent.
+  CF_VERSION_METADATA?: { id: string; tag: string; timestamp: string };
 }
 
 export interface CacheCategory {

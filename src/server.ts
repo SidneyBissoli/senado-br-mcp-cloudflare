@@ -27,12 +27,13 @@ import { registerOrcamentoSenadoTools } from "./tools/orcamento-senado.js";
 import { registerPrompts } from "./prompts.js";
 import { registerResources } from "./resources.js";
 import { instrumentTool } from "./instrument.js";
+import { VERSION } from "./version.js";
 import type { Env } from "./types.js";
 
 export function createServer(env: Env, ctx?: ExecutionContext): McpServer {
   const server = new McpServer({
     name: "senado-br-mcp",
-    version: "3.1.0",
+    version: VERSION,
     websiteUrl: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
     icons: [
       {
