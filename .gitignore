@@ -6,6 +6,8 @@ dist/
 scripts/ingest-ecidadania/out.sql
 .dev.vars
 docs/
+# Vetor B observability design — kept local (already covered by docs/ above; explicit for clarity)
+docs/observability-queries.md
 prompts/
 .api-spec/
 

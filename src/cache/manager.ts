@@ -15,6 +15,7 @@ import { l1Get, l1Set } from "./l1-cache-api.js";
 import type { CacheCategory } from "../types.js";
 import { logger } from "../utils/logger.js";
 import { incr } from "../metrics.js";
+import { recordFetch } from "../observability/call-context.js";
 
 /** Compute a stable hash for cache keying. */
 export async function hashParams(params: Record<string, unknown>): Promise<string> {
@@ -62,7 +63,7 @@ export interface CachedMeta<T> {
  * Designed for graceful degradation: if hashing or cache operations fail, falls through
  * to the fetcher so the tool still works.
  */
-export async function cachedFetchWithMeta<T>(
+async function runCachedFetch<T>(
   toolName: string,
   params: Record<string, unknown>,
   category: CacheCategory,
@@ -123,6 +124,22 @@ export async function cachedFetchWithMeta<T>(
   }
 
   return { value, fetchedAt, fromCache: false };
+}
+
+/**
+ * Public entry point. Records the cache outcome of this call into the per-call
+ * observability accumulator (single point, so cache hits/misses are counted exactly
+ * once regardless of which return path `runCachedFetch` took — see call-context.ts).
+ */
+export async function cachedFetchWithMeta<T>(
+  toolName: string,
+  params: Record<string, unknown>,
+  category: CacheCategory,
+  fetcher: () => Promise<T>,
+): Promise<CachedMeta<T>> {
+  const result = await runCachedFetch<T>(toolName, params, category, fetcher);
+  recordFetch(result.fromCache);
+  return result;
 }
 
 /**
