@@ -18,6 +18,16 @@ It exposes **65 tools**, **4 prompts**, and **5 resources** across two domains:
 
 Data comes from three official sources — the [legislative open-data API](https://legis.senado.leg.br/dadosabertos/), the [administrative open-data API](https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html), and the e-Cidadania portal. All tool responses are in Portuguese (pt-BR). See [CHANGELOG.md](CHANGELOG.md) for release history.
 
+## See it in action
+
+Point a client at the endpoint and ask, in plain Portuguese:
+
+- *"Como os senadores de São Paulo votaram nas últimas votações do plenário?"* → `senado_search_votacoes`
+- *"Mostre a tramitação da PEC 45/2019."* → `senado_buscar_materias` + `senado_obter_materia`
+- *"Quanto foi gasto com a cota parlamentar (CEAPS) em 2024, por tipo de despesa?"* → `senado_ceaps`
+
+The answers come live from the Senate's official open-data APIs — exact figures with provenance, not numbers guessed from training data.
+
 ## Use it (hosted — no setup)
 
 This is a **remote, hosted, open-access** server. To use it, point any MCP client at the Streamable
