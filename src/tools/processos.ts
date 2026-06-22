@@ -10,9 +10,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolResult, toolError, errorFrom, buildParams, ensureArray, safeInt } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND, CACHE_STATIC, CACHE_SEMI_STATIC } from "../types.js";
 
 /** Convert YYYYMMDD → YYYY-MM-DD when needed (v3 endpoints require ISO dates). */
@@ -170,13 +171,21 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_obter_processo",
           { id: params.idProcesso },
           CACHE_ON_DEMAND,
           () => upstreamFetch(`/processo/${params.idProcesso}`, {}, baseUrl),
         );
-        return toolResult(parseProcessoDetalhe(response as any));
+        const detalhe = parseProcessoDetalhe(response as any);
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/processo/${params.idProcesso}`, {
+          dataset_id: detalhe.codigoMateria
+            ? `codigoMateria=${detalhe.codigoMateria}`
+            : `idProcesso=${params.idProcesso}`,
+          reference_period: detalhe.dataApresentacao || (detalhe.ano ? String(detalhe.ano) : undefined),
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance(detalhe, prov);
       } catch (e) {
         return errorFrom(e, "Processo não encontrado");
       }

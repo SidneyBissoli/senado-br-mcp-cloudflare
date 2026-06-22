@@ -406,6 +406,24 @@ MCP uses POST for all `tools/call` requests. Caching POST responses is not nativ
 
 This caching happens at the **tool level** (inside each tool's callback), not at the MCP transport level.
 
+## Provenance
+
+Citable-data tools attach a **provenance envelope** so a result is traceable back to its official source. The envelope lives in `structuredContent.provenance` (parseable by clients, validated by the tool's output schema) and is mirrored as a one-line source footer in the text content for clients that only render text — the data JSON itself is **not** duplicated with the envelope, to keep the per-response token cost low (a fixed ≈170 chars).
+
+Fields (per response — one tool, one source):
+
+| Field | Meaning |
+|-------|---------|
+| `source` | Official source name (e.g. *Senado Federal — Dados Abertos (Legislativo)*) |
+| `source_url` | Canonical endpoint/item URL consulted (e.g. `…/processo/{id}`) |
+| `dataset_id` | Item/series identifier (e.g. `codigoMateria=137808`) |
+| `reference_period` | Vintage/competência of the data (e.g. `2024-03-15`, `2019`) |
+| `retrieved_at` | ISO-8601 of the **upstream extraction** — carried through the cache, so it reflects when the data was actually fetched, not the build or the cache-hit time |
+| `attribution` | Ready-to-use citation string |
+| `license` | Source terms (Dados Abertos do Senado Federal) |
+
+`retrieved_at` fidelity is provided by the cache layer (`cachedFetchWithMeta`), which persists the fetch timestamp alongside the value. Tools carrying provenance today (pilot): `senado_obter_votacao`, `senado_votos_materia`, `senado_search_votacoes`, `senado_obter_materia`, `senado_obter_processo`. Tools marked **⊕** in the inventory below carry the envelope.
+
 ## Tool Inventory
 
 ### Group H — Reference/Metadata (1 tool)
@@ -429,14 +447,14 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 | Tool | Description |
 |------|-------------|
 | `senado_buscar_materias` | Busca matérias por tipo, número, ano, palavra-chave, autor ou tramitação (via v3 `/processo`) |
-| `senado_obter_materia` | Dados de uma matéria via `secao` enum: detalhe (situação/relator), tramitacao (histórico) ou textos (documentos) |
+| `senado_obter_materia` ⊕ | Dados de uma matéria via `secao` enum: detalhe (situação/relator), tramitacao (histórico) ou textos (documentos) |
 
 ### Group C — Processes (5 tools)
 
 | Tool | Description |
 |------|-------------|
 | `senado_search_processos` | Busca processos legislativos (complementar à busca de matérias) |
-| `senado_obter_processo` | Detalhes completos de um processo legislativo específico |
+| `senado_obter_processo` ⊕ | Detalhes completos de um processo legislativo específico |
 | `senado_processo_detalhe` | Aspecto de um processo via `secao` enum: emendas, relatorias ou prazos |
 | `senado_autores_atuais` | Parlamentares autores de processos em tramitação, ordenados por produção |
 | `senado_tabelas_processo` | 12 tabelas de referência (siglas, assuntos, classes, tipos-*) via `tabela` enum |
@@ -445,9 +463,9 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 
 | Tool | Description |
 |------|-------------|
-| `senado_obter_votacao` | Detalhes de uma votação com votos nominais. Aceita `codigoVotacao` (codigoSessao da sessão plenária). |
-| `senado_votos_materia` | Votações de uma matéria (via v3 `/votacao?codigoMateria`), com votos nominais opcionais |
-| `senado_search_votacoes` | Busca/listagem flexível de votações do plenário por `dias`, período, processo, matéria ou senador |
+| `senado_obter_votacao` ⊕ | Detalhes de uma votação com votos nominais. Aceita `codigoVotacao` (codigoSessao da sessão plenária). |
+| `senado_votos_materia` ⊕ | Votações de uma matéria (via v3 `/votacao?codigoMateria`), com votos nominais opcionais |
+| `senado_search_votacoes` ⊕ | Busca/listagem flexível de votações do plenário por `dias`, período, processo, matéria ou senador |
 
 ### Group E — Committees (7 tools)
 

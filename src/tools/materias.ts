@@ -11,9 +11,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolResult, toolError, errorFrom, buildParams, ensureArray, safeInt } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND, CACHE_DYNAMIC } from "../types.js";
 
 /** Parse a /processo search result item (flat camelCase). */
@@ -195,7 +196,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
 
         if (secao === "tramitacao") {
           const resumo = await resolveProcesso(params.codigoMateria, baseUrl);
-          const detalheRes = await cachedFetch(
+          const { value: detalheRes, fetchedAt } = await cachedFetchWithMeta(
             "senado_tramitacao_materia",
             { idProcesso: resumo.id },
             CACHE_DYNAMIC,
@@ -204,7 +205,12 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
           const todas = parseInformesTramitacao(detalheRes as any);
           const limite = params.limite ?? 100;
           const tramitacoes = todas.length > limite ? todas.slice(-limite) : todas;
-          return toolResult({
+          const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/processo/${resumo.id}`, {
+            dataset_id: `codigoMateria=${params.codigoMateria}`,
+            reference_period: todas[todas.length - 1]?.data || undefined,
+            retrieved_at: fetchedAt,
+          });
+          return resultWithProvenance({
             codigoMateria: params.codigoMateria,
             secao,
             idProcesso: resumo.id,
@@ -212,11 +218,11 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
             total: todas.length,
             ...(todas.length > limite ? { aviso: `Exibindo os ${limite} eventos mais recentes de ${todas.length}.` } : {}),
             tramitacoes,
-          });
+          }, prov);
         }
 
         if (secao === "textos") {
-          const response = await cachedFetch(
+          const { value: response, fetchedAt } = await cachedFetchWithMeta(
             "senado_textos_materia",
             { codigo: params.codigoMateria },
             CACHE_ON_DEMAND,
@@ -227,14 +233,19 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
             .sort((a, b) => String(b.data || "").localeCompare(String(a.data || "")));
           const limite = params.limite ?? 50;
           const textos = todos.slice(0, limite);
-          return toolResult({
+          const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/processo/documento", {
+            dataset_id: `codigoMateria=${params.codigoMateria}`,
+            reference_period: todos[0]?.data || undefined,
+            retrieved_at: fetchedAt,
+          });
+          return resultWithProvenance({
             codigoMateria: params.codigoMateria,
             secao,
             count: textos.length,
             total: todos.length,
             ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} documentos.` } : {}),
             textos,
-          });
+          }, prov);
         }
 
         // secao === "detalhe" (padrão)
@@ -247,19 +258,24 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
             () => upstreamFetch("/processo/relatoria", { codigoMateria: String(params.codigoMateria) }, baseUrl),
           ).catch(() => null),
         ]);
-        const detalheRes = await cachedFetch(
+        const { value: detalheRes, fetchedAt } = await cachedFetchWithMeta(
           "senado_obter_materia",
           { idProcesso: resumo.id },
           CACHE_ON_DEMAND,
           () => upstreamFetch(`/processo/${resumo.id}`, {}, baseUrl),
         );
         const detalhe = parseProcessoDetalhe(detalheRes as any);
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/processo/${resumo.id}`, {
+          dataset_id: `codigoMateria=${params.codigoMateria}`,
+          reference_period: detalhe.dataApresentacao || (detalhe.ano ? String(detalhe.ano) : undefined),
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           ...detalhe,
           secao,
           ementa: resumo.ementa || null,
           relator: pickRelatorAtual(ensureArray(relatoriasRes)),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Matéria não encontrada");
       }
