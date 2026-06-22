@@ -117,17 +117,22 @@ export function provenanceFooter(p: Provenance): string {
 }
 
 /**
- * Variante de `toolResult` que injeta o envelope de proveniência. Funde `provenance` no
- * `structuredContent` (validável pelo outputSchema) e anexa um segundo bloco de texto com a
- * linha de fonte compacta. `data` deve ser um objeto (structuredContent precisa ser objeto).
+ * Variante de `toolResult` que injeta o envelope de proveniência, separando os dois canais
+ * (guia §1.5) para não duplicar a proveniência no que o modelo lê:
+ *  - `structuredContent` = `{ ...data, provenance }` — canal parseável/validável (Opção 2);
+ *  - bloco de texto = `JSON(data)` (SEM provenance) + a linha de fonte compacta (Opção 1).
+ *
+ * A medição de Δ tokens (scripts/measure-provenance-tokens.ts, gate §1.7) mostrou que embutir
+ * a proveniência também no texto JSON custava ~3.8× mais por resposta sem benefício: clientes
+ * estruturados já leem `structuredContent`, e os text-only já têm o rodapé compacto.
+ * `data` deve ser um objeto (structuredContent precisa ser objeto).
  */
 export function resultWithProvenance(data: Record<string, unknown>, provenance: Provenance) {
-  const merged = { ...data, provenance };
   return {
     content: [
-      { type: "text" as const, text: JSON.stringify(merged, null, 2) },
+      { type: "text" as const, text: JSON.stringify(data, null, 2) },
       { type: "text" as const, text: provenanceFooter(provenance) },
     ],
-    structuredContent: merged,
+    structuredContent: { ...data, provenance },
   };
 }

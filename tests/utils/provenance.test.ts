@@ -104,17 +104,23 @@ describe("provenanceFooter", () => {
 });
 
 describe("resultWithProvenance", () => {
-  it("merges provenance into structuredContent and appends a footer text block", () => {
+  it("puts provenance in structuredContent and the compact footer, NOT in the text JSON", () => {
     const prov = provenanceFor("SENADO_LEGIS", "https://x", "/votacao");
     const res = resultWithProvenance({ count: 2, votacoes: [] }, prov);
 
+    // structuredContent carries the full envelope (Opção 2 — parseable channel).
     expect(res.structuredContent.provenance).toEqual(prov);
     expect(res.structuredContent).toMatchObject({ count: 2 });
     expect(res.content).toHaveLength(2);
 
-    // First block is the full JSON (provenance included), second is the compact footer.
-    expect(JSON.parse(res.content[0].text).provenance.source).toBe(prov.source);
+    // The text JSON block holds only the data — provenance must NOT be duplicated here
+    // (the Δ-token optimization). The compact footer (Opção 1) carries the source for
+    // text-only clients.
+    const textJson = JSON.parse(res.content[0].text);
+    expect(textJson).toEqual({ count: 2, votacoes: [] });
+    expect(textJson.provenance).toBeUndefined();
     expect(res.content[1].text).toContain("Fonte:");
+    expect(res.content[1].text).toContain(prov.source_url);
   });
 
   it("produces structuredContent that passes the permissive global outputSchema", () => {
