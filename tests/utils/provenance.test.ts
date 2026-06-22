@@ -1,0 +1,126 @@
+import { describe, it, expect } from "vitest";
+import {
+  ProvenanceSchema,
+  SOURCES,
+  buildProvenance,
+  provenanceFor,
+  provenanceFooter,
+  resultWithProvenance,
+} from "../../src/utils/provenance.js";
+
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+
+describe("ProvenanceSchema", () => {
+  it("accepts a complete level-1 envelope", () => {
+    const ok = ProvenanceSchema.safeParse({
+      source: "Senado Federal",
+      source_url: "https://legis.senado.leg.br/dadosabertos/votacao",
+      dataset_id: "codigoSessao=123",
+      reference_period: "2024-03-15",
+      retrieved_at: "2026-06-22T12:00:00.000Z",
+      attribution: "Fonte: Senado Federal.",
+      license: "Dados Abertos.",
+    });
+    expect(ok.success).toBe(true);
+  });
+
+  it("requires source, source_url, retrieved_at and attribution (the non-empty level-1 core)", () => {
+    for (const field of ["source", "source_url", "retrieved_at", "attribution"]) {
+      const base: Record<string, string> = {
+        source: "s",
+        source_url: "u",
+        retrieved_at: "t",
+        attribution: "a",
+      };
+      delete base[field];
+      expect(ProvenanceSchema.safeParse(base).success, `missing ${field}`).toBe(false);
+    }
+  });
+
+  it("rejects empty strings on required fields", () => {
+    expect(
+      ProvenanceSchema.safeParse({ source: "", source_url: "u", retrieved_at: "t", attribution: "a" })
+        .success,
+    ).toBe(false);
+  });
+});
+
+describe("buildProvenance", () => {
+  it("defaults retrieved_at to an ISO-8601 timestamp", () => {
+    const p = buildProvenance({ source: "s", source_url: "u", attribution: "a" });
+    expect(p.retrieved_at).toMatch(ISO_RE);
+  });
+
+  it("preserves an explicit retrieved_at (the cache-fidelity seam)", () => {
+    const p = buildProvenance({
+      source: "s",
+      source_url: "u",
+      attribution: "a",
+      retrieved_at: "2020-01-01T00:00:00.000Z",
+    });
+    expect(p.retrieved_at).toBe("2020-01-01T00:00:00.000Z");
+  });
+
+  it("throws on an invalid envelope (missing attribution)", () => {
+    // @ts-expect-error intentionally incomplete
+    expect(() => buildProvenance({ source: "s", source_url: "u" })).toThrow();
+  });
+});
+
+describe("provenanceFor", () => {
+  it("fills source/attribution/license from the registry and builds source_url", () => {
+    const p = provenanceFor("SENADO_LEGIS", "https://legis.senado.leg.br/dadosabertos", "/votacao", {
+      dataset_id: "codigoSessao=1",
+    });
+    expect(p.source).toBe(SOURCES.SENADO_LEGIS.source);
+    expect(p.attribution).toBe(SOURCES.SENADO_LEGIS.attribution);
+    expect(p.license).toBe(SOURCES.SENADO_LEGIS.license);
+    expect(p.source_url).toBe("https://legis.senado.leg.br/dadosabertos/votacao");
+    expect(p.dataset_id).toBe("codigoSessao=1");
+  });
+
+  it("does not double the slash when baseUrl has a trailing slash", () => {
+    const p = provenanceFor("SENADO_ADM", "https://adm.senado.gov.br/adm-dadosabertos/", "/orgao");
+    expect(p.source_url).toBe("https://adm.senado.gov.br/adm-dadosabertos/orgao");
+  });
+});
+
+describe("provenanceFooter", () => {
+  it("renders a compact source line with the period when present", () => {
+    const footer = provenanceFooter(
+      buildProvenance({
+        source: "Senado Federal",
+        source_url: "https://x/votacao",
+        attribution: "a",
+        reference_period: "2024",
+        retrieved_at: "2026-06-22T12:00:00.000Z",
+      }),
+    );
+    expect(footer).toContain("Fonte: Senado Federal");
+    expect(footer).toContain("https://x/votacao");
+    expect(footer).toContain("extraído em 2026-06-22T12:00:00.000Z");
+    expect(footer).toContain("competência 2024");
+  });
+});
+
+describe("resultWithProvenance", () => {
+  it("merges provenance into structuredContent and appends a footer text block", () => {
+    const prov = provenanceFor("SENADO_LEGIS", "https://x", "/votacao");
+    const res = resultWithProvenance({ count: 2, votacoes: [] }, prov);
+
+    expect(res.structuredContent.provenance).toEqual(prov);
+    expect(res.structuredContent).toMatchObject({ count: 2 });
+    expect(res.content).toHaveLength(2);
+
+    // First block is the full JSON (provenance included), second is the compact footer.
+    expect(JSON.parse(res.content[0].text).provenance.source).toBe(prov.source);
+    expect(res.content[1].text).toContain("Fonte:");
+  });
+
+  it("produces structuredContent that passes the permissive global outputSchema", () => {
+    // The server registers tools with z.object({}).passthrough(); a merged object validates.
+    const prov = provenanceFor("ECIDADANIA", "https://www12.senado.leg.br/ecidadania", "/consultas");
+    const res = resultWithProvenance({ ok: true }, prov);
+    expect(res.structuredContent).toMatchObject({ ok: true, provenance: { source: prov.source } });
+  });
+});

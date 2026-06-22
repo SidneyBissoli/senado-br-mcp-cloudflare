@@ -11,7 +11,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 
 /** Convert YYYYMMDD → YYYY-MM-DD (required by /votacao endpoint). */
@@ -75,8 +76,15 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
           () => upstreamFetch("/votacao", qp, baseUrl),
         );
         const votacoes = ensureArray(response).map((v: any) => parseVotacaoItem(v, true));
-        if (votacoes.length === 1) return toolResult(votacoes[0]);
-        return toolResult({ codigoSessao: params.codigoVotacao, count: votacoes.length, votacoes });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
+          dataset_id: `codigoSessao=${params.codigoVotacao}`,
+          reference_period: votacoes[0]?.data || undefined,
+        });
+        if (votacoes.length === 1) return resultWithProvenance(votacoes[0], prov);
+        return resultWithProvenance(
+          { codigoSessao: params.codigoVotacao, count: votacoes.length, votacoes },
+          prov,
+        );
       } catch (e) {
         return errorFrom(e, "Votação não encontrada");
       }
@@ -102,7 +110,14 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
         const votacoes = ensureArray(response).map((v: any) =>
           parseVotacaoItem(v, params.incluirVotos ?? false),
         );
-        return toolResult({ codigoMateria: params.codigoMateria, count: votacoes.length, votacoes });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
+          dataset_id: `codigoMateria=${params.codigoMateria}`,
+          reference_period: votacoes[0]?.data || undefined,
+        });
+        return resultWithProvenance(
+          { codigoMateria: params.codigoMateria, count: votacoes.length, votacoes },
+          prov,
+        );
       } catch (e) {
         return errorFrom(e, "Erro ao obter votações da matéria");
       }
@@ -153,7 +168,10 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
         const votacoes = ensureArray(response)
           .map((v: any) => parseVotacaoItem(v))
           .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
-        return toolResult({ count: votacoes.length, votacoes });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
+          reference_period: di && df ? `${di}/${df}` : di || df || undefined,
+        });
+        return resultWithProvenance({ count: votacoes.length, votacoes }, prov);
       } catch (e) {
         return errorFrom(e, "Erro na busca de votações");
       }
