@@ -9,19 +9,14 @@
 [![GitHub stars](https://img.shields.io/github/stars/SidneyBissoli/senado-br-mcp-cloudflare?style=flat&logo=github)](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare)
 [![License: MIT](https://img.shields.io/github/license/SidneyBissoli/senado-br-mcp-cloudflare)](LICENSE)
 
-A **public, hosted** MCP server for **Brazilian Senate open data**, running on Cloudflare Workers (Streamable HTTP). It is **already deployed and open access** — just point your MCP client at the hosted endpoint; **no installation, no account, no API key** required.
+A **public, hosted** MCP server that gives AI assistants live, structured access to **Brazilian Senate open data** — **no installation, no account, no API key**. Point your MCP client at the hosted endpoint and start asking about senators, bills, votes, expenses, and more. It runs on Cloudflare Workers over Streamable HTTP.
 
-Provides **65 tools** (plus **4 prompts** and **5 resources**) organized into 19 groups covering the **legislative** domain (senators, bills, votes, committees, plenary sessions and results, presidential vetoes, party-bloc voting orientation, legislative processes, reference data, citizen participation via e-Cidadania, speeches and stenographic transcripts, blocs and leadership, federal legislation, committee voting) and the **administrative** domain (CEAPS parliamentary quota expenses, housing allowance, civil servants and payroll, overtime, interns, procurement contracts, biddings, outsourced staff, petty-cash funds, budget execution and own revenues). Connects to three sources: the [legislative open data API](https://legis.senado.leg.br/dadosabertos/), the [administrative open data API](https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html) and the e-Cidadania portal.
+It exposes **65 tools**, **4 prompts**, and **5 resources** across two domains:
 
-> **v2.1.0:** all tools that consumed endpoints marked *deprecated* upstream (the legacy `/materia/*` family and `/senador/{codigo}/votacoes`) were migrated to the v3 `/processo` and `/votacao` APIs, keeping tool names and output keys stable.
->
-> **v2.2.0:** adds the administrative domain (groups O, P, Q, R — 16 tools) consuming `adm.senado.gov.br`. Large datasets (CEAPS ≈ 10 MB/year, payroll ≈ 5.5 MB/month) are fetched once, cached, and filtered/aggregated inside the Worker — tools never return raw dumps.
->
-> **v2.3.0:** every tool now declares MCP annotations (`readOnlyHint`, `openWorldHint`) and a structured-output schema; canonical endpoint moved to the custom domain `https://senado.sidneybissoli.com/mcp` (the `*.workers.dev` URL still works as a fallback).
->
-> **v3.0.0:** consolidated 90 → 65 tools by merging near-duplicate tools into enum/secao/tipo parameters (e.g. reference tables → `senado_tabelas_referencia`; per-process sub-resources → `senado_processo_detalhe`; `senado_mesa` with a `casa` param; `senado_search_votacoes` absorbing the recent-votes/list tools). Breaking change: several tool names were removed or renamed.
->
-> **v3.1.0:** adds the MCP **prompts** capability (4 reusable pt-BR workflow templates — CEAPS expenses, bill tracking, senator votes, e-Cidadania overview) and the **resources** capability (5 static context docs: usage guide, tool catalog, glossary, and the tipos-matéria / UFs reference tables). Ships a `LICENSE` file (MIT).
+- **Legislative** — senators; bills and their tramitation; votes; committees; plenary sessions, results and presidential vetoes; party-bloc voting orientation; speeches and stenographic transcripts; blocs and leadership; federal legislation; and citizen participation via the e-Cidadania portal.
+- **Administrative** — CEAPS parliamentary-quota expenses; housing allowance; civil servants and payroll; overtime; interns; procurement contracts and biddings; outsourced staff; petty-cash funds; and budget execution.
+
+Data comes from three official sources — the [legislative open-data API](https://legis.senado.leg.br/dadosabertos/), the [administrative open-data API](https://adm.senado.gov.br/adm-dadosabertos/swagger-ui/index.html), and the e-Cidadania portal. All tool responses are in Portuguese (pt-BR). See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## Use it (hosted — no setup)
 
