@@ -9,7 +9,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, buildParams, ensureArray } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
@@ -69,7 +69,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
     async (params) => {
       try {
         const qp = { codigoSessao: String(params.codigoVotacao) };
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_obter_votacao",
           { codigo: params.codigoVotacao },
           CACHE_ON_DEMAND,
@@ -79,6 +79,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
           dataset_id: `codigoSessao=${params.codigoVotacao}`,
           reference_period: votacoes[0]?.data || undefined,
+          retrieved_at: fetchedAt,
         });
         if (votacoes.length === 1) return resultWithProvenance(votacoes[0], prov);
         return resultWithProvenance(
@@ -101,7 +102,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_votos_materia",
           { codigo: params.codigoMateria },
           CACHE_ON_DEMAND,
@@ -113,6 +114,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
           dataset_id: `codigoMateria=${params.codigoMateria}`,
           reference_period: votacoes[0]?.data || undefined,
+          retrieved_at: fetchedAt,
         });
         return resultWithProvenance(
           { codigoMateria: params.codigoMateria, count: votacoes.length, votacoes },
@@ -162,14 +164,18 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
           codigoParlamentar: params.codigoParlamentar,
           siglaVotoParlamentar: params.siglaVotoParlamentar,
         });
-        const response = await cachedFetch("senado_search_votacoes", qp, CACHE_ON_DEMAND, () =>
-          upstreamFetch("/votacao", qp, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_search_votacoes",
+          qp,
+          CACHE_ON_DEMAND,
+          () => upstreamFetch("/votacao", qp, baseUrl),
         );
         const votacoes = ensureArray(response)
           .map((v: any) => parseVotacaoItem(v))
           .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
           reference_period: di && df ? `${di}/${df}` : di || df || undefined,
+          retrieved_at: fetchedAt,
         });
         return resultWithProvenance({ count: votacoes.length, votacoes }, prov);
       } catch (e) {

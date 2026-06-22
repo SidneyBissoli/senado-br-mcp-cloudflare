@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { hashParams, cachedFetch } from "../../src/cache/manager.js";
+import { hashParams, cachedFetch, cachedFetchWithMeta } from "../../src/cache/manager.js";
 import * as l0 from "../../src/cache/l0-memory.js";
 import * as l1 from "../../src/cache/l1-cache-api.js";
 import { CACHE_DYNAMIC } from "../../src/types.js";
@@ -91,5 +91,68 @@ describe("cachedFetch", () => {
 
     expect(result).toEqual({ data: "fresh" });
     expect(fetcher).toHaveBeenCalledOnce();
+  });
+});
+
+const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+
+describe("cachedFetchWithMeta", () => {
+  beforeEach(() => {
+    l0._resetStore();
+    vi.clearAllMocks();
+    vi.mocked(l1.l1Get).mockResolvedValue(undefined);
+    vi.mocked(l1.l1Set).mockResolvedValue(undefined);
+  });
+
+  it("on miss stamps fetchedAt (~now), marks fromCache:false, and persists an envelope", async () => {
+    const fetcher = vi.fn().mockResolvedValue({ data: "fresh" });
+    const meta = await cachedFetchWithMeta("meta_miss", { key: "val" }, CACHE_DYNAMIC, fetcher);
+
+    expect(meta.value).toEqual({ data: "fresh" });
+    expect(meta.fromCache).toBe(false);
+    expect(meta.fetchedAt).toMatch(ISO_RE);
+
+    // L1 was populated with an enveloped value carrying the timestamp.
+    expect(l1.l1Set).toHaveBeenCalledOnce();
+    const stored = JSON.parse(vi.mocked(l1.l1Set).mock.calls[0][2]);
+    expect(stored._provMeta.fetchedAt).toBe(meta.fetchedAt);
+    expect(stored.v).toEqual({ data: "fresh" });
+  });
+
+  it("preserves the original fetchedAt on an enveloped L1 hit", async () => {
+    const original = "2020-01-01T00:00:00.000Z";
+    vi.mocked(l1.l1Get).mockResolvedValue(
+      JSON.stringify({ _provMeta: { fetchedAt: original }, v: { data: "cached" } }),
+    );
+    const fetcher = vi.fn();
+    const meta = await cachedFetchWithMeta("meta_l1", { key: "val" }, CACHE_DYNAMIC, fetcher);
+
+    expect(meta.value).toEqual({ data: "cached" });
+    expect(meta.fetchedAt).toBe(original);
+    expect(meta.fromCache).toBe(true);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("preserves the original fetchedAt on an enveloped L0 hit", async () => {
+    const original = "2019-06-15T08:30:00.000Z";
+    const paramsHash = await hashParams({ key: "val" });
+    l0.l0Set(`meta_l0:${paramsHash}`, { _provMeta: { fetchedAt: original }, v: { data: "l0" } }, 60);
+
+    const fetcher = vi.fn();
+    const meta = await cachedFetchWithMeta("meta_l0", { key: "val" }, CACHE_DYNAMIC, fetcher);
+
+    expect(meta.value).toEqual({ data: "l0" });
+    expect(meta.fetchedAt).toBe(original);
+    expect(meta.fromCache).toBe(true);
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("treats a legacy (non-enveloped) cache entry as the raw value", async () => {
+    vi.mocked(l1.l1Get).mockResolvedValue(JSON.stringify({ data: "legacy" }));
+    const meta = await cachedFetchWithMeta("meta_legacy", { key: "val" }, CACHE_DYNAMIC, vi.fn());
+
+    expect(meta.value).toEqual({ data: "legacy" });
+    expect(meta.fromCache).toBe(true);
+    expect(meta.fetchedAt).toMatch(ISO_RE); // unknown original time → best-effort now
   });
 });
