@@ -1,4 +1,4 @@
-# Senado Brasil MCP Server (Cloudflare Workers)
+# Senado Brasil MCP Server
 
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-1f6feb)
