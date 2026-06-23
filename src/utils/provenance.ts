@@ -60,6 +60,13 @@ export const SOURCES = {
     attribution: "Fonte: Senado Federal, Portal e-Cidadania — www12.senado.leg.br/ecidadania.",
     license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
   },
+  /** Feed de execução orçamentária/financeira — www.senado.gov.br/bi-arqs/Arquimedes/Financeiro. */
+  SENADO_ORCAMENTO_EXEC: {
+    source: "Senado Federal — Execução Orçamentária e Financeira",
+    attribution:
+      "Fonte: Senado Federal — Dados Abertos Orçamentários (Arquimedes/Financeiro) — senado.gov.br.",
+    license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
+  },
 } as const;
 
 type SourceKey = keyof typeof SOURCES;
@@ -105,6 +112,37 @@ export function provenanceFor(
     attribution: meta.attribution,
     license: meta.license,
     source_url: `${baseUrl.replace(/\/$/, "")}${path}`,
+    ...extra,
+  });
+}
+
+/** Base canônica do portal e-Cidadania (source_url dos tools do Grupo G). */
+export const ECIDADANIA_BASE_URL = "https://www12.senado.leg.br/ecidadania";
+
+/**
+ * Atalho para os tools do e-Cidadania (Grupo G). Diferente das demais fontes, o dado é lido
+ * do D1 (listas) ou raspado ao vivo (detalhes); por isso o `retrieved_at` deve vir do
+ * `meta.lastScrapedAt` (idade real do dado em D1) nos tools de lista, ou do `fetchedAt` do
+ * cache nos tools de detalhe — passe-o explicitamente. `pathOrUrl` é o caminho do recurso no
+ * portal (ex.: "/principalmateria") OU uma URL canônica completa do item (começando com "http").
+ */
+export function provenanceEcidadania(
+  pathOrUrl: string,
+  extra?: {
+    dataset_id?: string;
+    reference_period?: string;
+    retrieved_at?: string;
+  },
+): Provenance {
+  const meta = SOURCES.ECIDADANIA;
+  const source_url = pathOrUrl.startsWith("http")
+    ? pathOrUrl
+    : `${ECIDADANIA_BASE_URL}${pathOrUrl}`;
+  return buildProvenance({
+    source: meta.source,
+    attribution: meta.attribution,
+    license: meta.license,
+    source_url,
     ...extra,
   });
 }

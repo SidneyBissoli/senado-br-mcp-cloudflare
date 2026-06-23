@@ -5,9 +5,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_DYNAMIC } from "../types.js";
 
 /** Parse a committee vote item. */
@@ -65,18 +66,28 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
             dataInicio: params.dataInicio,
             dataFim: params.dataFim,
           });
-          const response = await cachedFetch(
+          const path = `/votacaoComissao/parlamentar/${params.codigoSenador}`;
+          const { value: response, fetchedAt } = await cachedFetchWithMeta(
             "senado_votacao_comissao_senador",
             { codigo: params.codigoSenador, ...qp },
             CACHE_DYNAMIC,
-            () => upstreamFetch(`/votacaoComissao/parlamentar/${params.codigoSenador}`, qp, baseUrl),
+            () => upstreamFetch(path, qp, baseUrl),
           );
           const r = response as any;
           const votacoes = ensureArray(
             r?.VotacaoComissaoParlamentar?.Votacoes?.Votacao ??
             r?.Votacoes?.Votacao,
           ).map(parseVotacaoComissao);
-          return toolResult({ por, codigoSenador: params.codigoSenador, count: votacoes.length, votacoes });
+          const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+            dataset_id: `codigoParlamentar=${params.codigoSenador}`,
+            reference_period: params.dataInicio && params.dataFim
+              ? `${params.dataInicio}/${params.dataFim}` : undefined,
+            retrieved_at: fetchedAt,
+          });
+          return resultWithProvenance(
+            { por, codigoSenador: params.codigoSenador, count: votacoes.length, votacoes },
+            prov,
+          );
         }
 
         if (por === "materia") {
@@ -89,11 +100,12 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
             dataInicio: params.dataInicio,
             dataFim: params.dataFim,
           });
-          const response = await cachedFetch(
+          const path = `/votacaoComissao/materia/${sigla}/${params.numero}/${params.ano}`;
+          const { value: response, fetchedAt } = await cachedFetchWithMeta(
             "senado_votacao_comissao_materia",
             { sigla, numero: params.numero, ano: params.ano, ...qp },
             CACHE_DYNAMIC,
-            () => upstreamFetch(`/votacaoComissao/materia/${sigla}/${params.numero}/${params.ano}`, qp, baseUrl),
+            () => upstreamFetch(path, qp, baseUrl),
           );
           const r = response as any;
           const votacoes = ensureArray(
@@ -101,7 +113,15 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
             r?.VotacaoComissaoMateria?.Votacoes?.Votacao ??
             r?.Votacoes?.Votacao,
           ).map(parseVotacaoComissao);
-          return toolResult({ por, materia: `${sigla} ${params.numero}/${params.ano}`, count: votacoes.length, votacoes });
+          const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+            dataset_id: `materia=${sigla} ${params.numero}/${params.ano}`,
+            reference_period: String(params.ano),
+            retrieved_at: fetchedAt,
+          });
+          return resultWithProvenance(
+            { por, materia: `${sigla} ${params.numero}/${params.ano}`, count: votacoes.length, votacoes },
+            prov,
+          );
         }
 
         // por === "comissao" (padrão)
@@ -111,18 +131,25 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
           dataFim: params.dataFim,
         });
         const sigla = params.siglaComissao.toUpperCase();
-        const response = await cachedFetch(
+        const path = `/votacaoComissao/comissao/${sigla}`;
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_votacao_comissao",
           { sigla, ...qp },
           CACHE_DYNAMIC,
-          () => upstreamFetch(`/votacaoComissao/comissao/${sigla}`, qp, baseUrl),
+          () => upstreamFetch(path, qp, baseUrl),
         );
         const r = response as any;
         const votacoes = ensureArray(
           r?.VotacaoComissao?.Votacoes?.Votacao ??
           r?.Votacoes?.Votacao,
         ).map(parseVotacaoComissao);
-        return toolResult({ por, siglaComissao: sigla, count: votacoes.length, votacoes });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `comissao=${sigla}`,
+          reference_period: params.dataInicio && params.dataFim
+            ? `${params.dataInicio}/${params.dataFim}` : undefined,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ por, siglaComissao: sigla, count: votacoes.length, votacoes }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter votações em comissões");
       }

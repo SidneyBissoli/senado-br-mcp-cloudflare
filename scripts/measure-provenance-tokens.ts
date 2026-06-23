@@ -22,6 +22,14 @@ const PROV = () =>
     reference_period: "2024-03-15",
   });
 
+// Proveniência da API administrativa (CEAPS, servidores, contratos) — source_url mais longo,
+// para checar o rodapé fixo contra os payloads administrativos grandes (gate §1.7).
+const PROV_ADM = () =>
+  provenanceFor("SENADO_ADM", "https://adm.senado.gov.br/adm-dadosabertos", "/api/v1/senadores/despesas_ceaps/2024", {
+    dataset_id: "ceaps; ano=2024",
+    reference_period: "2024",
+  });
+
 /** Texto que o modelo consome: concatenação dos blocos `content` de tipo text. */
 const modelText = (r: { content: { type: string; text: string }[] }) =>
   r.content.map((c) => c.text).join("\n");
@@ -59,8 +67,24 @@ function votacao(withVotos: number) {
   return base;
 }
 
-// Cenários: o que cada tool de votacoes.ts retorna, em tamanhos pequeno/médio/grande.
-const SCENARIOS: { name: string; data: Record<string, unknown> }[] = [
+/** Linha agregada de CEAPS (formato de agregarCeaps em senadores-admin.ts). */
+function ceapsAgregado(n: number) {
+  return {
+    ano: 2024,
+    modo: "por-senador",
+    totalDespesas: 8423,
+    valorTotal: 38215447.91,
+    agregado: Array.from({ length: n }, (_, i) => ({
+      chave: 5000 + i,
+      senador: `Senador Exemplo da Silva Sobrinho ${i + 1}`,
+      total: Math.round((500000 - i * 137) * 100) / 100,
+      despesas: 120 - (i % 40),
+    })),
+  };
+}
+
+// Cenários: o que cada tool retorna, em tamanhos pequeno/médio/grande, por fonte.
+const SCENARIOS: { name: string; data: Record<string, unknown>; prov?: () => ReturnType<typeof PROV> }[] = [
   {
     name: "PEQUENO  — obter_votacao, voto secreto (0 votos nominais)",
     data: votacao(0),
@@ -77,6 +101,11 @@ const SCENARIOS: { name: string; data: Record<string, unknown> }[] = [
     name: "GRANDE   — obter_votacao, chamada nominal completa (81 votos)",
     data: votacao(81),
   },
+  {
+    name: "GRANDE   — senado_ceaps por-senador, 81 agregados (fonte ADM)",
+    data: ceapsAgregado(81),
+    prov: PROV_ADM,
+  },
 ];
 
 // --- Formas de payload (texto que o modelo lê) -----------------------------------------
@@ -86,14 +115,13 @@ function beforeText(data: Record<string, unknown>): string {
   return JSON.stringify(data, null, 2);
 }
 
-function afterText(data: Record<string, unknown>): string {
+function afterText(data: Record<string, unknown>, prov = PROV()): string {
   // Saída REAL do código: resultWithProvenance() → blocos content que o modelo lê.
-  return modelText(resultWithProvenance(data, PROV()));
+  return modelText(resultWithProvenance(data, prov));
 }
 
-function naiveText(data: Record<string, unknown>): string {
+function naiveText(data: Record<string, unknown>, prov = PROV()): string {
   // Forma ingênua descartada: JSON(data+prov) no texto + rodapé (proveniência duplicada).
-  const prov = PROV();
   return `${JSON.stringify({ ...data, provenance: prov }, null, 2)}\n${provenanceFooter(prov)}`;
 }
 
@@ -120,15 +148,15 @@ function main() {
   for (const s of SCENARIOS) {
     const bt = beforeText(s.data);
     const baseChars = chars(bt);
-    const afterPct = ((chars(afterText(s.data)) - baseChars) / baseChars) * 100;
-    const naivePct = ((chars(naiveText(s.data)) - baseChars) / baseChars) * 100;
+    const afterPct = ((chars(afterText(s.data, s.prov?.())) - baseChars) / baseChars) * 100;
+    const naivePct = ((chars(naiveText(s.data, s.prov?.())) - baseChars) / baseChars) * 100;
     worstAfter = Math.max(worstAfter, afterPct);
     worstNaive = Math.max(worstNaive, naivePct);
 
     console.log(`■ ${s.name}`);
     console.log(row("BEFORE", bt, null));
-    console.log(row("AFTER", afterText(s.data), baseChars));
-    console.log(row("NAIVE", naiveText(s.data), baseChars));
+    console.log(row("AFTER", afterText(s.data, s.prov?.()), baseChars));
+    console.log(row("NAIVE", naiveText(s.data, s.prov?.()), baseChars));
     console.log("");
   }
 

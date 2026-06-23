@@ -411,7 +411,14 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 
 ## Provenance
 
-Citable-data tools attach a **provenance envelope** so a result is traceable back to its official source. The envelope lives in `structuredContent.provenance` (parseable by clients, validated by the tool's output schema) and is mirrored as a one-line source footer in the text content for clients that only render text — the data JSON itself is **not** duplicated with the envelope, to keep the per-response token cost low (a fixed ≈170 chars).
+**Every tool** attaches a **provenance envelope** so a result is traceable back to its official source — provenance is treated as a first-class part of the answer, not an optional extra (the audience is journalists and political-science researchers, for whom an un-sourced figure is unusable). The envelope lives in `structuredContent.provenance` (parseable by clients, validated by the tool's output schema) and is mirrored as a one-line source footer in the text content for clients that only render text — the data JSON itself is **not** duplicated with the envelope, to keep the per-response token cost low (a fixed ≈170 chars).
+
+Coverage spans all four upstream sources, each with its own `source`/`attribution`/`license` (in `src/utils/provenance.ts`):
+
+- **Senado Federal — Dados Abertos (Legislativo)** — `legis.senado.leg.br/dadosabertos`
+- **Senado Federal — Dados Abertos (Administrativo)** — `adm.senado.gov.br/adm-dadosabertos`
+- **Senado Federal — Execução Orçamentária e Financeira** — Arquimedes/Financeiro feed at `senado.gov.br`
+- **Senado Federal — Portal e-Cidadania** — `www12.senado.leg.br/ecidadania`
 
 Fields (per response — one tool, one source):
 
@@ -425,7 +432,9 @@ Fields (per response — one tool, one source):
 | `attribution` | Ready-to-use citation string |
 | `license` | Source terms (Dados Abertos do Senado Federal) |
 
-`retrieved_at` fidelity is provided by the cache layer (`cachedFetchWithMeta`), which persists the fetch timestamp alongside the value. Tools carrying the envelope today (8): `senado_obter_votacao`, `senado_votos_materia`, `senado_search_votacoes`, `senado_votacoes_senador`, `senado_buscar_materias`, `senado_obter_materia`, `senado_search_processos`, `senado_obter_processo`. Tools marked **⊕** in the inventory below carry the envelope.
+`retrieved_at` fidelity is provided by the cache layer (`cachedFetchWithMeta`), which persists the fetch timestamp alongside the value, so it reflects the real upstream extraction even on a cache hit. Two exceptions report an honest live timestamp instead: the e-Cidadania **list** tools (read from D1) use the corpus's `lastScrapedAt` — the true age of the stored data — while e-Cidadania **detail** tools, scraped live, use the fetch time and a level-3 canonical item URL.
+
+Coverage is **universal**: all 65 tools carry the envelope (verify with `grep -c 'resultWithProvenance(' src/tools/*.ts`). The **⊕** marks in the inventory below denote the original pilot tools (votes, bills, processes); the envelope now extends to every tool, so the marks are historical.
 
 ## Tool Inventory
 

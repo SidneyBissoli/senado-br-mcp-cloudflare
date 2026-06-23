@@ -10,9 +10,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
-import { toolResult, errorFrom, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
 import { matchesFiltro } from "./contratacoes.js";
 
@@ -67,7 +68,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
     async (params) => {
       try {
         const situacao = params.situacao ?? "ativos";
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_servidores",
           { situacao },
           CACHE_SEMI_STATIC,
@@ -78,13 +79,16 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
         if (params.lotacao) lista = lista.filter((s) => matchesFiltro(s.lotacao || "", params.lotacao!));
         if (params.cargo) lista = lista.filter((s) => matchesFiltro(s.cargo || "", params.cargo!));
         const limite = params.limite ?? 50;
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1/servidores/servidores/${situacao}`, {
+          dataset_id: `servidores; situacao=${situacao}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           situacao,
           count: Math.min(lista.length, limite),
           total: lista.length,
           ...(lista.length > limite ? { aviso: `Exibindo ${limite} de ${lista.length} servidores. Refine os filtros.` } : {}),
           servidores: lista.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao listar servidores");
       }
@@ -105,7 +109,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
     },
     async (params) => {
       try {
-        const bruto = await cachedFetch(
+        const { value: bruto, fetchedAt } = await cachedFetchWithMeta(
           "senado_remuneracoes_servidores",
           { ano: params.ano, mes: params.mes },
           CACHE_STATIC,
@@ -115,16 +119,21 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
         if (params.nome) itens = itens.filter((r: any) => matchesFiltro(r.nome, params.nome!));
         if (params.tipoFolha) itens = itens.filter((r: any) => matchesFiltro(r.tipo_folha || "", params.tipoFolha!));
 
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1/servidores/remuneracoes/${params.ano}/${params.mes}`, {
+          dataset_id: `remuneracoes; ${params.ano}/${params.mes}`,
+          reference_period: `${params.ano}-${String(params.mes).padStart(2, "0")}`,
+          retrieved_at: fetchedAt,
+        });
         if ((params.modo ?? "resumo") === "detalhe") {
           const limite = params.limite ?? 50;
-          return toolResult({
+          return resultWithProvenance({
             ano: params.ano,
             mes: params.mes,
             count: Math.min(itens.length, limite),
             total: itens.length,
             ...(itens.length > limite ? { aviso: `Exibindo ${limite} de ${itens.length} registros. Filtre por nome ou use modo=resumo.` } : {}),
             remuneracoes: itens.slice(0, limite).map(resumoRemuneracao),
-          });
+          }, prov);
         }
 
         const porFolha = new Map<string, { registros: number; totalBruto: number }>();
@@ -144,7 +153,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
             mediaBruta: Math.round((g.totalBruto / g.registros) * 100) / 100,
           }))
           .sort((a, b) => b.totalBruto - a.totalBruto);
-        return toolResult({ ano: params.ano, mes: params.mes, totalRegistros: itens.length, resumo });
+        return resultWithProvenance({ ano: params.ano, mes: params.mes, totalRegistros: itens.length, resumo }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar remunerações");
       }
@@ -163,7 +172,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_horas_extras",
           { ano: params.ano, mes: params.mes },
           CACHE_STATIC,
@@ -179,14 +188,19 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
         if (params.nome) itens = itens.filter((h) => matchesFiltro(h.nome, params.nome!));
         const valorTotal = Math.round(itens.reduce((s, h) => s + (typeof h.valorTotal === "number" ? h.valorTotal : 0), 0) * 100) / 100;
         const limite = params.limite ?? 100;
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1/servidores/horas-extras/${params.ano}/${params.mes}`, {
+          dataset_id: `horas-extras; ${params.ano}/${params.mes}`,
+          reference_period: `${params.ano}-${String(params.mes).padStart(2, "0")}`,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           ano: params.ano,
           mes: params.mes,
           count: Math.min(itens.length, limite),
           total: itens.length,
           valorTotal,
           horasExtras: itens.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar horas extras");
       }
@@ -215,7 +229,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
         };
         const isQuantitativo = params.tabela in QUANTITATIVOS;
         const path = isQuantitativo ? QUANTITATIVOS[params.tabela] : `/servidores/${params.tabela}`;
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_pessoal_tabelas",
           { tabela: params.tabela },
           isQuantitativo ? CACHE_STATIC : CACHE_SEMI_STATIC,
@@ -227,13 +241,16 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
           registros = registros.filter((item: any) => matchesFiltro(JSON.stringify(item), f));
         }
         const limite = params.limite ?? 100;
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1${path}`, {
+          dataset_id: `tabela=${params.tabela}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           tabela: params.tabela,
           count: Math.min(registros.length, limite),
           total: registros.length,
           ...(registros.length > limite ? { aviso: `Exibindo ${limite} de ${registros.length} registros.` } : {}),
           registros: registros.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar tabela de pessoal");
       }

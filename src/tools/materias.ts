@@ -13,7 +13,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, errorFrom, buildParams, ensureArray, safeInt } from "../utils/validation.js";
+import { toolError, errorFrom, buildParams, ensureArray, safeInt } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND, CACHE_DYNAMIC } from "../types.js";
 

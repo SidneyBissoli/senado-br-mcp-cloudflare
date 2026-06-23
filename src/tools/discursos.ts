@@ -7,9 +7,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, errorFrom, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
 
 /** Parse a speech summary from the senator or plenary speeches endpoint. */
@@ -48,11 +49,12 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
         if (params.dataInicio) qp.dataInicio = params.dataInicio;
         if (params.dataFim) qp.dataFim = params.dataFim;
 
-        const response = await cachedFetch(
+        const path = `/senador/${params.codigoSenador}/${tipo}`;
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_discursos_senador",
           { codigo: params.codigoSenador, tipo, ...qp },
           CACHE_DYNAMIC,
-          () => upstreamFetch(`/senador/${params.codigoSenador}/${tipo}`, qp, baseUrl),
+          () => upstreamFetch(path, qp, baseUrl),
         );
         const r = response as any;
         const discursos = ensureArray(
@@ -60,7 +62,16 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
             ? (r?.ApartesParlamentar?.Parlamentar?.Apartes?.Aparte ?? r?.Apartes?.Aparte)
             : (r?.DiscursosParlamentar?.Parlamentar?.Pronunciamentos?.Pronunciamento ?? r?.Pronunciamentos?.Pronunciamento),
         ).map(parseDiscursoResumo);
-        return toolResult({ codigoSenador: params.codigoSenador, tipo, count: discursos.length, discursos });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `codigoParlamentar=${params.codigoSenador}; tipo=${tipo}`,
+          reference_period: params.dataInicio && params.dataFim
+            ? `${params.dataInicio}/${params.dataFim}` : undefined,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance(
+          { codigoSenador: params.codigoSenador, tipo, count: discursos.length, discursos },
+          prov,
+        );
       } catch (e) {
         return errorFrom(e, "Erro ao obter pronunciamentos do senador");
       }
@@ -77,18 +88,26 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const path = `/plenario/lista/discursos/${params.dataInicio}/${params.dataFim}`;
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_discursos_plenario",
           { dataInicio: params.dataInicio, dataFim: params.dataFim },
           CACHE_DYNAMIC,
-          () => upstreamFetch(`/plenario/lista/discursos/${params.dataInicio}/${params.dataFim}`, {}, baseUrl),
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const r = response as any;
         const discursos = ensureArray(
           r?.DiscursosPlenario?.Pronunciamentos?.Pronunciamento ??
           r?.Pronunciamentos?.Pronunciamento,
         ).map(parseDiscursoResumo);
-        return toolResult({ periodo: { dataInicio: params.dataInicio, dataFim: params.dataFim }, count: discursos.length, discursos });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          reference_period: `${params.dataInicio}/${params.dataFim}`,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance(
+          { periodo: { dataInicio: params.dataInicio, dataFim: params.dataFim }, count: discursos.length, discursos },
+          prov,
+        );
       } catch (e) {
         return errorFrom(e, "Erro ao obter discursos do plenário");
       }
@@ -105,7 +124,7 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const texto = await cachedFetch(
+        const { value: texto, fetchedAt } = await cachedFetchWithMeta<string>(
           "senado_discurso_texto",
           { codigo: params.codigoPronunciamento },
           CACHE_ON_DEMAND,
@@ -151,7 +170,14 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
             }
           },
         );
-        return toolResult({ codigoPronunciamento: params.codigoPronunciamento, texto });
+        const prov = provenanceFor(
+          "SENADO_LEGIS", baseUrl, `/discurso/texto-integral/${params.codigoPronunciamento}`,
+          { dataset_id: `codigoPronunciamento=${params.codigoPronunciamento}`, retrieved_at: fetchedAt },
+        );
+        return resultWithProvenance(
+          { codigoPronunciamento: params.codigoPronunciamento, texto },
+          prov,
+        );
       } catch (e) {
         return errorFrom(e, "Erro ao obter texto do discurso");
       }

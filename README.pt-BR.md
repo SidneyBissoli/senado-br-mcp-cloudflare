@@ -406,6 +406,14 @@ O MCP usa POST para todas as requisições `tools/call`. Cachear respostas de PO
 
 Esse cache acontece no **nível da ferramenta** (dentro do callback de cada ferramenta), não no nível do transporte MCP.
 
+## Proveniência
+
+**Toda ferramenta** anexa um **envelope de proveniência** para que qualquer resultado seja rastreável até sua fonte oficial — a proveniência é parte essencial da resposta, não um extra opcional (o público são jornalistas e pesquisadores em ciência política, para quem um número sem fonte é inutilizável). O envelope fica em `structuredContent.provenance` (parseável e validado pelo output schema da ferramenta) e é espelhado como um rodapé compacto de fonte no texto, para clientes que só renderizam texto — o JSON dos dados **não** é duplicado com o envelope, mantendo o custo de tokens por resposta baixo (≈170 chars fixos).
+
+Campos (por resposta — uma ferramenta, uma fonte): `source`, `source_url` (URL canônica consultada), `dataset_id`, `reference_period` (competência/vintage do dado), `retrieved_at` (ISO-8601 da extração no upstream — preservado mesmo em cache-hit, o diferenciador nível-1), `attribution` (citação pronta) e `license`.
+
+A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`legis.senado.leg.br`), **Dados Abertos Administrativo** (`adm.senado.gov.br`), **Execução Orçamentária** (feed Arquimedes/Financeiro em `senado.gov.br`) e **Portal e-Cidadania** (`www12.senado.leg.br/ecidadania`). Nas listas do e-Cidadania (lidas do D1) o `retrieved_at` é o `lastScrapedAt` do corpus — a idade real do dado; nos detalhes (raspados ao vivo) é o instante da chamada, com a URL canônica do item. A fidelidade do `retrieved_at` vem da camada de cache (`cachedFetchWithMeta`), que persiste o timestamp junto ao valor.
+
 ## Inventário de ferramentas
 
 ### Grupo H — Referência/Metadados (1 ferramenta)

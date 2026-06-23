@@ -7,9 +7,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, errorFrom, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_STATIC } from "../types.js";
 
 export const TIPOS_MATERIA = [
@@ -40,9 +41,10 @@ export const UFS = [
   { sigla: "TO", nome: "Tocantins" },
 ];
 
-/** Shared fetcher for the current senators list (used by partidos, ufs, legislatura). */
+/** Shared fetcher for the current senators list (used by partidos, ufs, legislatura).
+ *  Returns the upstream value + its real extraction timestamp (for provenance). */
 async function fetchSenadoresAtuais(baseUrl: string) {
-  return cachedFetch("_senadores_atuais", {}, CACHE_STATIC, () =>
+  return cachedFetchWithMeta("_senadores_atuais", {}, CACHE_STATIC, () =>
     upstreamFetch("/senador/lista/atual", {}, baseUrl),
   );
 }
@@ -125,29 +127,60 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
     async (params) => {
       try {
         switch (params.tabela) {
-          case "tipos-materia":
-            return toolResult({ tabela: params.tabela, count: TIPOS_MATERIA.length, tipos: TIPOS_MATERIA });
+          case "tipos-materia": {
+            // Catálogo mantido em código (sem ida ao upstream): source_url aponta para a
+            // base oficial e retrieved_at faz default ao instante da resposta.
+            const prov = provenanceFor("SENADO_LEGIS", baseUrl, "", {
+              dataset_id: "catalogo=tipos-materia",
+            });
+            return resultWithProvenance(
+              { tabela: params.tabela, count: TIPOS_MATERIA.length, tipos: TIPOS_MATERIA },
+              prov,
+            );
+          }
 
           case "partidos": {
-            const parlamentares = extractParlamentares(await fetchSenadoresAtuais(baseUrl));
+            const { value, fetchedAt } = await fetchSenadoresAtuais(baseUrl);
+            const parlamentares = extractParlamentares(value);
             const partidos = tabularPartidos(parlamentares);
-            return toolResult({ tabela: params.tabela, count: partidos.length, totalSenadores: parlamentares.length, partidos });
+            const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/senador/lista/atual", {
+              dataset_id: "tabela=partidos", retrieved_at: fetchedAt,
+            });
+            return resultWithProvenance(
+              { tabela: params.tabela, count: partidos.length, totalSenadores: parlamentares.length, partidos },
+              prov,
+            );
           }
 
           case "ufs": {
-            const parlamentares = extractParlamentares(await fetchSenadoresAtuais(baseUrl));
+            const { value, fetchedAt } = await fetchSenadoresAtuais(baseUrl);
+            const parlamentares = extractParlamentares(value);
             const ufs = tabularUfs(parlamentares);
-            return toolResult({ tabela: params.tabela, count: ufs.length, totalSenadores: parlamentares.length, ufs });
+            const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/senador/lista/atual", {
+              dataset_id: "tabela=ufs", retrieved_at: fetchedAt,
+            });
+            return resultWithProvenance(
+              { tabela: params.tabela, count: ufs.length, totalSenadores: parlamentares.length, ufs },
+              prov,
+            );
           }
 
           case "legislatura-atual": {
-            const parlamentares = extractParlamentares(await fetchSenadoresAtuais(baseUrl));
-            return toolResult({ tabela: params.tabela, ...deriveLegislaturaAtual(parlamentares) });
+            const { value, fetchedAt } = await fetchSenadoresAtuais(baseUrl);
+            const parlamentares = extractParlamentares(value);
+            const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/senador/lista/atual", {
+              dataset_id: "tabela=legislatura-atual", retrieved_at: fetchedAt,
+            });
+            return resultWithProvenance(
+              { tabela: params.tabela, ...deriveLegislaturaAtual(parlamentares) },
+              prov,
+            );
           }
 
           case "tipos-norma": {
-            const response = await cachedFetch("senado_tipos_norma", {}, CACHE_STATIC, () =>
-              upstreamFetch("/legislacao/tiposNorma", {}, baseUrl),
+            const { value: response, fetchedAt } = await cachedFetchWithMeta(
+              "senado_tipos_norma", {}, CACHE_STATIC,
+              () => upstreamFetch("/legislacao/tiposNorma", {}, baseUrl),
             );
             const r = response as any;
             const tipos = ensureArray(
@@ -157,12 +190,16 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
               sigla: t.Sigla || t.sigla || null,
               descricao: t.Descricao || t.descricao || null,
             }));
-            return toolResult({ tabela: params.tabela, count: tipos.length, tipos });
+            const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/legislacao/tiposNorma", {
+              dataset_id: "tabela=tipos-norma", retrieved_at: fetchedAt,
+            });
+            return resultWithProvenance({ tabela: params.tabela, count: tipos.length, tipos }, prov);
           }
 
           case "tipos-uso-palavra": {
-            const response = await cachedFetch("senado_tipos_uso_palavra", {}, CACHE_STATIC, () =>
-              upstreamFetch("/senador/lista/tiposUsoPalavra", {}, baseUrl),
+            const { value: response, fetchedAt } = await cachedFetchWithMeta(
+              "senado_tipos_uso_palavra", {}, CACHE_STATIC,
+              () => upstreamFetch("/senador/lista/tiposUsoPalavra", {}, baseUrl),
             );
             const r = response as any;
             const tipos = ensureArray(
@@ -172,7 +209,10 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
               codigo: t.Codigo || t.codigo || null,
               descricao: t.Descricao || t.descricao || null,
             }));
-            return toolResult({ tabela: params.tabela, count: tipos.length, tipos });
+            const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/senador/lista/tiposUsoPalavra", {
+              dataset_id: "tabela=tipos-uso-palavra", retrieved_at: fetchedAt,
+            });
+            return resultWithProvenance({ tabela: params.tabela, count: tipos.length, tipos }, prov);
           }
         }
       } catch (e) {

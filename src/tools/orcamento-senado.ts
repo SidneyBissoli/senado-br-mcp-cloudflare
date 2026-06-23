@@ -12,9 +12,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_STATIC } from "../types.js";
 
 const FINANCEIRO_BASE = "https://www.senado.gov.br";
@@ -97,12 +98,18 @@ export function registerOrcamentoSenadoTools(server: McpServer) {
         const tipo = params.tipo ?? "despesas";
         const modo = params.modo ?? "por-ano";
         const limite = params.limite ?? 100;
-        const bruto = await cachedFetch(
+        const feedPath = tipo === "despesas" ? PATH_DESPESAS : PATH_RECEITAS;
+        const { value: bruto, fetchedAt } = await cachedFetchWithMeta(
           "senado_execucao_orcamentaria",
           { tipo },
           CACHE_STATIC,
-          () => upstreamFetch(tipo === "despesas" ? PATH_DESPESAS : PATH_RECEITAS, {}, FINANCEIRO_BASE, { noJsonSuffix: true }),
+          () => upstreamFetch(feedPath, {}, FINANCEIRO_BASE, { noJsonSuffix: true }),
         );
+        const prov = provenanceFor("SENADO_ORCAMENTO_EXEC", FINANCEIRO_BASE, feedPath, {
+          dataset_id: `tipo=${tipo}`,
+          reference_period: params.ano ? String(params.ano) : undefined,
+          retrieved_at: fetchedAt,
+        });
 
         if (tipo === "despesas") {
           let itens = ensureArray((bruto as any)?.despesas).map(parseDespesa);
@@ -122,7 +129,7 @@ export function registerOrcamentoSenadoTools(server: McpServer) {
             if (modo === "por-ano") agregado = agregado.sort((a, b) => String(a.chave).localeCompare(String(b.chave)));
             resultado = { agregado: agregado.slice(0, limite) };
           }
-          return toolResult({ tipo, modo, ano: params.ano ?? null, totalLinhas: itens.length, ...resultado });
+          return resultWithProvenance({ tipo, modo, ano: params.ano ?? null, totalLinhas: itens.length, ...resultado }, prov);
         }
 
         // receitas
@@ -152,7 +159,7 @@ export function registerOrcamentoSenadoTools(server: McpServer) {
             : agregado.sort((a, b) => a.chave.localeCompare(b.chave));
           resultado = { agregado: agregado.slice(0, limite) };
         }
-        return toolResult({ tipo, modo, ano: params.ano ?? null, totalLinhas: itens.length, ...resultado });
+        return resultWithProvenance({ tipo, modo, ano: params.ano ?? null, totalLinhas: itens.length, ...resultado }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar execução orçamentária");
       }

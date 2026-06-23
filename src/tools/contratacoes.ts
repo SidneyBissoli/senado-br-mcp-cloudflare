@@ -9,9 +9,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
-import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_ON_DEMAND } from "../types.js";
 
 /** Parse a contract / ata / nota de empenho list item (snake_case). */
@@ -73,18 +74,23 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
           objetoDescricaoContains: params.objeto,
           maoDeObraEquals: params.maoDeObra !== undefined ? (params.maoDeObra ? "S" : "N") : undefined,
         });
-        const response = await cachedFetch("senado_contratos", qp, CACHE_SEMI_STATIC, () =>
-          admFetch("/contratacoes/contratos", qp, admBaseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_contratos", qp, CACHE_SEMI_STATIC,
+          () => admFetch("/contratacoes/contratos", qp, admBaseUrl),
         );
         const todos = ensureArray(response).map(parseContrato);
         const limite = params.limite ?? 50;
         const contratos = todos.slice(0, limite);
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/contratos", {
+          reference_period: params.ano ? String(params.ano) : undefined,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           count: contratos.length,
           total: todos.length,
           ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} contratos. Refine os filtros.` } : {}),
           contratos,
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao buscar contratos");
       }
@@ -114,7 +120,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
         } else {
           path = `/contratacoes/${tipo}/${params.id}/${params.secao}`;
         }
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_contratacao_detalhe",
           { tipo, id: params.id, secao: params.secao },
           CACHE_ON_DEMAND,
@@ -122,14 +128,17 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
         );
         const todos = ensureArray(response);
         const limite = params.limite ?? 100;
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1${path}`, {
+          dataset_id: `${tipo}=${params.id}; secao=${params.secao}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           id: params.id,
           tipo,
           secao: params.secao,
           count: Math.min(todos.length, limite),
           total: todos.length,
           itens: todos.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter detalhe da contratação");
       }
@@ -154,16 +163,20 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
         if (Object.keys(qp).length === 0) {
           return toolError("Informe 'numero' ou 'objeto' para a busca.");
         }
-        const response = await cachedFetch("senado_licitacoes", qp, CACHE_SEMI_STATIC, () =>
-          admFetch("/contratacoes/licitacoes", qp, admBaseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_licitacoes", qp, CACHE_SEMI_STATIC,
+          () => admFetch("/contratacoes/licitacoes", qp, admBaseUrl),
         );
         const todos = ensureArray(response);
         const limite = params.limite ?? 50;
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/licitacoes", {
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           count: Math.min(todos.length, limite),
           total: todos.length,
           licitacoes: todos.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao buscar licitações");
       }
@@ -182,20 +195,24 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
     },
     async (params) => {
       try {
-        const response = await cachedFetch("senado_terceirizados", {}, CACHE_SEMI_STATIC, () =>
-          admFetch("/contratacoes/terceirizados", {}, admBaseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_terceirizados", {}, CACHE_SEMI_STATIC,
+          () => admFetch("/contratacoes/terceirizados", {}, admBaseUrl),
         );
         let lista = ensureArray(response).map(parseTerceirizado);
         if (params.nome) lista = lista.filter((t) => matchesFiltro(t.nome, params.nome!));
         if (params.empresa) lista = lista.filter((t) => matchesFiltro(t.empresa || "", params.empresa!));
         if (params.lotacao) lista = lista.filter((t) => matchesFiltro(t.lotacao || "", params.lotacao!));
         const limite = params.limite ?? 50;
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/terceirizados", {
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           count: Math.min(lista.length, limite),
           total: lista.length,
           ...(lista.length > limite ? { aviso: `Exibindo ${limite} de ${lista.length} terceirizados. Refine os filtros.` } : {}),
           terceirizados: lista.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao listar terceirizados");
       }
@@ -216,8 +233,9 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
         if (!params.nome && !params.cnpj) {
           return toolError("Informe 'nome' ou 'cnpj' para a busca.");
         }
-        const response = await cachedFetch("senado_empresas_contratadas", {}, CACHE_SEMI_STATIC, () =>
-          admFetchLarge("/contratacoes/empresas", {}, admBaseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_empresas_contratadas", {}, CACHE_SEMI_STATIC,
+          () => admFetchLarge("/contratacoes/empresas", {}, admBaseUrl),
         );
         let empresas = ensureArray(response);
         if (params.nome) empresas = empresas.filter((e: any) => matchesFiltro(e.nome, params.nome!));
@@ -236,11 +254,14 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
           totalAtas: ensureArray(e.atas_registro_preco).length,
           totalNotasEmpenho: ensureArray(e.notas_empenho).length,
         }));
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/empresas", {
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           count: resultado.length,
           total: empresas.length,
           empresas: resultado,
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao buscar empresas contratadas");
       }
@@ -258,7 +279,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_contratacoes_lista",
           { tipo: params.tipo },
           CACHE_SEMI_STATIC,
@@ -273,13 +294,16 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
           lista = lista.filter((item: any) => matchesFiltro(JSON.stringify(item), f));
         }
         const limite = params.limite ?? 50;
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1/contratacoes/${params.tipo}`, {
+          dataset_id: `tipo=${params.tipo}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           tipo: params.tipo,
           count: Math.min(lista.length, limite),
           total: lista.length,
           ...(lista.length > limite ? { aviso: `Exibindo ${limite} de ${lista.length} registros.` } : {}),
           registros: lista.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar lista de contratações");
       }

@@ -87,14 +87,25 @@ async function main() {
     `\n  retrieved_at preservado no cache-hit: ${first?.provenance?.retrieved_at === second?.provenance?.retrieved_at ? "SIM ✓" : "NÃO ✗"}`,
   );
 
-  // 3) Tools de busca/listagem recém-adicionadas — confirma envelope nível-1 não-vazio
+  // 3) Tools de busca/listagem — uma amostra de cada FONTE confirma envelope nível-1 não-vazio.
   const CORE = ["source", "source_url", "retrieved_at", "attribution"];
   const extras = [
+    // Legislativo (legis.senado.leg.br)
     { name: "senado_buscar_materias", arguments: { sigla: "PEC", ano: 2023, limite: 3 } },
     { name: "senado_search_processos", arguments: { sigla: "PL", ano: 2024 } },
     { name: "senado_votacoes_senador", arguments: { codigoSenador: 5322, ano: 2024 } },
+    { name: "senado_listar_senadores", arguments: { uf: "SP" } },
+    { name: "senado_listar_comissoes", arguments: {} },
+    { name: "senado_listar_blocos", arguments: {} },
+    // Administrativo (adm.senado.gov.br)
+    { name: "senado_ceaps", arguments: { ano: 2023, modo: "por-tipo" } },
+    { name: "senado_contratos", arguments: { ano: 2023, limite: 3 } },
+    // Execução orçamentária (Arquimedes/Financeiro)
+    { name: "senado_execucao_orcamentaria", arguments: { tipo: "despesas", modo: "por-ano" } },
+    // e-Cidadania (www12.senado.leg.br/ecidadania, lê do D1)
+    { name: "senado_ecidadania_listar_consultas", arguments: { limite: 3 } },
   ];
-  console.log("\n■ Tools expandidas (envelope nível-1 não-vazio):");
+  console.log("\n■ Tools expandidas — uma amostra por fonte (envelope nível-1 não-vazio):");
   for (const call of extras) {
     try {
       const p = structured(await rpc("tools/call", call))?.provenance;

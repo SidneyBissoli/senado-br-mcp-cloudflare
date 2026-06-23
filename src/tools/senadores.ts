@@ -9,9 +9,9 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
@@ -159,8 +159,11 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
         const path = params.legislatura
           ? `/senador/lista/legislatura/${params.legislatura}`
           : "/senador/lista/atual";
-        const response = await cachedFetch("senado_listar_senadores", { path }, CACHE_SEMI_STATIC, () =>
-          upstreamFetch(path, {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_listar_senadores",
+          { path },
+          CACHE_SEMI_STATIC,
+          () => upstreamFetch(path, {}, baseUrl),
         );
         let senadores = extractParlamentares(response).map(parseSenadorResumo);
         if (params.nome) {
@@ -174,7 +177,11 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
           const p = params.partido.toUpperCase();
           senadores = senadores.filter((s) => s.partido?.toUpperCase() === p);
         }
-        return toolResult({ count: senadores.length, senadores });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: params.legislatura ? `legislatura=${params.legislatura}` : "lista/atual",
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ count: senadores.length, senadores }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao listar senadores");
       }
@@ -190,14 +197,19 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const path = `/senador/${params.codigoSenador}`;
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_obter_senador",
           { codigo: params.codigoSenador },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(`/senador/${params.codigoSenador}`, {}, baseUrl),
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const dados = (response as any).DetalheParlamentar || response;
-        return toolResult(parseSenadorDetalhe(dados));
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `codigoParlamentar=${params.codigoSenador}`,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance(parseSenadorDetalhe(dados), prov);
       } catch (e) {
         return errorFrom(e, "Senador não encontrado");
       }
@@ -273,11 +285,12 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
           "filiacoes": `/senador/${params.codigoSenador}/filiacoes`,
           "profissoes": `/senador/${params.codigoSenador}/profissao`,
         };
-        const response = await cachedFetch(
+        const path = paths[params.tipo];
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_senador_historico",
           { codigo: params.codigoSenador, tipo: params.tipo },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(paths[params.tipo], {}, baseUrl),
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const r = response as any;
         let itens: any[];
@@ -303,7 +316,14 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
             break;
           }
         }
-        return toolResult({ codigoSenador: params.codigoSenador, tipo: params.tipo, count: itens.length, itens });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `codigoParlamentar=${params.codigoSenador}; tipo=${params.tipo}`,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance(
+          { codigoSenador: params.codigoSenador, tipo: params.tipo, count: itens.length, itens },
+          prov,
+        );
       } catch (e) {
         return errorFrom(e, "Erro ao obter histórico do senador");
       }
@@ -317,12 +337,18 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
     {},
     async () => {
       try {
-        const response = await cachedFetch("senado_senadores_afastados", {}, CACHE_SEMI_STATIC, () =>
-          upstreamFetch("/senador/afastados", {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_senadores_afastados",
+          {},
+          CACHE_SEMI_STATIC,
+          () => upstreamFetch("/senador/afastados", {}, baseUrl),
         );
         const senadores = extractParlamentares(response).map(parseSenadorResumo)
           .map((s) => ({ ...s, emExercicio: false }));
-        return toolResult({ count: senadores.length, senadores });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/senador/afastados", {
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ count: senadores.length, senadores }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao listar senadores afastados");
       }

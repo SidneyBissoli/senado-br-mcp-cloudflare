@@ -10,9 +10,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
-import { toolResult, errorFrom, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
 
 export interface CeapsFiltros {
@@ -85,7 +86,7 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
     async (params) => {
       try {
         // Cache the full year dataset once; filters/aggregation run per call.
-        const bruto = await cachedFetch(
+        const { value: bruto, fetchedAt } = await cachedFetchWithMeta(
           "senado_ceaps",
           { ano: params.ano },
           CACHE_STATIC,
@@ -118,13 +119,18 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
           resultado = { agregado: agregarCeaps(filtrado, (d) => d.codSenador ?? 0, (d) => ({ senador: d.nomeSenador || null })).slice(0, limite) };
         }
 
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1/senadores/despesas_ceaps/${params.ano}`, {
+          dataset_id: `ceaps; ano=${params.ano}`,
+          reference_period: params.mes ? `${params.ano}-${String(params.mes).padStart(2, "0")}` : String(params.ano),
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           ano: params.ano,
           modo,
           totalDespesas: filtrado.length,
           valorTotal: totalGeral,
           ...resultado,
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar despesas CEAPS");
       }
@@ -147,8 +153,9 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
     async (params) => {
       try {
         if (params.tipo === "escritorios-apoio") {
-          const response = await cachedFetch("senado_escritorios_apoio", {}, CACHE_SEMI_STATIC, () =>
-            admFetch("/senadores/escritorios", {}, admBaseUrl),
+          const { value: response, fetchedAt } = await cachedFetchWithMeta(
+            "senado_escritorios_apoio", {}, CACHE_SEMI_STATIC,
+            () => admFetch("/senadores/escritorios", {}, admBaseUrl),
           );
           let escritorios = ensureArray(response).map((e: any) => ({
             senador: e.nome || "",
@@ -163,12 +170,16 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
             escritorios = escritorios.filter((e) => e.uf?.toUpperCase() === uf);
           }
           if (params.nome) escritorios = escritorios.filter((e) => norm(e.senador).includes(norm(params.nome!)));
-          return toolResult({ tipo: params.tipo, count: escritorios.length, escritorios });
+          const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/senadores/escritorios", {
+            dataset_id: "tipo=escritorios-apoio", retrieved_at: fetchedAt,
+          });
+          return resultWithProvenance({ tipo: params.tipo, count: escritorios.length, escritorios }, prov);
         }
 
         if (params.tipo === "aposentados") {
-          const response = await cachedFetch("senado_senadores_aposentados", {}, CACHE_SEMI_STATIC, () =>
-            admFetch("/senadores/aposentados", {}, admBaseUrl),
+          const { value: response, fetchedAt } = await cachedFetchWithMeta(
+            "senado_senadores_aposentados", {}, CACHE_SEMI_STATIC,
+            () => admFetch("/senadores/aposentados", {}, admBaseUrl),
           );
           let aposentados = ensureArray(response).map((a: any) => ({
             nome: a.nome || "",
@@ -177,12 +188,16 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
             remuneracao: a.remuneracao ?? null,
           }));
           if (params.nome) aposentados = aposentados.filter((a) => norm(a.nome).includes(norm(params.nome!)));
-          return toolResult({ tipo: params.tipo, count: aposentados.length, aposentados });
+          const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/senadores/aposentados", {
+            dataset_id: "tipo=aposentados", retrieved_at: fetchedAt,
+          });
+          return resultWithProvenance({ tipo: params.tipo, count: aposentados.length, aposentados }, prov);
         }
 
         // tipo === "auxilio-moradia"
-        const response = await cachedFetch("senado_auxilio_moradia", {}, CACHE_SEMI_STATIC, () =>
-          admFetch("/senadores/auxilio-moradia", {}, admBaseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_auxilio_moradia", {}, CACHE_SEMI_STATIC,
+          () => admFetch("/senadores/auxilio-moradia", {}, admBaseUrl),
         );
         let senadores = ensureArray(response).map((s: any) => ({
           nome: s.nomeParlamentar || "",
@@ -196,7 +211,10 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
           senadores = senadores.filter((s) => s.uf?.toUpperCase() === uf);
         }
         if (params.nome) senadores = senadores.filter((s) => norm(s.nome).includes(norm(params.nome!)));
-        return toolResult({ tipo: params.tipo, count: senadores.length, senadores });
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/senadores/auxilio-moradia", {
+          dataset_id: "tipo=auxilio-moradia", retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ tipo: params.tipo, count: senadores.length, senadores }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar dados administrativos dos senadores");
       }

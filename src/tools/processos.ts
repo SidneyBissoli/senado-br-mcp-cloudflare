@@ -10,9 +10,9 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, errorFrom, buildParams, ensureArray, safeInt } from "../utils/validation.js";
+import { toolError, errorFrom, buildParams, ensureArray, safeInt } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND, CACHE_STATIC, CACHE_SEMI_STATIC } from "../types.js";
 
@@ -270,7 +270,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
           return toolError("Informe pelo menos um filtro (idProcesso, codigoMateria ou período).");
         }
 
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_processo_detalhe",
           { secao: params.secao, ...qp },
           CACHE_ON_DEMAND,
@@ -278,13 +278,22 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
         );
         const todos = ensureArray(response).map(mapper);
         const itens = todos.slice(0, limite);
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: params.idProcesso
+            ? `idProcesso=${params.idProcesso}`
+            : params.codigoMateria
+              ? `codigoMateria=${params.codigoMateria}`
+              : undefined,
+          reference_period: di && df ? `${di}/${df}` : dref || di || df || undefined,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           secao: params.secao,
           count: itens.length,
           total: todos.length,
           ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} registros.` } : {}),
           itens,
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter detalhe do processo");
       }
@@ -302,8 +311,11 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const response = await cachedFetch("senado_autores_atuais", {}, CACHE_SEMI_STATIC, () =>
-          upstreamFetch("/autor/lista/atual", {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_autores_atuais",
+          {},
+          CACHE_SEMI_STATIC,
+          () => upstreamFetch("/autor/lista/atual", {}, baseUrl),
         );
         const r = response as any;
         let autores = ensureArray(r?.ListaAutores?.Autores?.Parlamentar ?? r?.Autores?.Parlamentar)
@@ -319,11 +331,14 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
             a.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(norm));
         }
         const limite = params.limite ?? 50;
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/autor/lista/atual", {
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           count: Math.min(autores.length, limite),
           total: autores.length,
           autores: autores.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter autores");
       }
@@ -346,7 +361,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
     async (params) => {
       try {
         const path = TABELAS_PROCESSO[params.tabela];
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_tabelas_processo",
           { tabela: params.tabela },
           CACHE_STATIC,
@@ -358,12 +373,16 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
           linhas = linhas.filter((l: any) => JSON.stringify(l).toLowerCase().includes(f));
         }
         const limite = params.limite ?? 200;
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `tabela=${params.tabela}`,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           tabela: params.tabela,
           count: Math.min(linhas.length, limite),
           total: linhas.length,
           linhas: linhas.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar tabela de referência");
       }

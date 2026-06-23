@@ -6,9 +6,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_ON_DEMAND } from "../types.js";
 
 /** Parse a parliamentary bloc summary. */
@@ -63,7 +64,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
     {},
     async () => {
       try {
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_listar_blocos",
           {},
           CACHE_SEMI_STATIC,
@@ -74,7 +75,10 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
           r?.ListaBlocoParlamentar?.BlocosParlamentares?.BlocoParlamentar ??
           r?.BlocosParlamentares?.BlocoParlamentar,
         ).map(parseBlocoResumo);
-        return toolResult({ count: blocos.length, blocos });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/composicao/lista/blocos", {
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ count: blocos.length, blocos }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao listar blocos parlamentares");
       }
@@ -90,15 +94,19 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const path = `/composicao/bloco/${params.codigo}`;
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_obter_bloco",
           { codigo: params.codigo },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(`/composicao/bloco/${params.codigo}`, {}, baseUrl),
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const r = response as any;
         const bloco = r?.BlocoParlamentar?.Bloco || r?.Bloco || r;
-        return toolResult(parseBlocoResumo(bloco));
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `bloco=${params.codigo}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance(parseBlocoResumo(bloco), prov);
       } catch (e) {
         return errorFrom(e, "Bloco parlamentar não encontrado");
       }
@@ -123,7 +131,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
           vigente: params.vigente,
           siglaTipoLideranca: params.siglaTipoLideranca,
         });
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_liderancas",
           qp,
           CACHE_SEMI_STATIC,
@@ -134,7 +142,10 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
           r?.LiderancaList?.Liderancas?.Lideranca ??
           r?.Liderancas?.Lideranca,
         ).map(parseLideranca);
-        return toolResult({ count: liderancas.length, liderancas });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/composicao/lideranca", {
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ count: liderancas.length, liderancas }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter lideranças");
       }
@@ -153,7 +164,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
         const casa = params.casa ?? "senado";
         const path = casa === "congresso" ? "/composicao/mesaCN" : "/composicao/mesaSF";
         const rotulo = casa === "congresso" ? "Congresso Nacional" : "Senado Federal";
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_mesa",
           { casa },
           CACHE_SEMI_STATIC,
@@ -165,7 +176,10 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
           r?.MesaCN?.Cargos?.Cargo ??
           r?.Cargos?.Cargo,
         ).map(parseMembroMesa);
-        return toolResult({ casa, mesa: rotulo, count: membros.length, membros });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `mesa=${casa}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ casa, mesa: rotulo, count: membros.length, membros }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter Mesa Diretora");
       }

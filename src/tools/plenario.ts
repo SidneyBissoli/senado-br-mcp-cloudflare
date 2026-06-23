@@ -10,9 +10,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { toolError, errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_DYNAMIC, CACHE_ON_DEMAND, CACHE_STATIC } from "../types.js";
 
 function formatDateYMD(d: Date): string {
@@ -143,8 +144,9 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
         } else {
           path = `/plenario/agenda/dia/${data}`;
         }
-        const response = await cachedFetch("senado_agenda_plenario", { path }, CACHE_DYNAMIC, () =>
-          upstreamFetch(path, {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_agenda_plenario", { path }, CACHE_DYNAMIC,
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const r = response as any;
         const sessoes = ensureArray(
@@ -171,7 +173,10 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
               : undefined,
           };
         });
-        return toolResult({ data, escopo, count: sessoes.length, sessoes });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          reference_period: data, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ data, escopo, count: sessoes.length, sessoes }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter agenda do plenário");
       }
@@ -194,11 +199,15 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
           : escopo === "mes"
             ? `/plenario/resultado/mes/${params.data}`
             : `/plenario/resultado/${params.data}`;
-        const response = await cachedFetch("senado_resultado_plenario", { path }, CACHE_ON_DEMAND, () =>
-          upstreamFetch(path, {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_resultado_plenario", { path }, CACHE_ON_DEMAND,
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const sessoes = extractSessoesResultado(response).map(parseSessaoResultado);
-        return toolResult({ data: params.data, escopo, count: sessoes.length, sessoes });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          reference_period: params.data, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ data: params.data, escopo, count: sessoes.length, sessoes }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter resultado do plenário");
       }
@@ -224,12 +233,19 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
         } else {
           return toolError("Informe 'data' ou o período 'dataInicio'/'dataFim'.");
         }
-        const response = await cachedFetch("senado_orientacao_bancada", { path }, CACHE_ON_DEMAND, () =>
-          upstreamFetch(path, {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_orientacao_bancada", { path }, CACHE_ON_DEMAND,
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const r = response as any;
         const votacoes = ensureArray(r?.votacoes ?? r).map(parseOrientacaoVotacao);
-        return toolResult({ count: votacoes.length, votacoes });
+        const periodo = params.dataInicio && params.dataFim
+          ? `${params.dataInicio}/${params.dataFim}`
+          : params.data;
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          reference_period: periodo, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ count: votacoes.length, votacoes }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter orientação de bancada");
       }
@@ -254,19 +270,24 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
             : params.status === "encerrados"
               ? "/materia/vetos/encerrados"
               : "/materia/vetos/aposrcn";
-        const response = await cachedFetch("senado_vetos", { path }, CACHE_ON_DEMAND, () =>
-          upstreamFetch(path, {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_vetos", { path }, CACHE_ON_DEMAND,
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const body = stripWrapper(response);
         const todos = ensureArray((body as any)?.Vetos?.Veto ?? firstArrayDeep(body)).map(parseVeto);
         const limite = params.limite ?? 100;
         const vetos = todos.slice(0, limite);
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          reference_period: params.ano ? String(params.ano) : undefined,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           count: vetos.length,
           total: todos.length,
           ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} vetos.` } : {}),
           vetos,
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao listar vetos");
       }
@@ -289,10 +310,14 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
           : tipo === "dispositivo"
             ? `/plenario/resultado/veto/dispositivo/${params.codigo}`
             : `/plenario/resultado/veto/${params.codigo}`;
-        const response = await cachedFetch("senado_resultado_veto", { path }, CACHE_ON_DEMAND, () =>
-          upstreamFetch(path, {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_resultado_veto", { path }, CACHE_ON_DEMAND,
+          () => upstreamFetch(path, {}, baseUrl),
         );
-        return toolResult({ codigo: params.codigo, tipo, resultado: stripWrapper(response) });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `${tipo}=${params.codigo}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ codigo: params.codigo, tipo, resultado: stripWrapper(response) }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter resultado do veto");
       }
@@ -313,16 +338,20 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
         const path = secao === "detalhes"
           ? `/plenario/encontro/${params.codigo}`
           : `/plenario/encontro/${params.codigo}/${secao}`;
-        const response = await cachedFetch("senado_encontro_plenario", { path }, CACHE_ON_DEMAND, () =>
-          upstreamFetch(path, {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_encontro_plenario", { path }, CACHE_ON_DEMAND,
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const body = stripWrapper(response);
         const encontros = ensureArray((body as any)?.encontros?.encontro ?? body);
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `encontro=${params.codigo}; secao=${secao}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           codigo: params.codigo,
           secao,
           encontro: encontros.length === 1 ? encontros[0] : encontros,
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter encontro do plenário");
       }
@@ -345,7 +374,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
           : params.tabela === "tipos-comparecimento"
             ? "/plenario/lista/tiposComparecimento"
             : "/plenario/lista/legislaturas";
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_tabelas_plenario",
           { tabela: params.tabela },
           CACHE_STATIC,
@@ -357,12 +386,15 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
           linhas = linhas.filter((l: any) => JSON.stringify(l).toLowerCase().includes(f));
         }
         const limite = params.limite ?? 100;
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `tabela=${params.tabela}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           tabela: params.tabela,
           count: Math.min(linhas.length, limite),
           total: linhas.length,
           linhas: linhas.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar tabela do plenário");
       }

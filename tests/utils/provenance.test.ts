@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   ProvenanceSchema,
   SOURCES,
+  ECIDADANIA_BASE_URL,
   buildProvenance,
   provenanceFor,
+  provenanceEcidadania,
   provenanceFooter,
   resultWithProvenance,
 } from "../../src/utils/provenance.js";
@@ -82,6 +84,36 @@ describe("provenanceFor", () => {
   it("does not double the slash when baseUrl has a trailing slash", () => {
     const p = provenanceFor("SENADO_ADM", "https://adm.senado.gov.br/adm-dadosabertos/", "/orgao");
     expect(p.source_url).toBe("https://adm.senado.gov.br/adm-dadosabertos/orgao");
+  });
+
+  it("carries the budget-execution source (Arquimedes/Financeiro feed)", () => {
+    const p = provenanceFor(
+      "SENADO_ORCAMENTO_EXEC",
+      "https://www.senado.gov.br",
+      "/bi-arqs/Arquimedes/Financeiro/DespesaSenadoDadosAbertos.json",
+      { reference_period: "2024", retrieved_at: "2026-01-01T00:00:00.000Z" },
+    );
+    expect(p.source).toBe(SOURCES.SENADO_ORCAMENTO_EXEC.source);
+    expect(p.source_url).toBe(
+      "https://www.senado.gov.br/bi-arqs/Arquimedes/Financeiro/DespesaSenadoDadosAbertos.json",
+    );
+    expect(p.reference_period).toBe("2024");
+  });
+});
+
+describe("provenanceEcidadania", () => {
+  it("prepends the portal base for a section path", () => {
+    const p = provenanceEcidadania("/principalmateria", { dataset_id: "consultas" });
+    expect(p.source).toBe(SOURCES.ECIDADANIA.source);
+    expect(p.source_url).toBe(`${ECIDADANIA_BASE_URL}/principalmateria`);
+    expect(p.dataset_id).toBe("consultas");
+  });
+
+  it("uses a full item URL as-is (level-3 canonical item provenance)", () => {
+    const url = "https://www12.senado.leg.br/ecidadania/visualizacaomateria?id=42";
+    const p = provenanceEcidadania(url, { dataset_id: "consulta=42", retrieved_at: "2026-01-02T03:04:05.000Z" });
+    expect(p.source_url).toBe(url);
+    expect(p.retrieved_at).toBe("2026-01-02T03:04:05.000Z");
   });
 });
 

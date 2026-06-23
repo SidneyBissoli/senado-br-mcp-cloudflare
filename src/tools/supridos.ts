@@ -8,9 +8,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch } from "../throttle/adm.js";
-import { toolResult, errorFrom, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_STATIC } from "../types.js";
 import { matchesFiltro } from "./contratacoes.js";
 
@@ -36,11 +37,12 @@ export function registerSupridosTools(server: McpServer, admBaseUrl: string) {
     async (params) => {
       try {
         const tipo = params.tipo ?? "supridos";
-        const response = await cachedFetch(
+        const path = PATHS[tipo](params.ano);
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_suprimento_fundos",
           { ano: params.ano, tipo },
           CACHE_STATIC,
-          () => admFetch(PATHS[tipo](params.ano), {}, admBaseUrl),
+          () => admFetch(path, {}, admBaseUrl),
         );
         let lista = ensureArray(response);
         if (params.filtro) {
@@ -48,14 +50,19 @@ export function registerSupridosTools(server: McpServer, admBaseUrl: string) {
           lista = lista.filter((item: any) => matchesFiltro(JSON.stringify(item), f));
         }
         const limite = params.limite ?? 100;
-        return toolResult({
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1${path}`, {
+          dataset_id: `suprimento; tipo=${tipo}; ano=${params.ano}`,
+          reference_period: String(params.ano),
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           ano: params.ano,
           tipo,
           count: Math.min(lista.length, limite),
           total: lista.length,
           ...(lista.length > limite ? { aviso: `Exibindo ${limite} de ${lista.length} registros.` } : {}),
           registros: lista.slice(0, limite),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar suprimento de fundos");
       }

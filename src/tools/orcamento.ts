@@ -5,9 +5,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, errorFrom, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC } from "../types.js";
 
 /** Parse a budget amendment batch. */
@@ -51,7 +52,7 @@ export function registerOrcamentoTools(server: McpServer, baseUrl: string) {
       try {
         const tipo = params.tipo ?? "emendas";
         if (tipo === "oficios") {
-          const response = await cachedFetch(
+          const { value: response, fetchedAt } = await cachedFetchWithMeta(
             "senado_orcamento_oficios",
             {},
             CACHE_SEMI_STATIC,
@@ -63,9 +64,12 @@ export function registerOrcamentoTools(server: McpServer, baseUrl: string) {
             r?.Oficios?.Oficio ??
             r?.ListaOficios?.Oficios?.Oficio,
           ).map(parseOficio);
-          return toolResult({ tipo, count: oficios.length, oficios });
+          const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/orcamento/oficios", {
+            dataset_id: "tipo=oficios", retrieved_at: fetchedAt,
+          });
+          return resultWithProvenance({ tipo, count: oficios.length, oficios }, prov);
         }
-        const response = await cachedFetch(
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_orcamento_emendas",
           {},
           CACHE_SEMI_STATIC,
@@ -77,7 +81,10 @@ export function registerOrcamentoTools(server: McpServer, baseUrl: string) {
           r?.Emendas?.Emenda ??
           r?.ListaEmendas?.Emendas?.Emenda,
         ).map(parseEmenda);
-        return toolResult({ tipo, count: emendas.length, emendas });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/orcamento/lista", {
+          dataset_id: "tipo=emendas", retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ tipo, count: emendas.length, emendas }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter dados orçamentários");
       }

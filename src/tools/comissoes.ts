@@ -14,9 +14,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, errorFrom, ensureArray } from "../utils/validation.js";
+import { toolError, errorFrom, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
 
 export function formatDateYMD(d: Date): string {
@@ -46,8 +47,9 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const response = await cachedFetch("senado_listar_comissoes", {}, CACHE_SEMI_STATIC, () =>
-          upstreamFetch("/comissao/lista/colegiados", {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_listar_comissoes", {}, CACHE_SEMI_STATIC,
+          () => upstreamFetch("/comissao/lista/colegiados", {}, baseUrl),
         );
         const r = response as any;
         let comissoes = ensureArray(
@@ -73,7 +75,10 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         if (params.ativa === false) {
           comissoes = []; // this endpoint only returns active ones
         }
-        return toolResult({ count: comissoes.length, comissoes });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/comissao/lista/colegiados", {
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ count: comissoes.length, comissoes }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao listar comissões");
       }
@@ -99,8 +104,10 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         if (!codigo) return toolError(`Comissão com sigla "${sigla}" não encontrada.`);
 
         if (secao === "membros") {
-          const response = await cachedFetch("senado_membros_comissao", { codigo }, CACHE_SEMI_STATIC, () =>
-            upstreamFetch(`/composicao/comissao/${codigo}`, {}, baseUrl),
+          const membrosPath = `/composicao/comissao/${codigo}`;
+          const { value: response, fetchedAt } = await cachedFetchWithMeta(
+            "senado_membros_comissao", { codigo }, CACHE_SEMI_STATIC,
+            () => upstreamFetch(membrosPath, {}, baseUrl),
           );
           const r = response as any;
           const membros = ensureArray(
@@ -112,11 +119,16 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
             ativo: m.IndicadorVagaAtiva === "Sim",
             dataInicio: m.DataInicioMembroVaga || null,
           }));
-          return toolResult({ sigla, secao, count: membros.length, membros });
+          const prov = provenanceFor("SENADO_LEGIS", baseUrl, membrosPath, {
+            dataset_id: `comissao=${sigla}; codigo=${codigo}`, retrieved_at: fetchedAt,
+          });
+          return resultWithProvenance({ sigla, secao, count: membros.length, membros }, prov);
         }
 
-        const response = await cachedFetch("senado_obter_comissao", { codigo }, CACHE_SEMI_STATIC, () =>
-          upstreamFetch(`/comissao/${codigo}`, {}, baseUrl),
+        const resumoPath = `/comissao/${codigo}`;
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_obter_comissao", { codigo }, CACHE_SEMI_STATIC,
+          () => upstreamFetch(resumoPath, {}, baseUrl),
         );
         const r = response as any;
         const colegiado = ensureArray(
@@ -128,7 +140,10 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         const presidente = cargos.find((c: any) => c.TipoCargo === "PRESIDENTE");
         const vicePresidente = cargos.find((c: any) => c.TipoCargo === "VICE-PRESIDENTE");
 
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, resumoPath, {
+          dataset_id: `comissao=${sigla}; codigo=${codigo}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           codigo: parseInt(colegiado.CodigoColegiado || "0"),
           secao,
           sigla: colegiado.SiglaColegiado || sigla,
@@ -143,7 +158,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
           totalMembros: parseInt(colegiado.QuantidadesMembros?.Distribuicao?.Senadores || "0") || null,
           titulares: parseInt(colegiado.QuantidadesMembros?.Distribuicao?.SenadoresTitulares || "0") || null,
           suplentes: parseInt(colegiado.QuantidadesMembros?.Distribuicao?.SenadoresSuplentes || "0") || null,
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Comissão não encontrada");
       }
@@ -174,31 +189,34 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         const yearDi = parseInt(di.slice(0, 4));
         const yearDf = parseInt(df.slice(0, 4));
         let todas: any[] = [];
+        let fetchedAt: string;
         if (yearDi === yearDf) {
-          const response = await cachedFetch(
+          const res = await cachedFetchWithMeta(
             "senado_reunioes_comissao",
             { sigla, dataInicio: di, dataFim: df },
             CACHE_DYNAMIC,
             () => upstreamFetch(`/comissao/agenda/${di}/${df}`, {}, baseUrl),
           );
-          todas = ensureArray((response as any)?.AgendaReuniao?.reunioes?.reuniao);
+          fetchedAt = res.fetchedAt;
+          todas = ensureArray((res.value as any)?.AgendaReuniao?.reunioes?.reuniao);
         } else {
           // Split: [di..yearDi-12-31] + [yearDf-01-01..df]
-          const r1 = await cachedFetch(
+          const r1 = await cachedFetchWithMeta(
             "senado_reunioes_comissao_p1",
             { sigla, dataInicio: di, dataFim: `${yearDi}1231` },
             CACHE_DYNAMIC,
             () => upstreamFetch(`/comissao/agenda/${di}/${yearDi}1231`, {}, baseUrl),
           );
-          const r2 = await cachedFetch(
+          const r2 = await cachedFetchWithMeta(
             "senado_reunioes_comissao_p2",
             { sigla, dataInicio: `${yearDf}0101`, dataFim: df },
             CACHE_DYNAMIC,
             () => upstreamFetch(`/comissao/agenda/${yearDf}0101/${df}`, {}, baseUrl),
           );
+          fetchedAt = r1.fetchedAt;
           todas = [
-            ...ensureArray((r1 as any)?.AgendaReuniao?.reunioes?.reuniao),
-            ...ensureArray((r2 as any)?.AgendaReuniao?.reunioes?.reuniao),
+            ...ensureArray((r1.value as any)?.AgendaReuniao?.reunioes?.reuniao),
+            ...ensureArray((r2.value as any)?.AgendaReuniao?.reunioes?.reuniao),
           ];
         }
         const reunioes = todas
@@ -215,7 +233,15 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
             tipo: re.tipo?.descricao || null,
             situacao: re.situacao || null,
           }));
-        return toolResult({ sigla, periodo: { dataInicio: di, dataFim: df }, count: reunioes.length, reunioes });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/comissao/agenda/${di}/${df}`, {
+          dataset_id: `comissao=${sigla}`,
+          reference_period: `${di}/${df}`,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance(
+          { sigla, periodo: { dataInicio: di, dataFim: df }, count: reunioes.length, reunioes },
+          prov,
+        );
       } catch (e) {
         return errorFrom(e, "Erro ao obter reuniões da comissão");
       }
@@ -233,8 +259,9 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
     async (params) => {
       try {
         const data = params.data || formatDateYMD(new Date());
-        const response = await cachedFetch("senado_agenda_comissoes", { data }, CACHE_DYNAMIC, () =>
-          upstreamFetch(`/comissao/agenda/${data}`, {}, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_agenda_comissoes", { data }, CACHE_DYNAMIC,
+          () => upstreamFetch(`/comissao/agenda/${data}`, {}, baseUrl),
         );
         const r = response as any;
         let reunioes = ensureArray(r?.AgendaReuniao?.reunioes?.reuniao).map((re: any) => {
@@ -254,7 +281,13 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
           const s = params.siglaComissao.toUpperCase();
           reunioes = reunioes.filter((r: any) => r.comissao.sigla.toUpperCase() === s);
         }
-        return toolResult({ data, siglaComissao: params.siglaComissao || null, count: reunioes.length, reunioes });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/comissao/agenda/${data}`, {
+          reference_period: data, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance(
+          { data, siglaComissao: params.siglaComissao || null, count: reunioes.length, reunioes },
+          prov,
+        );
       } catch (e) {
         return errorFrom(e, "Erro ao obter agenda das comissões");
       }
@@ -270,15 +303,21 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const reuniaoPath = `/comissao/reuniao/${params.codigoReuniao}`;
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_reuniao_comissao",
           { codigo: params.codigoReuniao },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(`/comissao/reuniao/${params.codigoReuniao}`, {}, baseUrl),
+          () => upstreamFetch(reuniaoPath, {}, baseUrl),
         );
         const re = (response as any)?.DetalheReuniao?.reuniao ?? (response as any)?.reuniao ?? response;
         const com = re.colegiadoCriador || {};
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, reuniaoPath, {
+          dataset_id: `codigoReuniao=${params.codigoReuniao}`,
+          reference_period: re.dataInicio ? String(re.dataInicio).split("T")[0] : undefined,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           codigo: parseInt(re.codigo || "0"),
           titulo: re.titulo || re.descricao || null,
           comissao: { sigla: com.sigla || null, nome: com.nome || null, casa: com.siglaCasa || null },
@@ -308,7 +347,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
               resultado: i.resultado || i.descricaoResultado || i.resultadoTexto || null,
             })),
           })),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Reunião de comissão não encontrada");
       }
@@ -330,7 +369,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
       try {
         const sigla = params.siglaCpi.toUpperCase();
         const pagina = params.pagina ?? 0;
-        const requerimentos = await cachedFetch(
+        const { value: requerimentos, fetchedAt } = await cachedFetchWithMeta<any[]>(
           "senado_requerimentos_cpi",
           { sigla, pagina },
           CACHE_DYNAMIC,
@@ -371,12 +410,15 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
             }
           },
         );
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/comissao/cpi/${sigla}/requerimentos`, {
+          dataset_id: `cpi=${sigla}; pagina=${pagina}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           siglaCpi: sigla,
           pagina,
           count: (requerimentos as any[]).length,
           requerimentos,
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter requerimentos da CPI");
       }
@@ -397,15 +439,19 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         const sigla = params.siglaComissao.toUpperCase();
         const tipo = params.tipo ?? "autoria";
         let parlamentares: any[];
+        let fetchedAt: string;
+        let path: string;
         if (tipo === "autoria") {
+          path = "/materia/distribuicao/autoria";
           const qp: Record<string, string> = { siglaComissao: sigla };
           if (params.codigoParlamentar) qp.codParlamentar = String(params.codigoParlamentar);
-          const response = await cachedFetch(
+          const { value: response, fetchedAt: fa } = await cachedFetchWithMeta(
             "senado_distribuicao_materias",
             { tipo, ...qp },
             CACHE_DYNAMIC,
-            () => upstreamFetch("/materia/distribuicao/autoria", qp, baseUrl),
+            () => upstreamFetch(path, qp, baseUrl),
           );
+          fetchedAt = fa;
           const r = response as any;
           const comissao = ensureArray(r?.ParlamentarcomMaterianaComissao?.Comissoes?.Comissao)[0];
           parlamentares = ensureArray((comissao as any)?.Parlamentares?.Parlamentar).map((p: any) => ({
@@ -416,12 +462,14 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
             quantidade: parseInt(p.Quantidade || "0"),
           }));
         } else {
-          const response = await cachedFetch(
+          path = `/materia/distribuicao/relatoria/${sigla}`;
+          const { value: response, fetchedAt: fa } = await cachedFetchWithMeta(
             "senado_distribuicao_materias",
             { tipo, sigla },
             CACHE_DYNAMIC,
-            () => upstreamFetch(`/materia/distribuicao/relatoria/${sigla}`, {}, baseUrl),
+            () => upstreamFetch(path, {}, baseUrl),
           );
+          fetchedAt = fa;
           const r = response as any;
           parlamentares = ensureArray(r?.DistribuicaodeRelatoria?.Totais?.Parlamentares).map((p: any) => ({
             codigo: parseInt(p.CodigoParlamentar || "0") || null,
@@ -432,12 +480,15 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
           }));
         }
         parlamentares.sort((a, b) => b.quantidade - a.quantidade);
-        return toolResult({
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `comissao=${sigla}; tipo=${tipo}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({
           siglaComissao: sigla,
           tipo,
           count: parlamentares.length,
           parlamentares,
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter distribuição de matérias");
       }

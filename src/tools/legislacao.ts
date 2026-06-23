@@ -6,9 +6,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 
 /** Parse a legislation search result. */
@@ -65,15 +66,20 @@ export function registerLegislacaoTools(server: McpServer, baseUrl: string) {
         if (Object.keys(qp).length === 0) {
           return toolError("É obrigatório informar pelo menos um parâmetro de busca.");
         }
-        const response = await cachedFetch("senado_buscar_legislacao", qp, CACHE_ON_DEMAND, () =>
-          upstreamFetch("/legislacao/lista", qp, baseUrl),
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+          "senado_buscar_legislacao", qp, CACHE_ON_DEMAND,
+          () => upstreamFetch("/legislacao/lista", qp, baseUrl),
         );
         const r = response as any;
         const normas = ensureArray(
           r?.ListaNormas?.Normas?.Norma ??
           r?.Normas?.Norma,
         ).map(parseLegislacaoResumo);
-        return toolResult({ count: normas.length, normas });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/legislacao/lista", {
+          reference_period: params.ano ? String(params.ano) : undefined,
+          retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ count: normas.length, normas }, prov);
       } catch (e) {
         return errorFrom(e, "Erro na busca de legislação");
       }
@@ -89,15 +95,19 @@ export function registerLegislacaoTools(server: McpServer, baseUrl: string) {
     },
     async (params) => {
       try {
-        const response = await cachedFetch(
+        const path = `/legislacao/${params.codigo}`;
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_obter_legislacao",
           { codigo: params.codigo },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(`/legislacao/${params.codigo}`, {}, baseUrl),
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const r = response as any;
         const norma = r?.DetalheNorma?.Norma || r?.Norma || r;
-        return toolResult(parseLegislacaoDetalhe(norma));
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `norma=${params.codigo}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance(parseLegislacaoDetalhe(norma), prov);
       } catch (e) {
         return errorFrom(e, "Norma não encontrada");
       }

@@ -10,9 +10,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolResult, errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 
 const TRECHO_LEN = 200;
@@ -71,11 +72,12 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
     async (params) => {
       try {
         const tipo = params.tipo ?? "sessao";
-        const response = await cachedFetch(
+        const path = `/taquigrafia/notas/${tipo}/${params.id}`;
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_notas_taquigraficas",
           { tipo, id: params.id },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(`/taquigrafia/notas/${tipo}/${params.id}`, {}, baseUrl),
+          () => upstreamFetch(path, {}, baseUrl),
         );
         const nt = (response as any)?.notasTaquigraficas ?? response;
         let quartos = ensureArray(nt?.quartos);
@@ -91,8 +93,13 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
           data: nt?.data || null,
           totalBlocos: quartos.length,
         };
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `${tipo}=${params.id}`,
+          reference_period: nt?.data || undefined,
+          retrieved_at: fetchedAt,
+        });
         if ((params.modo ?? "resumo") === "resumo") {
-          return toolResult({ ...dados, blocos: quartos.map(parseQuartoResumo) });
+          return resultWithProvenance({ ...dados, blocos: quartos.map(parseQuartoResumo) }, prov);
         }
         const inicio = params.sequenciaInicio ?? 1;
         const fim = Math.min(params.sequenciaFim ?? inicio + MAX_QUARTOS_TEXTO - 1, inicio + MAX_QUARTOS_TEXTO - 1);
@@ -100,11 +107,11 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
           const seq = safeInt(q.sequencia);
           return seq >= inicio && seq <= fim;
         });
-        return toolResult({
+        return resultWithProvenance({
           ...dados,
           intervalo: { sequenciaInicio: inicio, sequenciaFim: fim },
           blocos: selecionados.map(parseQuartoTexto),
-        });
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter notas taquigráficas");
       }
@@ -123,18 +130,22 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
     async (params) => {
       try {
         const tipo = params.tipo ?? "sessao";
-        const response = await cachedFetch(
+        const path = `/taquigrafia/videos/${tipo}/${params.id}`;
+        const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_videos_taquigrafia",
           { tipo, id: params.id },
           CACHE_ON_DEMAND,
-          () => upstreamFetch(`/taquigrafia/videos/${tipo}/${params.id}`, {}, baseUrl),
+          () => upstreamFetch(path, {}, baseUrl),
         );
         let videos = ensureArray(response).map(parseVideoUnidade);
         if (params.orador) {
           const alvo = params.orador.toLowerCase();
           videos = videos.filter((v) => v.orador?.toLowerCase().includes(alvo));
         }
-        return toolResult({ id: params.id, tipo, count: videos.length, videos });
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `${tipo}=${params.id}`, retrieved_at: fetchedAt,
+        });
+        return resultWithProvenance({ id: params.id, tipo, count: videos.length, videos }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter vídeos da sessão");
       }

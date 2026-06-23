@@ -12,8 +12,9 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch } from "../cache/manager.js";
-import { toolResult, toolError } from "../utils/validation.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
+import { toolError } from "../utils/validation.js";
+import { provenanceEcidadania, resultWithProvenance } from "../utils/provenance.js";
 import { logger } from "../utils/logger.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 import type { Env } from "../types.js";
@@ -76,6 +77,24 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // original coverage bug); serve the corpus from D1 instead. Live is reserved for an empty D1.
   const CONSULTAS_RESOLVE = { fallbackOnStale: false } as const;
 
+  // Listas vêm do D1 (resolveList): o retrieved_at fiel é o lastScrapedAt da meta — a idade
+  // real do dado, não o instante desta chamada. `pathOrUrl` é a página de seção do portal.
+  function provLista(pathOrUrl: string, dataset_id: string, meta: unknown) {
+    const ts = (meta as { lastScrapedAt?: unknown } | null)?.lastScrapedAt;
+    return provenanceEcidadania(pathOrUrl, {
+      dataset_id,
+      retrieved_at: typeof ts === "string" && ts ? ts : undefined,
+    });
+  }
+
+  // Detalhes são raspados ao vivo (via cachedFetch): use a URL canônica do próprio item quando
+  // o scraper a expõe (nível 3), com o fetchedAt do cache como retrieved_at.
+  function provDetalhe(item: unknown, fallbackPath: string, dataset_id: string, fetchedAt: string) {
+    const url = (item as { url?: unknown } | null)?.url;
+    const alvo = typeof url === "string" && url.startsWith("http") ? url : fallbackPath;
+    return provenanceEcidadania(alvo, { dataset_id, retrieved_at: fetchedAt });
+  }
+
   function ecidadaniaError(e: unknown) {
     const msg = e instanceof Error ? e.message : "Erro ao acessar e-Cidadania";
     const retryable = e instanceof Error && "retryable" in e && typeof (e as any).retryable === "boolean"
@@ -107,7 +126,10 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         let filtered = items as ConsultaResumo[];
         if (status !== "todas") filtered = filtered.filter((c) => c.status === status);
         const out = filtered.slice(0, params.limite);
-        return toolResult({ count: out.length, consultas: out, meta });
+        return resultWithProvenance(
+          { count: out.length, consultas: out, meta },
+          provLista("/principalmateria", "consultas", meta),
+        );
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -119,11 +141,14 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
     { id: z.number().int().positive().describe("ID da consulta pública") },
     async (params) => {
       try {
-        const r = await cachedFetch("ecidadania_consulta", { id: params.id }, CACHE_ON_DEMAND, () =>
+        const { value: r, fetchedAt } = await cachedFetchWithMeta("ecidadania_consulta", { id: params.id }, CACHE_ON_DEMAND, () =>
           obterConsultaInternal(params.id),
         );
         writeDetalheThrough(db, ctx, "consultas", params.id, r as Record<string, unknown>);
-        return toolResult(r);
+        return resultWithProvenance(
+          r as Record<string, unknown>,
+          provDetalhe(r, `/visualizacaomateria?id=${params.id}`, `consulta=${params.id}`, fetchedAt),
+        );
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -176,7 +201,10 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
             .slice(0, limite);
           criterio = `≥${percentualMinimo}% numa direção, mínimo ${minimoVotos} votos`;
         }
-        return toolResult({ modo, criterio, count: filtered.length, consultas: filtered, meta });
+        return resultWithProvenance(
+          { modo, criterio, count: filtered.length, consultas: filtered, meta },
+          provLista("/principalmateria", "consultas", meta),
+        );
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -202,7 +230,10 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           arr = [...arr].sort((a, b) => (params.ordem === "asc" ? a.apoios - b.apoios : b.apoios - a.apoios));
         }
         arr = arr.slice(0, params.limite ?? 20);
-        return toolResult({ count: arr.length, ideias: arr, meta });
+        return resultWithProvenance(
+          { count: arr.length, ideias: arr, meta },
+          provLista("/principalideia", "ideias", meta),
+        );
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -214,11 +245,14 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
     { id: z.number().int().positive().describe("ID da ideia legislativa") },
     async (params) => {
       try {
-        const r = await cachedFetch("ecidadania_ideia", { id: params.id }, CACHE_ON_DEMAND, () =>
+        const { value: r, fetchedAt } = await cachedFetchWithMeta("ecidadania_ideia", { id: params.id }, CACHE_ON_DEMAND, () =>
           obterIdeiaInternal(params.id),
         );
         writeDetalheThrough(db, ctx, "ideias", params.id, r as Record<string, unknown>);
-        return toolResult(r);
+        return resultWithProvenance(
+          r as Record<string, unknown>,
+          provDetalhe(r, `/visualizacaoideia?id=${params.id}`, `ideia=${params.id}`, fetchedAt),
+        );
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -255,7 +289,10 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           });
         }
         eventos = eventos.slice(0, limite);
-        return toolResult({ count: eventos.length, eventos, meta });
+        return resultWithProvenance(
+          { count: eventos.length, eventos, meta },
+          provLista("/principalaudiencia", "eventos", meta),
+        );
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -267,11 +304,14 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
     { id: z.number().int().positive().describe("ID do evento") },
     async (params) => {
       try {
-        const r = await cachedFetch("ecidadania_evento", { id: params.id }, CACHE_ON_DEMAND, () =>
+        const { value: r, fetchedAt } = await cachedFetchWithMeta("ecidadania_evento", { id: params.id }, CACHE_ON_DEMAND, () =>
           obterEventoInternal(params.id),
         );
         writeDetalheThrough(db, ctx, "eventos", params.id, r as Record<string, unknown>);
-        return toolResult(r);
+        return resultWithProvenance(
+          r as Record<string, unknown>,
+          provDetalhe(r, `/visualizacaoaudiencia?id=${params.id}`, `evento=${params.id}`, fetchedAt),
+        );
       } catch (e) { return ecidadaniaError(e); }
     },
   );
@@ -339,13 +379,13 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
 
         sugestoes.sort((a, b) => b.metricas.participacao - a.metricas.participacao);
 
-        return toolResult({
+        return resultWithProvenance({
           criteriosAplicados: criterios,
           totalAnalisados: consultas.length + ideias.length,
           count: sugestoes.length,
           sugestoes: sugestoes.slice(0, 10),
           meta: { consultas: cRes.meta, ideias: iRes.meta },
-        });
+        }, provLista("/principalmateria", "consultas+ideias", cRes.meta));
       } catch (e) { return ecidadaniaError(e); }
     },
   );
