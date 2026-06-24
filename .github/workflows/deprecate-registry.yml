@@ -43,8 +43,9 @@ jobs:
         run: ./mcp-publisher login github-oidc
 
       - name: Set status
+        # `status` prompts "Continue? [y/N]" — there is no stdin in CI, so feed it `y`.
         run: |
-          ./mcp-publisher status \
+          printf 'y\n' | ./mcp-publisher status \
             --status "${{ inputs.status }}" \
             --message "${{ inputs.message }}" \
             --all-versions \
