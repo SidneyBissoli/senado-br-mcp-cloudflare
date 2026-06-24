@@ -1,0 +1,51 @@
+name: Deprecate server in MCP Registry
+
+# Manual maintenance workflow: marks a server (all versions) as `deprecated`
+# in the Official MCP Registry. Used to retire superseded listings — e.g. the
+# old standalone `io.github.SidneyBissoli/senado-br-mcp` package, now replaced
+# by `io.github.SidneyBissoli/senado-br-mcp-cloudflare`.
+#
+# Auth uses GitHub OIDC, which proves ownership of the io.github.SidneyBissoli
+# namespace — no secrets. Reversible: re-run with status `active` to undo.
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_name:
+        description: "Registry server name (e.g. io.github.SidneyBissoli/senado-br-mcp)"
+        required: true
+        default: "io.github.SidneyBissoli/senado-br-mcp"
+      status:
+        description: "Target status"
+        required: true
+        default: "deprecated"
+        type: choice
+        options:
+          - deprecated
+          - active
+      message:
+        description: "Deprecation message"
+        required: true
+        default: "Substituído pelo servidor oficial senado-br-mcp-cloudflare (66 tools, proveniência; hospedado + npx senado-br-mcp v3.x). github.com/SidneyBissoli/senado-br-mcp-cloudflare"
+
+jobs:
+  deprecate:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # OIDC
+      contents: read
+    steps:
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+
+      - name: Set status
+        run: |
+          ./mcp-publisher status \
+            --status "${{ inputs.status }}" \
+            --message "${{ inputs.message }}" \
+            --all-versions \
+            "${{ inputs.server_name }}"
