@@ -37,7 +37,7 @@ export interface ListingItem {
 }
 
 /** Decode the handful of HTML entities that appear in listing anchor text. */
-function decodeEntities(s: string): string {
+export function decodeEntities(s: string): string {
   return s
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')

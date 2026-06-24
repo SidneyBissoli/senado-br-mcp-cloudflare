@@ -14,7 +14,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { toolError } from "../utils/validation.js";
-import { provenanceEcidadania, resultWithProvenance } from "../utils/provenance.js";
+import { provenanceEcidadania, provenanceArquimedesVotos, resultWithProvenance } from "../utils/provenance.js";
 import { logger } from "../utils/logger.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 import type { Env } from "../types.js";
@@ -37,6 +37,7 @@ import {
   type ConsultaResumo,
   type IdeiaResumo,
   type EventoResumo,
+  type ConsultaVotoResumo,
 } from "../scraper/ecidadania.js";
 
 // Re-export the scraper's pure/IO helpers so existing unit tests keep importing them from here.
@@ -63,19 +64,17 @@ export {
 
 export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env: Env, ctx?: ExecutionContext) {
   const db = env.ECIDADANIA_DB;
-  const staleMaxMin = () => {
-    const n = parseInt(env.ECIDADANIA_STALE_MAX_MIN ?? "", 10);
-    return Number.isFinite(n) && n > 0 ? n : 360;
-  };
-  // consultas is a weekly full corpus, not a 2h set, so it gets a much larger staleness window —
+  // All three e-Cidadania entities are now weekly full corpora, not 2h highlight sets, so they get a
+  // much larger staleness window —
   // otherwise possivelDesatualizacao would trip ~6h after every weekly load. See store.resolveList.
   const corpusStaleMaxMin = () => {
     const n = parseInt(env.ECIDADANIA_CORPUS_STALE_MAX_MIN ?? "", 10);
     return Number.isFinite(n) && n > 0 ? n : 14400; // ~10 days
   };
-  // consultas must never collapse to the ~5-item live highlight scrape on staleness (that was the
-  // original coverage bug); serve the corpus from D1 instead. Live is reserved for an empty D1.
-  const CONSULTAS_RESOLVE = { fallbackOnStale: false } as const;
+  // Corpus entities (consultas, eventos, ideias) must never collapse to the ~5-item live highlight
+  // scrape on staleness (that was the original coverage bug); serve the corpus from D1 flagged
+  // instead. Live is reserved for an empty D1 (cold start, before the first weekly corpus run).
+  const CORPUS_RESOLVE = { fallbackOnStale: false } as const;
 
   // Listas vêm do D1 (resolveList): o retrieved_at fiel é o lastScrapedAt da meta — a idade
   // real do dado, não o instante desta chamada. `pathOrUrl` é a página de seção do portal.
@@ -120,7 +119,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         const { items, meta } = await resolveList(
           db, "consultas", corpusStaleMaxMin(),
           () => listarConsultasInternal({ limite: 100 }),
-          undefined, CONSULTAS_RESOLVE,
+          undefined, CORPUS_RESOLVE,
         );
         const status = params.status ?? "aberta";
         let filtered = items as ConsultaResumo[];
@@ -179,7 +178,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         const { items, meta } = await resolveList(
           db, "consultas", corpusStaleMaxMin(),
           () => listarConsultasInternal({ limite: 100 }),
-          undefined, CONSULTAS_RESOLVE,
+          undefined, CORPUS_RESOLVE,
         );
         const all = (items as ConsultaResumo[]).filter(
           (c) => statusFiltro === "todas" || c.status === statusFiltro,
@@ -212,20 +211,23 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G5. senado_ecidadania_listar_ideias
   server.tool(
     "senado_ecidadania_listar_ideias",
-    "Lista ideias legislativas propostas por cidadãos no portal e-Cidadania. Retorna `{ count, ideias }`, cada ideia com código, título, autor, número de apoios e status; resultado paginado (padrão 20 por página, ordenável por apoios, data ou comentários). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`, opcionalmente `status: \"aberta\"`). Para o detalhe completo de uma ideia (texto, apoios, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o código.",
+    "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1, atualizado semanalmente; ~150 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`) e `url` (`autor` e `dataPublicacao` só aparecem no detalhe, vêm `null` aqui). Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
     {
       status: z.enum(["aberta", "encerrada", "convertida", "todas"]).optional().describe("Filtrar por status"),
-      ordenarPor: z.enum(["apoios", "data", "comentarios"]).optional().describe("Campo para ordenação"),
+      ordenarPor: z.enum(["apoios", "data", "comentarios"]).optional().describe("Campo para ordenação (apoios é o disponível no corpus; data/comentarios só no detalhe)"),
       ordem: z.enum(["asc", "desc"]).optional().describe("Ordem de ordenação"),
       limite: z.number().int().min(1).max(100).optional().default(20).describe("Número máximo de resultados"),
       pagina: z.number().int().min(1).optional().default(1).describe("Página de resultados"),
     },
     async (params) => {
       try {
-        const { items, meta } = await resolveList(db, "ideias", staleMaxMin(), () =>
-          listarIdeiasInternal({ limite: 100 }),
+        const { items, meta } = await resolveList(
+          db, "ideias", corpusStaleMaxMin(),
+          () => listarIdeiasInternal({ limite: 100 }),
+          undefined, CORPUS_RESOLVE,
         );
         let arr = items as IdeiaResumo[];
+        if (params.status && params.status !== "todas") arr = arr.filter((i) => i.status === params.status);
         if (params.ordenarPor === "apoios") {
           arr = [...arr].sort((a, b) => (params.ordem === "asc" ? a.apoios - b.apoios : b.apoios - a.apoios));
         }
@@ -260,7 +262,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G7. senado_ecidadania_listar_eventos
   server.tool(
     "senado_ecidadania_listar_eventos",
-    "Lista eventos interativos do e-Cidadania (audiências públicas, sabatinas, lives). Retorna `{ count, eventos }`, cada evento com `id`, `titulo`, `data`, `hora`, `comissao` (sigla), `comentarios`, `status` (`agendado`/`encerrado`) e `url`; aceita filtro por `status`, por `comissao` (sigla) e `limite` (padrão 20). Para um ranking dos mais comentados, ordene por comentários (`ordenarPor: \"comentarios\"`, `ordem: \"desc\"`). Para o detalhe completo de um evento use `senado_ecidadania_obter_evento`.",
+    "Lista eventos interativos do e-Cidadania (audiências públicas, sabatinas, lives) — conjunto completo (corpus persistido em D1, atualizado semanalmente; ~milhares de eventos, incluindo encerrados). Retorna `{ count, eventos }`, cada evento com `id`, `titulo`, `data`, `hora`, `comissao` (sigla), `comentarios`, `status` (`agendado`/`encerrado`/`cancelado`) e `url`; aceita filtro por `status`, por `comissao` (sigla) e `limite` (padrão 20). Para um ranking dos mais comentados, ordene por comentários (`ordenarPor: \"comentarios\"`, `ordem: \"desc\"`). Para o detalhe completo de um evento use `senado_ecidadania_obter_evento`.",
     {
       status: z.enum(["agendado", "encerrado", "todos"]).optional().describe("Filtrar por status"),
       comissao: z.string().optional().describe("Sigla da comissão"),
@@ -272,8 +274,10 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
       try {
         const limite = params.limite ?? 20;
         const ordem = params.ordem ?? "desc";
-        const { items, meta } = await resolveList(db, "eventos", staleMaxMin(), () =>
-          listarEventosInternal({ limite: 100 }),
+        const { items, meta } = await resolveList(
+          db, "eventos", corpusStaleMaxMin(),
+          () => listarEventosInternal({ limite: 100 }),
+          undefined, CORPUS_RESOLVE,
         );
         let eventos = (items as EventoResumo[]).filter((e) => {
           if (params.status && params.status !== "todos" && e.status !== params.status) return false;
@@ -339,9 +343,13 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           resolveList(
             db, "consultas", corpusStaleMaxMin(),
             () => listarConsultasInternal({ limite: 100 }),
-            undefined, CONSULTAS_RESOLVE,
+            undefined, CORPUS_RESOLVE,
           ),
-          resolveList(db, "ideias", staleMaxMin(), () => listarIdeiasInternal({ limite: 100 })),
+          resolveList(
+            db, "ideias", corpusStaleMaxMin(),
+            () => listarIdeiasInternal({ limite: 100 }),
+            undefined, CORPUS_RESOLVE,
+          ),
         ]);
         // apenasEmTramitacao is now honored against the real /processo-derived status (aberta ⟺ em
         // tramitação), so the criterion is no longer inert (§2.1 / §7).
@@ -386,6 +394,75 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           sugestoes: sugestoes.slice(0, 10),
           meta: { consultas: cRes.meta, ideias: iRes.meta },
         }, provLista("/principalmateria", "consultas+ideias", cRes.meta));
+      } catch (e) { return ecidadaniaError(e); }
+    },
+  );
+
+  // G10. senado_ecidadania_consultas_votos (acervo histórico de votos por UF — CSV Arquimedes)
+  server.tool(
+    "senado_ecidadania_consultas_votos",
+    "Acervo **histórico** de votos das consultas públicas do e-Cidadania, com **quebra por UF** (fonte: CSV Arquimedes; ~15 mil matérias, atualizado semanalmente). Diferente de `senado_ecidadania_listar_consultas` (consultas em tramitação): aqui o conjunto é o **arquivo** de matérias já consultadas — `status` vem como `Descontinuado` no arquivo de origem, por isso é tratado como acervo, não como opinião atual. Retorna `{ count, referencePeriod, consultas }`, cada item com `id`, `materia`, `ementa`, `autoria`, `votosSim`/`votosNao`/`totalVotos`, `votosPorUf` (`{ UF: { sim, nao } }`) e `url`. Use `ordenarPor` (`total`/`sim`/`nao`, padrão `total`) e `ordem` para ranking; `uf` para recortar e **ranquear por aquele estado** (só matérias com votos na UF, e cada item ganha `recorteUf`); `materia` para filtrar por código (numérico) ou trecho do nome/ementa; `limite` (padrão 20).",
+    {
+      ordenarPor: z.enum(["total", "sim", "nao"]).optional().default("total").describe("Métrica do ranking (padrão: total de votos)"),
+      ordem: z.enum(["asc", "desc"]).optional().default("desc").describe("Ordem (padrão desc)"),
+      uf: z.string().length(2).optional().describe("Sigla da UF (ex.: SP) — filtra e ranqueia por votos daquele estado"),
+      materia: z.string().optional().describe("Filtro por código da matéria (numérico) ou trecho do nome/ementa"),
+      limite: z.number().int().min(1).max(100).optional().default(20).describe("Número máximo de resultados"),
+    },
+    async (params) => {
+      try {
+        const ordenarPor = params.ordenarPor ?? "total";
+        const ordem = params.ordem ?? "desc";
+        const limite = params.limite ?? 20;
+        const uf = params.uf?.toUpperCase();
+        const { items, meta } = await resolveList(
+          db, "consultas_votos", corpusStaleMaxMin(),
+          async () => [], // sem fonte ao vivo: na 1ª carga (D1 vazio) responde vazio com aviso
+          undefined, CORPUS_RESOLVE,
+        );
+        let arr = items as ConsultaVotoResumo[];
+
+        if (params.materia) {
+          const q = params.materia.trim();
+          if (/^\d+$/.test(q)) {
+            const code = Number(q);
+            arr = arr.filter((v) => v.id === code);
+          } else {
+            const needle = q.toLowerCase();
+            arr = arr.filter((v) => v.materia.toLowerCase().includes(needle) || v.ementa.toLowerCase().includes(needle));
+          }
+        }
+
+        // Ranking metric: by UF when `uf` is set (and drop matérias without votes there), else aggregate.
+        const valueOf = (v: ConsultaVotoResumo): number => {
+          if (uf) {
+            const u = v.votosPorUf[uf];
+            if (!u) return Number.NEGATIVE_INFINITY;
+            return ordenarPor === "sim" ? u.sim : ordenarPor === "nao" ? u.nao : u.sim + u.nao;
+          }
+          return ordenarPor === "sim" ? v.votosSim : ordenarPor === "nao" ? v.votosNao : v.totalVotos;
+        };
+        if (uf) arr = arr.filter((v) => v.votosPorUf[uf]);
+        arr = [...arr].sort((a, b) => (ordem === "asc" ? valueOf(a) - valueOf(b) : valueOf(b) - valueOf(a)));
+
+        const out = arr.slice(0, limite).map((v) => {
+          if (!uf) return v;
+          const u = v.votosPorUf[uf]!;
+          return { ...v, recorteUf: { uf, votosSim: u.sim, votosNao: u.nao, totalVotos: u.sim + u.nao } };
+        });
+
+        const referencePeriod = (items[0] as ConsultaVotoResumo | undefined)?.referencePeriod ?? null;
+        const payload: Record<string, unknown> = { count: out.length, referencePeriod, consultas: out, meta };
+        if (out.length === 0 && (meta.fonte === "ao-vivo" || meta.motivo === "d1-vazio" || meta.motivo === "d1-indisponivel")) {
+          payload.aviso = "Acervo de votos ainda não ingerido (primeira carga semanal pendente) ou filtro sem correspondência.";
+        }
+        return resultWithProvenance(
+          payload,
+          provenanceArquimedesVotos({
+            reference_period: referencePeriod ?? undefined,
+            retrieved_at: typeof meta.lastScrapedAt === "string" && meta.lastScrapedAt ? meta.lastScrapedAt : undefined,
+          }),
+        );
       } catch (e) { return ecidadaniaError(e); }
     },
   );

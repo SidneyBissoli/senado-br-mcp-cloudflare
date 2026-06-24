@@ -67,7 +67,18 @@ export const SOURCES = {
       "Fonte: Senado Federal — Dados Abertos Orçamentários (Arquimedes/Financeiro) — senado.gov.br.",
     license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
   },
+  /** Acervo histórico de votos das consultas e-Cidadania — CSV Arquimedes (bi-arqs/.../ecidadania). */
+  ECIDADANIA_ARQUIMEDES: {
+    source: "Senado Federal — e-Cidadania (acervo histórico de votos, Arquimedes)",
+    attribution:
+      "Fonte: Senado Federal — e-Cidadania, acervo de votos por matéria/UF (Arquimedes/DadosAbertos) — senado.gov.br.",
+    license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
+  },
 } as const;
+
+/** URL canônica do CSV Arquimedes de votos das consultas e-Cidadania (source_url da proveniência). */
+export const ECIDADANIA_ARQUIMEDES_CSV_URL =
+  "https://www.senado.gov.br/bi-arqs/Arquimedes/ecidadania/DadosAbertos/Proposi%C3%A7%C3%B5es-com-votos.csv";
 
 type SourceKey = keyof typeof SOURCES;
 
@@ -143,6 +154,27 @@ export function provenanceEcidadania(
     attribution: meta.attribution,
     license: meta.license,
     source_url,
+    ...extra,
+  });
+}
+
+/**
+ * Proveniência da tool de votos históricos do e-Cidadania (entidade `consultas_votos`). O dado NÃO
+ * vem do portal nem da API, e sim do CSV Arquimedes — então `source_url` é a URL do CSV (constante),
+ * `reference_period` é o carimbo "dados atualizados até" do próprio arquivo (passado pela tool a
+ * partir do payload) e `retrieved_at` é o `lastScrapedAt` do corpus em D1 (idade real do dado).
+ */
+export function provenanceArquimedesVotos(extra?: {
+  reference_period?: string;
+  retrieved_at?: string;
+}): Provenance {
+  const meta = SOURCES.ECIDADANIA_ARQUIMEDES;
+  return buildProvenance({
+    source: meta.source,
+    attribution: meta.attribution,
+    license: meta.license,
+    source_url: ECIDADANIA_ARQUIMEDES_CSV_URL,
+    dataset_id: "consultas_votos",
     ...extra,
   });
 }

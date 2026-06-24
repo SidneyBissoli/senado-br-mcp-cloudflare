@@ -237,19 +237,46 @@ export interface IdeiaResumo {
   dataPublicacao: string | null; status: string; autor: string | null; url: string;
 }
 
+/**
+ * Canonical `IdeiaResumo` builder — single source of the object's field order, so the JSON payload
+ * (and `contentHash`) is byte-identical across the three writers into `ecidadania_current`: the 2h
+ * highlight Cron (`listarIdeiasInternal`, REST source), the weekly full-corpus ingestion job
+ * (`pesquisaideia` HTML listing, per-situacao status), and the metric splice. Diverging field order
+ * would make every row read as "changed" forever, bloating `ecidadania_history`.
+ *
+ * `autor` and `dataPublicacao` are detail-only (the listing/REST sources never carry them), so they
+ * default to `null` here — keep them out of the corpus payload to stay byte-compatible with the
+ * highlight scrape, which also has only id/titulo/apoios/status.
+ */
+export function buildIdeiaResumo(fields: {
+  id: number; titulo?: string; apoios?: number;
+  dataPublicacao?: string | null; status?: string; autor?: string | null; url?: string;
+}): IdeiaResumo {
+  return {
+    id: fields.id,
+    titulo: fields.titulo || "",
+    apoios: fields.apoios ?? 0,
+    dataPublicacao: fields.dataPublicacao ?? null,
+    status: fields.status || "aberta",
+    autor: fields.autor ?? null,
+    url: fields.url || `${ECIDADANIA_BASE}/visualizacaoideia?id=${fields.id}`,
+  };
+}
+
 export async function listarIdeiasInternal(params: { status?: string; limite?: number; pagina?: number; ordenarPor?: string; ordem?: string }): Promise<IdeiaResumo[]> {
   const { limite = 20 } = params;
   const data = await fetchEcidadaniaJson("/restcolecaomaisideia");
 
-  let ideias: IdeiaResumo[] = data.map((item: any) => ({
-    id: item.id,
-    titulo: item.titulo || "",
-    apoios: parseBrNum(String(item.apoiamentos || "0")),
-    dataPublicacao: null,
-    status: "aberta" as const,
-    autor: null,
-    url: `${ECIDADANIA_BASE}/visualizacaoideia?id=${item.id}`,
-  }));
+  // status is hardcoded "aberta" (via the builder default) because this REST "highlight" collection
+  // lists active ideas by construction; real per-idea status for the full set comes from the
+  // per-situacao corpus crawl (the source of truth). See buildConsultaResumo for the same rationale.
+  let ideias: IdeiaResumo[] = data.map((item: any) =>
+    buildIdeiaResumo({
+      id: item.id,
+      titulo: item.titulo || "",
+      apoios: parseBrNum(String(item.apoiamentos || "0")),
+    }),
+  );
 
   if (params.ordenarPor === "apoios") {
     ideias.sort((a, b) => params.ordem === "asc" ? a.apoios - b.apoios : b.apoios - a.apoios);
@@ -312,6 +339,29 @@ export interface EventoResumo {
   comissao: string | null; comentarios: number; status: string; url: string;
 }
 
+/**
+ * Canonical `EventoResumo` builder — single source of the object's field order, so the JSON payload
+ * (and `contentHash`) is byte-identical across the three writers into `ecidadania_current`: the 2h
+ * highlight Cron (`listarEventosInternal`, REST source), the weekly full-corpus ingestion job (HTML
+ * listing source), and the metric splice. Diverging field order would make every row read as
+ * "changed" forever, bloating `ecidadania_history`.
+ */
+export function buildEventoResumo(fields: {
+  id: number; titulo?: string; data?: string | null; hora?: string | null;
+  comissao?: string | null; comentarios?: number; status?: string; url?: string;
+}): EventoResumo {
+  return {
+    id: fields.id,
+    titulo: fields.titulo || "",
+    data: fields.data ?? null,
+    hora: fields.hora ?? null,
+    comissao: fields.comissao ?? null,
+    comentarios: fields.comentarios ?? 0,
+    status: fields.status || "agendado",
+    url: fields.url || `${ECIDADANIA_BASE}/visualizacaoaudiencia?id=${fields.id}`,
+  };
+}
+
 export async function listarEventosInternal(params: { status?: string; comissao?: string; limite?: number }): Promise<EventoResumo[]> {
   const { limite = 20 } = params;
   const data = await fetchEcidadaniaJson("/restcolecaomaisaudiencia");
@@ -329,7 +379,7 @@ export async function listarEventosInternal(params: { status?: string; comissao?
     let status = "agendado";
     if (item.situacaoAudienciaId === 3 || item.situacaoAudienciaId === 4) status = "encerrado";
 
-    return {
+    return buildEventoResumo({
       id: item.id,
       titulo: item.titulo || item.tituloAbreviado || "",
       data: dataStr,
@@ -337,8 +387,7 @@ export async function listarEventosInternal(params: { status?: string; comissao?
       comissao: item.sigla || null,
       comentarios: item.qtdComentario || 0,
       status,
-      url: `${ECIDADANIA_BASE}/visualizacaoaudiencia?id=${item.id}`,
-    };
+    });
   });
 
   if (params.status && params.status !== "todos") eventos = eventos.filter((e) => e.status === params.status);
@@ -347,6 +396,62 @@ export async function listarEventosInternal(params: { status?: string; comissao?
     eventos = eventos.filter((e) => e.comissao?.toUpperCase().includes(s));
   }
   return eventos.slice(0, limite);
+}
+
+// ── Consultas (votos históricos / acervo Arquimedes) ────────────────────────
+
+/** Votos por UF de uma matéria (diferencial regional do acervo histórico). */
+export type VotosPorUf = Record<string, { sim: number; nao: number }>;
+
+export interface ConsultaVotoResumo {
+  id: number; materia: string; ementa: string; autoria: string; status: string;
+  votosSim: number; votosNao: number; totalVotos: number;
+  votosPorUf: VotosPorUf; url: string;
+  /** Carimbo "dados atualizados até" do CSV (vintage). EXCLUÍDO do contentHash — ver consultaVotoCore. */
+  referencePeriod: string | null;
+}
+
+/**
+ * Canonical `ConsultaVotoResumo` builder — único writer é o job semanal do CSV Arquimedes (não há
+ * fonte REST nem splice de 2h para esta entidade), mas o builder fixa a ordem dos campos para que o
+ * `contentHash` seja estável entre execuções (history-on-change). `votosPorUf` deve chegar com chaves
+ * já ordenadas (o agregador ordena) para o JSON ser determinístico.
+ *
+ * `totalVotos` é sempre derivado de `votosSim + votosNao`. `referencePeriod` é o vintage do CSV e fica
+ * por ÚLTIMO de propósito: `consultaVotoCore` o remove antes do hash, de modo que um bump semanal do
+ * carimbo sobre votos arquivados (congelados) NÃO gere ruído em `ecidadania_history`.
+ */
+export function buildConsultaVotoResumo(fields: {
+  id: number; materia?: string; ementa?: string; autoria?: string; status?: string;
+  votosSim: number; votosNao: number;
+  votosPorUf?: VotosPorUf; url?: string; referencePeriod?: string | null;
+}): ConsultaVotoResumo {
+  const votosSim = fields.votosSim;
+  const votosNao = fields.votosNao;
+  return {
+    id: fields.id,
+    materia: fields.materia || "",
+    ementa: fields.ementa || "",
+    autoria: fields.autoria || "",
+    status: fields.status || "Descontinuado",
+    votosSim,
+    votosNao,
+    totalVotos: votosSim + votosNao,
+    votosPorUf: fields.votosPorUf ?? {},
+    url: fields.url || `${ECIDADANIA_BASE}/visualizacaomateria?id=${fields.id}`,
+    referencePeriod: fields.referencePeriod ?? null,
+  };
+}
+
+/**
+ * Vote-relevant core of a `ConsultaVotoResumo` — everything EXCEPT `referencePeriod` (the CSV vintage
+ * stamp). The corpus job hashes THIS (not the full payload), so a weekly stamp change on otherwise
+ * unchanged archival votes does not append a junk `ecidadania_history` row. The stored `payload_json`
+ * still carries `referencePeriod` (the tool reports it as the provenance vintage).
+ */
+export function consultaVotoCore(v: ConsultaVotoResumo): Omit<ConsultaVotoResumo, "referencePeriod"> {
+  const { referencePeriod: _omit, ...core } = v;
+  return core;
 }
 
 export async function obterEventoInternal(id: number) {

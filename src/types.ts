@@ -10,15 +10,10 @@ export interface Env {
   // e-Cidadania sovereign dataset (P2). Optional so tests/local dev run without it;
   // tools fall back to live scraping when the binding or data is absent.
   ECIDADANIA_DB?: D1Database;
-  // Max age (minutes, as string from wrangler vars) before D1-backed reads flag staleness.
-  // Applies to the 2h-cadence entities (ideias/eventos). Default 360.
-  ECIDADANIA_STALE_MAX_MIN?: string;
-  // Staleness threshold (minutes) for the weekly full-corpus 'consultas' set — much larger than
-  // the 2h cadence so possivelDesatualizacao is meaningful, not always-on. String; default 14400 (~10d).
+  // Staleness threshold (minutes) before D1-backed reads flag possible desatualização. All e-Cidadania
+  // entities are now weekly full corpora, so this is a single large window (much larger than the 2h
+  // metric-splice cadence) — possivelDesatualizacao stays meaningful, not always-on. Default 14400 (~10d).
   ECIDADANIA_CORPUS_STALE_MAX_MIN?: string;
-  // Anomaly guard: a Cron run is anomalous (and must not overwrite `current`) if it returns
-  // fewer than this % of the last good run's rows. String from wrangler vars; default 50.
-  ECIDADANIA_ANOMALY_MIN_PCT?: string;
   // Catastrophic floor for the off-Worker corpus ingestion job: a *complete* crawl returning fewer
   // than this % of the last 'ok' corpus is rejected (degraded-page guard). String; default 80.
   ECIDADANIA_CORPUS_MIN_PCT?: string;
