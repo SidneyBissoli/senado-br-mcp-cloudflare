@@ -1,9 +1,10 @@
 {
   "name": "senado-br-mcp",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "MCP server for Brazilian Senate open data — runs hosted on Cloudflare Workers or locally via npx (stdio)",
   "license": "MIT",
   "type": "module",
+  "mcpName": "io.github.SidneyBissoli/senado-br-mcp-cloudflare",
   "bin": {
     "senado-br-mcp": "./dist/cli.js"
   },
