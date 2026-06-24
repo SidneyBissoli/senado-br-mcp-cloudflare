@@ -94,6 +94,18 @@ list/corpus tools: without D1 they fall back to a live scrape of the ~5 REST hig
 `meta.fonte` / `possivelDesatualizacao`; the detail tools (`obter_*`) are identical. Logs go to
 **stderr** — stdout carries only the JSON-RPC protocol stream.
 
+## Agent Skill (optional)
+
+This repo bundles a Claude [Agent Skill](https://platform.claude.com/docs/en/docs/agents-and-tools/agent-skills/overview)
+at [`.claude/skills/senado-br/`](.claude/skills/senado-br/SKILL.md) that teaches Claude **when** to reach for
+this server and **how** to use its 66 tools well — a themed tool map, common question→tool playbooks, the
+provenance contract, and gotchas (dates, the `codigoMateria` bridge, e-Cidadania's open-set listing, pagination).
+It points back to the server's own `senado://catalogo` / `senado://guia` resources rather than duplicating them.
+
+Claude Code auto-discovers it when you work in this repo. To use it elsewhere, copy
+`.claude/skills/senado-br/` into your `~/.claude/skills/`, or zip the folder and upload it in claude.ai
+(Settings → Features). The skill assumes the `senado-br` MCP server is connected (hosted or via npx).
+
 ## Architecture
 
 - **Runtime:** Cloudflare Workers (ESM)

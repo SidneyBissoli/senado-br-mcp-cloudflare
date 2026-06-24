@@ -93,6 +93,19 @@ as ferramentas de lista/corpus do e-Cidadania: sem D1, elas caem no scraping ao 
 REST, sinalizado por `meta.fonte` / `possivelDesatualizacao`; as de detalhe (`obter_*`) são idênticas.
 Os logs vão para o **stderr** — o stdout carrega apenas o fluxo do protocolo JSON-RPC.
 
+## Agent Skill (opcional)
+
+Este repositório inclui uma [Agent Skill](https://platform.claude.com/docs/en/docs/agents-and-tools/agent-skills/overview)
+do Claude em [`.claude/skills/senado-br/`](.claude/skills/senado-br/SKILL.md) que ensina o Claude **quando**
+recorrer a este servidor e **como** usar bem as 66 ferramentas — um mapa de ferramentas por tema, playbooks de
+pergunta→ferramenta, o contrato de proveniência e os gotchas (datas, a ponte `codigoMateria`, a listagem
+só-abertas do e-Cidadania, paginação). Ela aponta para os recursos `senado://catalogo` / `senado://guia` do
+próprio servidor em vez de duplicá-los.
+
+O Claude Code a descobre automaticamente ao trabalhar neste repositório. Para usá-la em outro lugar, copie
+`.claude/skills/senado-br/` para o seu `~/.claude/skills/`, ou compacte a pasta e faça upload no claude.ai
+(Configurações → Recursos). A skill pressupõe o servidor MCP `senado-br` conectado (hospedado ou via npx).
+
 ## Arquitetura
 
 - **Runtime:** Cloudflare Workers (ESM)
