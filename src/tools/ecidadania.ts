@@ -63,11 +63,8 @@ export {
 
 export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env: Env, ctx?: ExecutionContext) {
   const db = env.ECIDADANIA_DB;
-  const staleMaxMin = () => {
-    const n = parseInt(env.ECIDADANIA_STALE_MAX_MIN ?? "", 10);
-    return Number.isFinite(n) && n > 0 ? n : 360;
-  };
-  // consultas is a weekly full corpus, not a 2h set, so it gets a much larger staleness window —
+  // All three e-Cidadania entities are now weekly full corpora, not 2h highlight sets, so they get a
+  // much larger staleness window —
   // otherwise possivelDesatualizacao would trip ~6h after every weekly load. See store.resolveList.
   const corpusStaleMaxMin = () => {
     const n = parseInt(env.ECIDADANIA_CORPUS_STALE_MAX_MIN ?? "", 10);
@@ -213,20 +210,23 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G5. senado_ecidadania_listar_ideias
   server.tool(
     "senado_ecidadania_listar_ideias",
-    "Lista ideias legislativas propostas por cidadãos no portal e-Cidadania. Retorna `{ count, ideias }`, cada ideia com código, título, autor, número de apoios e status; resultado paginado (padrão 20 por página, ordenável por apoios, data ou comentários). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`, opcionalmente `status: \"aberta\"`). Para o detalhe completo de uma ideia (texto, apoios, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o código.",
+    "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1, atualizado semanalmente; ~150 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`) e `url` (`autor` e `dataPublicacao` só aparecem no detalhe, vêm `null` aqui). Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
     {
       status: z.enum(["aberta", "encerrada", "convertida", "todas"]).optional().describe("Filtrar por status"),
-      ordenarPor: z.enum(["apoios", "data", "comentarios"]).optional().describe("Campo para ordenação"),
+      ordenarPor: z.enum(["apoios", "data", "comentarios"]).optional().describe("Campo para ordenação (apoios é o disponível no corpus; data/comentarios só no detalhe)"),
       ordem: z.enum(["asc", "desc"]).optional().describe("Ordem de ordenação"),
       limite: z.number().int().min(1).max(100).optional().default(20).describe("Número máximo de resultados"),
       pagina: z.number().int().min(1).optional().default(1).describe("Página de resultados"),
     },
     async (params) => {
       try {
-        const { items, meta } = await resolveList(db, "ideias", staleMaxMin(), () =>
-          listarIdeiasInternal({ limite: 100 }),
+        const { items, meta } = await resolveList(
+          db, "ideias", corpusStaleMaxMin(),
+          () => listarIdeiasInternal({ limite: 100 }),
+          undefined, CORPUS_RESOLVE,
         );
         let arr = items as IdeiaResumo[];
+        if (params.status && params.status !== "todas") arr = arr.filter((i) => i.status === params.status);
         if (params.ordenarPor === "apoios") {
           arr = [...arr].sort((a, b) => (params.ordem === "asc" ? a.apoios - b.apoios : b.apoios - a.apoios));
         }
@@ -344,7 +344,11 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
             () => listarConsultasInternal({ limite: 100 }),
             undefined, CORPUS_RESOLVE,
           ),
-          resolveList(db, "ideias", staleMaxMin(), () => listarIdeiasInternal({ limite: 100 })),
+          resolveList(
+            db, "ideias", corpusStaleMaxMin(),
+            () => listarIdeiasInternal({ limite: 100 }),
+            undefined, CORPUS_RESOLVE,
+          ),
         ]);
         // apenasEmTramitacao is now honored against the real /processo-derived status (aberta ⟺ em
         // tramitação), so the criterion is no longer inert (§2.1 / §7).

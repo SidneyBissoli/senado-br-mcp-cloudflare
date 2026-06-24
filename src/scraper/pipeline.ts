@@ -12,15 +12,17 @@
  */
 
 import type { Env } from "../types.js";
-import { classifyRun, parseAnomalyMinPct, type RunStatus } from "./anomaly.js";
+import { classifyRun, type RunStatus } from "./anomaly.js";
 import {
   buildConsultaResumo,
   buildEventoResumo,
+  buildIdeiaResumo,
   listarConsultasInternal,
   listarIdeiasInternal,
   listarEventosInternal,
   type ConsultaResumo,
   type EventoResumo,
+  type IdeiaResumo,
 } from "./ecidadania.js";
 
 export type Entidade = "consultas" | "ideias" | "eventos";
@@ -55,33 +57,6 @@ export function contentHash(s: string): string {
     h = Math.imul(h, 0x01000193);
   }
   return (h >>> 0).toString(16).padStart(8, "0") + ":" + s.length.toString(16);
-}
-
-function toRecord(item: Record<string, unknown>, metrica: number | null, comissao: string | null): SyncRecord {
-  const payloadJson = JSON.stringify(item);
-  return {
-    entityId: Number(item.id),
-    sourceUrl: String(item.url ?? ""),
-    payloadJson,
-    status: (item.status as string) ?? null,
-    metrica,
-    comissao,
-    contentHash: contentHash(payloadJson),
-  };
-}
-
-/** Scrape one entity's highlight list and normalize to SyncRecords. */
-async function scrapeEntity(entidade: Entidade): Promise<SyncRecord[]> {
-  if (entidade === "consultas") {
-    const items = await listarConsultasInternal({ limite: 100 });
-    return items.map((c) => toRecord(c as unknown as Record<string, unknown>, c.totalVotos, null));
-  }
-  if (entidade === "ideias") {
-    const items = await listarIdeiasInternal({ limite: 100 });
-    return items.map((i) => toRecord(i as unknown as Record<string, unknown>, i.apoios, null));
-  }
-  const items = await listarEventosInternal({ limite: 100 });
-  return items.map((e) => toRecord(e as unknown as Record<string, unknown>, e.comentarios, e.comissao));
 }
 
 /**
@@ -255,6 +230,23 @@ const eventosHighlightCfg: HighlightConfig<EventoResumo> = {
     }),
 };
 
+const ideiasHighlightCfg: HighlightConfig<IdeiaResumo> = {
+  entidade: "ideias",
+  scrape: () => listarIdeiasInternal({ limite: 100 }),
+  metrica: (i) => i.apoios,
+  comissao: () => null,
+  splice: (corpus, fresh) =>
+    buildIdeiaResumo({
+      id: fresh.id,
+      titulo: corpus.titulo,
+      apoios: fresh.apoios,
+      dataPublicacao: corpus.dataPublicacao,
+      status: corpus.status,
+      autor: corpus.autor,
+      url: corpus.url,
+    }),
+};
+
 /** Thin wrappers (kept by name for tests/back-compat). */
 export function refreshConsultasHighlights(db: D1Database, now: string): Promise<RunSummary> {
   return refreshHighlights(db, now, consultasHighlightCfg);
@@ -262,22 +254,25 @@ export function refreshConsultasHighlights(db: D1Database, now: string): Promise
 export function refreshEventosHighlights(db: D1Database, now: string): Promise<RunSummary> {
   return refreshHighlights(db, now, eventosHighlightCfg);
 }
+export function refreshIdeiasHighlights(db: D1Database, now: string): Promise<RunSummary> {
+  return refreshHighlights(db, now, ideiasHighlightCfg);
+}
 
 /**
- * Top-level Cron entry (every 2h): consultas + eventos get the targeted highlight metric splice
- * (their full corpus is owned by the weekly off-Worker job); ideias still go through the full
- * syncEntity path until the ideias corpus job lands (then it switches to a splice too).
+ * Top-level Cron entry (every 2h): all three corpus entities get the targeted highlight metric
+ * splice of their ~5 hot REST highlights (votos | comentários | apoios). The full corpus of each is
+ * owned by the weekly off-Worker ingestion job; this tick never touches the long tail and records
+ * its run as 'ok-metrica' so it can't re-break the corpus baseline or inflate the freshness signal.
  */
 export async function refreshEcidadania(env: Env, now = new Date().toISOString()): Promise<RunSummary[]> {
   const db = env.ECIDADANIA_DB;
   if (!db) return [];
-  const minPct = parseAnomalyMinPct(env.ECIDADANIA_ANOMALY_MIN_PCT);
   const summaries: RunSummary[] = [];
 
-  // consultas + eventos: targeted highlight splice (bypasses syncEntity/classifyRun — see above).
   for (const [entidade, refresh] of [
     ["consultas", refreshConsultasHighlights],
     ["eventos", refreshEventosHighlights],
+    ["ideias", refreshIdeiasHighlights],
   ] as Array<[Entidade, (db: D1Database, now: string) => Promise<RunSummary>]>) {
     try {
       summaries.push(await refresh(db, now));
@@ -285,18 +280,6 @@ export async function refreshEcidadania(env: Env, now = new Date().toISOString()
       const errMsg = e instanceof Error ? e.message : String(e);
       summaries.push({ entidade, status: "erro-metrica", rowsScraped: 0, rowsChanged: 0, error: errMsg });
     }
-  }
-
-  // ideias: full syncEntity path with the anomaly guard (until its corpus job lands).
-  {
-    let records: SyncRecord[] = [];
-    let error: unknown;
-    try {
-      records = await scrapeEntity("ideias");
-    } catch (e) {
-      error = e;
-    }
-    summaries.push(await syncEntity(db, "ideias", records, now, minPct, error));
   }
   return summaries;
 }

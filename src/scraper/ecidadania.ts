@@ -237,19 +237,46 @@ export interface IdeiaResumo {
   dataPublicacao: string | null; status: string; autor: string | null; url: string;
 }
 
+/**
+ * Canonical `IdeiaResumo` builder — single source of the object's field order, so the JSON payload
+ * (and `contentHash`) is byte-identical across the three writers into `ecidadania_current`: the 2h
+ * highlight Cron (`listarIdeiasInternal`, REST source), the weekly full-corpus ingestion job
+ * (`pesquisaideia` HTML listing, per-situacao status), and the metric splice. Diverging field order
+ * would make every row read as "changed" forever, bloating `ecidadania_history`.
+ *
+ * `autor` and `dataPublicacao` are detail-only (the listing/REST sources never carry them), so they
+ * default to `null` here — keep them out of the corpus payload to stay byte-compatible with the
+ * highlight scrape, which also has only id/titulo/apoios/status.
+ */
+export function buildIdeiaResumo(fields: {
+  id: number; titulo?: string; apoios?: number;
+  dataPublicacao?: string | null; status?: string; autor?: string | null; url?: string;
+}): IdeiaResumo {
+  return {
+    id: fields.id,
+    titulo: fields.titulo || "",
+    apoios: fields.apoios ?? 0,
+    dataPublicacao: fields.dataPublicacao ?? null,
+    status: fields.status || "aberta",
+    autor: fields.autor ?? null,
+    url: fields.url || `${ECIDADANIA_BASE}/visualizacaoideia?id=${fields.id}`,
+  };
+}
+
 export async function listarIdeiasInternal(params: { status?: string; limite?: number; pagina?: number; ordenarPor?: string; ordem?: string }): Promise<IdeiaResumo[]> {
   const { limite = 20 } = params;
   const data = await fetchEcidadaniaJson("/restcolecaomaisideia");
 
-  let ideias: IdeiaResumo[] = data.map((item: any) => ({
-    id: item.id,
-    titulo: item.titulo || "",
-    apoios: parseBrNum(String(item.apoiamentos || "0")),
-    dataPublicacao: null,
-    status: "aberta" as const,
-    autor: null,
-    url: `${ECIDADANIA_BASE}/visualizacaoideia?id=${item.id}`,
-  }));
+  // status is hardcoded "aberta" (via the builder default) because this REST "highlight" collection
+  // lists active ideas by construction; real per-idea status for the full set comes from the
+  // per-situacao corpus crawl (the source of truth). See buildConsultaResumo for the same rationale.
+  let ideias: IdeiaResumo[] = data.map((item: any) =>
+    buildIdeiaResumo({
+      id: item.id,
+      titulo: item.titulo || "",
+      apoios: parseBrNum(String(item.apoiamentos || "0")),
+    }),
+  );
 
   if (params.ordenarPor === "apoios") {
     ideias.sort((a, b) => params.ordem === "asc" ? a.apoios - b.apoios : b.apoios - a.apoios);

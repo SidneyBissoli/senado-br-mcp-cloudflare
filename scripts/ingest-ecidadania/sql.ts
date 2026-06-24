@@ -82,3 +82,37 @@ export function generateLoadSql(
 export function generateRunOnlySql(now: string, status: string, rowsScraped: number, error: string | null, entidade: string = DEFAULT_ENTIDADE): string {
   return runRowStmt(now, status, rowsScraped, 0, error, entidade) + "\n";
 }
+
+/**
+ * Same load as `generateLoadSql`, but split into multiple files of at most `maxStmtsPerFile`
+ * statements each — for a large corpus (ideias is ~150k items → ~300k statements) a single .sql
+ * file exceeds what `wrangler d1 execute --file` will apply in one shot.
+ *
+ * The 'ok' run row is the VERY LAST statement of the LAST file, so it is only recorded once every
+ * data file before it applied. Unlike the single-file load (atomic server-side), a multi-file apply
+ * is NOT atomic across files: a mid-sequence failure leaves the corpus partially updated WITHOUT an
+ * 'ok' run row — so the freshness signal still reflects the previous good run (tool serves the old
+ * corpus flagged) and the next successful run reconciles it. Upserts are idempotent, so re-applying
+ * is safe. Files must be applied in lexical order (callers zero-pad the index: out-x-001.sql, …).
+ */
+export function generateLoadSqlBatches(
+  annotated: Array<{ rec: SyncRecord; changed: boolean }>,
+  now: string,
+  rowsScraped: number,
+  rowsChanged: number,
+  entidade: string = DEFAULT_ENTIDADE,
+  maxStmtsPerFile = 10000,
+): string[] {
+  const lines: string[] = [];
+  for (const { rec, changed } of annotated) {
+    lines.push(upsertStmt(entidade, rec, now));
+    if (changed) lines.push(historyStmt(entidade, rec, now));
+  }
+  lines.push(runRowStmt(now, "ok", rowsScraped, rowsChanged, null, entidade));
+
+  const files: string[] = [];
+  for (let i = 0; i < lines.length; i += maxStmtsPerFile) {
+    files.push(lines.slice(i, i + maxStmtsPerFile).join("\n") + "\n");
+  }
+  return files;
+}
