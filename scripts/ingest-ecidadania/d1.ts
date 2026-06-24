@@ -47,27 +47,27 @@ export interface ExistingRow {
  * All current consultas rows with id + content_hash + status (NOT payload — that would be ~12 MB).
  * content_hash feeds the history diff (planEntitySync); status feeds the linger re-status (§2).
  */
-export function readExistingMeta(): ExistingRow[] {
+export function readExistingMeta(entidade: string = "consultas"): ExistingRow[] {
   const rows = queryD1<{ entity_id: number; content_hash: string; status: string | null }>(
-    "SELECT entity_id, content_hash, status FROM ecidadania_current WHERE entidade='consultas'",
+    `SELECT entity_id, content_hash, status FROM ecidadania_current WHERE entidade='${entidade}'`,
   );
   return rows.map((r) => ({ id: Number(r.entity_id), content_hash: String(r.content_hash), status: String(r.status ?? "") }));
 }
 
-/** payload_json for specific consultas ids (targeted — only the rows being re-statused). */
-export function readPayloads(ids: number[]): Map<number, string> {
+/** payload_json for specific ids (targeted — only the rows being re-statused). */
+export function readPayloads(ids: number[], entidade: string = "consultas"): Map<number, string> {
   if (ids.length === 0) return new Map();
   const list = ids.map((n) => String(Math.trunc(n))).join(",");
   const rows = queryD1<{ entity_id: number; payload_json: string }>(
-    `SELECT entity_id, payload_json FROM ecidadania_current WHERE entidade='consultas' AND entity_id IN (${list})`,
+    `SELECT entity_id, payload_json FROM ecidadania_current WHERE entidade='${entidade}' AND entity_id IN (${list})`,
   );
   return new Map(rows.map((r) => [Number(r.entity_id), String(r.payload_json)]));
 }
 
 /** rows_scraped of the most recent status='ok' corpus run, or null if there is no baseline yet. */
-export function readLastGoodRows(): number | null {
+export function readLastGoodRows(entidade: string = "consultas"): number | null {
   const rows = queryD1<{ rows_scraped: number }>(
-    "SELECT rows_scraped FROM ecidadania_scrape_runs WHERE entidade='consultas' AND status='ok' ORDER BY id DESC LIMIT 1",
+    `SELECT rows_scraped FROM ecidadania_scrape_runs WHERE entidade='${entidade}' AND status='ok' ORDER BY id DESC LIMIT 1`,
   );
   return rows.length ? Number(rows[0].rows_scraped) : null;
 }

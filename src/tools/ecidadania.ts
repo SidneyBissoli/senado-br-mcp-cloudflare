@@ -73,9 +73,10 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
     const n = parseInt(env.ECIDADANIA_CORPUS_STALE_MAX_MIN ?? "", 10);
     return Number.isFinite(n) && n > 0 ? n : 14400; // ~10 days
   };
-  // consultas must never collapse to the ~5-item live highlight scrape on staleness (that was the
-  // original coverage bug); serve the corpus from D1 instead. Live is reserved for an empty D1.
-  const CONSULTAS_RESOLVE = { fallbackOnStale: false } as const;
+  // Corpus entities (consultas, eventos, ideias) must never collapse to the ~5-item live highlight
+  // scrape on staleness (that was the original coverage bug); serve the corpus from D1 flagged
+  // instead. Live is reserved for an empty D1 (cold start, before the first weekly corpus run).
+  const CORPUS_RESOLVE = { fallbackOnStale: false } as const;
 
   // Listas vêm do D1 (resolveList): o retrieved_at fiel é o lastScrapedAt da meta — a idade
   // real do dado, não o instante desta chamada. `pathOrUrl` é a página de seção do portal.
@@ -120,7 +121,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         const { items, meta } = await resolveList(
           db, "consultas", corpusStaleMaxMin(),
           () => listarConsultasInternal({ limite: 100 }),
-          undefined, CONSULTAS_RESOLVE,
+          undefined, CORPUS_RESOLVE,
         );
         const status = params.status ?? "aberta";
         let filtered = items as ConsultaResumo[];
@@ -179,7 +180,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         const { items, meta } = await resolveList(
           db, "consultas", corpusStaleMaxMin(),
           () => listarConsultasInternal({ limite: 100 }),
-          undefined, CONSULTAS_RESOLVE,
+          undefined, CORPUS_RESOLVE,
         );
         const all = (items as ConsultaResumo[]).filter(
           (c) => statusFiltro === "todas" || c.status === statusFiltro,
@@ -260,7 +261,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G7. senado_ecidadania_listar_eventos
   server.tool(
     "senado_ecidadania_listar_eventos",
-    "Lista eventos interativos do e-Cidadania (audiências públicas, sabatinas, lives). Retorna `{ count, eventos }`, cada evento com `id`, `titulo`, `data`, `hora`, `comissao` (sigla), `comentarios`, `status` (`agendado`/`encerrado`) e `url`; aceita filtro por `status`, por `comissao` (sigla) e `limite` (padrão 20). Para um ranking dos mais comentados, ordene por comentários (`ordenarPor: \"comentarios\"`, `ordem: \"desc\"`). Para o detalhe completo de um evento use `senado_ecidadania_obter_evento`.",
+    "Lista eventos interativos do e-Cidadania (audiências públicas, sabatinas, lives) — conjunto completo (corpus persistido em D1, atualizado semanalmente; ~milhares de eventos, incluindo encerrados). Retorna `{ count, eventos }`, cada evento com `id`, `titulo`, `data`, `hora`, `comissao` (sigla), `comentarios`, `status` (`agendado`/`encerrado`/`cancelado`) e `url`; aceita filtro por `status`, por `comissao` (sigla) e `limite` (padrão 20). Para um ranking dos mais comentados, ordene por comentários (`ordenarPor: \"comentarios\"`, `ordem: \"desc\"`). Para o detalhe completo de um evento use `senado_ecidadania_obter_evento`.",
     {
       status: z.enum(["agendado", "encerrado", "todos"]).optional().describe("Filtrar por status"),
       comissao: z.string().optional().describe("Sigla da comissão"),
@@ -272,8 +273,10 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
       try {
         const limite = params.limite ?? 20;
         const ordem = params.ordem ?? "desc";
-        const { items, meta } = await resolveList(db, "eventos", staleMaxMin(), () =>
-          listarEventosInternal({ limite: 100 }),
+        const { items, meta } = await resolveList(
+          db, "eventos", corpusStaleMaxMin(),
+          () => listarEventosInternal({ limite: 100 }),
+          undefined, CORPUS_RESOLVE,
         );
         let eventos = (items as EventoResumo[]).filter((e) => {
           if (params.status && params.status !== "todos" && e.status !== params.status) return false;
@@ -339,7 +342,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           resolveList(
             db, "consultas", corpusStaleMaxMin(),
             () => listarConsultasInternal({ limite: 100 }),
-            undefined, CONSULTAS_RESOLVE,
+            undefined, CORPUS_RESOLVE,
           ),
           resolveList(db, "ideias", staleMaxMin(), () => listarIdeiasInternal({ limite: 100 })),
         ]);

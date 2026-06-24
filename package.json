@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit && tsc -p scripts/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "ingest:ecidadania": "tsx scripts/ingest-ecidadania/index.ts"
+    "ingest:ecidadania": "tsx scripts/ingest-ecidadania/index.ts",
+    "ingest:ecidadania:eventos": "tsx scripts/ingest-ecidadania/index-eventos.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",

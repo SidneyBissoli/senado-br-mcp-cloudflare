@@ -10,7 +10,8 @@
 
 import type { SyncRecord } from "../../src/scraper/pipeline.js";
 
-const ENTIDADE = "consultas";
+/** Default entity for the original consultas job; new corpora (ideias/eventos/consultas_votos) pass their own. */
+const DEFAULT_ENTIDADE = "consultas";
 
 /** Render a JS value as a SQLite literal. Strings are single-quoted with '' escaping. */
 export function sqlValue(v: string | number | null): string {
@@ -19,8 +20,8 @@ export function sqlValue(v: string | number | null): string {
   return `'${v.replace(/'/g, "''")}'`;
 }
 
-function upsertStmt(rec: SyncRecord, now: string): string {
-  const cols = [ENTIDADE, rec.entityId, now, rec.contentHash, rec.sourceUrl, rec.payloadJson, rec.status, rec.metrica, rec.comissao];
+function upsertStmt(entidade: string, rec: SyncRecord, now: string): string {
+  const cols = [entidade, rec.entityId, now, rec.contentHash, rec.sourceUrl, rec.payloadJson, rec.status, rec.metrica, rec.comissao];
   return (
     "INSERT INTO ecidadania_current (entidade, entity_id, scraped_at, content_hash, source_url, payload_json, status, metrica_principal, comissao) VALUES (" +
     cols.map(sqlValue).join(", ") +
@@ -30,8 +31,8 @@ function upsertStmt(rec: SyncRecord, now: string): string {
   );
 }
 
-function historyStmt(rec: SyncRecord, now: string): string {
-  const cols = [ENTIDADE, rec.entityId, now, rec.contentHash, rec.payloadJson];
+function historyStmt(entidade: string, rec: SyncRecord, now: string): string {
+  const cols = [entidade, rec.entityId, now, rec.contentHash, rec.payloadJson];
   return (
     "INSERT OR IGNORE INTO ecidadania_history (entidade, entity_id, scraped_at, content_hash, payload_json) VALUES (" +
     cols.map(sqlValue).join(", ") +
@@ -40,8 +41,8 @@ function historyStmt(rec: SyncRecord, now: string): string {
 }
 
 /** A scrape-runs row (mirrors SQL.run). Used for both write and no-write outcomes. */
-export function runRowStmt(now: string, status: string, rowsScraped: number, rowsChanged: number, error: string | null): string {
-  const cols = [now, ENTIDADE, status, rowsScraped, rowsChanged, error];
+export function runRowStmt(now: string, status: string, rowsScraped: number, rowsChanged: number, error: string | null, entidade: string = DEFAULT_ENTIDADE): string {
+  const cols = [now, entidade, status, rowsScraped, rowsChanged, error];
   return (
     "INSERT INTO ecidadania_scrape_runs (run_at, entidade, status, rows_scraped, rows_changed, error) VALUES (" +
     cols.map(sqlValue).join(", ") +
@@ -66,17 +67,18 @@ export function generateLoadSql(
   now: string,
   rowsScraped: number,
   rowsChanged: number,
+  entidade: string = DEFAULT_ENTIDADE,
 ): string {
   const lines: string[] = [];
   for (const { rec, changed } of annotated) {
-    lines.push(upsertStmt(rec, now));
-    if (changed) lines.push(historyStmt(rec, now));
+    lines.push(upsertStmt(entidade, rec, now));
+    if (changed) lines.push(historyStmt(entidade, rec, now));
   }
-  lines.push(runRowStmt(now, "ok", rowsScraped, rowsChanged, null));
+  lines.push(runRowStmt(now, "ok", rowsScraped, rowsChanged, null, entidade));
   return lines.join("\n") + "\n";
 }
 
 /** No-write script: only the run row, recording why the corpus was NOT overwritten. */
-export function generateRunOnlySql(now: string, status: string, rowsScraped: number, error: string | null): string {
-  return runRowStmt(now, status, rowsScraped, 0, error) + "\n";
+export function generateRunOnlySql(now: string, status: string, rowsScraped: number, error: string | null, entidade: string = DEFAULT_ENTIDADE): string {
+  return runRowStmt(now, status, rowsScraped, 0, error, entidade) + "\n";
 }

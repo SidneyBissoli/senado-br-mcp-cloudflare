@@ -312,6 +312,29 @@ export interface EventoResumo {
   comissao: string | null; comentarios: number; status: string; url: string;
 }
 
+/**
+ * Canonical `EventoResumo` builder — single source of the object's field order, so the JSON payload
+ * (and `contentHash`) is byte-identical across the three writers into `ecidadania_current`: the 2h
+ * highlight Cron (`listarEventosInternal`, REST source), the weekly full-corpus ingestion job (HTML
+ * listing source), and the metric splice. Diverging field order would make every row read as
+ * "changed" forever, bloating `ecidadania_history`.
+ */
+export function buildEventoResumo(fields: {
+  id: number; titulo?: string; data?: string | null; hora?: string | null;
+  comissao?: string | null; comentarios?: number; status?: string; url?: string;
+}): EventoResumo {
+  return {
+    id: fields.id,
+    titulo: fields.titulo || "",
+    data: fields.data ?? null,
+    hora: fields.hora ?? null,
+    comissao: fields.comissao ?? null,
+    comentarios: fields.comentarios ?? 0,
+    status: fields.status || "agendado",
+    url: fields.url || `${ECIDADANIA_BASE}/visualizacaoaudiencia?id=${fields.id}`,
+  };
+}
+
 export async function listarEventosInternal(params: { status?: string; comissao?: string; limite?: number }): Promise<EventoResumo[]> {
   const { limite = 20 } = params;
   const data = await fetchEcidadaniaJson("/restcolecaomaisaudiencia");
@@ -329,7 +352,7 @@ export async function listarEventosInternal(params: { status?: string; comissao?
     let status = "agendado";
     if (item.situacaoAudienciaId === 3 || item.situacaoAudienciaId === 4) status = "encerrado";
 
-    return {
+    return buildEventoResumo({
       id: item.id,
       titulo: item.titulo || item.tituloAbreviado || "",
       data: dataStr,
@@ -337,8 +360,7 @@ export async function listarEventosInternal(params: { status?: string; comissao?
       comissao: item.sigla || null,
       comentarios: item.qtdComentario || 0,
       status,
-      url: `${ECIDADANIA_BASE}/visualizacaoaudiencia?id=${item.id}`,
-    };
+    });
   });
 
   if (params.status && params.status !== "todos") eventos = eventos.filter((e) => e.status === params.status);

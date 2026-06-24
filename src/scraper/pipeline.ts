@@ -15,10 +15,12 @@ import type { Env } from "../types.js";
 import { classifyRun, parseAnomalyMinPct, type RunStatus } from "./anomaly.js";
 import {
   buildConsultaResumo,
+  buildEventoResumo,
   listarConsultasInternal,
   listarIdeiasInternal,
   listarEventosInternal,
   type ConsultaResumo,
+  type EventoResumo,
 } from "./ecidadania.js";
 
 export type Entidade = "consultas" | "ideias" | "eventos";
@@ -152,28 +154,42 @@ export async function syncEntity(
 }
 
 /**
- * 2h consultas refresh — TARGETED METRIC UPDATE of the ~5 REST "highlight" ids (P2.6, option b).
- *
- * The full consultas corpus is owned by the weekly off-Worker ingestion job; this 2h tick keeps the
- * vote counts of the hot/open highlights fresh WITHOUT going through syncEntity/classifyRun. That is
- * deliberate (it reconciles two writers into ecidadania_current, §6.5):
- *   - It bypasses classifyRun: a 5-row run can't be compared against the ~thousands-row corpus
- *     baseline, and must never write a 'consultas' status='ok' run (it would re-break the corpus
- *     baseline and inflate the freshness signal). It records its run as 'ok-metrica' instead.
- *   - It is a SPLICE: for an existing row it overwrites only the vote fields and preserves the
- *     corpus-authoritative materia/ementa/status/url, so the content_hash only changes when the
- *     votes actually move (history-on-change preserved; no source ping-pong between the two writers).
- *   - A brand-new highlight not yet in the corpus is inserted fresh (status "aberta" — an active
- *     highlight by construction); the next weekly corpus run reconciles its other fields.
+ * 2h highlight refresh — TARGETED METRIC SPLICE of the ~5 REST "highlight" ids of a corpus entity
+ * (P2.6, option b). Generic over consultas/eventos/ideias: the full corpus is owned by the weekly
+ * off-Worker ingestion job; this 2h tick keeps the volatile metric (votos | comentários | apoios)
+ * of the hot highlights fresh WITHOUT going through syncEntity/classifyRun. That is deliberate (it
+ * reconciles two writers into ecidadania_current, §6.5):
+ *   - It bypasses classifyRun and records its run as 'ok-metrica' (never 'ok'): a ~5-row tick must
+ *     not re-break the corpus baseline nor inflate the freshness signal (both filter status='ok').
+ *   - It is a SPLICE: for an existing corpus row it overwrites only the metric and preserves the
+ *     corpus-authoritative fields, so content_hash only changes when the metric actually moves
+ *     (history-on-change preserved; no source ping-pong between the two writers).
+ *   - A brand-new highlight not yet in the corpus is inserted as-is; the next weekly corpus run
+ *     reconciles its other fields.
  */
-export async function refreshConsultasHighlights(db: D1Database, now: string): Promise<RunSummary> {
-  let highlights: ConsultaResumo[];
+interface HighlightConfig<T extends { id: number; url: string; status: string }> {
+  entidade: Entidade;
+  scrape: () => Promise<T[]>;
+  /** metrica_principal of the (final) item (votos | comentários | apoios). */
+  metrica: (item: T) => number;
+  /** comissao column of the (final) item, or null. */
+  comissao: (item: T) => string | null;
+  /** rebuild via the canonical builder: corpus-authoritative fields + the fresh metric spliced in. */
+  splice: (corpus: T, fresh: T) => T;
+}
+
+async function refreshHighlights<T extends { id: number; url: string; status: string }>(
+  db: D1Database,
+  now: string,
+  cfg: HighlightConfig<T>,
+): Promise<RunSummary> {
+  let highlights: T[];
   try {
-    highlights = await listarConsultasInternal({ limite: 100 });
+    highlights = await cfg.scrape();
   } catch (e) {
     const errMsg = e instanceof Error ? e.message : String(e);
-    await db.prepare(SQL.run).bind(now, "consultas", "erro-metrica", 0, 0, errMsg).run();
-    return { entidade: "consultas", status: "erro-metrica", rowsScraped: 0, rowsChanged: 0, error: errMsg };
+    await db.prepare(SQL.run).bind(now, cfg.entidade, "erro-metrica", 0, 0, errMsg).run();
+    return { entidade: cfg.entidade, status: "erro-metrica", rowsScraped: 0, rowsChanged: 0, error: errMsg };
   }
 
   const stmts = [];
@@ -181,46 +197,76 @@ export async function refreshConsultasHighlights(db: D1Database, now: string): P
   for (const hl of highlights) {
     const existing = await db
       .prepare(SQL.currentRow)
-      .bind("consultas", hl.id)
+      .bind(cfg.entidade, hl.id)
       .first<{ content_hash: string; payload_json: string; status: string | null }>();
 
-    // Existing corpus row → splice in fresh votes, keep corpus materia/ementa/status/url.
-    // No existing row → insert the REST highlight as-is (active by definition).
-    const item = existing
-      ? buildConsultaResumo({
-          id: hl.id,
-          materia: (JSON.parse(existing.payload_json) as ConsultaResumo).materia,
-          ementa: (JSON.parse(existing.payload_json) as ConsultaResumo).ementa,
-          votosSim: hl.votosSim,
-          votosNao: hl.votosNao,
-          totalVotos: hl.totalVotos,
-          status: (JSON.parse(existing.payload_json) as ConsultaResumo).status,
-          url: (JSON.parse(existing.payload_json) as ConsultaResumo).url,
-        })
-      : hl;
-
+    const item = existing ? cfg.splice(JSON.parse(existing.payload_json) as T, hl) : hl;
     const payloadJson = JSON.stringify(item);
     const hash = contentHash(payloadJson);
-    if (existing && existing.content_hash === hash) continue; // votes unchanged — skip
+    if (existing && existing.content_hash === hash) continue; // metric unchanged — skip
 
     rowsChanged++;
     stmts.push(
       db.prepare(SQL.upsert).bind(
-        "consultas", hl.id, now, hash, item.url, payloadJson, item.status, item.totalVotos, null,
+        cfg.entidade, hl.id, now, hash, item.url, payloadJson, item.status, cfg.metrica(item), cfg.comissao(item),
       ),
     );
-    stmts.push(db.prepare(SQL.history).bind("consultas", hl.id, now, hash, payloadJson));
+    stmts.push(db.prepare(SQL.history).bind(cfg.entidade, hl.id, now, hash, payloadJson));
   }
-  stmts.push(db.prepare(SQL.run).bind(now, "consultas", "ok-metrica", highlights.length, rowsChanged, null));
+  stmts.push(db.prepare(SQL.run).bind(now, cfg.entidade, "ok-metrica", highlights.length, rowsChanged, null));
   await db.batch(stmts);
 
-  return { entidade: "consultas", status: "ok-metrica", rowsScraped: highlights.length, rowsChanged };
+  return { entidade: cfg.entidade, status: "ok-metrica", rowsScraped: highlights.length, rowsChanged };
+}
+
+const consultasHighlightCfg: HighlightConfig<ConsultaResumo> = {
+  entidade: "consultas",
+  scrape: () => listarConsultasInternal({ limite: 100 }),
+  metrica: (c) => c.totalVotos,
+  comissao: () => null,
+  splice: (corpus, fresh) =>
+    buildConsultaResumo({
+      id: fresh.id,
+      materia: corpus.materia,
+      ementa: corpus.ementa,
+      votosSim: fresh.votosSim,
+      votosNao: fresh.votosNao,
+      totalVotos: fresh.totalVotos,
+      status: corpus.status,
+      url: corpus.url,
+    }),
+};
+
+const eventosHighlightCfg: HighlightConfig<EventoResumo> = {
+  entidade: "eventos",
+  scrape: () => listarEventosInternal({ limite: 100 }),
+  metrica: (e) => e.comentarios,
+  comissao: (e) => e.comissao,
+  splice: (corpus, fresh) =>
+    buildEventoResumo({
+      id: fresh.id,
+      titulo: corpus.titulo,
+      data: corpus.data,
+      hora: corpus.hora,
+      comissao: corpus.comissao,
+      comentarios: fresh.comentarios,
+      status: corpus.status,
+      url: corpus.url,
+    }),
+};
+
+/** Thin wrappers (kept by name for tests/back-compat). */
+export function refreshConsultasHighlights(db: D1Database, now: string): Promise<RunSummary> {
+  return refreshHighlights(db, now, consultasHighlightCfg);
+}
+export function refreshEventosHighlights(db: D1Database, now: string): Promise<RunSummary> {
+  return refreshHighlights(db, now, eventosHighlightCfg);
 }
 
 /**
- * Top-level Cron entry (every 2h): refresh ideias/eventos via the full syncEntity path (their REST
- * endpoint IS their full source), and consultas via the targeted highlight metric splice above.
- * The weekly full consultas corpus is loaded separately by the off-Worker ingestion job.
+ * Top-level Cron entry (every 2h): consultas + eventos get the targeted highlight metric splice
+ * (their full corpus is owned by the weekly off-Worker job); ideias still go through the full
+ * syncEntity path until the ideias corpus job lands (then it switches to a splice too).
  */
 export async function refreshEcidadania(env: Env, now = new Date().toISOString()): Promise<RunSummary[]> {
   const db = env.ECIDADANIA_DB;
@@ -228,24 +274,29 @@ export async function refreshEcidadania(env: Env, now = new Date().toISOString()
   const minPct = parseAnomalyMinPct(env.ECIDADANIA_ANOMALY_MIN_PCT);
   const summaries: RunSummary[] = [];
 
-  // consultas: targeted highlight refresh (bypasses syncEntity/classifyRun — see above).
-  try {
-    summaries.push(await refreshConsultasHighlights(db, now));
-  } catch (e) {
-    const errMsg = e instanceof Error ? e.message : String(e);
-    summaries.push({ entidade: "consultas", status: "erro-metrica", rowsScraped: 0, rowsChanged: 0, error: errMsg });
+  // consultas + eventos: targeted highlight splice (bypasses syncEntity/classifyRun — see above).
+  for (const [entidade, refresh] of [
+    ["consultas", refreshConsultasHighlights],
+    ["eventos", refreshEventosHighlights],
+  ] as Array<[Entidade, (db: D1Database, now: string) => Promise<RunSummary>]>) {
+    try {
+      summaries.push(await refresh(db, now));
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      summaries.push({ entidade, status: "erro-metrica", rowsScraped: 0, rowsChanged: 0, error: errMsg });
+    }
   }
 
-  // ideias/eventos: full syncEntity path with the anomaly guard.
-  for (const entidade of ["ideias", "eventos"] as Entidade[]) {
+  // ideias: full syncEntity path with the anomaly guard (until its corpus job lands).
+  {
     let records: SyncRecord[] = [];
     let error: unknown;
     try {
-      records = await scrapeEntity(entidade);
+      records = await scrapeEntity("ideias");
     } catch (e) {
       error = e;
     }
-    summaries.push(await syncEntity(db, entidade, records, now, minPct, error));
+    summaries.push(await syncEntity(db, "ideias", records, now, minPct, error));
   }
   return summaries;
 }
