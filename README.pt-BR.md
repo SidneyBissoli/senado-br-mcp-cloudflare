@@ -55,6 +55,56 @@ npx -y mcp-remote https://senado.sidneybissoli.com/mcp
 Tudo abaixo de *Arquitetura* (Pré-requisitos, Configuração, Deploy) é **apenas para opcionalmente auto-hospedar a sua
 própria instância** — **não** é necessário para usar este servidor público.
 
+## Rodar localmente (npx · stdio)
+
+Prefere não rotear suas consultas por um servidor de terceiros (ex.: política de uma redação)? O **mesmo
+servidor** também roda como um **processo local stdio** que bate **direto nas APIs oficiais do governo** —
+as mesmas 66 ferramentas, o mesmo envelope de proveniência, sem Cloudflare no caminho. É o canal npm/stdio.
+
+> **Atenção:** o atalho `npx senado-br-mcp` **ainda não está publicado** — o nome no npm está sendo
+> reclaimado de um pacote antigo e sem manutenção (sem proveniência). Até lá, rode a partir do fonte:
+
+```bash
+git clone https://github.com/SidneyBissoli/senado-br-mcp-cloudflare
+cd senado-br-mcp-cloudflare
+npm install
+npm run build
+node dist/cli.js   # serve o MCP por stdio (Ctrl+C para parar)
+```
+
+Aponte um cliente baseado em comando para o entrypoint compilado:
+
+```json
+{
+  "mcpServers": {
+    "senado-br": {
+      "command": "node",
+      "args": ["/caminho/absoluto/para/senado-br-mcp-cloudflare/dist/cli.js"]
+    }
+  }
+}
+```
+
+Quando o pacote npm for publicado, isto vira a forma sem instalação:
+
+```json
+{
+  "mcpServers": {
+    "senado-br": {
+      "command": "npx",
+      "args": ["-y", "senado-br-mcp"]
+    }
+  }
+}
+```
+
+**Paridade com o servidor hospedado:** as ferramentas legislativas e administrativas são **idênticas**
+(mesmas APIs de origem, mesmo throttle/cache/proveniência) — localmente o cache L1 do Cloudflare vira
+no-op, mas o L0 em memória continua funcionando, então o resultado é o mesmo. A **única** diferença são
+as ferramentas de lista/corpus do e-Cidadania: sem D1, elas caem no scraping ao vivo dos ~5 destaques
+REST, sinalizado por `meta.fonte` / `possivelDesatualizacao`; as de detalhe (`obter_*`) são idênticas.
+Os logs vão para o **stderr** — o stdout carrega apenas o fluxo do protocolo JSON-RPC.
+
 ## Arquitetura
 
 - **Runtime:** Cloudflare Workers (ESM)
