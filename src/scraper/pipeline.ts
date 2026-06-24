@@ -25,7 +25,7 @@ import {
   type IdeiaResumo,
 } from "./ecidadania.js";
 
-export type Entidade = "consultas" | "ideias" | "eventos";
+export type Entidade = "consultas" | "ideias" | "eventos" | "consultas_votos";
 
 /** Normalized row ready for persistence (entity-agnostic). */
 export interface SyncRecord {

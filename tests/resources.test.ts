@@ -11,9 +11,9 @@ describe("resource builders", () => {
     expect(g).toContain("senado_tabelas_referencia");
   });
 
-  it("catalogo lists 65 and a representative tool from each end", () => {
+  it("catalogo lists 66 and a representative tool from each end", () => {
     const c = buildCatalogo();
-    expect(c).toContain("(65)");
+    expect(c).toContain("(66)");
     expect(c).toContain("senado_search_votacoes");
     expect(c).toContain("senado_execucao_orcamentaria");
   });

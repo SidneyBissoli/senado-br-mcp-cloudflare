@@ -2,7 +2,7 @@
 
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-1f6feb)
-![Tools](https://img.shields.io/badge/tools-65-2ea44f)
+![Tools](https://img.shields.io/badge/tools-66-2ea44f)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
 [![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
 [![smithery badge](https://smithery.ai/badge/sidneybissoli/senado-br-mcp-cloudflare)](https://smithery.ai/servers/sidneybissoli/senado-br-mcp-cloudflare)
@@ -15,7 +15,7 @@
 
 A **public, hosted** MCP server that gives AI assistants live, structured access to **Brazilian Senate open data** — **no installation, no account, no API key**. Point your MCP client at the hosted endpoint and start asking about senators, bills, votes, expenses, and more. It runs on Cloudflare Workers over Streamable HTTP.
 
-It exposes **65 tools**, **4 prompts**, and **5 resources** across two domains:
+It exposes **66 tools**, **4 prompts**, and **5 resources** across two domains:
 
 - **Legislative** — senators; bills and their tramitation; votes; committees; plenary sessions, results and presidential vetoes; party-bloc voting orientation; speeches and stenographic transcripts; blocs and leadership; federal legislation; and citizen participation via the e-Cidadania portal.
 - **Administrative** — CEAPS parliamentary-quota expenses; housing allowance; civil servants and payroll; overtime; interns; procurement contracts and biddings; outsourced staff; petty-cash funds; and budget execution.
@@ -353,19 +353,33 @@ Used by Groups O, P, Q, R via `admFetch` (no `.json` suffix; HTTP 404 treated as
 
 ### e-Cidadania (D1-backed, Cron-refreshed)
 
-The e-Cidadania **list** data (consultas, ideias, eventos) is persisted in a **D1 database** and refreshed by a **Cron Trigger** (`0 */2 * * *`) instead of being scraped on every call. The scheduled job (`src/scraper/pipeline.ts`) scrapes the internal REST highlight endpoints (`restcolecaomaismateria`, `restcolecaomaisideia`, `restcolecaomaisaudiencia` — the top ~5 per entity, **not** the full corpus; these endpoints have no pagination), then:
+The e-Cidadania **list** data is persisted in a **D1 database** (`ecidadania_current/_history/_scrape_runs`, discriminated by `entidade`) and read from there instead of being scraped on every call. **Two cadences** write into it:
+
+- a **weekly off-Worker GitHub Action** owns the **full corpus** of each entity (see below) — the source of truth;
+- an in-Worker **Cron Trigger** (`0 */2 * * *`, `src/scraper/pipeline.ts → refreshEcidadania`) does only a **targeted metric splice** of the ~5 REST highlights per live entity (`restcolecaomaismateria/ideia/audiencia` — votos/comentários/apoios), recorded as `ok-metrica` so it never re-breaks the corpus baseline and never touches the long tail.
+
+Both writers build payloads through the canonical `buildXResumo` builders + shared `contentHash`, so their rows are byte-identical. Each write:
 
 - **upserts** `ecidadania_current` (one row per item — what the tools read),
 - **appends** `ecidadania_history` only when an item's `content_hash` changes (time-series-ready),
 - records each run in `ecidadania_scrape_runs`.
 
-An **anomaly guard** (`src/scraper/anomaly.ts`) ensures a failed or anomalous run (zero rows, or fewer than `ECIDADANIA_ANOMALY_MIN_PCT`% of the last good run) **never overwrites** the last good state.
+An **anomaly guard** (`src/scraper/anomaly.ts`, `classifyRun`) ensures a failed or anomalous corpus run (zero rows, or fewer than `ECIDADANIA_CORPUS_MIN_PCT`% of the last good run) **never overwrites** the last good state.
 
-The **list / analysis tools** (`listar_*`, `consultas_analise`, `sugerir_tema_enquete`) read from D1 via `resolveList` (`src/scraper/store.ts`): D1-first, with a graceful **live-scrape fallback** when D1 is empty or stale (older than `ECIDADANIA_STALE_MAX_MIN` minutes). Every list response carries an additive `meta` (`fonte`, `lastScrapedAt`, `possivelDesatualizacao`) so callers always see the data's real age and never get stale data silently.
+The **list / analysis tools** (`listar_*`, `consultas_analise`, `sugerir_tema_enquete`, `consultas_votos`) read from D1 via `resolveList` (`src/scraper/store.ts`): D1-first. Because every entity is now a full corpus, a stale corpus is served from D1 **flagged** (`possivelDesatualizacao: true`) rather than collapsing to the ~5-item live highlights (the original coverage bug); the live scrape is reserved for an empty D1 (cold start, before the first weekly run). Staleness uses `ECIDADANIA_CORPUS_STALE_MAX_MIN` (~10 days). Every list response carries an additive `meta` (`fonte`, `lastScrapedAt`, `possivelDesatualizacao`) so callers always see the data's real age and never get stale data silently.
 
 The **detail tools** (`obter_*`) stay **live** (HTML scraped with CSS-class-targeted regex) for freshness, and write their richer payload through to `ecidadania_detalhe` fire-and-forget (deduped by `content_hash`), so detail history accrues without adding latency to the response.
 
-#### Full-corpus consultas ingestion (off-Worker, weekly)
+#### Full-corpus ingestion (off-Worker, weekly)
+
+All four e-Cidadania entities are full corpora owned by the weekly Action (`.github/workflows/ingest-ecidadania.yml`), each with its own `scripts/ingest-ecidadania/index-*.ts` orchestrator emitting batched `out-*.sql` the apply step bulk-loads:
+
+- **`consultas`** — open consultations (detailed below).
+- **`eventos`** — audiências/eventos from the `principalaudiencia?p=N` HTML listing; status comes straight from the listing block (no `/processo` bridge).
+- **`ideias`** — ideias legislativas (~150k) from `pesquisaideia?situacao=N&p=M`, crawled **per `situacao` bucket** (the listing has no inline status) and emitted in ~10k-statement batches.
+- **`consultas_votos`** — a separate **historical** acervo of votes-by-UF parsed from the ~33 MB Arquimedes CSV (`Proposições-com-votos.csv`), aggregated to one record per matéria with a `votosPorUf` breakdown. The CSV's "dados atualizados até" stamp becomes the provenance `reference_period`; it is excluded from the row hash (`consultaVotoCore`) so a weekly stamp bump on these frozen votes doesn't churn `_history`. `STATUS ATUAL` is uniformly "Descontinuado", hence archival, not a migration of the open consultations. Served by `senado_ecidadania_consultas_votos` with provenance pointing at the CSV (`ECIDADANIA_ARQUIMEDES`).
+
+The `consultas` job is the reference implementation:
 
 `consultas` covers the **full set of OPEN consultations** — every matter currently in tramitação (~7.7k), not just the ~5 highlights. Confirmed on the first run: the `pesquisamateria` listing is **in-tramitação-only**, so closed/historical consultations are **not** captured by this source (a pre-ingestion historical backfill is out of scope). Three settled design decisions:
 
@@ -434,7 +448,7 @@ Fields (per response — one tool, one source):
 
 `retrieved_at` fidelity is provided by the cache layer (`cachedFetchWithMeta`), which persists the fetch timestamp alongside the value, so it reflects the real upstream extraction even on a cache hit. Two exceptions report an honest live timestamp instead: the e-Cidadania **list** tools (read from D1) use the corpus's `lastScrapedAt` — the true age of the stored data — while e-Cidadania **detail** tools, scraped live, use the fetch time and a level-3 canonical item URL.
 
-Coverage is **universal**: all 65 tools carry the envelope (verify with `grep -c 'resultWithProvenance(' src/tools/*.ts`). The **⊕** marks in the inventory below denote the original pilot tools (votes, bills, processes); the envelope now extends to every tool, so the marks are historical.
+Coverage is **universal**: all 66 tools carry the envelope (verify with `grep -c 'resultWithProvenance(' src/tools/*.ts`). The **⊕** marks in the inventory below denote the original pilot tools (votes, bills, processes); the envelope now extends to every tool, so the marks are historical.
 
 ## Tool Inventory
 
@@ -503,7 +517,7 @@ Coverage is **universal**: all 65 tools carry the envelope (verify with `grep -c
 | `senado_encontro_plenario` | Legislative session detail, agenda items, results or summary |
 | `senado_tabelas_plenario` | Session types, attendance types, legislatures list |
 
-### Group G — e-Cidadania (8 tools)
+### Group G — e-Cidadania (9 tools)
 
 | Tool | Description |
 |------|-------------|
@@ -515,6 +529,7 @@ Coverage is **universal**: all 65 tools carry the envelope (verify with `grep -c
 | `senado_ecidadania_listar_eventos` | Eventos interativos (audiências, sabatinas, lives); ranking dos mais comentados via `ordenarPor` |
 | `senado_ecidadania_obter_evento` | Detalhe de um evento: pauta, convidados, link de vídeo |
 | `senado_ecidadania_sugerir_tema_enquete` | Sugere temas para enquete mensal a partir de critérios configuráveis |
+| `senado_ecidadania_consultas_votos` | Acervo **histórico** de votos das consultas com quebra **por UF** (CSV Arquimedes); ranking por `total`/`sim`/`nao`, filtro `uf`/`materia` |
 
 ### Group I — Speeches (3 tools)
 
@@ -598,7 +613,7 @@ Coverage is **universal**: all 65 tools carry the envelope (verify with `grep -c
 |------|-------------|
 | `senado_execucao_orcamentaria` | Budget execution since 2013 (allocation, committed/settled/paid) and own revenues since 2012 (forecast vs collected) — aggregated by year, action, expense group, source or revenue origin |
 
-**Total: 65 tools**
+**Total: 66 tools**
 
 ### Prompts (4)
 
@@ -618,7 +633,7 @@ Static context documents/tables (MCP `resources` capability), defined in `src/re
 | URI | Type | Content |
 | --- | --- | --- |
 | `senado://guia` | markdown | Visão geral e qual ferramenta usar por objetivo. |
-| `senado://catalogo` | markdown | As 65 ferramentas agrupadas por domínio. |
+| `senado://catalogo` | markdown | As 66 ferramentas agrupadas por domínio. |
 | `senado://glossario` | markdown | Siglas e termos do Senado (PEC, CEAPS, CCJ, RCN…). |
 | `senado://tabelas/tipos-materia` | json | Tipos de proposição (sigla/nome/descrição). |
 | `senado://tabelas/ufs` | json | As 27 unidades federativas. |
@@ -641,7 +656,7 @@ src/
 │   └── upstream.ts       # Upstream fetch with concurrency limit, retry, timeout
 ├── scraper/
 │   ├── ecidadania.ts     # Isolated e-Cidadania scraper (REST lists + regex HTML detail; buildConsultaResumo)
-│   ├── pipeline.ts       # 2h Cron sync: ideias/eventos via syncEntity + consultas highlight metric splice
+│   ├── pipeline.ts       # 2h Cron: targeted highlight metric splice (consultas/eventos/ideias); corpora owned by the weekly jobs
 │   ├── anomaly.ts        # Run classification (anomalous run never overwrites current)
 │   └── store.ts          # D1 reads (resolveList + per-entity staleness, lastGoodRunAt) + detail write-through
 ├── instrument.ts         # Per-tool call telemetry (in-memory + Analytics Engine)
@@ -693,10 +708,8 @@ tests/                    # Vitest unit tests mirroring src/ (parsers, cache, th
 | `API_KEY` | No (secret) | — | When set, requires `Authorization: Bearer <key>` on all requests except `/health`, `/metrics`, and CORS preflight |
 | `CACHE_KV` | Yes (binding) | — | KV namespace for L2 cache |
 | `ECIDADANIA_DB` | Yes (binding) | — | D1 database for the e-Cidadania pipeline (list persistence + history) |
-| `ECIDADANIA_STALE_MAX_MIN` | No | `360` | Minutes before D1-backed e-Cidadania reads (ideias/eventos) flag possible staleness and fall back to live |
-| `ECIDADANIA_CORPUS_STALE_MAX_MIN` | No | `14400` | Staleness window (minutes, ~10d) for the weekly full `consultas` corpus — served flagged, never collapsed to highlights |
-| `ECIDADANIA_ANOMALY_MIN_PCT` | No | `50` | A 2h Cron run (ideias/eventos) returning fewer than this % of the last good run's rows is anomalous and won't overwrite `current` |
-| `ECIDADANIA_CORPUS_MIN_PCT` | No | `80` | Catastrophic floor for the off-Worker corpus job: a complete crawl below this % of the last good corpus is rejected |
+| `ECIDADANIA_CORPUS_STALE_MAX_MIN` | No | `14400` | Staleness window (minutes, ~10d) for the weekly full corpora (all e-Cidadania entities) — served flagged, never collapsed to highlights |
+| `ECIDADANIA_CORPUS_MIN_PCT` | No | `80` | Catastrophic floor for the off-Worker corpus jobs: a complete crawl/parse below this % of the last good corpus is rejected |
 | `CLOUDFLARE_API_TOKEN` | No (secret) | — | GitHub Actions secret (D1 edit scope) for the weekly corpus ingestion job; not used by the Worker |
 | `CLOUDFLARE_ACCOUNT_ID` | No (Actions var) | — | GitHub Actions repo variable so wrangler skips `/memberships` account auto-discovery (a D1-scoped token can't read it); required alongside `CLOUDFLARE_API_TOKEN` in the ingestion job |
 | `SENADO_ANALYTICS` | No (binding) | — | Analytics Engine dataset for per-tool call telemetry |
@@ -704,7 +717,7 @@ tests/                    # Vitest unit tests mirroring src/ (parsers, cache, th
 ## Connecting MCP Clients
 
 This is a **remote** server (Streamable HTTP, no install, open access) — point any MCP client at
-`https://senado.sidneybissoli.com/mcp`. Besides 65 tools, it exposes **prompts** (ready-made pt-BR
+`https://senado.sidneybissoli.com/mcp`. Besides 66 tools, it exposes **prompts** (ready-made pt-BR
 workflows: `senado_gastos_senador`, `senado_tramitacao_materia`, `senado_votos_senador`,
 `senado_panorama_ecidadania`) and **resources** (`senado://guia`, `senado://catalogo`,
 `senado://glossario`, `senado://tabelas/tipos-materia`, `senado://tabelas/ufs`).

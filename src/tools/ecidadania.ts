@@ -14,7 +14,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { toolError } from "../utils/validation.js";
-import { provenanceEcidadania, resultWithProvenance } from "../utils/provenance.js";
+import { provenanceEcidadania, provenanceArquimedesVotos, resultWithProvenance } from "../utils/provenance.js";
 import { logger } from "../utils/logger.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 import type { Env } from "../types.js";
@@ -37,6 +37,7 @@ import {
   type ConsultaResumo,
   type IdeiaResumo,
   type EventoResumo,
+  type ConsultaVotoResumo,
 } from "../scraper/ecidadania.js";
 
 // Re-export the scraper's pure/IO helpers so existing unit tests keep importing them from here.
@@ -393,6 +394,75 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           sugestoes: sugestoes.slice(0, 10),
           meta: { consultas: cRes.meta, ideias: iRes.meta },
         }, provLista("/principalmateria", "consultas+ideias", cRes.meta));
+      } catch (e) { return ecidadaniaError(e); }
+    },
+  );
+
+  // G10. senado_ecidadania_consultas_votos (acervo histórico de votos por UF — CSV Arquimedes)
+  server.tool(
+    "senado_ecidadania_consultas_votos",
+    "Acervo **histórico** de votos das consultas públicas do e-Cidadania, com **quebra por UF** (fonte: CSV Arquimedes; ~15 mil matérias, atualizado semanalmente). Diferente de `senado_ecidadania_listar_consultas` (consultas em tramitação): aqui o conjunto é o **arquivo** de matérias já consultadas — `status` vem como `Descontinuado` no arquivo de origem, por isso é tratado como acervo, não como opinião atual. Retorna `{ count, referencePeriod, consultas }`, cada item com `id`, `materia`, `ementa`, `autoria`, `votosSim`/`votosNao`/`totalVotos`, `votosPorUf` (`{ UF: { sim, nao } }`) e `url`. Use `ordenarPor` (`total`/`sim`/`nao`, padrão `total`) e `ordem` para ranking; `uf` para recortar e **ranquear por aquele estado** (só matérias com votos na UF, e cada item ganha `recorteUf`); `materia` para filtrar por código (numérico) ou trecho do nome/ementa; `limite` (padrão 20).",
+    {
+      ordenarPor: z.enum(["total", "sim", "nao"]).optional().default("total").describe("Métrica do ranking (padrão: total de votos)"),
+      ordem: z.enum(["asc", "desc"]).optional().default("desc").describe("Ordem (padrão desc)"),
+      uf: z.string().length(2).optional().describe("Sigla da UF (ex.: SP) — filtra e ranqueia por votos daquele estado"),
+      materia: z.string().optional().describe("Filtro por código da matéria (numérico) ou trecho do nome/ementa"),
+      limite: z.number().int().min(1).max(100).optional().default(20).describe("Número máximo de resultados"),
+    },
+    async (params) => {
+      try {
+        const ordenarPor = params.ordenarPor ?? "total";
+        const ordem = params.ordem ?? "desc";
+        const limite = params.limite ?? 20;
+        const uf = params.uf?.toUpperCase();
+        const { items, meta } = await resolveList(
+          db, "consultas_votos", corpusStaleMaxMin(),
+          async () => [], // sem fonte ao vivo: na 1ª carga (D1 vazio) responde vazio com aviso
+          undefined, CORPUS_RESOLVE,
+        );
+        let arr = items as ConsultaVotoResumo[];
+
+        if (params.materia) {
+          const q = params.materia.trim();
+          if (/^\d+$/.test(q)) {
+            const code = Number(q);
+            arr = arr.filter((v) => v.id === code);
+          } else {
+            const needle = q.toLowerCase();
+            arr = arr.filter((v) => v.materia.toLowerCase().includes(needle) || v.ementa.toLowerCase().includes(needle));
+          }
+        }
+
+        // Ranking metric: by UF when `uf` is set (and drop matérias without votes there), else aggregate.
+        const valueOf = (v: ConsultaVotoResumo): number => {
+          if (uf) {
+            const u = v.votosPorUf[uf];
+            if (!u) return Number.NEGATIVE_INFINITY;
+            return ordenarPor === "sim" ? u.sim : ordenarPor === "nao" ? u.nao : u.sim + u.nao;
+          }
+          return ordenarPor === "sim" ? v.votosSim : ordenarPor === "nao" ? v.votosNao : v.totalVotos;
+        };
+        if (uf) arr = arr.filter((v) => v.votosPorUf[uf]);
+        arr = [...arr].sort((a, b) => (ordem === "asc" ? valueOf(a) - valueOf(b) : valueOf(b) - valueOf(a)));
+
+        const out = arr.slice(0, limite).map((v) => {
+          if (!uf) return v;
+          const u = v.votosPorUf[uf]!;
+          return { ...v, recorteUf: { uf, votosSim: u.sim, votosNao: u.nao, totalVotos: u.sim + u.nao } };
+        });
+
+        const referencePeriod = (items[0] as ConsultaVotoResumo | undefined)?.referencePeriod ?? null;
+        const payload: Record<string, unknown> = { count: out.length, referencePeriod, consultas: out, meta };
+        if (out.length === 0 && (meta.fonte === "ao-vivo" || meta.motivo === "d1-vazio" || meta.motivo === "d1-indisponivel")) {
+          payload.aviso = "Acervo de votos ainda não ingerido (primeira carga semanal pendente) ou filtro sem correspondência.";
+        }
+        return resultWithProvenance(
+          payload,
+          provenanceArquimedesVotos({
+            reference_period: referencePeriod ?? undefined,
+            retrieved_at: typeof meta.lastScrapedAt === "string" && meta.lastScrapedAt ? meta.lastScrapedAt : undefined,
+          }),
+        );
       } catch (e) { return ecidadaniaError(e); }
     },
   );

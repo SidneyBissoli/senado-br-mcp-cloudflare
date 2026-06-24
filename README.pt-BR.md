@@ -2,7 +2,7 @@
 
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-1f6feb)
-![Tools](https://img.shields.io/badge/tools-65-2ea44f)
+![Tools](https://img.shields.io/badge/tools-66-2ea44f)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
 [![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
 [![smithery badge](https://smithery.ai/badge/sidneybissoli/senado-br-mcp-cloudflare)](https://smithery.ai/servers/sidneybissoli/senado-br-mcp-cloudflare)
@@ -14,7 +14,7 @@
 
 Um servidor MCP **público e hospedado** que dá aos assistentes de IA acesso ao vivo e estruturado aos **dados abertos do Senado Federal do Brasil** — **sem instalação, sem conta, sem chave de API**. Aponte o seu cliente MCP para o endpoint hospedado e comece a perguntar sobre senadores, matérias, votações, despesas e muito mais. Roda em Cloudflare Workers via Streamable HTTP.
 
-Expõe **65 ferramentas**, **4 prompts** e **5 recursos** em dois domínios:
+Expõe **66 ferramentas**, **4 prompts** e **5 recursos** em dois domínios:
 
 - **Legislativo** — senadores; matérias e sua tramitação; votações; comissões; sessões plenárias, resultados e vetos presidenciais; orientação de bancada nas votações; discursos e notas taquigráficas; blocos e lideranças; legislação federal; e participação cidadã pelo portal e-Cidadania.
 - **Administrativo** — despesas da cota parlamentar (CEAPS); auxílio-moradia; servidores e remunerações; horas extras; estagiários; contratos e licitações; terceirizados; suprimento de fundos; e execução orçamentária.
@@ -350,19 +350,33 @@ Usada pelos Grupos O, P, Q, R via `admFetch` (sem sufixo `.json`; HTTP 404 trata
 
 ### e-Cidadania (em D1, atualizado por Cron)
 
-Os dados de **listagem** do e-Cidadania (consultas, ideias, eventos) são persistidos em um **banco D1** e atualizados por um **Cron Trigger** (`0 */2 * * *`) em vez de serem raspados a cada chamada. O job agendado (`src/scraper/pipeline.ts`) raspa os endpoints REST internos de destaques (`restcolecaomaismateria`, `restcolecaomaisideia`, `restcolecaomaisaudiencia` — os ~5 principais por entidade, **não** o corpus completo; esses endpoints não têm paginação) e então:
+Os dados de **listagem** do e-Cidadania são persistidos em um **banco D1** (`ecidadania_current/_history/_scrape_runs`, discriminado por `entidade`) e lidos de lá em vez de raspados a cada chamada. **Duas cadências** escrevem nele:
+
+- uma **GitHub Action semanal fora do Worker** é dona do **corpus completo** de cada entidade (veja abaixo) — a fonte da verdade;
+- um **Cron Trigger** in-Worker (`0 */2 * * *`, `src/scraper/pipeline.ts → refreshEcidadania`) faz apenas um **splice de métrica direcionado** dos ~5 destaques REST por entidade ao vivo (`restcolecaomaismateria/ideia/audiencia` — votos/comentários/apoios), registrado como `ok-metrica` para nunca re-quebrar a baseline do corpus nem tocar a cauda longa.
+
+Ambos os escritores constroem os payloads pelos builders canônicos `buildXResumo` + `contentHash` compartilhado, então suas linhas são byte-idênticas. Cada escrita:
 
 - faz **upsert** em `ecidadania_current` (uma linha por item — o que as ferramentas leem),
 - **anexa** em `ecidadania_history` apenas quando o `content_hash` de um item muda (pronto para série temporal),
 - registra cada execução em `ecidadania_scrape_runs`.
 
-Um **guard de anomalia** (`src/scraper/anomaly.ts`) garante que uma execução falha ou anômala (zero linhas, ou menos que `ECIDADANIA_ANOMALY_MIN_PCT`% da última boa) **nunca sobrescreva** o último bom estado.
+Um **guard de anomalia** (`src/scraper/anomaly.ts`, `classifyRun`) garante que uma execução de corpus falha ou anômala (zero linhas, ou menos que `ECIDADANIA_CORPUS_MIN_PCT`% da última boa) **nunca sobrescreva** o último bom estado.
 
-As **ferramentas de listagem/análise** (`listar_*`, `consultas_analise`, `sugerir_tema_enquete`) leem do D1 via `resolveList` (`src/scraper/store.ts`): D1 primeiro, com **fallback de scraping ao vivo** quando o D1 está vazio ou velho (mais antigo que `ECIDADANIA_STALE_MAX_MIN` minutos). Toda resposta de listagem carrega um `meta` aditivo (`fonte`, `lastScrapedAt`, `possivelDesatualizacao`) para que os chamadores sempre vejam a idade real dos dados e nunca recebam dados velhos silenciosamente.
+As **ferramentas de listagem/análise** (`listar_*`, `consultas_analise`, `sugerir_tema_enquete`, `consultas_votos`) leem do D1 via `resolveList` (`src/scraper/store.ts`): D1 primeiro. Como toda entidade agora é um corpus completo, um corpus velho é servido do D1 **com flag** (`possivelDesatualizacao: true`) em vez de colapsar para os ~5 destaques ao vivo (o bug de cobertura original); o scraping ao vivo fica reservado a um D1 vazio (cold start, antes da 1ª carga semanal). O frescor usa `ECIDADANIA_CORPUS_STALE_MAX_MIN` (~10 dias). Toda resposta de listagem carrega um `meta` aditivo (`fonte`, `lastScrapedAt`, `possivelDesatualizacao`) para que os chamadores sempre vejam a idade real dos dados e nunca recebam dados velhos silenciosamente.
 
 As **ferramentas de detalhe** (`obter_*`) ficam **ao vivo** (HTML raspado com regex direcionado por classe CSS) por frescor, e gravam o payload mais rico em `ecidadania_detalhe` em fire-and-forget (deduplicado por `content_hash`), para que o histórico de detalhe se acumule sem adicionar latência à resposta.
 
-#### Ingestão do corpus completo de consultas (fora do Worker, semanal)
+#### Ingestão do corpus completo (fora do Worker, semanal)
+
+As quatro entidades do e-Cidadania são corpora completos, cada um dono de um orquestrador `scripts/ingest-ecidadania/index-*.ts` executado pela Action semanal (`.github/workflows/ingest-ecidadania.yml`), emitindo `out-*.sql` em lotes que o passo de apply carrega:
+
+- **`consultas`** — consultas abertas (detalhado abaixo).
+- **`eventos`** — audiências/eventos da listagem HTML `principalaudiencia?p=N`; o status vem direto do bloco da listagem (sem ponte por `/processo`).
+- **`ideias`** — ideias legislativas (~150 mil) de `pesquisaideia?situacao=N&p=M`, varridas **por bucket de `situacao`** (a listagem não traz status inline) e emitidas em lotes de ~10k statements.
+- **`consultas_votos`** — acervo **histórico** separado de votos por UF, lido do CSV Arquimedes de ~33 MB (`Proposições-com-votos.csv`), agregado a uma linha por matéria com quebra `votosPorUf`. O carimbo "dados atualizados até" do CSV vira o `reference_period` da proveniência; fica **fora** do hash da linha (`consultaVotoCore`) para que um bump semanal do carimbo sobre esses votos congelados não suje o `_history`. `STATUS ATUAL` é uniformemente "Descontinuado" — por isso é acervo, não migração das consultas abertas. Servido por `senado_ecidadania_consultas_votos` com proveniência apontando para o CSV (`ECIDADANIA_ARQUIMEDES`).
+
+O job de `consultas` é a implementação de referência:
 
 `consultas` cobre o **conjunto completo de consultas ABERTAS** — toda matéria atualmente em tramitação (~7,7 mil), não apenas os ~5 destaques. Confirmado na primeira execução: a listagem `pesquisamateria` é **apenas de em-tramitação**, então consultas encerradas/históricas **não** são capturadas por essa fonte (um backfill histórico pré-ingestão está fora de escopo). Três decisões de design já assentadas:
 
@@ -481,7 +495,7 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 | `senado_encontro_plenario` | Detalhe de sessão legislativa, itens de pauta, resultados ou resumo |
 | `senado_tabelas_plenario` | Tipos de sessão, tipos de comparecimento, lista de legislaturas |
 
-### Grupo G — e-Cidadania (8 ferramentas)
+### Grupo G — e-Cidadania (9 ferramentas)
 
 | Ferramenta | Descrição |
 |------|-------------|
@@ -493,6 +507,7 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 | `senado_ecidadania_listar_eventos` | Eventos interativos (audiências, sabatinas, lives); ranking dos mais comentados via `ordenarPor` |
 | `senado_ecidadania_obter_evento` | Detalhe de um evento: pauta, convidados, link de vídeo |
 | `senado_ecidadania_sugerir_tema_enquete` | Sugere temas para enquete mensal a partir de critérios configuráveis |
+| `senado_ecidadania_consultas_votos` | Acervo **histórico** de votos das consultas com quebra **por UF** (CSV Arquimedes); ranking por `total`/`sim`/`nao`, filtro `uf`/`materia` |
 
 ### Grupo I — Discursos (3 ferramentas)
 
@@ -576,7 +591,7 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 |------|-------------|
 | `senado_execucao_orcamentaria` | Execução orçamentária desde 2013 (dotação, empenhado/liquidado/pago) e receitas próprias desde 2012 (previsto vs. arrecadado) — agregadas por ano, ação, grupo de despesa, fonte ou origem de receita |
 
-**Total: 65 ferramentas**
+**Total: 66 ferramentas**
 
 ### Prompts (4)
 
@@ -596,7 +611,7 @@ Documentos/tabelas de contexto estáticos (capacidade MCP `resources`), definido
 | URI | Tipo | Conteúdo |
 | --- | --- | --- |
 | `senado://guia` | markdown | Visão geral e qual ferramenta usar por objetivo. |
-| `senado://catalogo` | markdown | As 65 ferramentas agrupadas por domínio. |
+| `senado://catalogo` | markdown | As 66 ferramentas agrupadas por domínio. |
 | `senado://glossario` | markdown | Siglas e termos do Senado (PEC, CEAPS, CCJ, RCN…). |
 | `senado://tabelas/tipos-materia` | json | Tipos de proposição (sigla/nome/descrição). |
 | `senado://tabelas/ufs` | json | As 27 unidades federativas. |
@@ -619,7 +634,7 @@ src/
 │   └── upstream.ts       # Fetch upstream com limite de concorrência, retry, timeout
 ├── scraper/
 │   ├── ecidadania.ts     # Scraper isolado do e-Cidadania (listas REST + detalhe HTML por regex; buildConsultaResumo)
-│   ├── pipeline.ts       # Sync do Cron de 2h: ideias/eventos via syncEntity + splice de métrica das consultas em destaque
+│   ├── pipeline.ts       # Cron de 2h: splice de métrica direcionado (consultas/eventos/ideias); corpora são dos jobs semanais
 │   ├── anomaly.ts        # Classificação de execução (execução anômala nunca sobrescreve current)
 │   └── store.ts          # Leituras D1 (resolveList + staleness por entidade, lastGoodRunAt) + write-through de detalhe
 ├── instrument.ts         # Telemetria de chamadas por ferramenta (memória + Analytics Engine)
@@ -634,7 +649,7 @@ src/
     ├── votacoes.ts          # Grupo D — 3 ferramentas de votações
     ├── comissoes.ts         # Grupo E — 7 ferramentas de comissões
     ├── plenario.ts          # Grupo F — 7 ferramentas de plenário
-    ├── ecidadania.ts        # Grupo G — 8 ferramentas do e-Cidadania (leem do D1; veja scraper/)
+    ├── ecidadania.ts        # Grupo G — 9 ferramentas do e-Cidadania (leem do D1; veja scraper/)
     ├── discursos.ts         # Grupo I — 3 ferramentas de discursos
     ├── composicao.ts        # Grupo J — 4 ferramentas de blocos/lideranças
     ├── orcamento.ts         # Grupo K — 1 ferramenta de orçamento
@@ -671,10 +686,8 @@ tests/                    # Testes unitários Vitest espelhando src/ (parsers, c
 | `API_KEY` | Não (secret) | — | Quando definido, exige `Authorization: Bearer <key>` em todas as requisições exceto `/health`, `/metrics` e preflight CORS |
 | `CACHE_KV` | Sim (binding) | — | Namespace KV para o cache L2 |
 | `ECIDADANIA_DB` | Sim (binding) | — | Banco D1 para o pipeline do e-Cidadania (persistência de listas + histórico) |
-| `ECIDADANIA_STALE_MAX_MIN` | Não | `360` | Minutos antes de leituras do e-Cidadania em D1 (ideias/eventos) sinalizarem possível desatualização e caírem para ao vivo |
-| `ECIDADANIA_CORPUS_STALE_MAX_MIN` | Não | `14400` | Janela de desatualização (minutos, ~10d) para o corpus semanal completo de `consultas` — servido com flag, nunca colapsado para destaques |
-| `ECIDADANIA_ANOMALY_MIN_PCT` | Não | `50` | Uma execução do Cron de 2h (ideias/eventos) retornando menos que esse % das linhas da última boa execução é anômala e não sobrescreve `current` |
-| `ECIDADANIA_CORPUS_MIN_PCT` | Não | `80` | Piso catastrófico para o job de corpus fora do Worker: um crawl completo abaixo desse % do último bom corpus é rejeitado |
+| `ECIDADANIA_CORPUS_STALE_MAX_MIN` | Não | `14400` | Janela de desatualização (minutos, ~10d) para os corpora semanais completos (todas as entidades do e-Cidadania) — servido com flag, nunca colapsado para destaques |
+| `ECIDADANIA_CORPUS_MIN_PCT` | Não | `80` | Piso catastrófico para os jobs de corpus fora do Worker: um crawl/parse completo abaixo desse % do último bom corpus é rejeitado |
 | `CLOUDFLARE_API_TOKEN` | Não (secret) | — | Secret do GitHub Actions (escopo de edição D1) para o job semanal de ingestão do corpus; não usado pelo Worker |
 | `CLOUDFLARE_ACCOUNT_ID` | Não (var do Actions) | — | Variável de repositório do GitHub Actions para o wrangler pular o auto-discovery de conta via `/memberships` (um token com escopo só de D1 não consegue lê-lo); obrigatória junto com `CLOUDFLARE_API_TOKEN` no job de ingestão |
 | `SENADO_ANALYTICS` | Não (binding) | — | Dataset do Analytics Engine para telemetria de chamadas por ferramenta |
@@ -682,7 +695,7 @@ tests/                    # Testes unitários Vitest espelhando src/ (parsers, c
 ## Conectando clientes MCP
 
 Este é um servidor **remoto** (Streamable HTTP, sem instalação, acesso aberto) — aponte qualquer cliente MCP para
-`https://senado.sidneybissoli.com/mcp`. Além das 65 ferramentas, ele expõe **prompts** (workflows prontos em pt-BR:
+`https://senado.sidneybissoli.com/mcp`. Além das 66 ferramentas, ele expõe **prompts** (workflows prontos em pt-BR:
 `senado_gastos_senador`, `senado_tramitacao_materia`, `senado_votos_senador`,
 `senado_panorama_ecidadania`) e **recursos** (`senado://guia`, `senado://catalogo`,
 `senado://glossario`, `senado://tabelas/tipos-materia`, `senado://tabelas/ufs`).

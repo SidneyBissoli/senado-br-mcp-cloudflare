@@ -15,7 +15,7 @@ export function buildGuia(): string {
   return `# Senado BR MCP — guia de uso
 
 Servidor MCP de dados abertos do Senado Federal (API legislativa, API administrativa e portal
-e-Cidadania). 65 ferramentas, respostas em pt-BR. Abaixo, por onde começar conforme o objetivo.
+e-Cidadania). 66 ferramentas, respostas em pt-BR. Abaixo, por onde começar conforme o objetivo.
 
 ## Senadores
 - \`senado_listar_senadores\` — lista/busca por nome, UF ou partido (use o filtro \`nome\` quando só tiver o nome).
@@ -45,6 +45,7 @@ e-Cidadania). 65 ferramentas, respostas em pt-BR. Abaixo, por onde começar conf
 ## e-Cidadania (participação cidadã)
 - \`senado_ecidadania_listar_consultas\` / \`_consultas_analise\` (consenso/polarização),
   \`_listar_ideias\`, \`_listar_eventos\`, \`_sugerir_tema_enquete\`.
+- Acervo **histórico** de votos por UF: \`senado_ecidadania_consultas_votos\` (ranking por estado).
 
 ## Tabelas de referência
 - \`senado_tabelas_referencia\` (\`tabela\`: tipos-materia | partidos | ufs | legislatura-atual | tipos-norma | tipos-uso-palavra).
@@ -54,9 +55,9 @@ Dica: vários tools usam um parâmetro enum (\`secao\`/\`tipo\`/\`por\`/\`modo\`
 leia a descrição do tool para os valores aceitos.`;
 }
 
-/** Compact grouped catalog of all 65 tools. */
+/** Compact grouped catalog of all 66 tools. */
 export function buildCatalogo(): string {
-  return `# Catálogo de ferramentas (65)
+  return `# Catálogo de ferramentas (66)
 
 A — Senadores (5): senado_listar_senadores, senado_obter_senador, senado_votacoes_senador, senado_senador_historico, senado_senadores_afastados
 B — Matérias (2): senado_buscar_materias, senado_obter_materia
@@ -64,7 +65,7 @@ C — Processos (5): senado_search_processos, senado_obter_processo, senado_proc
 D — Votações (3): senado_search_votacoes, senado_obter_votacao, senado_votos_materia
 E — Comissões (7): senado_listar_comissoes, senado_obter_comissao, senado_reunioes_comissao, senado_agenda_comissoes, senado_reuniao_comissao, senado_requerimentos_cpi, senado_distribuicao_materias
 F — Plenário (7): senado_agenda_plenario, senado_resultado_plenario, senado_orientacao_bancada, senado_vetos, senado_resultado_veto, senado_encontro_plenario, senado_tabelas_plenario
-G — e-Cidadania (8): senado_ecidadania_listar_consultas, senado_ecidadania_obter_consulta, senado_ecidadania_consultas_analise, senado_ecidadania_listar_ideias, senado_ecidadania_obter_ideia, senado_ecidadania_listar_eventos, senado_ecidadania_obter_evento, senado_ecidadania_sugerir_tema_enquete
+G — e-Cidadania (9): senado_ecidadania_listar_consultas, senado_ecidadania_obter_consulta, senado_ecidadania_consultas_analise, senado_ecidadania_listar_ideias, senado_ecidadania_obter_ideia, senado_ecidadania_listar_eventos, senado_ecidadania_obter_evento, senado_ecidadania_sugerir_tema_enquete, senado_ecidadania_consultas_votos
 H — Referência (1): senado_tabelas_referencia
 I — Discursos (3): senado_discursos_senador, senado_discursos_plenario, senado_discurso_texto
 J — Composição (4): senado_listar_blocos, senado_obter_bloco, senado_liderancas, senado_mesa
@@ -130,7 +131,7 @@ export function registerResources(server: McpServer) {
     "senado://catalogo",
     {
       title: "Catálogo de ferramentas",
-      description: "Lista das 65 ferramentas agrupadas por domínio.",
+      description: "Lista das 66 ferramentas agrupadas por domínio.",
       mimeType: "text/markdown",
     },
     (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: buildCatalogo() }] }),

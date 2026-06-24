@@ -398,6 +398,62 @@ export async function listarEventosInternal(params: { status?: string; comissao?
   return eventos.slice(0, limite);
 }
 
+// ── Consultas (votos históricos / acervo Arquimedes) ────────────────────────
+
+/** Votos por UF de uma matéria (diferencial regional do acervo histórico). */
+export type VotosPorUf = Record<string, { sim: number; nao: number }>;
+
+export interface ConsultaVotoResumo {
+  id: number; materia: string; ementa: string; autoria: string; status: string;
+  votosSim: number; votosNao: number; totalVotos: number;
+  votosPorUf: VotosPorUf; url: string;
+  /** Carimbo "dados atualizados até" do CSV (vintage). EXCLUÍDO do contentHash — ver consultaVotoCore. */
+  referencePeriod: string | null;
+}
+
+/**
+ * Canonical `ConsultaVotoResumo` builder — único writer é o job semanal do CSV Arquimedes (não há
+ * fonte REST nem splice de 2h para esta entidade), mas o builder fixa a ordem dos campos para que o
+ * `contentHash` seja estável entre execuções (history-on-change). `votosPorUf` deve chegar com chaves
+ * já ordenadas (o agregador ordena) para o JSON ser determinístico.
+ *
+ * `totalVotos` é sempre derivado de `votosSim + votosNao`. `referencePeriod` é o vintage do CSV e fica
+ * por ÚLTIMO de propósito: `consultaVotoCore` o remove antes do hash, de modo que um bump semanal do
+ * carimbo sobre votos arquivados (congelados) NÃO gere ruído em `ecidadania_history`.
+ */
+export function buildConsultaVotoResumo(fields: {
+  id: number; materia?: string; ementa?: string; autoria?: string; status?: string;
+  votosSim: number; votosNao: number;
+  votosPorUf?: VotosPorUf; url?: string; referencePeriod?: string | null;
+}): ConsultaVotoResumo {
+  const votosSim = fields.votosSim;
+  const votosNao = fields.votosNao;
+  return {
+    id: fields.id,
+    materia: fields.materia || "",
+    ementa: fields.ementa || "",
+    autoria: fields.autoria || "",
+    status: fields.status || "Descontinuado",
+    votosSim,
+    votosNao,
+    totalVotos: votosSim + votosNao,
+    votosPorUf: fields.votosPorUf ?? {},
+    url: fields.url || `${ECIDADANIA_BASE}/visualizacaomateria?id=${fields.id}`,
+    referencePeriod: fields.referencePeriod ?? null,
+  };
+}
+
+/**
+ * Vote-relevant core of a `ConsultaVotoResumo` — everything EXCEPT `referencePeriod` (the CSV vintage
+ * stamp). The corpus job hashes THIS (not the full payload), so a weekly stamp change on otherwise
+ * unchanged archival votes does not append a junk `ecidadania_history` row. The stored `payload_json`
+ * still carries `referencePeriod` (the tool reports it as the provenance vintage).
+ */
+export function consultaVotoCore(v: ConsultaVotoResumo): Omit<ConsultaVotoResumo, "referencePeriod"> {
+  const { referencePeriod: _omit, ...core } = v;
+  return core;
+}
+
 export async function obterEventoInternal(id: number) {
   const html = await fetchPage(`/visualizacaoaudiencia?id=${id}`);
 
