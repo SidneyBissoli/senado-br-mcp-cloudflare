@@ -3,7 +3,7 @@
   "name": "io.github.SidneyBissoli/senado-br-mcp-cloudflare",
   "title": "Senado BR MCP",
   "description": "Brazilian Federal Senate open data over MCP — 66 tools, 4 prompts, 5 resources.",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "websiteUrl": "https://senado.sidneybissoli.com",
   "repository": {
     "url": "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
@@ -20,7 +20,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "senado-br-mcp",
-      "version": "3.2.1",
+      "version": "3.3.0",
       "transport": {
         "type": "stdio"
       }

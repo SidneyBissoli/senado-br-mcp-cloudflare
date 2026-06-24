@@ -3,10 +3,26 @@
 import { incr } from "../metrics.js";
 import { logger } from "./logger.js";
 
-export function toolError(message: string, isRetryable = false) {
+/** Actionable next-step guidance, derived from whether retrying can help. */
+function defaultHint(isRetryable: boolean): string {
+  return isRetryable
+    ? "Erro transitório na fonte de dados oficial; repita a chamada em alguns segundos."
+    : "Erro não recuperável por repetição; verifique os parâmetros (códigos, datas, filtros). Se persistir, a fonte oficial pode estar indisponível.";
+}
+
+/**
+ * Standard error envelope, identical across all tools: `{ error, retryable, hint }`.
+ * `hint` is an actionable next step (additive, defaults from `isRetryable`; callers may
+ * override). The same payload is also returned as `structuredContent` so clients can parse
+ * errors deterministically — symmetric with toolResult() — the permissive outputSchema is
+ * skipped on isError results anyway, and a plain object satisfies it regardless.
+ */
+export function toolError(message: string, isRetryable = false, hint?: string) {
   incr("toolErrors");
+  const payload = { error: message, retryable: isRetryable, hint: hint ?? defaultHint(isRetryable) };
   return {
-    content: [{ type: "text" as const, text: JSON.stringify({ error: message, retryable: isRetryable }) }],
+    content: [{ type: "text" as const, text: JSON.stringify(payload) }],
+    structuredContent: payload,
     isError: true,
   };
 }

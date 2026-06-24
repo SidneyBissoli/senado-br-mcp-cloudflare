@@ -1,6 +1,6 @@
 {
   "name": "senado-br-mcp",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "description": "MCP server for Brazilian Senate open data — runs hosted on Cloudflare Workers or locally via npx (stdio)",
   "license": "MIT",
   "type": "module",
