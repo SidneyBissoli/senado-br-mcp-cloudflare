@@ -29,6 +29,30 @@ describe("toolError", () => {
     const result = toolError("fail");
     expect(result.content[0].type).toBe("text");
   });
+
+  it("includes an actionable hint that differs by retryability", () => {
+    const transient = JSON.parse(toolError("oops", true).content[0].text);
+    const permanent = JSON.parse(toolError("oops", false).content[0].text);
+    expect(typeof transient.hint).toBe("string");
+    expect(transient.hint.length).toBeGreaterThan(0);
+    expect(transient.hint).not.toBe(permanent.hint);
+    expect(transient.hint).toMatch(/repita|segundos/i);
+  });
+
+  it("honors an explicit hint override", () => {
+    const parsed = JSON.parse(toolError("oops", false, "dica custom").content[0].text);
+    expect(parsed.hint).toBe("dica custom");
+  });
+
+  it("mirrors the payload in structuredContent for deterministic parsing", () => {
+    const result = toolError("broke", true) as unknown as {
+      structuredContent: Record<string, unknown>;
+      content: { text: string }[];
+    };
+    expect(result.structuredContent).toEqual(JSON.parse(result.content[0].text));
+    expect(result.structuredContent).toMatchObject({ error: "broke", retryable: true });
+    expect(result.structuredContent.hint).toBeTruthy();
+  });
 });
 
 describe("toolResult", () => {

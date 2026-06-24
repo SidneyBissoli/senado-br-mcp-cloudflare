@@ -14,6 +14,17 @@ import { UPSTREAM_TIMEOUT_MS } from "../types.js";
 
 export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
 
+/**
+ * Error carrying a `retryable` flag, mirroring UpstreamError so the tool layer
+ * (`errorFrom` / `ecidadaniaError`) can surface it. e-Cidadania has its own fetch
+ * (not `upstreamFetch`), so transient conditions are classified here: 5xx / 429 /
+ * timeout / network → retryable; 4xx → not.
+ */
+function ecidadaniaFetchError(message: string, retryable: boolean): Error {
+  return Object.assign(new Error(message), { retryable });
+}
+const isTransientStatus = (status: number) => status >= 500 || status === 429;
+
 /** Fetch an HTML page from e-Cidadania with descriptive errors. */
 export async function fetchPage(path: string): Promise<string> {
   const url = `${ECIDADANIA_BASE}${path}`;
@@ -28,16 +39,19 @@ export async function fetchPage(path: string): Promise<string> {
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!resp.ok) throw new Error(`e-Cidadania retornou HTTP ${resp.status} para ${path}`);
+    if (!resp.ok) {
+      throw ecidadaniaFetchError(`e-Cidadania retornou HTTP ${resp.status} para ${path}`, isTransientStatus(resp.status));
+    }
     const text = await resp.text();
-    if (!text.trim()) throw new Error(`e-Cidadania retornou página vazia para ${path}`);
+    if (!text.trim()) throw ecidadaniaFetchError(`e-Cidadania retornou página vazia para ${path}`, true);
     return text;
   } catch (e) {
     clearTimeout(timeout);
     if ((e as Error).name === "AbortError") {
-      throw new Error(`e-Cidadania: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${path}`);
+      throw ecidadaniaFetchError(`e-Cidadania: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${path}`, true);
     }
-    throw e;
+    if (e instanceof Error && "retryable" in e) throw e; // already classified above
+    throw ecidadaniaFetchError(`e-Cidadania: falha de rede ao acessar ${path} (${(e as Error).message})`, true);
   }
 }
 
@@ -55,13 +69,15 @@ export async function fetchEcidadaniaJson(endpoint: string): Promise<any[]> {
       signal: controller.signal,
     });
     clearTimeout(timeout);
-    if (!resp.ok) throw new Error(`e-Cidadania REST API retornou HTTP ${resp.status} para ${endpoint}`);
+    if (!resp.ok) {
+      throw ecidadaniaFetchError(`e-Cidadania REST API retornou HTTP ${resp.status} para ${endpoint}`, isTransientStatus(resp.status));
+    }
 
     let data: unknown;
     try {
       data = await resp.json();
     } catch {
-      throw new Error(`e-Cidadania REST API retornou JSON inválido para ${endpoint}`);
+      throw ecidadaniaFetchError(`e-Cidadania REST API retornou JSON inválido para ${endpoint}`, true);
     }
 
     if (!Array.isArray(data)) {
@@ -73,9 +89,10 @@ export async function fetchEcidadaniaJson(endpoint: string): Promise<any[]> {
   } catch (e) {
     clearTimeout(timeout);
     if ((e as Error).name === "AbortError") {
-      throw new Error(`e-Cidadania REST API: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${endpoint}`);
+      throw ecidadaniaFetchError(`e-Cidadania REST API: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${endpoint}`, true);
     }
-    throw e;
+    if (e instanceof Error && "retryable" in e) throw e; // already classified above
+    throw ecidadaniaFetchError(`e-Cidadania REST API: falha de rede ao acessar ${endpoint} (${(e as Error).message})`, true);
   }
 }
 
