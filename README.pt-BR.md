@@ -59,33 +59,11 @@ própria instância** — **não** é necessário para usar este servidor públi
 
 Prefere não rotear suas consultas por um servidor de terceiros (ex.: política de uma redação)? O **mesmo
 servidor** também roda como um **processo local stdio** que bate **direto nas APIs oficiais do governo** —
-as mesmas 66 ferramentas, o mesmo envelope de proveniência, sem Cloudflare no caminho. É o canal npm/stdio.
+as mesmas 66 ferramentas, o mesmo envelope de proveniência, sem Cloudflare no caminho. É o canal npm/stdio,
+publicado como [`senado-br-mcp`](https://www.npmjs.com/package/senado-br-mcp).
 
-> **Atenção:** o atalho `npx senado-br-mcp` **ainda não está publicado** — o nome no npm está sendo
-> reclaimado de um pacote antigo e sem manutenção (sem proveniência). Até lá, rode a partir do fonte:
-
-```bash
-git clone https://github.com/SidneyBissoli/senado-br-mcp-cloudflare
-cd senado-br-mcp-cloudflare
-npm install
-npm run build
-node dist/cli.js   # serve o MCP por stdio (Ctrl+C para parar)
-```
-
-Aponte um cliente baseado em comando para o entrypoint compilado:
-
-```json
-{
-  "mcpServers": {
-    "senado-br": {
-      "command": "node",
-      "args": ["/caminho/absoluto/para/senado-br-mcp-cloudflare/dist/cli.js"]
-    }
-  }
-}
-```
-
-Quando o pacote npm for publicado, isto vira a forma sem instalação:
+Aponte um cliente baseado em comando (Claude Desktop/Code, etc.) para o pacote — o npm baixa e executa,
+sem clone nem build:
 
 ```json
 {
@@ -96,6 +74,16 @@ Quando o pacote npm for publicado, isto vira a forma sem instalação:
     }
   }
 }
+```
+
+Para rodar direto ou mexer no código, use o checkout do fonte:
+
+```bash
+git clone https://github.com/SidneyBissoli/senado-br-mcp-cloudflare
+cd senado-br-mcp-cloudflare
+npm install
+npm run build
+node dist/cli.js   # serve o MCP por stdio (Ctrl+C para parar)
 ```
 
 **Paridade com o servidor hospedado:** as ferramentas legislativas e administrativas são **idênticas**

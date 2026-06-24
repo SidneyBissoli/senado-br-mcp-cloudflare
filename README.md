@@ -60,33 +60,11 @@ own instance** — it is **not** required to use this public server.
 
 Prefer not to route queries through a third-party host (e.g. a newsroom policy)? The **same server**
 also runs as a **local stdio process** that talks **directly to the official government APIs** — same
-66 tools, same provenance envelope, no Cloudflare in the loop. This is the npm/stdio channel.
+66 tools, same provenance envelope, no Cloudflare in the loop. This is the npm/stdio channel, published
+as [`senado-br-mcp`](https://www.npmjs.com/package/senado-br-mcp).
 
-> **Heads-up:** the one-liner `npx senado-br-mcp` is **not published yet** — the npm name is being
-> reclaimed from an older, unmaintained package (no provenance). Until then, run from source:
-
-```bash
-git clone https://github.com/SidneyBissoli/senado-br-mcp-cloudflare
-cd senado-br-mcp-cloudflare
-npm install
-npm run build
-node dist/cli.js   # serves MCP over stdio (Ctrl+C to stop)
-```
-
-Point a command-based client at the built entrypoint:
-
-```json
-{
-  "mcpServers": {
-    "senado-br": {
-      "command": "node",
-      "args": ["/absolute/path/to/senado-br-mcp-cloudflare/dist/cli.js"]
-    }
-  }
-}
-```
-
-Once the npm package is published, this collapses to the zero-install form:
+Point a command-based client (Claude Desktop/Code, etc.) at the package — npm fetches and runs it,
+no clone or build:
 
 ```json
 {
@@ -97,6 +75,16 @@ Once the npm package is published, this collapses to the zero-install form:
     }
   }
 }
+```
+
+To run it directly or hack on it, use the source checkout instead:
+
+```bash
+git clone https://github.com/SidneyBissoli/senado-br-mcp-cloudflare
+cd senado-br-mcp-cloudflare
+npm install
+npm run build
+node dist/cli.js   # serves MCP over stdio (Ctrl+C to stop)
 ```
 
 **Parity with the hosted server:** the legislative and administrative tools are **identical** (same
