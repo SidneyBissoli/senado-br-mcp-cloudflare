@@ -1,0 +1,60 @@
+name: Monthly usage report (Vetor B)
+
+# Runs the Analytics Engine usage report once a month and publishes it to the
+# run's job summary and a single tracking issue (create-or-comment, so it builds
+# a monthly timeline). Also dispatchable manually.
+#
+# Requires a repo secret CF_API_TOKEN with `Account Analytics: Read` permission
+# (same token used locally via .secrets/cf-analytics-token). The runner has zero
+# npm dependencies — only Node built-ins + global fetch — so no install step.
+
+on:
+  schedule:
+    - cron: "0 9 1 * *" # 1st of each month, 09:00 UTC (06:00 BRT)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_TITLE: "📊 Relatório de uso mensal — observabilidade (Vetor B)"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Generate report
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        run: |
+          if [ -z "$CF_API_TOKEN" ]; then
+            echo "::error::Missing repo secret CF_API_TOKEN (needs 'Account Analytics: Read')."
+            exit 1
+          fi
+          node scripts/observability/usage-report.mjs --markdown | tee report.md
+
+      - name: Publish to job summary
+        run: cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish to tracking issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          NUM=$(gh issue list --state open --search "Vetor B in:title" \
+            --json number,title \
+            --jq "map(select(.title == \"$ISSUE_TITLE\")) | .[0].number // empty")
+          if [ -n "$NUM" ]; then
+            echo "Commenting on existing issue #$NUM"
+            gh issue comment "$NUM" --body-file report.md
+          else
+            echo "Creating tracking issue"
+            gh issue create --title "$ISSUE_TITLE" --body-file report.md
+          fi

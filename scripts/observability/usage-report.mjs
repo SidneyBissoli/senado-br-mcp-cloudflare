@@ -126,12 +126,25 @@ const reports = {
   },
 };
 
+// Markdown mode (--markdown) emits GitHub-flavored tables/headings for the
+// scheduled workflow's job summary and tracking issue; default is aligned text.
+let MD = false;
+const heading = (t) => console.log(MD ? `\n### ${t}\n` : `\n=== ${t} ===`);
+
 function printTable(rows) {
   if (!rows || rows.length === 0) {
-    console.log("  (sem dados na janela)");
+    console.log(MD ? "_(sem dados na janela)_" : "  (sem dados na janela)");
     return;
   }
   const cols = Object.keys(rows[0]);
+  if (MD) {
+    console.log("| " + cols.join(" | ") + " |");
+    console.log("| " + cols.map(() => "---").join(" | ") + " |");
+    for (const r of rows) {
+      console.log("| " + cols.map((c) => String(r[c] ?? "")).join(" | ") + " |");
+    }
+    return;
+  }
   const width = (c) =>
     Math.max(c.length, ...rows.map((r) => String(r[c] ?? "").length));
   const w = Object.fromEntries(cols.map((c) => [c, width(c)]));
@@ -180,6 +193,7 @@ async function main() {
   const args = process.argv.slice(2);
   if (args.includes("--selftest")) return selftest();
 
+  MD = args.includes("--markdown");
   const daysIdx = args.indexOf("--days");
   const days = daysIdx >= 0 ? String(args[daysIdx + 1]) : "30";
   const picked = args.filter((a) => /^[A-D]$/.test(a));
@@ -194,17 +208,16 @@ async function main() {
     process.exit(2);
   }
 
-  console.log(
-    `Analytics Engine — dataset ${DATASET} — conta ${ACCOUNT_ID.slice(0, 8)}… — janela ${days}d (A/B)\n`,
-  );
+  const meta = `dataset \`${DATASET}\` · conta ${ACCOUNT_ID.slice(0, 8)}… · janela ${days}d (A/B) · ${new Date().toISOString().slice(0, 10)}`;
+  console.log(MD ? `# Relatório de uso — Vetor B\n\n${meta}` : `Analytics Engine — ${meta}\n`);
   for (const key of toRun) {
     const r = reports[key];
-    console.log(`\n=== ${r.title} ===`);
+    heading(r.title);
     try {
       printTable(await r.run(token, { days }));
     } catch (e) {
       // console.log (not error) so it stays ordered under its header.
-      console.log(`  ERRO: ${e.message}`);
+      console.log(MD ? `\n> ⚠️ ERRO: ${e.message}` : `  ERRO: ${e.message}`);
     }
   }
 }
