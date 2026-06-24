@@ -6,6 +6,7 @@ dist/
 scripts/ingest-ecidadania/out.sql
 .dev.vars
 .secrets/
+reports/
 docs/
 marketing/
 prompts/
