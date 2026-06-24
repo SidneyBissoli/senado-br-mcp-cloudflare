@@ -1,12 +1,23 @@
 {
-  "name": "senado-br-mcp-cloudflare",
+  "name": "senado-br-mcp",
   "version": "3.1.0",
-  "description": "MCP server for Brazilian Senate open data, running on Cloudflare Workers",
+  "description": "MCP server for Brazilian Senate open data — runs hosted on Cloudflare Workers or locally via npx (stdio)",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "senado-br-mcp": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run build && npm test",
     "typecheck": "tsc --noEmit && tsc -p scripts/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",

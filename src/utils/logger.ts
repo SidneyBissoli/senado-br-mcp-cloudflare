@@ -1,4 +1,13 @@
-/** Structured JSON logging — picked up by CF Logpush / wrangler tail. */
+/**
+ * Structured JSON logging — picked up by CF Logpush / wrangler tail.
+ *
+ * Every level writes to stderr (`console.error`). On the Worker this is
+ * indistinguishable from stdout for log capture, but in the npm/stdio channel
+ * (`src/cli.ts`) stdout is the JSON-RPC protocol stream — any stray byte there
+ * corrupts the transport. Keeping all logs on stderr makes the same logger safe
+ * in both runtimes. The `level` field in the payload preserves the distinction
+ * for downstream filtering.
+ */
 
 type LogFields = Record<string, unknown>;
 
@@ -8,10 +17,7 @@ function emit(
   fields?: LogFields,
 ): void {
   const entry = { level, msg, ts: new Date().toISOString(), ...fields };
-  const json = JSON.stringify(entry);
-  if (level === "error") console.error(json);
-  else if (level === "warn") console.warn(json);
-  else console.log(json);
+  console.error(JSON.stringify(entry));
 }
 
 export const logger = {
