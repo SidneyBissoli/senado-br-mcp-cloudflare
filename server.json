@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.SidneyBissoli/senado-br-mcp-cloudflare",
   "title": "Senado BR MCP",
-  "description": "Brazilian Federal Senate open data over MCP — 65 tools, 4 prompts, 5 resources.",
-  "version": "3.1.0",
+  "description": "Brazilian Federal Senate open data over MCP — 66 tools, 4 prompts, 5 resources.",
+  "version": "3.2.0",
   "websiteUrl": "https://senado.sidneybissoli.com",
   "repository": {
     "url": "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
@@ -13,6 +13,17 @@
     {
       "type": "streamable-http",
       "url": "https://senado.sidneybissoli.com/mcp"
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "senado-br-mcp",
+      "version": "3.2.0",
+      "transport": {
+        "type": "stdio"
+      }
     }
   ]
 }
