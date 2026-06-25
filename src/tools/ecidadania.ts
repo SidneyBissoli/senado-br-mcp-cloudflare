@@ -1,5 +1,5 @@
 /**
- * Group G — e-Cidadania (8 tools)
+ * Group G — e-Cidadania (9 tools)
  *
  * Data acquisition + normalization now lives in src/scraper/ecidadania.ts (isolated boundary,
  * fixture-tested). This module only registers the MCP tools over those scraper functions, with

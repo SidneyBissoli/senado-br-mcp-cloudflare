@@ -95,7 +95,7 @@ export function createServer(env: Env, ctx?: ExecutionContext): McpServer {
   // Group C — Processes (5 tools)
   registerProcessosTools(server, baseUrl);
 
-  // Group G — e-Cidadania (8 tools) — reads from D1 (env) and write-through detail (ctx)
+  // Group G — e-Cidadania (9 tools) — reads from D1 (env) and write-through detail (ctx)
   registerECidadaniaTools(server, baseUrl, env, ctx);
 
   // Group I — Speeches (3 tools)
