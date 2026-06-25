@@ -16,7 +16,7 @@
  * cache/D1) are captured but never invoked here.
  */
 
-import type { ZodTypeAny } from "zod";
+import { z, type ZodTypeAny } from "zod";
 
 import { registerReferenciaTools } from "../src/tools/referencia.js";
 import { registerSenadoresTools } from "../src/tools/senadores.js";
@@ -106,87 +106,29 @@ const GROUPS: { area: string; register: (s: CapturingServer) => void }[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Minimal zod -> JSON-schema conversion.
+// Zod -> JSON-schema conversion.
 //
-// We intentionally roll our own (no zod-to-json-schema dependency) because the harness must
-// not add packages, and the tool params only use a small slice of zod: string/number/boolean,
-// enum, optional, default, array, and `.describe()`. This converter covers exactly that.
+// Zod 4 ships a native, version-stable `z.toJSONSchema` — so the harness still adds no
+// extra dependency, but no longer reaches into zod's private internals (which churn
+// between majors; the old hand-rolled converter broke on the 3->4 bump). We convert in
+// `io: "input"` mode so a param is required iff it is neither `.optional()` nor
+// `.default()` (a defaulted field is supplied by the server, so the model need not send
+// it). The result is normalized to this harness's JsonSchema contract: native output
+// omits `additionalProperties` and drops `required` when empty.
 // ---------------------------------------------------------------------------
-
-interface ZodDef {
-  typeName?: string;
-  description?: string;
-  innerType?: ZodTypeAny;
-  type?: ZodTypeAny; // array element
-  values?: unknown[]; // enum
-  checks?: { kind: string }[];
-}
-
-function defOf(schema: ZodTypeAny): ZodDef {
-  return (schema as unknown as { _def: ZodDef })._def;
-}
-
-/** Unwrap optional/default/nullable wrappers, returning the inner schema and whether it's required. */
-function unwrap(schema: ZodTypeAny): { inner: ZodTypeAny; required: boolean; description?: string } {
-  let current = schema;
-  let required = true;
-  let description: string | undefined = defOf(current).description;
-  // ZodOptional / ZodDefault / ZodNullable all carry an `innerType`.
-  for (let guard = 0; guard < 10; guard++) {
-    const def = defOf(current);
-    description = description ?? def.description;
-    const tn = def.typeName;
-    if (tn === "ZodOptional" || tn === "ZodDefault" || tn === "ZodNullable") {
-      if (tn === "ZodOptional" || tn === "ZodDefault") required = false;
-      if (!def.innerType) break;
-      current = def.innerType;
-      continue;
-    }
-    break;
-  }
-  description = description ?? defOf(current).description;
-  return { inner: current, required, description };
-}
-
-function schemaForType(schema: ZodTypeAny, description?: string): Record<string, unknown> {
-  const def = defOf(schema);
-  const tn = def.typeName;
-  const base: Record<string, unknown> = {};
-  if (description) base.description = description;
-
-  switch (tn) {
-    case "ZodString":
-      return { type: "string", ...base };
-    case "ZodNumber": {
-      const isInt = (def.checks ?? []).some((c) => c.kind === "int");
-      return { type: isInt ? "integer" : "number", ...base };
-    }
-    case "ZodBoolean":
-      return { type: "boolean", ...base };
-    case "ZodEnum":
-      return { type: "string", enum: def.values ?? [], ...base };
-    case "ZodArray": {
-      const el = def.type ? schemaForType(unwrap(def.type).inner) : { type: "string" };
-      return { type: "array", items: el, ...base };
-    }
-    case "ZodLiteral":
-      return { ...base };
-    default:
-      // Fallback for unforeseen wrappers; keep it permissive rather than crash.
-      return { ...base };
-  }
-}
 
 /** Convert a zod object-shape (the 3rd arg of server.tool) into a JSON schema. */
 export function shapeToJsonSchema(shape: ZodShape): JsonSchema {
-  const properties: Record<string, unknown> = {};
-  const required: string[] = [];
-  for (const [key, raw] of Object.entries(shape)) {
-    const { inner, required: isRequired, description } = unwrap(raw);
-    properties[key] = schemaForType(inner, description);
-    if (isRequired) required.push(key);
-  }
-  return { type: "object", properties, required, additionalProperties: false };
+  const raw = z.toJSONSchema(z.object(shape), { io: "input" }) as {
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+  return {
+    type: "object",
+    properties: raw.properties ?? {},
+    required: raw.required ?? [],
+    additionalProperties: false,
+  };
 }
 
 let _cache: CatalogTool[] | null = null;
