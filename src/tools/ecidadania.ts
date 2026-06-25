@@ -15,6 +15,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { toolError } from "../utils/validation.js";
 import { provenanceEcidadania, provenanceArquimedesVotos, resultWithProvenance } from "../utils/provenance.js";
+import { tagUntrustedFields, tagUntrustedList, neutralizeUntrustedText } from "../utils/untrusted.js";
 import { logger } from "../utils/logger.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 import type { Env } from "../types.js";
@@ -126,7 +127,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         if (status !== "todas") filtered = filtered.filter((c) => c.status === status);
         const out = filtered.slice(0, params.limite);
         return resultWithProvenance(
-          { count: out.length, consultas: out, meta },
+          { count: out.length, consultas: tagUntrustedList("consultas", out as unknown as Record<string, unknown>[]), meta },
           provLista("/principalmateria", "consultas", meta),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -145,7 +146,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         );
         writeDetalheThrough(db, ctx, "consultas", params.id, r as Record<string, unknown>);
         return resultWithProvenance(
-          r as Record<string, unknown>,
+          tagUntrustedFields("consultas", r as Record<string, unknown>),
           provDetalhe(r, `/visualizacaomateria?id=${params.id}`, `consulta=${params.id}`, fetchedAt),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -201,7 +202,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           criterio = `≥${percentualMinimo}% numa direção, mínimo ${minimoVotos} votos`;
         }
         return resultWithProvenance(
-          { modo, criterio, count: filtered.length, consultas: filtered, meta },
+          { modo, criterio, count: filtered.length, consultas: tagUntrustedList("consultas", filtered as unknown as Record<string, unknown>[]), meta },
           provLista("/principalmateria", "consultas", meta),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -233,7 +234,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         }
         arr = arr.slice(0, params.limite ?? 20);
         return resultWithProvenance(
-          { count: arr.length, ideias: arr, meta },
+          { count: arr.length, ideias: tagUntrustedList("ideias", arr as unknown as Record<string, unknown>[]), meta },
           provLista("/principalideia", "ideias", meta),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -252,7 +253,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         );
         writeDetalheThrough(db, ctx, "ideias", params.id, r as Record<string, unknown>);
         return resultWithProvenance(
-          r as Record<string, unknown>,
+          tagUntrustedFields("ideias", r as Record<string, unknown>),
           provDetalhe(r, `/visualizacaoideia?id=${params.id}`, `ideia=${params.id}`, fetchedAt),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -294,7 +295,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         }
         eventos = eventos.slice(0, limite);
         return resultWithProvenance(
-          { count: eventos.length, eventos, meta },
+          { count: eventos.length, eventos: tagUntrustedList("eventos", eventos as unknown as Record<string, unknown>[]), meta },
           provLista("/principalaudiencia", "eventos", meta),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -313,7 +314,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         );
         writeDetalheThrough(db, ctx, "eventos", params.id, r as Record<string, unknown>);
         return resultWithProvenance(
-          r as Record<string, unknown>,
+          tagUntrustedFields("eventos", r as Record<string, unknown>),
           provDetalhe(r, `/visualizacaoaudiencia?id=${params.id}`, `evento=${params.id}`, fetchedAt),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -370,16 +371,16 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           if (polarizacao >= 20 && polarizacao <= 40) motivo = "Tema com divisão moderada de opiniões, ideal para debate";
           else if (polarizacao > 40 && polarizacao <= 70) motivo = "Tema com tendência clara mas ainda com debate significativo";
           sugestoes.push({
-            tipo: "consulta", id: c.id, titulo: c.ementa.substring(0, 200), motivo,
+            tipo: "consulta", id: c.id, titulo: neutralizeUntrustedText(c.ementa.substring(0, 200)), motivo,
             metricas: { participacao: c.totalVotos, polarizacao: 100 - polarizacao },
-            materiaRelacionada: c.materia || undefined, url: c.url,
+            materiaRelacionada: c.materia ? neutralizeUntrustedText(c.materia) : undefined, url: c.url,
           });
         }
 
         for (const i of ideias) {
           if (i.apoios < (criterios.minimoParticipacao ?? 500)) continue;
           sugestoes.push({
-            tipo: "ideia", id: i.id, titulo: i.titulo.substring(0, 200),
+            tipo: "ideia", id: i.id, titulo: neutralizeUntrustedText(i.titulo.substring(0, 200)),
             motivo: `Ideia popular com ${i.apoios.toLocaleString()} apoios`,
             metricas: { participacao: i.apoios }, url: i.url,
           });
@@ -452,7 +453,8 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         });
 
         const referencePeriod = (items[0] as ConsultaVotoResumo | undefined)?.referencePeriod ?? null;
-        const payload: Record<string, unknown> = { count: out.length, referencePeriod, consultas: out, meta };
+        const consultasTagged = tagUntrustedList("consultas_votos", out as unknown as Record<string, unknown>[]);
+        const payload: Record<string, unknown> = { count: out.length, referencePeriod, consultas: consultasTagged, meta };
         if (out.length === 0 && (meta.fonte === "ao-vivo" || meta.motivo === "d1-vazio" || meta.motivo === "d1-indisponivel")) {
           payload.aviso = "Acervo de votos ainda não ingerido (primeira carga semanal pendente) ou filtro sem correspondência.";
         }
