@@ -20,3 +20,6 @@ icon-512.jpg
 # Debug screenshots (registry UIs, etc.)
 *.png
 naming.png
+
+# Packaged Claude Code skill bundle (regenerated artifact)
+.claude/skills/senado-br.zip
