@@ -478,7 +478,7 @@ This caching happens at the **tool level** (inside each tool's callback), not at
 
 **Every tool** attaches a **provenance envelope** so a result is traceable back to its official source — provenance is treated as a first-class part of the answer, not an optional extra (the audience is journalists and political-science researchers, for whom an un-sourced figure is unusable). The envelope lives in `structuredContent.provenance` (parseable by clients, validated by the tool's output schema) and is mirrored as a one-line source footer in the text content for clients that only render text — the data JSON itself is **not** duplicated with the envelope, to keep the per-response token cost low (a fixed ≈170 chars).
 
-Coverage spans all four upstream sources, each with its own `source`/`attribution`/`license` (in `src/utils/provenance.ts`):
+Coverage spans all four upstream sources, each with its own `source`/`citation`/`license` (in `src/utils/provenance.ts`):
 
 - **Senado Federal — Dados Abertos (Legislativo)** — `legis.senado.leg.br/dadosabertos`
 - **Senado Federal — Dados Abertos (Administrativo)** — `adm.senado.gov.br/adm-dadosabertos`
@@ -494,10 +494,15 @@ Fields (per response — one tool, one source):
 | `dataset_id` | Item/series identifier (e.g. `codigoMateria=137808`) |
 | `reference_period` | Vintage/competência of the data (e.g. `2024-03-15`, `2019`) |
 | `retrieved_at` | ISO-8601 of the **upstream extraction** — carried through the cache, so it reflects when the data was actually fetched, not the build or the cache-hit time |
-| `attribution` | Ready-to-use citation string |
+| `citation` | Ready-to-use citation string (human-readable) |
 | `license` | Source terms (Dados Abertos do Senado Federal) |
+| `field_sources` | *(optional)* per-field provenance — present only when a single response merges fields from more than one upstream endpoint (see below) |
 
-`retrieved_at` fidelity is provided by the cache layer (`cachedFetchWithMeta`), which persists the fetch timestamp alongside the value, so it reflects the real upstream extraction even on a cache hit. Two exceptions report an honest live timestamp instead: the e-Cidadania **list** tools (read from D1) use the corpus's `lastScrapedAt` — the true age of the stored data — while e-Cidadania **detail** tools, scraped live, use the fetch time and a level-3 canonical item URL.
+In addition to the `provenance` envelope, `structuredContent` carries a top-level **`attribution`** list — the distinct source URLs behind the response. This mirrors the naming proposed in [modelcontextprotocol#711](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/711) (where `attribution` is a list of source references at the response level), so the server stays forward-compatible if that RFC lands; the richer `provenance` object remains this server's own extension.
+
+**Field-level granularity.** Most tools are single-source, so one envelope suffices. The few that merge slices in one response fill `provenance.field_sources` — a list of `{ fields, source_url, retrieved_at, … }` attributing specific output fields to their real origin. Example: `senado_obter_materia` `secao=detalhe` fuses `/processo/{id}` (the top-level source) with the `ementa` from `/processo` and the `relator` from `/processo/relatoria`, each carrying its own `retrieved_at`.
+
+`retrieved_at` fidelity is provided by the cache layer (`cachedFetchWithMeta`), which persists the fetch timestamp alongside the value, so it reflects the real upstream extraction even on a cache hit. Two exceptions report an honest live timestamp instead: the e-Cidadania **list** tools (read from D1) use the corpus's `lastScrapedAt` — the true age of the stored data — while e-Cidadania **detail** tools, scraped live, use the fetch time and a level-3 canonical item URL. The only path that falls back to the build-time default is the in-code static reference catalog (`senado_tabelas_referencia` `tipos-materia`), which has no upstream extraction instant.
 
 Coverage is **universal**: all 66 tools carry the envelope (verify with `grep -c 'resultWithProvenance(' src/tools/*.ts`). The **⊕** marks in the inventory below denote the original pilot tools (votes, bills, processes); the envelope now extends to every tool, so the marks are historical.
 
