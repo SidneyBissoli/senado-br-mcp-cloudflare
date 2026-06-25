@@ -1,12 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   ProvenanceSchema,
+  FieldSourceSchema,
   SOURCES,
   ECIDADANIA_BASE_URL,
   buildProvenance,
   provenanceFor,
   provenanceEcidadania,
   provenanceFooter,
+  withFieldSources,
   resultWithProvenance,
 } from "../../src/utils/provenance.js";
 
@@ -20,19 +22,19 @@ describe("ProvenanceSchema", () => {
       dataset_id: "codigoSessao=123",
       reference_period: "2024-03-15",
       retrieved_at: "2026-06-22T12:00:00.000Z",
-      attribution: "Fonte: Senado Federal.",
+      citation: "Fonte: Senado Federal.",
       license: "Dados Abertos.",
     });
     expect(ok.success).toBe(true);
   });
 
-  it("requires source, source_url, retrieved_at and attribution (the non-empty level-1 core)", () => {
-    for (const field of ["source", "source_url", "retrieved_at", "attribution"]) {
+  it("requires source, source_url, retrieved_at and citation (the non-empty level-1 core)", () => {
+    for (const field of ["source", "source_url", "retrieved_at", "citation"]) {
       const base: Record<string, string> = {
         source: "s",
         source_url: "u",
         retrieved_at: "t",
-        attribution: "a",
+        citation: "a",
       };
       delete base[field];
       expect(ProvenanceSchema.safeParse(base).success, `missing ${field}`).toBe(false);
@@ -41,15 +43,34 @@ describe("ProvenanceSchema", () => {
 
   it("rejects empty strings on required fields", () => {
     expect(
-      ProvenanceSchema.safeParse({ source: "", source_url: "u", retrieved_at: "t", attribution: "a" })
+      ProvenanceSchema.safeParse({ source: "", source_url: "u", retrieved_at: "t", citation: "a" })
         .success,
     ).toBe(false);
+  });
+
+  it("accepts an optional field_sources array (field-level granularity)", () => {
+    const ok = ProvenanceSchema.safeParse({
+      source: "s",
+      source_url: "u",
+      retrieved_at: "t",
+      citation: "a",
+      field_sources: [{ fields: ["ementa"], source_url: "u2", retrieved_at: "t2" }],
+    });
+    expect(ok.success).toBe(true);
+  });
+});
+
+describe("FieldSourceSchema", () => {
+  it("requires at least one field name and a source_url", () => {
+    expect(FieldSourceSchema.safeParse({ fields: [], source_url: "u" }).success).toBe(false);
+    expect(FieldSourceSchema.safeParse({ fields: ["x"], source_url: "" }).success).toBe(false);
+    expect(FieldSourceSchema.safeParse({ fields: ["x"], source_url: "u" }).success).toBe(true);
   });
 });
 
 describe("buildProvenance", () => {
   it("defaults retrieved_at to an ISO-8601 timestamp", () => {
-    const p = buildProvenance({ source: "s", source_url: "u", attribution: "a" });
+    const p = buildProvenance({ source: "s", source_url: "u", citation: "a" });
     expect(p.retrieved_at).toMatch(ISO_RE);
   });
 
@@ -57,25 +78,25 @@ describe("buildProvenance", () => {
     const p = buildProvenance({
       source: "s",
       source_url: "u",
-      attribution: "a",
+      citation: "a",
       retrieved_at: "2020-01-01T00:00:00.000Z",
     });
     expect(p.retrieved_at).toBe("2020-01-01T00:00:00.000Z");
   });
 
-  it("throws on an invalid envelope (missing attribution)", () => {
+  it("throws on an invalid envelope (missing citation)", () => {
     // @ts-expect-error intentionally incomplete
     expect(() => buildProvenance({ source: "s", source_url: "u" })).toThrow();
   });
 });
 
 describe("provenanceFor", () => {
-  it("fills source/attribution/license from the registry and builds source_url", () => {
+  it("fills source/citation/license from the registry and builds source_url", () => {
     const p = provenanceFor("SENADO_LEGIS", "https://legis.senado.leg.br/dadosabertos", "/votacao", {
       dataset_id: "codigoSessao=1",
     });
     expect(p.source).toBe(SOURCES.SENADO_LEGIS.source);
-    expect(p.attribution).toBe(SOURCES.SENADO_LEGIS.attribution);
+    expect(p.citation).toBe(SOURCES.SENADO_LEGIS.citation);
     expect(p.license).toBe(SOURCES.SENADO_LEGIS.license);
     expect(p.source_url).toBe("https://legis.senado.leg.br/dadosabertos/votacao");
     expect(p.dataset_id).toBe("codigoSessao=1");
@@ -99,6 +120,14 @@ describe("provenanceFor", () => {
     );
     expect(p.reference_period).toBe("2024");
   });
+
+  it("threads field_sources through into the envelope", () => {
+    const p = provenanceFor("SENADO_LEGIS", "https://x", "/processo/1", {
+      field_sources: [{ fields: ["ementa"], source_url: "https://x/processo" }],
+    });
+    expect(p.field_sources).toHaveLength(1);
+    expect(p.field_sources?.[0].fields).toEqual(["ementa"]);
+  });
 });
 
 describe("provenanceEcidadania", () => {
@@ -117,13 +146,31 @@ describe("provenanceEcidadania", () => {
   });
 });
 
+describe("withFieldSources", () => {
+  it("attaches validated field_sources and is a no-op for an empty list", () => {
+    const base = provenanceFor("SENADO_LEGIS", "https://x", "/processo/1");
+    expect(withFieldSources(base, [])).toBe(base);
+    const enriched = withFieldSources(base, [
+      { fields: ["relator"], source_url: "https://x/processo/relatoria", retrieved_at: "2026-01-01T00:00:00.000Z" },
+    ]);
+    expect(enriched.field_sources).toHaveLength(1);
+    expect(enriched.field_sources?.[0].source_url).toBe("https://x/processo/relatoria");
+  });
+
+  it("throws on an invalid field source", () => {
+    const base = provenanceFor("SENADO_LEGIS", "https://x", "/processo/1");
+    // @ts-expect-error fields is required and non-empty
+    expect(() => withFieldSources(base, [{ source_url: "u" }])).toThrow();
+  });
+});
+
 describe("provenanceFooter", () => {
   it("renders a compact source line with the period when present", () => {
     const footer = provenanceFooter(
       buildProvenance({
         source: "Senado Federal",
         source_url: "https://x/votacao",
-        attribution: "a",
+        citation: "a",
         reference_period: "2024",
         retrieved_at: "2026-06-22T12:00:00.000Z",
       }),
@@ -151,8 +198,31 @@ describe("resultWithProvenance", () => {
     const textJson = JSON.parse(res.content[0].text);
     expect(textJson).toEqual({ count: 2, votacoes: [] });
     expect(textJson.provenance).toBeUndefined();
+    expect(textJson.attribution).toBeUndefined();
     expect(res.content[1].text).toContain("Fonte:");
     expect(res.content[1].text).toContain(prov.source_url);
+  });
+
+  it("emits the RFC #711 canonical top-level `attribution` list (distinct source URLs)", () => {
+    const prov = provenanceFor("SENADO_LEGIS", "https://x", "/processo/1", {
+      field_sources: [
+        { fields: ["ementa"], source_url: "https://x/processo" },
+        { fields: ["relator"], source_url: "https://x/processo/relatoria" },
+        { fields: ["dup"], source_url: "https://x/processo" }, // duplicate is de-duped
+      ],
+    });
+    const res = resultWithProvenance({ ok: true }, prov);
+    expect(res.structuredContent.attribution).toEqual([
+      "https://x/processo/1",
+      "https://x/processo",
+      "https://x/processo/relatoria",
+    ]);
+  });
+
+  it("attribution is just the single source_url when there are no field_sources", () => {
+    const prov = provenanceFor("SENADO_LEGIS", "https://x", "/votacao");
+    const res = resultWithProvenance({ ok: true }, prov);
+    expect(res.structuredContent.attribution).toEqual(["https://x/votacao"]);
   });
 
   it("produces structuredContent that passes the permissive global outputSchema", () => {

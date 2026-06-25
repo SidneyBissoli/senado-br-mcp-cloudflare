@@ -11,10 +11,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
+import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolError, errorFrom, buildParams, ensureArray, safeInt } from "../utils/validation.js";
-import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { provenanceFor, resultWithProvenance, type FieldSource } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND, CACHE_DYNAMIC } from "../types.js";
 
 /** Parse a /processo search result item (flat camelCase). */
@@ -117,9 +117,15 @@ export function parseDocumentoProcesso(d: any) {
   };
 }
 
-/** Resolve codigoMateria → processo summary item via /processo?codigoMateria=. */
-async function resolveProcesso(codigoMateria: number, baseUrl: string): Promise<any> {
-  const response = await cachedFetch(
+/**
+ * Resolve codigoMateria → processo summary item via /processo?codigoMateria=.
+ * Devolve também o `fetchedAt` do cache p/ a granularidade por-campo (o resumo dá a `ementa`).
+ */
+async function resolveProcesso(
+  codigoMateria: number,
+  baseUrl: string,
+): Promise<{ item: any; fetchedAt: string }> {
+  const { value: response, fetchedAt } = await cachedFetchWithMeta(
     "_processo_por_materia",
     { codigoMateria },
     CACHE_ON_DEMAND,
@@ -129,7 +135,7 @@ async function resolveProcesso(codigoMateria: number, baseUrl: string): Promise<
   if (!item || !(item as any).id) {
     throw new Error(`Matéria ${codigoMateria} não encontrada na API de processos`);
   }
-  return item;
+  return { item, fetchedAt };
 }
 
 export function registerMateriasTools(server: McpServer, baseUrl: string) {
@@ -202,7 +208,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
         const secao = params.secao ?? "detalhe";
 
         if (secao === "tramitacao") {
-          const resumo = await resolveProcesso(params.codigoMateria, baseUrl);
+          const { item: resumo } = await resolveProcesso(params.codigoMateria, baseUrl);
           const { value: detalheRes, fetchedAt } = await cachedFetchWithMeta(
             "senado_tramitacao_materia",
             { idProcesso: resumo.id },
@@ -255,16 +261,20 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
           }, prov);
         }
 
-        // secao === "detalhe" (padrão)
-        const [resumo, relatoriasRes] = await Promise.all([
+        // secao === "detalhe" (padrão) — funde 3 endpoints numa só resposta, então a
+        // proveniência ganha granularidade por-campo (field_sources): a fonte de topo é o
+        // detalhe (/processo/{id}); a `ementa` vem do resumo (/processo) e o `relator` da
+        // relatoria (/processo/relatoria), cada um com o seu retrieved_at real.
+        const [resumoRes, relatoriasRes] = await Promise.all([
           resolveProcesso(params.codigoMateria, baseUrl),
-          cachedFetch(
+          cachedFetchWithMeta(
             "_processo_relatoria",
             { codigoMateria: params.codigoMateria },
             CACHE_ON_DEMAND,
             () => upstreamFetch("/processo/relatoria", { codigoMateria: String(params.codigoMateria) }, baseUrl),
           ).catch(() => null),
         ]);
+        const resumo = resumoRes.item;
         const { value: detalheRes, fetchedAt } = await cachedFetchWithMeta(
           "senado_obter_materia",
           { idProcesso: resumo.id },
@@ -272,16 +282,31 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
           () => upstreamFetch(`/processo/${resumo.id}`, {}, baseUrl),
         );
         const detalhe = parseProcessoDetalhe(detalheRes as any);
+        const relator = pickRelatorAtual(ensureArray(relatoriasRes?.value));
+        const base = baseUrl.replace(/\/$/, "");
+        const dataset_id = `codigoMateria=${params.codigoMateria}`;
+        const fieldSources: FieldSource[] = [
+          { fields: ["ementa"], source_url: `${base}/processo`, dataset_id, retrieved_at: resumoRes.fetchedAt },
+        ];
+        if (relator) {
+          fieldSources.push({
+            fields: ["relator"],
+            source_url: `${base}/processo/relatoria`,
+            dataset_id,
+            retrieved_at: relatoriasRes?.fetchedAt,
+          });
+        }
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/processo/${resumo.id}`, {
-          dataset_id: `codigoMateria=${params.codigoMateria}`,
+          dataset_id,
           reference_period: detalhe.dataApresentacao || (detalhe.ano ? String(detalhe.ano) : undefined),
           retrieved_at: fetchedAt,
+          field_sources: fieldSources,
         });
         return resultWithProvenance({
           ...detalhe,
           secao,
           ementa: resumo.ementa || null,
-          relator: pickRelatorAtual(ensureArray(relatoriasRes)),
+          relator,
         }, prov);
       } catch (e) {
         return errorFrom(e, "Matéria não encontrada");

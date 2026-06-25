@@ -88,7 +88,7 @@ async function main() {
   );
 
   // 3) Tools de busca/listagem — uma amostra de cada FONTE confirma envelope nível-1 não-vazio.
-  const CORE = ["source", "source_url", "retrieved_at", "attribution"];
+  const CORE = ["source", "source_url", "retrieved_at", "citation"];
   const extras = [
     // Legislativo (legis.senado.leg.br)
     { name: "senado_buscar_materias", arguments: { sigla: "PEC", ano: 2023, limite: 3 } },
