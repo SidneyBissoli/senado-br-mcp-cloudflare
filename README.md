@@ -25,11 +25,11 @@ Data comes from three official sources — the [legislative open-data API](https
 
 ## See it in action
 
-Point a client at the endpoint and ask, in plain Portuguese:
+Point a client at the endpoint and ask in plain language — English or Portuguese:
 
-- *"Como os senadores de São Paulo votaram nas últimas votações do plenário?"* → `senado_search_votacoes`
-- *"Mostre a tramitação da PEC 45/2019."* → `senado_buscar_materias` + `senado_obter_materia`
-- *"Quanto foi gasto com a cota parlamentar (CEAPS) em 2024, por tipo de despesa?"* → `senado_ceaps`
+- *"How did São Paulo's senators vote in the most recent floor votes?"* → `senado_search_votacoes`
+- *"Show the legislative progress of PEC 45/2019 (a constitutional amendment proposal)."* → `senado_buscar_materias` + `senado_obter_materia`
+- *"How much was spent on the CEAPS parliamentary allowance in 2024, broken down by expense type?"* → `senado_ceaps`
 
 The answers come live from the Senate's official open-data APIs — exact figures with provenance, not numbers guessed from training data.
 
