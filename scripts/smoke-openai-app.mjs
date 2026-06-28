@@ -131,6 +131,12 @@ if (
 ) {
   fail("initialize did not return the current-senators tool-selection instruction");
 }
+if (
+  !init.instructions?.includes("senado_buscar_materias") ||
+  !init.instructions?.includes("dataApresentacao")
+) {
+  fail("initialize did not return the recent-matters tool-selection instruction");
+}
 console.log(`initialize OK - ${init.serverInfo.name} v${init.serverInfo.version}`);
 
 const list = await rpc("tools/list");

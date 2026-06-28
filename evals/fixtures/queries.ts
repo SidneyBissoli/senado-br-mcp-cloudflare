@@ -72,6 +72,12 @@ export const FIXTURES: EvalFixture[] = [
     note: "Busca por palavra-chave/ano; processos é o vizinho v3.",
   },
   {
+    id: "mat-04",
+    query: "Use o app Dados Abertos Senado BR. Busque matérias recentes sobre inteligência artificial.",
+    expectedTools: ["senado_buscar_materias"],
+    note: "Prompt canário de demo: matérias recentes por tema devem usar busca de matérias com ordenação por data.",
+  },
+  {
     id: "mat-02",
     query: "Qual a ementa e a situação atual da PEC 45 de 2019?",
     expectedTools: ["senado_buscar_materias"],

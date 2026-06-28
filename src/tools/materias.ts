@@ -17,6 +17,16 @@ import { toolError, errorFrom, buildParams, ensureArray, safeInt } from "../util
 import { provenanceFor, resultWithProvenance, type FieldSource } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND, CACHE_DYNAMIC } from "../types.js";
 
+/** Convert YYYYMMDD → YYYY-MM-DD when needed (v3 endpoints require ISO dates). */
+export function ensureISODate(d: string | undefined): string | undefined {
+  if (!d) return undefined;
+  return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : d;
+}
+
+function datePart(d: string | null | undefined): string {
+  return d ? String(d).split("T")[0] : "";
+}
+
 /** Parse a /processo search result item (flat camelCase). */
 export function parseProcessoResumo(p: any) {
   const m = typeof p.identificacao === "string" ? p.identificacao.match(/^(\S+)\s+(\d+)\/(\d{4})/) : null;
@@ -142,7 +152,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
   // B1. senado_buscar_materias
   server.tool(
     "senado_buscar_materias",
-    "Busca matérias legislativas por tipo (PEC, PL, PLP, MPV), número, ano, palavras-chave, autor ou situação de tramitação; informe ao menos um critério. Retorna `{ count, total, materias[] }`, cada item com `codigo` (codigoMateria), `sigla`, `numero`, `ano`, `ementa`, `autor`, `situacao` e `tramitando`. Use `codigo` em `senado_obter_materia` (com `secao` = detalhe, tramitacao ou textos). `limite` padrão 100 (máx. 500); ao truncar inclui `aviso`.",
+    "Busca matérias legislativas por tipo (PEC, PL, PLP, MPV), número, ano, palavras-chave, autor, período de apresentação ou situação de tramitação; informe ao menos um critério. Para pedidos como 'matérias recentes sobre X', use `palavraChave`, `ano` ou `dataInicioApresentacao`/`dataFimApresentacao`, `ordenarPor: 'dataApresentacao'`, `ordem: 'desc'` e `limite` baixo (ex: 10); não é necessário chamar detalhes para listar resultados. Retorna `{ count, total, materias[] }`, cada item com `codigo` (codigoMateria), `sigla`, `numero`, `ano`, `ementa`, `autor`, `situacao`, `dataApresentacao`, `url` e `tramitando`. Use `codigo` em `senado_obter_materia` apenas quando o usuário pedir detalhe/tramitação/textos. `limite` padrão 100 (máx. 500); ao truncar inclui `aviso`.",
     {
       sigla: z.string().optional().describe("Tipo: PEC, PL, PLP, MPV, PDL, PRS, etc."),
       numero: z.number().int().positive().optional().describe("Número da matéria"),
@@ -150,10 +160,16 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
       palavraChave: z.string().optional().describe("Termo livre buscado nas palavras-chave do processo"),
       autorNome: z.string().optional().describe("Nome do autor"),
       tramitando: z.boolean().optional().describe("Apenas em tramitação"),
+      dataInicioApresentacao: z.string().regex(/^(\d{8}|\d{4}-\d{2}-\d{2})$/).optional().describe("Data inicial de apresentação (YYYYMMDD ou YYYY-MM-DD)"),
+      dataFimApresentacao: z.string().regex(/^(\d{8}|\d{4}-\d{2}-\d{2})$/).optional().describe("Data final de apresentação (YYYYMMDD ou YYYY-MM-DD)"),
+      ordenarPor: z.enum(["relevancia", "dataApresentacao"]).optional().default("relevancia").describe("Ordenação local; use dataApresentacao para pedidos recentes"),
+      ordem: z.enum(["asc", "desc"]).optional().default("desc").describe("Direção da ordenação quando ordenarPor=dataApresentacao"),
       limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de resultados (padrão: 100)"),
     },
     async (params) => {
       try {
+        const di = ensureISODate(params.dataInicioApresentacao);
+        const df = ensureISODate(params.dataFimApresentacao);
         const qp = buildParams({
           sigla: params.sigla?.toUpperCase(),
           numero: params.numero,
@@ -161,6 +177,8 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
           termo: params.palavraChave,
           autor: params.autorNome,
           tramitando: params.tramitando !== undefined ? (params.tramitando ? "S" : "N") : undefined,
+          dataInicioApresentacao: di,
+          dataFimApresentacao: df,
         });
         if (Object.keys(qp).length === 0) {
           return toolError("É obrigatório informar pelo menos um critério de busca.");
@@ -171,11 +189,22 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
           CACHE_ON_DEMAND,
           () => upstreamFetch("/processo", qp, baseUrl),
         );
-        const todos = ensureArray(response).map(parseProcessoResumo);
+        let todos = ensureArray(response).map(parseProcessoResumo);
+        if (di) {
+          todos = todos.filter((m) => datePart(m.dataApresentacao) >= di);
+        }
+        if (df) {
+          todos = todos.filter((m) => datePart(m.dataApresentacao) <= df);
+        }
+        if (params.ordenarPor === "dataApresentacao") {
+          const multiplier = (params.ordem ?? "desc") === "asc" ? 1 : -1;
+          todos = todos.slice().sort((a, b) =>
+            multiplier * datePart(a.dataApresentacao).localeCompare(datePart(b.dataApresentacao)));
+        }
         const limite = params.limite ?? 100;
         const materias = todos.slice(0, limite);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/processo", {
-          reference_period: params.ano ? String(params.ano) : undefined,
+          reference_period: di && df ? `${di}/${df}` : params.ano ? String(params.ano) : di || df || undefined,
           retrieved_at: fetchedAt,
         });
         return resultWithProvenance({

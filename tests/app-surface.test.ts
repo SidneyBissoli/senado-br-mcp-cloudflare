@@ -24,6 +24,14 @@ describe("OpenAI app surface helpers", () => {
     expect(instructions).toContain("emExercicio: true");
   });
 
+  it("biases the OpenAI app instructions toward dated matter search for recent topics", () => {
+    const instructions = instructionsForProfile("openai-app");
+    expect(instructions).toContain("matérias recentes");
+    expect(instructions).toContain("senado_buscar_materias");
+    expect(instructions).toContain("dataApresentacao");
+    expect(instructions).toContain("limite");
+  });
+
   it("strips top-level operational meta only from the OpenAI app profile", () => {
     const result = {
       content: [
