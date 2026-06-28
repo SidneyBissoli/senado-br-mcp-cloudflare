@@ -19,6 +19,7 @@ import { upstreamFetch } from "../throttle/upstream.js";
 import { toolError, errorFrom, ensureArray } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
+import { USER_AGENT } from "../version.js";
 
 export function formatDateYMD(d: Date): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
@@ -379,7 +380,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
             const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
             try {
               const resp = await fetch(url, {
-                headers: { Accept: "application/json", "User-Agent": "senado-br-mcp/2.2.0" },
+                headers: { Accept: "application/json", "User-Agent": USER_AGENT },
                 signal: controller.signal,
               });
               clearTimeout(timeout);

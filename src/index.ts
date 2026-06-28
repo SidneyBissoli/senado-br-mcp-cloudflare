@@ -13,6 +13,8 @@ import { logger } from "./utils/logger.js";
 import { incr, getMetrics } from "./metrics.js";
 import { ICON_JPEG_BASE64 } from "./icon.js";
 import { refreshEcidadania } from "./scraper/pipeline.js";
+import { handlerRouteForPath, toolProfileForRoute } from "./app-surface.js";
+import { legalResponseForPath } from "./legal.js";
 
 /** Decoded once per isolate — server logo bytes referenced by serverInfo.icons. */
 const ICON_JPEG = Uint8Array.from(atob(ICON_JPEG_BASE64), (c) => c.charCodeAt(0));
@@ -29,6 +31,11 @@ export default {
         status: 200,
         headers: { "Content-Type": "text/plain" },
       });
+    }
+
+    const legalResponse = legalResponseForPath(url.pathname);
+    if (legalResponse) {
+      return legalResponse;
     }
 
     // Server icon — public (referenced by serverInfo.icons; registries fetch it)
@@ -82,13 +89,16 @@ export default {
 
     // Create new McpServer per request (required by SDK 1.26.0+). ctx enables the
     // e-Cidadania detail write-through (fire-and-forget via ctx.waitUntil).
-    const server = createServer(env, ctx);
+    const toolProfile = toolProfileForRoute(url.pathname);
+    const route = handlerRouteForPath(url.pathname, toolProfile);
+    const server = createServer(env, ctx, { toolProfile });
 
     const handler = createMcpHandler(server, {
+      route,
       corsOptions: {
         origin: env.ALLOWED_ORIGIN || "*",
         methods: "GET, POST, DELETE, OPTIONS",
-        headers: "Content-Type, mcp-session-id, Authorization",
+        headers: "Content-Type, Accept, mcp-session-id, MCP-Protocol-Version, Authorization",
         maxAge: 86400,
       },
     });

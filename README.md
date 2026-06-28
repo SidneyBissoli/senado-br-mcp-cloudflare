@@ -42,6 +42,30 @@ HTTP endpoint — **no install, no account, no API key, no configuration**:
 https://senado.sidneybissoli.com/mcp
 ```
 
+### OpenAI / ChatGPT app surface
+
+For OpenAI Apps SDK submission and review, the Worker also exposes a curated MCP surface:
+
+```
+https://senado.sidneybissoli.com/mcp/openai-app
+```
+
+This endpoint intentionally keeps the full public MCP server intact at `/mcp`, but limits tool discovery
+to 25 high-signal, intent-oriented tools for ChatGPT app use. The tools still call the same handlers and
+return the same provenance envelope; only the advertised surface is narrower. Any ChatGPT app listing
+should present this as an independent open-data research app, not as an official Senate, OpenAI or
+ChatGPT connector.
+
+For ChatGPT Apps, those 25 tools also advertise a shared MCP Apps UI template at
+`ui://senado-br-mcp/openai-app-dashboard-v1.html`. The self-contained widget renders the returned
+`structuredContent` as a compact dashboard with metrics, main records, and source/provenance, without
+adding another model-visible data tool.
+
+Public legal URLs for app review:
+
+- Privacy policy: `https://senado.sidneybissoli.com/privacy`
+- Terms of use: `https://senado.sidneybissoli.com/terms`
+
 ### Install (any client)
 
 For clients that launch MCP servers as a command — and for one-command setup — use the
@@ -111,7 +135,7 @@ Claude Code auto-discovers it when you work in this repo. To use it elsewhere, c
 
 - **Runtime:** Cloudflare Workers (ESM)
 - **Transport:** Streamable HTTP (MCP spec 2025-03-26) via `createMcpHandler` from `agents/mcp`
-- **Protocol:** MCP over JSON-RPC — single `/mcp` endpoint handles POST, GET, DELETE
+- **Protocol:** MCP over JSON-RPC — `/mcp` handles the full public server; `/mcp/openai-app` exposes a curated 25-tool profile plus a shared MCP Apps widget for OpenAI app review/submission
 - **SDK:** `@modelcontextprotocol/sdk` 1.26.0+ (per-request McpServer instances)
 - **Validation:** Zod schemas for all tool inputs
 - **Caching:** 2-layer (L0 memory + L1 Cache API) with SHA-256 keying

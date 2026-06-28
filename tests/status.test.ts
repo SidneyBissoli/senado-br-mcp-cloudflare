@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { buildStatus } from "../src/status.js";
 import { VERSION } from "../src/version.js";
+import { OPENAI_APP_MCP_ROUTE } from "../src/app-surface.js";
+import { PRIVACY_URL, TERMS_URL } from "../src/legal.js";
 
 describe("buildStatus", () => {
   it("reports ok, name, version and the mcp path", () => {
@@ -9,6 +11,8 @@ describe("buildStatus", () => {
     expect(s.name).toBe("senado-br-mcp");
     expect(s.version).toBe(VERSION);
     expect(s.mcp).toBe("/mcp");
+    expect(s.openaiAppMcp).toBe(OPENAI_APP_MCP_ROUTE);
+    expect(s.legal).toEqual({ privacy: PRIVACY_URL, terms: TERMS_URL });
   });
 
   it("omits the deploy block when the version_metadata binding is absent", () => {

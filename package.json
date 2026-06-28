@@ -22,6 +22,7 @@
     "typecheck": "tsc --noEmit && tsc -p scripts/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "smoke:openai-app": "node scripts/smoke-openai-app.mjs",
     "ingest:ecidadania": "tsx scripts/ingest-ecidadania/index.ts",
     "ingest:ecidadania:eventos": "tsx scripts/ingest-ecidadania/index-eventos.ts",
     "ingest:ecidadania:ideias": "tsx scripts/ingest-ecidadania/index-ideias.ts",

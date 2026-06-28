@@ -11,6 +11,7 @@
  */
 
 import { UPSTREAM_TIMEOUT_MS } from "../types.js";
+import { USER_AGENT } from "../version.js";
 
 export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
 
@@ -34,7 +35,7 @@ export async function fetchPage(path: string): Promise<string> {
     const resp = await fetch(url, {
       headers: {
         Accept: "text/html",
-        "User-Agent": "senado-br-mcp/2.2.0",
+        "User-Agent": USER_AGENT,
       },
       signal: controller.signal,
     });
@@ -65,7 +66,7 @@ export async function fetchEcidadaniaJson(endpoint: string): Promise<any[]> {
   const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
   try {
     const resp = await fetch(url, {
-      headers: { Accept: "application/json", "User-Agent": "senado-br-mcp/2.2.0" },
+      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
       signal: controller.signal,
     });
     clearTimeout(timeout);

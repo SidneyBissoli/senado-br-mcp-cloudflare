@@ -8,6 +8,8 @@
  */
 
 import { VERSION } from "./version.js";
+import { OPENAI_APP_MCP_ROUTE } from "./app-surface.js";
+import { PRIVACY_URL, TERMS_URL } from "./legal.js";
 import type { Env } from "./types.js";
 
 export function buildStatus(env: Env) {
@@ -17,6 +19,11 @@ export function buildStatus(env: Env) {
     name: "senado-br-mcp",
     version: VERSION,
     mcp: "/mcp",
+    openaiAppMcp: OPENAI_APP_MCP_ROUTE,
+    legal: {
+      privacy: PRIVACY_URL,
+      terms: TERMS_URL,
+    },
     ...(meta
       ? { deploy: { id: meta.id, tag: meta.tag || null, timestamp: meta.timestamp } }
       : {}),

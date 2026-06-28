@@ -28,21 +28,35 @@ import { registerPrompts } from "./prompts.js";
 import { registerResources } from "./resources.js";
 import { instrumentTool } from "./instrument.js";
 import { VERSION } from "./version.js";
+import {
+  instructionsForProfile,
+  isToolEnabledForProfile,
+  minimizeToolResultForProfile,
+  toolMetaForProfile,
+  type CreateServerOptions,
+} from "./app-surface.js";
+import { registerOpenAiAppWidget } from "./openai-app-widget.js";
 import type { Env } from "./types.js";
 
-export function createServer(env: Env, ctx?: ExecutionContext): McpServer {
-  const server = new McpServer({
-    name: "senado-br-mcp",
-    version: VERSION,
-    websiteUrl: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
-    icons: [
-      {
-        src: "https://senado.sidneybissoli.com/icon.jpg",
-        mimeType: "image/jpeg",
-        sizes: ["512x512"],
-      },
-    ],
-  });
+type ToolCallback = (...args: unknown[]) => Promise<unknown> | unknown;
+
+export function createServer(env: Env, ctx?: ExecutionContext, options: CreateServerOptions = {}): McpServer {
+  const toolProfile = options.toolProfile ?? "full";
+  const server = new McpServer(
+    {
+      name: "senado-br-mcp",
+      version: VERSION,
+      websiteUrl: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
+      icons: [
+        {
+          src: "https://senado.sidneybissoli.com/icon.jpg",
+          mimeType: "image/jpeg",
+          sizes: ["512x512"],
+        },
+      ],
+    },
+    { instructions: instructionsForProfile(toolProfile) },
+  );
 
   // Every tool here only reads upstream open data — no writes, no side effects — and
   // reaches external systems (Senate APIs / e-Cidadania) whose data is an open, changing
@@ -59,17 +73,26 @@ export function createServer(env: Env, ctx?: ExecutionContext): McpServer {
     description: string,
     shape: Record<string, unknown>,
     cb: unknown,
-  ) =>
-    registerTool(
+  ) => {
+    if (!isToolEnabledForProfile(name, toolProfile)) {
+      return undefined;
+    }
+
+    const profiledCallback: ToolCallback = async (...args: unknown[]) =>
+      minimizeToolResultForProfile(await (cb as ToolCallback)(...args), toolProfile);
+
+    return registerTool(
       name,
       {
         description,
         inputSchema: shape as never,
         outputSchema: outputSchema as never,
         annotations: { readOnlyHint: true, openWorldHint: true },
+        _meta: toolMetaForProfile(toolProfile),
       },
-      instrumentTool(name, cb as never, analytics) as never,
+      instrumentTool(name, profiledCallback as never, analytics) as never,
     );
+  };
 
   const baseUrl = env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
   const admBaseUrl = env.SENADO_ADM_BASE_URL || "https://adm.senado.gov.br/adm-dadosabertos";
@@ -135,6 +158,9 @@ export function createServer(env: Env, ctx?: ExecutionContext): McpServer {
   // context docs/tables) — advertised as the `prompts` and `resources` capabilities.
   registerPrompts(server);
   registerResources(server);
+  if (toolProfile === "openai-app") {
+    registerOpenAiAppWidget(server);
+  }
 
   return server;
 }

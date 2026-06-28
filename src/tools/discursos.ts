@@ -12,6 +12,7 @@ import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
+import { USER_AGENT } from "../version.js";
 
 /** Parse a speech summary from the senator or plenary speeches endpoint. */
 export function parseDiscursoResumo(d: any) {
@@ -137,7 +138,7 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
                 method: "GET",
                 headers: {
                   Accept: "text/plain, application/json",
-                  "User-Agent": "senado-br-mcp/2.2.0",
+                  "User-Agent": USER_AGENT,
                 },
                 signal: controller.signal,
               });

@@ -41,6 +41,31 @@ Streamable HTTP — **sem instalação, sem conta, sem chave de API, sem configu
 https://senado.sidneybissoli.com/mcp
 ```
 
+### Superficie para app OpenAI / ChatGPT
+
+Para submissao e revisao pelo OpenAI Apps SDK, o Worker tambem expoe uma superficie MCP curada:
+
+```
+https://senado.sidneybissoli.com/mcp/openai-app
+```
+
+Esse endpoint preserva o servidor MCP publico completo em `/mcp`, mas limita a descoberta a 25
+ferramentas de alto sinal, organizadas por intencao de usuario, para uso como app do ChatGPT. As
+ferramentas continuam chamando os mesmos handlers e retornando o mesmo envelope de proveniencia; apenas
+a superficie anunciada fica mais estreita. Qualquer listagem de ChatGPT App deve apresentar isto como um
+app independente de pesquisa em dados abertos, nao como conector oficial do Senado, da OpenAI ou do
+ChatGPT.
+
+Para ChatGPT Apps, essas 25 ferramentas tambem anunciam um template UI compartilhado do MCP Apps em
+`ui://senado-br-mcp/openai-app-dashboard-v1.html`. O widget e autocontido e renderiza o
+`structuredContent` retornado como painel compacto com metricas, registros principais e fonte/proveniencia,
+sem adicionar outra ferramenta de dados visivel ao modelo.
+
+URLs publicas legais para revisao do app:
+
+- Politica de privacidade: `https://senado.sidneybissoli.com/privacy`
+- Termos de uso: `https://senado.sidneybissoli.com/terms`
+
 ### Instalação (qualquer cliente)
 
 Para clientes que iniciam servidores MCP como um comando — e para uma configuração de um único comando — use a
@@ -111,7 +136,7 @@ O Claude Code a descobre automaticamente ao trabalhar neste repositório. Para u
 
 - **Runtime:** Cloudflare Workers (ESM)
 - **Transporte:** Streamable HTTP (spec MCP 2025-03-26) via `createMcpHandler` de `agents/mcp`
-- **Protocolo:** MCP sobre JSON-RPC — um único endpoint `/mcp` trata POST, GET, DELETE
+- **Protocolo:** MCP sobre JSON-RPC — `/mcp` serve o catalogo publico completo; `/mcp/openai-app` expoe um perfil curado de 25 ferramentas mais um widget MCP Apps compartilhado para revisao/submissao como app OpenAI
 - **SDK:** `@modelcontextprotocol/sdk` 1.26.0+ (instâncias de McpServer por requisição)
 - **Validação:** schemas Zod para todas as entradas das ferramentas
 - **Cache:** 2 camadas (L0 memória + L1 Cache API) com chaveamento SHA-256

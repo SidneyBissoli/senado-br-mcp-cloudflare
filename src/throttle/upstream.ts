@@ -11,6 +11,7 @@ import { globalBucket } from "./token-bucket.js";
 import { UPSTREAM_TIMEOUT_MS, MAX_RESPONSE_SIZE, SENADO_BASE_URL_DEFAULT } from "../types.js";
 import { log, logger } from "../utils/logger.js";
 import { incr } from "../metrics.js";
+import { USER_AGENT } from "../version.js";
 
 const MAX_RETRIES = 2;
 const MAX_CONCURRENT = 6;
@@ -108,7 +109,7 @@ export async function upstreamFetch(
         method: "GET",
         headers: {
           Accept: "application/json",
-          "User-Agent": "senado-br-mcp/2.2.0",
+          "User-Agent": USER_AGENT,
         },
         signal: controller.signal,
       });

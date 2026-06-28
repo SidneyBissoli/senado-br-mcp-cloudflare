@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { createServer } from "../src/server.js";
+import {
+  OPENAI_APP_TOOL_ALLOWLIST,
+  OPENAI_APP_WIDGET_URI,
+  SERVER_INSTRUCTIONS,
+} from "../src/app-surface.js";
+import {
+  OPENAI_APP_WIDGET_MIME_TYPE,
+  OPENAI_APP_WIDGET_RESOURCE_NAME,
+} from "../src/openai-app-widget.js";
 
 /**
  * Regression test: every tool group must actually be registered on the
@@ -44,5 +53,37 @@ describe("createServer", () => {
     for (const name of representatives) {
       expect(names, `tool ${name} não registrado`).toContain(name);
     }
+  });
+
+  it("publishes server instructions for MCP clients", () => {
+    const server = createServer(env as any);
+    expect((server as any).server._instructions).toBe(SERVER_INSTRUCTIONS);
+  });
+
+  it("can expose the reduced OpenAI app tool surface", () => {
+    const server = createServer(env as any, undefined, { toolProfile: "openai-app" });
+    const tools = (server as any)._registeredTools;
+    const names = Object.keys(tools);
+
+    expect(OPENAI_APP_TOOL_ALLOWLIST.size).toBe(25);
+    expect(names.length).toBe(OPENAI_APP_TOOL_ALLOWLIST.size);
+    for (const name of OPENAI_APP_TOOL_ALLOWLIST) {
+      expect(names, `OpenAI app tool ${name} não registrado`).toContain(name);
+      expect(tools[name]._meta?.ui?.resourceUri).toBe(OPENAI_APP_WIDGET_URI);
+      expect(tools[name]._meta?.["openai/outputTemplate"]).toBe(OPENAI_APP_WIDGET_URI);
+    }
+    expect(names).not.toContain("senado_suprimento_fundos");
+  });
+
+  it("registers the ChatGPT app widget only on the OpenAI app profile", () => {
+    const fullServer = createServer(env as any);
+    const appServer = createServer(env as any, undefined, { toolProfile: "openai-app" });
+
+    expect((fullServer as any)._registeredResources[OPENAI_APP_WIDGET_URI]).toBeUndefined();
+
+    const widget = (appServer as any)._registeredResources[OPENAI_APP_WIDGET_URI];
+    expect(widget).toBeDefined();
+    expect(widget.name).toBe(OPENAI_APP_WIDGET_RESOURCE_NAME);
+    expect(widget.metadata.mimeType).toBe(OPENAI_APP_WIDGET_MIME_TYPE);
   });
 });
