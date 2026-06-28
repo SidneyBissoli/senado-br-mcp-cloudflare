@@ -31,19 +31,19 @@ function datePart(d: string | null | undefined): string {
 export function parseProcessoResumo(p: any) {
   const m = typeof p.identificacao === "string" ? p.identificacao.match(/^(\S+)\s+(\d+)\/(\d{4})/) : null;
   return {
-    codigo: p.codigoMateria ?? null,
-    idProcesso: p.id ?? null,
     sigla: p.sigla || (m ? m[1] : ""),
     numero: safeInt(p.numero ?? (m ? m[2] : 0)),
     ano: safeInt(p.ano ?? (m ? m[3] : 0)),
     identificacao: p.identificacao || null,
+    dataApresentacao: p.dataApresentacao || null,
     ementa: p.ementa || null,
     autor: p.autoria || null,
     situacao: p.situacaoAtual || null,
-    dataApresentacao: p.dataApresentacao || null,
     tramitando: p.tramitando === "Sim" || p.tramitando === "S" ? true
       : p.tramitando === "Não" || p.tramitando === "N" ? false : null,
     url: p.urlDocumento || null,
+    codigo: p.codigoMateria ?? null,
+    idProcesso: p.id ?? null,
   };
 }
 

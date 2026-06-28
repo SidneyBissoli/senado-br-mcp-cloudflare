@@ -34,6 +34,31 @@ describe("parseProcessoResumo", () => {
     expect(result.url).toContain("sdleg-getter");
   });
 
+  it("keeps user-facing summary fields before internal ids for compact ChatGPT views", () => {
+    const result = parseProcessoResumo({
+      id: 7914763,
+      codigoMateria: 141944,
+      identificacao: "PL 2630/2020",
+      dataApresentacao: "2020-05-13",
+      ementa: "Institui a Lei Brasileira de Liberdade...",
+      autoria: "Senador Alessandro Vieira",
+      situacaoAtual: "Em tramitação",
+      tramitando: "Sim",
+      urlDocumento: "https://legis.senado.gov.br/doc",
+    });
+    expect(Object.keys(result).slice(0, 9)).toEqual([
+      "sigla",
+      "numero",
+      "ano",
+      "identificacao",
+      "dataApresentacao",
+      "ementa",
+      "autor",
+      "situacao",
+      "tramitando",
+    ]);
+  });
+
   it("prefers explicit sigla/numero/ano fields when present", () => {
     const result = parseProcessoResumo({
       identificacao: "PEC 45/2019",
