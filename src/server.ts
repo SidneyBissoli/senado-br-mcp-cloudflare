@@ -87,7 +87,7 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
         description,
         inputSchema: shape as never,
         outputSchema: outputSchema as never,
-        annotations: { readOnlyHint: true, openWorldHint: true },
+        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
         _meta: toolMetaForProfile(toolProfile),
       },
       instrumentTool(name, profiledCallback as never, analytics) as never,

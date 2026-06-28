@@ -5,6 +5,8 @@ Atualizado: 2026-06-28.
 Este documento registra a estrategia para publicar o `senado-br-mcp` dentro do ecossistema da OpenAI, sem
 desorganizar o servidor MCP publico ja existente.
 
+Pacote final de submissao: [`docs/openai-submission-package.pt-BR.md`](openai-submission-package.pt-BR.md).
+
 ## Posicionamento
 
 Nome sugerido para submissao: **Dados Abertos Senado BR**.
@@ -155,8 +157,8 @@ Pontos tecnicos ja implementados:
 - [x] Smoke test local do perfil OpenAI com Wrangler e `MCP_URL` apontando para `http://127.0.0.1:<porta>/mcp/openai-app`.
 - [x] Metadados do projeto atualizados para evitar aparencia de app oficial.
 - [x] Testes cobrindo catalogo completo, instrucoes e perfil OpenAI.
-- [ ] Texto final de listing do app.
-- [ ] Categoria final do app no formulario da OpenAI.
+- [x] Texto final de listing do app em `docs/openai-submission-package.pt-BR.md`.
+- [x] Categorias sugeridas em `docs/openai-submission-package.pt-BR.md`; categoria final depende das opcoes reais do formulario.
 - [ ] Verificacao de identidade no dashboard da OpenAI antes/na revisao.
 - [ ] Confirmar que o endpoint submetido nao exige `API_KEY` para a equipe de revisao.
 - [ ] Revisao manual do fluxo no ChatGPT antes da submissao.

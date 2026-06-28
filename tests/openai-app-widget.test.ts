@@ -26,6 +26,8 @@ describe("OpenAI app widget", () => {
   it("renders from the Apps SDK bridge without external scripts", () => {
     expect(OPENAI_APP_WIDGET_HTML).toContain("window.openai");
     expect(OPENAI_APP_WIDGET_HTML).toContain("toolOutput");
+    expect(OPENAI_APP_WIDGET_HTML).toContain("ui/notifications/tool-result");
+    expect(OPENAI_APP_WIDGET_HTML).toContain("latestToolResult");
     expect(OPENAI_APP_WIDGET_HTML).toContain("textContent");
     expect(OPENAI_APP_WIDGET_HTML).not.toContain("<script src=");
   });

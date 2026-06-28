@@ -13,6 +13,7 @@ scripts/ingest-ecidadania/out.sql
 reports/
 docs/*
 !docs/openai-app-readiness.pt-BR.md
+!docs/openai-submission-package.pt-BR.md
 marketing/
 prompts/
 .api-spec/

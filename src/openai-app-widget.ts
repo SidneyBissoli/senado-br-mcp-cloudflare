@@ -227,6 +227,7 @@ export const OPENAI_APP_WIDGET_HTML = String.raw`<!doctype html>
       const appRoot = document.getElementById("app");
       const hiddenKeys = new Set(["provenance", "attribution", "meta"]);
       const preferredTitleKeys = ["nome", "nomeParlamentar", "identificacao", "sigla", "titulo", "descricao", "ementa"];
+      let latestToolResult = null;
 
       function bridge() {
         return window.openai || {};
@@ -235,6 +236,7 @@ export const OPENAI_APP_WIDGET_HTML = String.raw`<!doctype html>
       function readOutput() {
         const openai = bridge();
         const metadata = openai.toolResponseMetadata || {};
+        if (latestToolResult) return latestToolResult;
         return openai.toolOutput ||
           metadata.mcp_tool_result?.structuredContent ||
           metadata.call_tool_result?.structuredContent ||
@@ -398,7 +400,21 @@ export const OPENAI_APP_WIDGET_HTML = String.raw`<!doctype html>
       }
 
       document.addEventListener("DOMContentLoaded", render);
-      window.addEventListener("message", () => window.setTimeout(render, 0));
+      window.addEventListener("message", (event) => {
+        if (event.source !== window.parent || !event.data || typeof event.data !== "object") {
+          window.setTimeout(render, 0);
+          return;
+        }
+
+        const message = event.data;
+        if (message.jsonrpc === "2.0" && message.method === "ui/notifications/tool-result") {
+          latestToolResult = message.params?.structuredContent ||
+            message.params?.result?.structuredContent ||
+            message.params?.mcp_tool_result?.structuredContent ||
+            null;
+        }
+        window.setTimeout(render, 0);
+      });
 
       let attempts = 0;
       const timer = window.setInterval(() => {

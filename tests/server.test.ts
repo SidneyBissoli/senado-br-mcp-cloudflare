@@ -69,6 +69,12 @@ describe("createServer", () => {
     expect(names.length).toBe(OPENAI_APP_TOOL_ALLOWLIST.size);
     for (const name of OPENAI_APP_TOOL_ALLOWLIST) {
       expect(names, `OpenAI app tool ${name} não registrado`).toContain(name);
+      expect(tools[name].annotations).toMatchObject({
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      });
       expect(tools[name]._meta?.ui?.resourceUri).toBe(OPENAI_APP_WIDGET_URI);
       expect(tools[name]._meta?.["openai/outputTemplate"]).toBe(OPENAI_APP_WIDGET_URI);
     }

@@ -147,10 +147,14 @@ for (const name of names) {
 }
 
 const badAnnotations = tools.filter(
-  (tool) => tool.annotations?.readOnlyHint !== true || tool.annotations?.openWorldHint !== true,
+  (tool) =>
+    tool.annotations?.readOnlyHint !== true ||
+    tool.annotations?.destructiveHint !== false ||
+    tool.annotations?.idempotentHint !== true ||
+    tool.annotations?.openWorldHint !== true,
 );
 if (badAnnotations.length > 0) {
-  fail(`tools missing read-only/open-world annotations: ${badAnnotations.map((tool) => tool.name).join(", ")}`);
+  fail(`tools missing read-only/non-destructive/idempotent/open-world annotations: ${badAnnotations.map((tool) => tool.name).join(", ")}`);
 }
 
 if (names.includes("senado_suprimento_fundos")) {
@@ -188,6 +192,6 @@ if (widgetContent?._meta?.ui?.domain !== WIDGET_DOMAIN) {
 }
 
 console.log(`tools/list OK - ${tools.length} curated tools`);
-console.log("annotations OK - all tools are read-only/open-world");
+console.log("annotations OK - all tools are read-only/non-destructive/idempotent/open-world");
 console.log(`widget OK - ${WIDGET_URI}`);
 console.log("\nSMOKE PASS");
