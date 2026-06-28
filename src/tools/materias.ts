@@ -162,7 +162,7 @@ export function registerMateriasTools(server: McpServer, baseUrl: string) {
       tramitando: z.boolean().optional().describe("Apenas em tramitação"),
       dataInicioApresentacao: z.string().regex(/^(\d{8}|\d{4}-\d{2}-\d{2})$/).optional().describe("Data inicial de apresentação (YYYYMMDD ou YYYY-MM-DD)"),
       dataFimApresentacao: z.string().regex(/^(\d{8}|\d{4}-\d{2}-\d{2})$/).optional().describe("Data final de apresentação (YYYYMMDD ou YYYY-MM-DD)"),
-      ordenarPor: z.enum(["relevancia", "dataApresentacao"]).optional().default("relevancia").describe("Ordenação local; use dataApresentacao para pedidos recentes"),
+      ordenarPor: z.enum(["relevancia", "dataApresentacao"]).optional().default("dataApresentacao").describe("Ordenação local; padrão dataApresentacao para favorecer pedidos recentes"),
       ordem: z.enum(["asc", "desc"]).optional().default("desc").describe("Direção da ordenação quando ordenarPor=dataApresentacao"),
       limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de resultados (padrão: 100)"),
     },

@@ -142,6 +142,7 @@ console.log(`initialize OK - ${init.serverInfo.name} v${init.serverInfo.version}
 const list = await rpc("tools/list");
 const tools = list.tools ?? [];
 const names = tools.map((tool) => tool.name).sort();
+const materiasTool = tools.find((tool) => tool.name === "senado_buscar_materias");
 
 if (tools.length !== EXPECTED_TOOLS.length) {
   fail(`expected ${EXPECTED_TOOLS.length} OpenAI app tools, got ${tools.length}`);
@@ -151,6 +152,9 @@ for (const name of EXPECTED_TOOLS) {
   if (!names.includes(name)) {
     fail(`missing OpenAI app tool: ${name}`);
   }
+}
+if (materiasTool?.inputSchema?.properties?.ordenarPor?.default !== "dataApresentacao") {
+  fail("senado_buscar_materias must default ordenarPor to dataApresentacao");
 }
 for (const name of names) {
   if (!EXPECTED_TOOLS.includes(name)) {
