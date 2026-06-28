@@ -227,6 +227,17 @@ export const OPENAI_APP_WIDGET_HTML = String.raw`<!doctype html>
       const appRoot = document.getElementById("app");
       const hiddenKeys = new Set(["provenance", "attribution", "meta"]);
       const preferredTitleKeys = ["nome", "nomeParlamentar", "identificacao", "sigla", "titulo", "descricao", "ementa"];
+      const priorityDetailKeys = [
+        "identificacao",
+        "dataApresentacao",
+        "ementa",
+        "autor",
+        "situacao",
+        "tramitando",
+        "url",
+        "idProcesso",
+        "codigo",
+      ];
       let latestToolResult = null;
 
       function bridge() {
@@ -322,14 +333,21 @@ export const OPENAI_APP_WIDGET_HTML = String.raw`<!doctype html>
 
       function detailEntries(record) {
         if (!record || typeof record !== "object" || Array.isArray(record)) return [];
-        return Object.entries(record)
-          .filter(([key, value]) => !hiddenKeys.has(key) && !preferredTitleKeys.includes(key) && value !== undefined)
-          .slice(0, 6);
+        const seen = new Set();
+        const prioritized = priorityDetailKeys
+          .filter((key) => Object.prototype.hasOwnProperty.call(record, key) && record[key] !== undefined)
+          .map((key) => {
+            seen.add(key);
+            return [key, record[key]];
+          });
+        const rest = Object.entries(record)
+          .filter(([key, value]) => !hiddenKeys.has(key) && !seen.has(key) && value !== undefined);
+        return prioritized.concat(rest).slice(0, 9);
       }
 
       function renderItems(data, collection, parent) {
         const section = el("section", "items");
-        const rows = collection ? collection[1].slice(0, 8) : [data];
+        const rows = collection ? collection[1].slice(0, 10) : [data];
 
         for (const [index, row] of rows.entries()) {
           const card = el("article", "item");

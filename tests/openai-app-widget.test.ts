@@ -31,4 +31,12 @@ describe("OpenAI app widget", () => {
     expect(OPENAI_APP_WIDGET_HTML).toContain("textContent");
     expect(OPENAI_APP_WIDGET_HTML).not.toContain("<script src=");
   });
+
+  it("prioritizes matter-search fields in the compact result cards", () => {
+    expect(OPENAI_APP_WIDGET_HTML).toContain("priorityDetailKeys");
+    expect(OPENAI_APP_WIDGET_HTML).toContain('"dataApresentacao"');
+    expect(OPENAI_APP_WIDGET_HTML).toContain('"situacao"');
+    expect(OPENAI_APP_WIDGET_HTML).toContain('"tramitando"');
+    expect(OPENAI_APP_WIDGET_HTML).toContain("slice(0, 10)");
+  });
 });
