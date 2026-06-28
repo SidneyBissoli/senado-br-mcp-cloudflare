@@ -34,6 +34,12 @@ export const FIXTURES: EvalFixture[] = [
     note: "Listagem com filtro de UF.",
   },
   {
+    id: "sen-06",
+    query: "Use o app Dados Abertos Senado BR. Liste os senadores em exercício e cite a fonte.",
+    expectedTools: ["senado_listar_senadores"],
+    note: "Prompt canário de demo do ChatGPT App: a primeira ação deve ser a listagem atual com proveniência.",
+  },
+  {
     id: "sen-02",
     query: "Me dá a biografia e os mandatos do senador Renan Calheiros.",
     expectedTools: ["senado_listar_senadores", "senado_obter_senador"],

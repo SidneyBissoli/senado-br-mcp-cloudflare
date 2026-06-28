@@ -125,6 +125,12 @@ if (init.serverInfo?.name !== "senado-br-mcp") {
 if (!init.instructions?.includes("superfície reduzida para ChatGPT Apps")) {
   fail("initialize did not return the OpenAI app server instructions");
 }
+if (
+  !init.instructions?.includes("senado_listar_senadores") ||
+  !init.instructions?.includes("emExercicio: true")
+) {
+  fail("initialize did not return the current-senators tool-selection instruction");
+}
 console.log(`initialize OK - ${init.serverInfo.name} v${init.serverInfo.version}`);
 
 const list = await rpc("tools/list");

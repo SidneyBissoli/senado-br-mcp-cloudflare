@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   handlerRouteForPath,
+  instructionsForProfile,
   minimizeToolResultForProfile,
   normalizeMcpRoute,
   OPENAI_APP_MCP_ROUTE,
@@ -14,6 +15,13 @@ describe("OpenAI app surface helpers", () => {
     expect(toolProfileForRoute("/mcp/openai-app/")).toBe("openai-app");
     expect(handlerRouteForPath("/mcp/openai-app/", "openai-app")).toBe("/mcp/openai-app/");
     expect(handlerRouteForPath("/MCP/OpenAI-App", "openai-app")).toBe("/MCP/OpenAI-App");
+  });
+
+  it("biases the OpenAI app instructions toward the senator listing tool for current senators", () => {
+    const instructions = instructionsForProfile("openai-app");
+    expect(instructions).toContain("senadores em exercício");
+    expect(instructions).toContain("senado_listar_senadores");
+    expect(instructions).toContain("emExercicio: true");
   });
 
   it("strips top-level operational meta only from the OpenAI app profile", () => {
