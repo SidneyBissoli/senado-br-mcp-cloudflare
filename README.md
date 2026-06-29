@@ -773,7 +773,9 @@ scripts/
     ├── http.ts           # Polite fetch (retry/backoff) for the unattended crawl
     ├── d1.ts             # D1 pre-reads (existing meta, payloads, last good rows) via wrangler
     └── sql.ts            # out.sql generation (mirrors SQL.upsert/SQL.history; reuses SyncRecord)
-.github/workflows/        # publish-mcp.yml (registry) + ingest-ecidadania.yml (weekly D1 corpus load)
+.github/workflows/        # ingest-ecidadania.yml (weekly D1 corpus load), publish-mcp.yml (registry),
+                          # usage-report.yml (monthly Analytics report), deprecate-registry.yml
+                          # (all pinned to current Node 24 action majors — see each YAML for exact versions)
 migrations/               # D1 schema (0001 tables, 0002 indexes) for the e-Cidadania pipeline
 tests/                    # Vitest unit tests mirroring src/ (parsers, cache, throttle, auth, scraper,
                           # pipeline/anomaly/store, listing/sql/highlights, plus e-Cidadania contract tests)
