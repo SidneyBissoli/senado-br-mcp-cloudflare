@@ -1,7 +1,10 @@
 export const DEFAULT_MCP_ROUTE = "/mcp";
-export const OPENAI_APP_MCP_ROUTE = "/mcp/openai-app";
+export const OPENAI_APP_LEGACY_MCP_ROUTE = "/mcp/openai-app";
+export const OPENAI_APP_MCP_ROUTE = "/mcp/openai-app-v2";
 export const OPENAI_APP_WIDGET_URI = "ui://senado-br-mcp/openai-app-dashboard-v2.html";
 export const OPENAI_APP_WIDGET_DOMAIN = "https://senado.sidneybissoli.com";
+
+const OPENAI_APP_MCP_ROUTES = new Set([OPENAI_APP_LEGACY_MCP_ROUTE, OPENAI_APP_MCP_ROUTE]);
 
 export type SenadoToolProfile = "full" | "openai-app";
 
@@ -79,7 +82,7 @@ export function normalizeMcpRoute(pathname: string): string {
 }
 
 export function toolProfileForRoute(pathname: string): SenadoToolProfile {
-  return normalizeMcpRoute(pathname) === OPENAI_APP_MCP_ROUTE ? "openai-app" : "full";
+  return OPENAI_APP_MCP_ROUTES.has(normalizeMcpRoute(pathname)) ? "openai-app" : "full";
 }
 
 export function mcpRouteForProfile(profile: SenadoToolProfile): string {
@@ -88,7 +91,7 @@ export function mcpRouteForProfile(profile: SenadoToolProfile): string {
 
 export function handlerRouteForPath(pathname: string, profile: SenadoToolProfile): string {
   const normalized = normalizeMcpRoute(pathname);
-  if (normalized === OPENAI_APP_MCP_ROUTE || normalized === DEFAULT_MCP_ROUTE) {
+  if (OPENAI_APP_MCP_ROUTES.has(normalized) || normalized === DEFAULT_MCP_ROUTE) {
     return pathname;
   }
   return mcpRouteForProfile(profile);

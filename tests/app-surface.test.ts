@@ -4,17 +4,20 @@ import {
   instructionsForProfile,
   minimizeToolResultForProfile,
   normalizeMcpRoute,
+  OPENAI_APP_LEGACY_MCP_ROUTE,
   OPENAI_APP_MCP_ROUTE,
   toolProfileForRoute,
 } from "../src/app-surface.js";
 
 describe("OpenAI app surface helpers", () => {
   it("normalizes near-miss MCP app routes", () => {
-    expect(normalizeMcpRoute("/mcp/openai-app/")).toBe(OPENAI_APP_MCP_ROUTE);
-    expect(normalizeMcpRoute("/MCP/OpenAI-App")).toBe(OPENAI_APP_MCP_ROUTE);
+    expect(normalizeMcpRoute("/mcp/openai-app-v2/")).toBe(OPENAI_APP_MCP_ROUTE);
+    expect(normalizeMcpRoute("/MCP/OpenAI-App-V2")).toBe(OPENAI_APP_MCP_ROUTE);
+    expect(normalizeMcpRoute("/mcp/openai-app/")).toBe(OPENAI_APP_LEGACY_MCP_ROUTE);
+    expect(toolProfileForRoute("/mcp/openai-app-v2/")).toBe("openai-app");
     expect(toolProfileForRoute("/mcp/openai-app/")).toBe("openai-app");
-    expect(handlerRouteForPath("/mcp/openai-app/", "openai-app")).toBe("/mcp/openai-app/");
-    expect(handlerRouteForPath("/MCP/OpenAI-App", "openai-app")).toBe("/MCP/OpenAI-App");
+    expect(handlerRouteForPath("/mcp/openai-app-v2/", "openai-app")).toBe("/mcp/openai-app-v2/");
+    expect(handlerRouteForPath("/MCP/OpenAI-App-V2", "openai-app")).toBe("/MCP/OpenAI-App-V2");
   });
 
   it("biases the OpenAI app instructions toward the senator listing tool for current senators", () => {

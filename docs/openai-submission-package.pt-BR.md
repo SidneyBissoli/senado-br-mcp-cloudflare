@@ -22,7 +22,7 @@ foi submetido ou aprovado.
 | Requisito | Estado em 2026-06-28 |
 | --- | --- |
 | Endpoint MCP remoto HTTPS | Implementado: `https://senado.sidneybissoli.com/mcp`. |
-| Endpoint curado para ChatGPT App | Implementado: `https://senado.sidneybissoli.com/mcp/openai-app`. |
+| Endpoint curado para ChatGPT App | Implementado: `https://senado.sidneybissoli.com/mcp/openai-app-v2` (`/mcp/openai-app` permanece como alias legado). |
 | Superficie revisavel | Implementado: 25 tools de alto sinal no perfil OpenAI; endpoint completo preservado. |
 | Instructions no handshake MCP | Implementado em `SERVER_INSTRUCTIONS` e `OPENAI_APP_SERVER_INSTRUCTIONS`. |
 | Metadados de tools | Implementado: tools read-only, non-destructive, idempotent, open-world, com template UI compartilhado. |
@@ -84,7 +84,7 @@ Evitar no formulario:
 Endpoint MCP para o app:
 
 ```text
-https://senado.sidneybissoli.com/mcp/openai-app
+https://senado.sidneybissoli.com/mcp/openai-app-v2
 ```
 
 Privacidade:
@@ -116,7 +116,7 @@ Notas para reviewer:
 ```text
 This is an independent, read-only public-data app for Brazilian Federal Senate datasets. It is not affiliated with, maintained by, or endorsed by the Brazilian Federal Senate, OpenAI, or ChatGPT.
 
-The submitted endpoint is /mcp/openai-app, a curated profile with 25 read-only tools and one shared MCP Apps widget. The full public MCP endpoint remains available at /mcp for technical users, but it is not the endpoint intended for ChatGPT App review.
+The submitted endpoint is /mcp/openai-app-v2, a curated profile with 25 read-only tools and one shared MCP Apps widget. /mcp/openai-app remains as a legacy alias. The full public MCP endpoint remains available at /mcp for technical users, but it is not the endpoint intended for ChatGPT App review.
 
 Suggested review prompts:
 1. Liste os senadores em exercicio por UF e cite a fonte.
@@ -133,7 +133,7 @@ The app does not write to external systems, does not require end-user login, and
 A documentacao publica consultada em 2026-06-28 nao expunha requisito publico obrigatorio de screenshot. Se o
 Dashboard pedir screenshots durante a submissao, capturar manualmente:
 
-- tela de teste do app no ChatGPT usando o endpoint `https://senado.sidneybissoli.com/mcp/openai-app`;
+- tela de teste do app no ChatGPT usando o endpoint `https://senado.sidneybissoli.com/mcp/openai-app-v2`;
 - uma resposta com proveniencia visivel;
 - o widget `Dados Abertos Senado BR` renderizando metricas, itens e fonte;
 - a tela/listing sem qualquer alegacao de status oficial.
@@ -150,7 +150,7 @@ Checklist visual:
 
 1. Acessar `https://platform.openai.com/apps`.
 2. Criar ou abrir o app MCP.
-3. Informar o endpoint `https://senado.sidneybissoli.com/mcp/openai-app`.
+3. Informar o endpoint `https://senado.sidneybissoli.com/mcp/openai-app-v2`.
 4. Preencher nome, descricoes, politica de privacidade, termos e contatos usando os textos acima.
 5. Concluir verificacao de identidade/perfil de builder, se o Dashboard solicitar.
 6. Aceitar as politicas e termos aplicaveis da OpenAI, se o fluxo solicitar.

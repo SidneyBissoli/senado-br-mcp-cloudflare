@@ -2,13 +2,13 @@
  * Smoke test for the OpenAI / ChatGPT app MCP surface.
  *
  * Exercises the real Streamable HTTP route:
- *   initialize -> tools/list on /mcp/openai-app
+ *   initialize -> tools/list on /mcp/openai-app-v2
  *
  * Defaults to the hosted endpoint. For local Wrangler:
- *   MCP_URL=http://127.0.0.1:8787/mcp/openai-app node scripts/smoke-openai-app.mjs
+ *   MCP_URL=http://127.0.0.1:8787/mcp/openai-app-v2 node scripts/smoke-openai-app.mjs
  */
 
-const BASE = process.env.MCP_URL || "https://senado.sidneybissoli.com/mcp/openai-app";
+const BASE = process.env.MCP_URL || "https://senado.sidneybissoli.com/mcp/openai-app-v2";
 const ORIGIN = new URL(BASE).origin;
 const WIDGET_URI = "ui://senado-br-mcp/openai-app-dashboard-v2.html";
 const WIDGET_DOMAIN = "https://senado.sidneybissoli.com";
@@ -156,6 +156,12 @@ for (const name of EXPECTED_TOOLS) {
 if (materiasTool?.inputSchema?.properties?.ordenarPor?.default !== "dataApresentacao") {
   fail("senado_buscar_materias must default ordenarPor to dataApresentacao");
 }
+for (const param of ["ordenarPor", "ordem", "dataInicioApresentacao", "dataFimApresentacao"]) {
+  if (!materiasTool?.inputSchema?.properties?.[param]) {
+    fail(`senado_buscar_materias schema missing parameter: ${param}`);
+  }
+}
+console.log("matter schema OK - recent-date parameters present");
 for (const name of names) {
   if (!EXPECTED_TOOLS.includes(name)) {
     fail(`unexpected tool in OpenAI app profile: ${name}`);

@@ -46,12 +46,13 @@ https://senado.sidneybissoli.com/mcp
 Endpoint MCP curado para submissao como ChatGPT App:
 
 ```text
-https://senado.sidneybissoli.com/mcp/openai-app
+https://senado.sidneybissoli.com/mcp/openai-app-v2
 ```
 
-O endpoint de app expoe uma allowlist de 25 ferramentas de alto sinal. As ferramentas chamam os mesmos
-handlers do servidor completo e retornam o mesmo contrato de proveniencia; apenas a superficie anunciada
-ao cliente fica menor.
+O endpoint de app expoe uma allowlist de 25 ferramentas de alto sinal. `/mcp/openai-app` permanece como
+alias legado, mas o endpoint recomendado para cadastro/revisao no ChatGPT e `/mcp/openai-app-v2`, para
+forcar clientes a recarregarem o schema atual. As ferramentas chamam os mesmos handlers do servidor
+completo e retornam o mesmo contrato de proveniencia; apenas a superficie anunciada ao cliente fica menor.
 
 As 25 ferramentas tambem anunciam um template UI compartilhado via `_meta.ui.resourceUri` e
 `_meta["openai/outputTemplate"]`:
@@ -74,7 +75,7 @@ https://senado.sidneybissoli.com/terms
 
 ## Superficie curada
 
-Ferramentas anunciadas em `/mcp/openai-app`:
+Ferramentas anunciadas em `/mcp/openai-app-v2`:
 
 - `senado_listar_senadores`
 - `senado_obter_senador`
@@ -135,7 +136,7 @@ buscou a mesma fonte pela web.
 Preflight:
 
 1. Rode `npm run smoke:openai-app`.
-2. Confirme que o endpoint usado no cadastro/revisao do app e `https://senado.sidneybissoli.com/mcp/openai-app`.
+2. Confirme que o endpoint usado no cadastro/revisao do app e `https://senado.sidneybissoli.com/mcp/openai-app-v2`.
 3. Abra uma conversa nova no ChatGPT a partir do app instalado ou selecione explicitamente o app no seletor de apps/ferramentas.
 4. Se a interface oferecer busca web como ferramenta separada, deixe claro no prompt que a demonstracao deve usar o app.
 
@@ -199,10 +200,10 @@ Pontos tecnicos ja implementados:
 - [x] Endpoint HTTPS publico e estavel.
 - [x] Icone publico em `https://senado.sidneybissoli.com/icon.jpg`.
 - [x] Instrucoes MCP no handshake.
-- [x] Superficie curada para app em `/mcp/openai-app`.
+- [x] Superficie curada para app em `/mcp/openai-app-v2`.
 - [x] URLs publicas de politica de privacidade e termos de uso.
-- [x] Widget UI compartilhado do Apps SDK/MCP Apps para o perfil `/mcp/openai-app`.
-- [x] Smoke test local do perfil OpenAI com Wrangler e `MCP_URL` apontando para `http://127.0.0.1:<porta>/mcp/openai-app`.
+- [x] Widget UI compartilhado do Apps SDK/MCP Apps para o perfil `/mcp/openai-app-v2`.
+- [x] Smoke test local do perfil OpenAI com Wrangler e `MCP_URL` apontando para `http://127.0.0.1:<porta>/mcp/openai-app-v2`.
 - [x] Metadados do projeto atualizados para evitar aparencia de app oficial.
 - [x] Testes cobrindo catalogo completo, instrucoes e perfil OpenAI.
 - [x] Texto final de listing do app em `docs/openai-submission-package.pt-BR.md`.

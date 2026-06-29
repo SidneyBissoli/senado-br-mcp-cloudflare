@@ -46,15 +46,16 @@ https://senado.sidneybissoli.com/mcp
 Para submissao e revisao pelo OpenAI Apps SDK, o Worker tambem expoe uma superficie MCP curada:
 
 ```
-https://senado.sidneybissoli.com/mcp/openai-app
+https://senado.sidneybissoli.com/mcp/openai-app-v2
 ```
 
 Esse endpoint preserva o servidor MCP publico completo em `/mcp`, mas limita a descoberta a 25
-ferramentas de alto sinal, organizadas por intencao de usuario, para uso como app do ChatGPT. As
-ferramentas continuam chamando os mesmos handlers e retornando o mesmo envelope de proveniencia; apenas
-a superficie anunciada fica mais estreita. Qualquer listagem de ChatGPT App deve apresentar isto como um
-app independente de pesquisa em dados abertos, nao como conector oficial do Senado, da OpenAI ou do
-ChatGPT.
+ferramentas de alto sinal, organizadas por intencao de usuario, para uso como app do ChatGPT.
+`/mcp/openai-app` continua disponivel como alias legado, mas novas configuracoes do app no ChatGPT
+devem usar `/mcp/openai-app-v2` para forcar a leitura do schema atual das ferramentas. As ferramentas
+continuam chamando os mesmos handlers e retornando o mesmo envelope de proveniencia; apenas a superficie
+anunciada fica mais estreita. Qualquer listagem de ChatGPT App deve apresentar isto como um app
+independente de pesquisa em dados abertos, nao como conector oficial do Senado, da OpenAI ou do ChatGPT.
 
 Para ChatGPT Apps, essas 25 ferramentas tambem anunciam um template UI compartilhado do MCP Apps em
 `ui://senado-br-mcp/openai-app-dashboard-v2.html`. O widget e autocontido e renderiza o
@@ -136,7 +137,7 @@ O Claude Code a descobre automaticamente ao trabalhar neste repositório. Para u
 
 - **Runtime:** Cloudflare Workers (ESM)
 - **Transporte:** Streamable HTTP (spec MCP 2025-03-26) via `createMcpHandler` de `agents/mcp`
-- **Protocolo:** MCP sobre JSON-RPC — `/mcp` serve o catalogo publico completo; `/mcp/openai-app` expoe um perfil curado de 25 ferramentas mais um widget MCP Apps compartilhado para revisao/submissao como app OpenAI
+- **Protocolo:** MCP sobre JSON-RPC — `/mcp` serve o catalogo publico completo; `/mcp/openai-app-v2` expoe um perfil curado de 25 ferramentas mais um widget MCP Apps compartilhado para revisao/submissao como app OpenAI (`/mcp/openai-app` permanece como alias legado)
 - **SDK:** `@modelcontextprotocol/sdk` 1.26.0+ (instâncias de McpServer por requisição)
 - **Validação:** schemas Zod para todas as entradas das ferramentas
 - **Cache:** 2 camadas (L0 memória + L1 Cache API) com chaveamento SHA-256
