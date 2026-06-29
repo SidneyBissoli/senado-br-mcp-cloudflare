@@ -12,7 +12,7 @@ import {
 describe("OpenAI app widget", () => {
   it("uses the MCP Apps HTML MIME profile", () => {
     expect(OPENAI_APP_WIDGET_MIME_TYPE).toBe("text/html;profile=mcp-app");
-    expect(OPENAI_APP_WIDGET_URI).toContain("v1");
+    expect(OPENAI_APP_WIDGET_URI).toContain("v2");
   });
 
   it("declares a submission-ready isolated widget origin and CSP", () => {

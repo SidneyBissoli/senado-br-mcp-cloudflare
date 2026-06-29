@@ -57,7 +57,7 @@ should present this as an independent open-data research app, not as an official
 ChatGPT connector.
 
 For ChatGPT Apps, those 25 tools also advertise a shared MCP Apps UI template at
-`ui://senado-br-mcp/openai-app-dashboard-v1.html`. The self-contained widget renders the returned
+`ui://senado-br-mcp/openai-app-dashboard-v2.html`. The self-contained widget renders the returned
 `structuredContent` as a compact dashboard with metrics, main records, and source/provenance, without
 adding another model-visible data tool.
 

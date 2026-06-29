@@ -57,7 +57,7 @@ app independente de pesquisa em dados abertos, nao como conector oficial do Sena
 ChatGPT.
 
 Para ChatGPT Apps, essas 25 ferramentas tambem anunciam um template UI compartilhado do MCP Apps em
-`ui://senado-br-mcp/openai-app-dashboard-v1.html`. O widget e autocontido e renderiza o
+`ui://senado-br-mcp/openai-app-dashboard-v2.html`. O widget e autocontido e renderiza o
 `structuredContent` retornado como painel compacto com metricas, registros principais e fonte/proveniencia,
 sem adicionar outra ferramenta de dados visivel ao modelo.
 

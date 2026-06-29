@@ -1,6 +1,6 @@
 export const DEFAULT_MCP_ROUTE = "/mcp";
 export const OPENAI_APP_MCP_ROUTE = "/mcp/openai-app";
-export const OPENAI_APP_WIDGET_URI = "ui://senado-br-mcp/openai-app-dashboard-v1.html";
+export const OPENAI_APP_WIDGET_URI = "ui://senado-br-mcp/openai-app-dashboard-v2.html";
 export const OPENAI_APP_WIDGET_DOMAIN = "https://senado.sidneybissoli.com";
 
 export type SenadoToolProfile = "full" | "openai-app";

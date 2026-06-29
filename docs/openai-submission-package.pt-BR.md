@@ -26,7 +26,7 @@ foi submetido ou aprovado.
 | Superficie revisavel | Implementado: 25 tools de alto sinal no perfil OpenAI; endpoint completo preservado. |
 | Instructions no handshake MCP | Implementado em `SERVER_INSTRUCTIONS` e `OPENAI_APP_SERVER_INSTRUCTIONS`. |
 | Metadados de tools | Implementado: tools read-only, non-destructive, idempotent, open-world, com template UI compartilhado. |
-| Widget MCP Apps / Apps SDK | Implementado: recurso `ui://senado-br-mcp/openai-app-dashboard-v1.html`, MIME `text/html;profile=mcp-app`, CSP sem dominios externos, dominio dedicado e bridge ChatGPT/MCP Apps. |
+| Widget MCP Apps / Apps SDK | Implementado: recurso `ui://senado-br-mcp/openai-app-dashboard-v2.html`, MIME `text/html;profile=mcp-app`, CSP sem dominios externos, dominio dedicado e bridge ChatGPT/MCP Apps. |
 | Privacidade e termos publicos | Implementado: `/privacy` e `/terms`. |
 | Sem falsa afiliacao | Implementado em instructions, docs, legal pages e textos de submissao abaixo. |
 | Review por Dashboard | Depende de acao manual no OpenAI Dashboard. |
@@ -166,4 +166,3 @@ Em 2026-06-28, a documentacao oficial atual indica estes caminhos:
 - Apps publicados e aprovados podem ser expostos no ChatGPT catalog e no Codex Plugin Directory conforme o fluxo da OpenAI.
 - O Codex tambem aceita plugins via marketplaces locais/de repo (`.agents/plugins/marketplace.json`) e compartilhamento de workspace, mas isso nao publica o app no diretorio publico curado pela OpenAI.
 - Nao foi encontrada, nas fontes oficiais consultadas, uma submissao publica separada de "MCP para Codex" fora do fluxo de ChatGPT Apps ou dos marketplaces/plugins locais do Codex.
-

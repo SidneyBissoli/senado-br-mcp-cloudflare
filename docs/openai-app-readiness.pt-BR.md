@@ -57,7 +57,7 @@ As 25 ferramentas tambem anunciam um template UI compartilhado via `_meta.ui.res
 `_meta["openai/outputTemplate"]`:
 
 ```text
-ui://senado-br-mcp/openai-app-dashboard-v1.html
+ui://senado-br-mcp/openai-app-dashboard-v2.html
 ```
 
 O resource do widget usa o MIME MCP Apps `text/html;profile=mcp-app`, origem dedicada

@@ -10,7 +10,7 @@
 
 const BASE = process.env.MCP_URL || "https://senado.sidneybissoli.com/mcp/openai-app";
 const ORIGIN = new URL(BASE).origin;
-const WIDGET_URI = "ui://senado-br-mcp/openai-app-dashboard-v1.html";
+const WIDGET_URI = "ui://senado-br-mcp/openai-app-dashboard-v2.html";
 const WIDGET_DOMAIN = "https://senado.sidneybissoli.com";
 const WIDGET_MIME_TYPE = "text/html;profile=mcp-app";
 const EXPECTED_TOOLS = [
