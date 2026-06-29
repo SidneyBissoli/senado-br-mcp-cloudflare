@@ -51,7 +51,7 @@ jobs:
           node scripts/observability/monthly-spreadsheet.mjs $ARGS
 
       - name: Upload spreadsheet artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: usage-report
           path: reports/usage/*.xlsx
