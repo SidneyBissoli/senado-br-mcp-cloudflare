@@ -32,7 +32,7 @@ describe("parseEventoListingPage", () => {
 
   it("derives status from the resumo-audiencia-STATUS class", () => {
     expect(items[0].status).toBe("agendado"); // AGENDADO
-    expect(items[1].status).toBe("encerrado"); // REALIZADO
+    expect(items[1].status).toBe("encerrado"); // ENCERRADO
   });
 
   it("parses data/hora from the <span class=data> cell", () => {

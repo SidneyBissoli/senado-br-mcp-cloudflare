@@ -58,7 +58,9 @@ async function main(): Promise<void> {
   cleanOldOutputs();
 
   console.log(`[consultas_votos][download] GET ${CSV_URL}`);
-  const csv = await getText(CSV_URL, { timeoutMs: DOWNLOAD_TIMEOUT_MS });
+  // The Arquimedes feed now does content negotiation and rejects the getText() default
+  // Accept: text/html with HTTP 406 for the .csv resource — ask for text/csv explicitly.
+  const csv = await getText(CSV_URL, { accept: "text/csv, */*", timeoutMs: DOWNLOAD_TIMEOUT_MS });
   const { referencePeriod, rows } = parseVotosCsv(csv);
   console.log(`[consultas_votos][parse] referencePeriod=${referencePeriod} dataRows=${rows.length}`);
 

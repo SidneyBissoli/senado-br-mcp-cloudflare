@@ -5,16 +5,17 @@
  * (the REST `/restcolecaomaisaudiencia` endpoint returns only the ~5 highlights). Pure parser,
  * fixture-testable, keyed on stable anchors/classes — not on layout.
  *
- * Each event renders as one `<div class="resumo-audiencia resumo-audiencia-STATUS">` block:
- *   <div class="resumo-audiencia resumo-audiencia-AGENDADO">
+ * Each event renders as one `<article class="resumo-audiencia resumo-audiencia-STATUS">` block
+ * (the container tag was a <div> historically — the parser accepts either):
+ *   <article class="resumo-audiencia resumo-audiencia-AGENDADO">
  *     <header><span>Audiência Pública</span></header>
  *     <section><div class="descricao"><a href="visualizacaoaudiencia?id=39529">TÍTULO</a></div></section>
  *     <footer><div class="comissao">
  *        <span class="data">24/06/26 | 10:00</span>
  *        <em class="sigla" title="Comissão …"> | CCT</em>
  *     </div></footer>
- *   </div>
- * Status is the class suffix (AGENDADO | REALIZADO | CANCELADO); date/time live in
+ *   </article>
+ * Status is the class suffix (AGENDADO | ENCERRADO | REALIZADO | CANCELADO | REGISTRADO); date/time live in
  * `<span class="data">`; the committee sigla is the token after "| " in `<em class="sigla">`.
  */
 
@@ -38,6 +39,12 @@ export function mapEventoStatus(classSuffix: string | null, data: string | null,
   if (st === "CANCELADO") return "cancelado";
   if (st === "REALIZADO" || st === "ENCERRADO") return "encerrado";
   if (st === "AGENDADO") return "agendado";
+  // TODO(registrado): the live listing now also emits a `resumo-audiencia-REGISTRADO` class.
+  // The page shows three visible sections — "Eventos agendados", "Eventos sem data prevista",
+  // and "Eventos encerrados" — with no explicit "registrado" label, so REGISTRADO most likely
+  // maps to "sem data prevista" (no date → date fallback below yields "agendado", which is the
+  // sensible reading for an event not yet held). Not adding an explicit case until the
+  // class→section binding is confirmed against the raw HTML — guessing could mislabel status.
   // Fallback by date: a past event is encerrado, otherwise agendado.
   if (data) return data < toISODate(now) ? "encerrado" : "agendado";
   return "agendado";
@@ -52,7 +59,9 @@ function toISODate(d: Date): string {
  * `now` is injectable for the date-based status fallback (tests pass a fixed date).
  */
 export function parseEventoListingPage(html: string, now: Date = new Date()): EventoListingItem[] {
-  const blocks = html.split(/<div class="resumo-audiencia\b/i).slice(1);
+  // The listing card container switched from <div> to <article> (class anchor unchanged) —
+  // accept either tag so a future tag swap back does not silently zero out the crawl.
+  const blocks = html.split(/<(?:div|article)\s+class="resumo-audiencia\b/i).slice(1);
   const items: EventoListingItem[] = [];
   for (const block of blocks) {
     const id = extractId(block);

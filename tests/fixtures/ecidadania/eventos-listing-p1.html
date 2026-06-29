@@ -1,9 +1,11 @@
 <!-- Trimmed but faithful capture of principalaudiencia?p=1 (2 event blocks + pagination nav).
-     The real page is UTF-8 (literal accents). Refresh if the portal markup changes. -->
+     The listing card container is now <article class="resumo-audiencia resumo-audiencia-STATUS">
+     (it was a <div> before — the parser accepts either tag). The real page is UTF-8 (literal
+     accents). Refresh if the portal markup changes. -->
 <html><body>
 <div class="colecao-audiencia">
 
-  <div class="resumo-audiencia resumo-audiencia-AGENDADO">
+  <article class="resumo-audiencia resumo-audiencia-AGENDADO">
     <div class="row">
       <div class="col-xs-12 col-sm-5">
         <div class="box-evento-interativo">
@@ -25,9 +27,9 @@
         <div class="participe">Participe 70</div>
       </div>
     </div>
-  </div>
+  </article>
 
-  <div class="resumo-audiencia resumo-audiencia-REALIZADO">
+  <article class="resumo-audiencia resumo-audiencia-ENCERRADO">
     <div class="row">
       <div class="col-xs-12 col-sm-5">
         <div class="box-evento-interativo">
@@ -49,7 +51,7 @@
         <span>120 comentários</span>
       </div>
     </div>
-  </div>
+  </article>
 
 </div>
 
