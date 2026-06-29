@@ -60,7 +60,14 @@ async function main(): Promise<void> {
   console.log(`[consultas_votos][download] GET ${CSV_URL}`);
   // The Arquimedes feed now does content negotiation and rejects the getText() default
   // Accept: text/html with HTTP 406 for the .csv resource — ask for text/csv explicitly.
-  const csv = await getText(CSV_URL, { accept: "text/csv, */*", timeoutMs: DOWNLOAD_TIMEOUT_MS });
+  // It is served as application/octet-stream but encoded in windows-1252 (Latin-1), so decode
+  // it as such; the default UTF-8 decode mangles the accented header (CÓD. MATÉRIA) and the
+  // parser then fails to locate the header row.
+  const csv = await getText(CSV_URL, {
+    accept: "text/csv, */*",
+    charset: "windows-1252",
+    timeoutMs: DOWNLOAD_TIMEOUT_MS,
+  });
   const { referencePeriod, rows } = parseVotosCsv(csv);
   console.log(`[consultas_votos][parse] referencePeriod=${referencePeriod} dataRows=${rows.length}`);
 

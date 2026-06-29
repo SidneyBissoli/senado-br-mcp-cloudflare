@@ -25,6 +25,8 @@ export class HttpError extends Error {
 
 interface GetOpts {
   accept?: string;
+  /** Decode the body with this charset (e.g. "windows-1252") instead of the default UTF-8. */
+  charset?: string;
   timeoutMs?: number;
   retries?: number;
 }
@@ -62,7 +64,12 @@ async function fetchWithRetry(url: string, opts: GetOpts): Promise<Response> {
 
 export async function getText(url: string, opts: GetOpts = {}): Promise<string> {
   const resp = await fetchWithRetry(url, { accept: "text/html", ...opts });
-  const text = await resp.text();
+  // resp.text() assumes UTF-8 when the response carries no charset. Some Senate feeds (the
+  // Arquimedes CSV) are served as application/octet-stream but encoded in windows-1252, so
+  // decode explicitly when the caller knows the charset — otherwise accents get mangled.
+  const text = opts.charset
+    ? new TextDecoder(opts.charset).decode(await resp.arrayBuffer())
+    : await resp.text();
   if (!text.trim()) throw new HttpError(`Empty response body for ${url}`);
   return text;
 }
