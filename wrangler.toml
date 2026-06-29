@@ -17,6 +17,7 @@ custom_domain = true
 SENADO_BASE_URL = "https://legis.senado.leg.br/dadosabertos"
 SENADO_ADM_BASE_URL = "https://adm.senado.gov.br/adm-dadosabertos"
 ALLOWED_ORIGIN = "*"
+OPENAI_APPS_CHALLENGE_TOKEN = "a-qZzjjz8ccDmm2bE1FTQQYOZvASUyGUhKIz5BRu8KQ"
 # e-Cidadania: staleness window (minutes) before D1-backed reads flag possible desatualização.
 # All entities are weekly full corpora, so this only trips after a missed weekly run + buffer (~10d).
 ECIDADANIA_CORPUS_STALE_MAX_MIN = "14400"

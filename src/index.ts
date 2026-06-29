@@ -15,6 +15,7 @@ import { ICON_JPEG_BASE64 } from "./icon.js";
 import { refreshEcidadania } from "./scraper/pipeline.js";
 import { handlerRouteForPath, toolProfileForRoute } from "./app-surface.js";
 import { legalResponseForPath } from "./legal.js";
+import { openAiAppsChallengeResponseForPath } from "./openai-domain-verification.js";
 
 /** Decoded once per isolate — server logo bytes referenced by serverInfo.icons. */
 const ICON_JPEG = Uint8Array.from(atob(ICON_JPEG_BASE64), (c) => c.charCodeAt(0));
@@ -31,6 +32,14 @@ export default {
         status: 200,
         headers: { "Content-Type": "text/plain" },
       });
+    }
+
+    const openAiChallengeResponse = openAiAppsChallengeResponseForPath(
+      url.pathname,
+      env.OPENAI_APPS_CHALLENGE_TOKEN,
+    );
+    if (openAiChallengeResponse) {
+      return openAiChallengeResponse;
     }
 
     const legalResponse = legalResponseForPath(url.pathname);

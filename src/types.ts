@@ -1,6 +1,7 @@
 export interface Env {
   CACHE_KV: KVNamespace;
   ALLOWED_ORIGIN?: string;
+  OPENAI_APPS_CHALLENGE_TOKEN?: string;
   SENADO_BASE_URL?: string;
   SENADO_ADM_BASE_URL?: string;
   API_KEY?: string;
