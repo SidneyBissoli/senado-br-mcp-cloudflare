@@ -13,6 +13,14 @@
  * catastrophic floor (classifyRun vs the last good 'consultas_votos' corpus). A failed guard writes
  * only a run row — never a shrunken corpus. The contentHash is taken over consultaVotoCore (i.e.
  * WITHOUT the CSV vintage stamp) so a weekly stamp bump on frozen votes never churns history.
+ *
+ * VERIFY mode (INGEST_CONSULTAS_VOTOS_VERIFY=1 / --verify): the recurring run is an INTEGRITY CHECK,
+ * not a re-ingest. consultas_votos is a frozen single-vintage acervo (ROADMAP Etapa 2, decisão D1),
+ * so the ordinary corpus crawl went daily while this one stays weekly and only verifies. If the CSV
+ * hashes identically to the registered vintage, it skips the ~15k upserts (records an 'ok' run row
+ * only). If it diverges, the "acervo congelado" premise is falsified — it records an 'anomalo' run
+ * row and exits non-zero (the Action failure IS the alert) rather than silently overwriting. Re-
+ * ingesting a legitimately new vintage after human review is an explicit --force / INGEST_FORCE.
  */
 
 import { writeFileSync, readdirSync, unlinkSync } from "node:fs";
@@ -26,6 +34,7 @@ import { classifyRun, parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
 import { ECIDADANIA_ARQUIMEDES_CSV_URL } from "../../src/utils/provenance.js";
 import { readExistingMeta, readLastGoodRows } from "./d1.js";
 import { generateLoadSqlBatches, generateRunOnlySql } from "./sql.js";
+import { verifyAcervoIntegrity } from "./verify.js";
 
 const ENTIDADE = "consultas_votos";
 const CSV_URL = process.env.SENADO_ECIDADANIA_CSV_URL || ECIDADANIA_ARQUIMEDES_CSV_URL;
@@ -46,13 +55,14 @@ function writeBatches(files: string[]): void {
   });
 }
 
-function writeRunOnly(now: string, status: string, rows: number, error: string): void {
+function writeRunOnly(now: string, status: string, rows: number, error: string | null): void {
   writeFileSync(join(OUT_DIR, `${OUT_PREFIX}001.sql`), generateRunOnlySql(now, status, rows, error, ENTIDADE));
 }
 
 async function main(): Promise<void> {
   const now = new Date().toISOString();
   const force = process.env.INGEST_FORCE === "1" || process.argv.includes("--force");
+  const verify = process.env.INGEST_CONSULTAS_VOTOS_VERIFY === "1" || process.argv.includes("--verify");
   const corpusMinPct = parseAnomalyMinPct(process.env.ECIDADANIA_CORPUS_MIN_PCT, 80);
 
   cleanOldOutputs();
@@ -118,6 +128,26 @@ async function main(): Promise<void> {
 
   const existingHashes = new Map(readExistingMeta(ENTIDADE).map((r) => [r.id, r.content_hash]));
   const { annotated, rowsChanged } = planEntitySync(records, existingHashes);
+
+  // Weekly integrity check: verify the frozen acervo instead of blindly re-ingesting it (see header).
+  // --force bypasses this to perform an explicit, human-approved re-ingest of a new vintage.
+  if (verify && !force) {
+    const integrity = verifyAcervoIntegrity({ rowsScraped: records.length, existingCount: existingHashes.size, rowsChanged });
+    if (integrity === "integro") {
+      console.log(`[consultas_votos][verify] acervo íntegro: ${records.length} matérias, hash idêntico ao vintage registrado — nada reaplicado no D1`);
+      writeRunOnly(now, "ok", records.length, null);
+      process.exit(0);
+    }
+    const err =
+      `DIVERGÊNCIA no acervo congelado consultas_votos: ${rowsChanged} matéria(s) com hash diferente, ` +
+      `${records.length} no CSV vs ${existingHashes.size} no D1. O CSV Arquimedes é acervo de vintage único ` +
+      `(ROADMAP D1) e não deveria mudar — revisão humana necessária. Se for um novo vintage legítimo, ` +
+      `reingerir com INGEST_FORCE=1.`;
+    console.error(`[consultas_votos][verify][ALERTA] ${err}`);
+    writeRunOnly(now, "anomalo", records.length, err);
+    process.exit(1);
+  }
+
   const files = generateLoadSqlBatches(annotated, now, records.length, rowsChanged, ENTIDADE, BATCH_SIZE);
   writeBatches(files);
   console.log(`[consultas_votos][load] wrote ${files.length} file(s): ${records.length} upserts, ${rowsChanged} changed, 1 ok run row`);

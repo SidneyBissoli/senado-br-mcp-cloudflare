@@ -429,9 +429,10 @@ Used by Groups O, P, Q, R via `admFetch` (no `.json` suffix; HTTP 404 treated as
 
 ### e-Cidadania (D1-backed, Cron-refreshed)
 
-The e-Cidadania **list** data is persisted in a **D1 database** (`ecidadania_current/_history/_scrape_runs`, discriminated by `entidade`) and read from there instead of being scraped on every call. **Two cadences** write into it:
+The e-Cidadania **list** data is persisted in a **D1 database** (`ecidadania_current/_history/_scrape_runs`, discriminated by `entidade`) and read from there instead of being scraped on every call. **Three cadences** write into it:
 
-- a **weekly off-Worker GitHub Action** owns the **full corpus** of each entity (see below) — the source of truth;
+- a **daily off-Worker GitHub Action** owns the **full corpus** of the three live entities (`consultas`, `eventos`, `ideias`; see below) — the source of truth. Daily (not weekly) because the first-seen series `MIN(scraped_at)` is the only measurable entry-rhythm signal and every skipped day permanently shortens it (ROADMAP Etapa 2, decisão D3);
+- a **weekly integrity-check Action** (`.github/workflows/verify-consultas-votos.yml`) for the frozen `consultas_votos` acervo — it re-hashes the CSV and, if unchanged, records an `ok` run row **without** re-applying the ~15k upserts; if it diverges from the registered vintage the job fails to alert (see below);
 - an in-Worker **Cron Trigger** (`0 */2 * * *`, `src/scraper/pipeline.ts → refreshEcidadania`) does only a **targeted metric splice** of the ~5 REST highlights per live entity (`restcolecaomaismateria/ideia/audiencia` — votos/comentários/apoios), recorded as `ok-metrica` so it never re-breaks the corpus baseline and never touches the long tail.
 
 Both writers build payloads through the canonical `buildXResumo` builders + shared `contentHash`, so their rows are byte-identical. Each write:
@@ -446,24 +447,25 @@ The **list / analysis tools** (`listar_*`, `consultas_analise`, `sugerir_tema_en
 
 The **detail tools** (`obter_*`) stay **live** (HTML scraped with CSS-class-targeted regex) for freshness, and write their richer payload through to `ecidadania_detalhe` fire-and-forget (deduped by `content_hash`), so detail history accrues without adding latency to the response.
 
-#### Full-corpus ingestion (off-Worker, weekly)
+#### Full-corpus ingestion (off-Worker)
 
-All four e-Cidadania entities are full corpora owned by the weekly Action (`.github/workflows/ingest-ecidadania.yml`), each with its own `scripts/ingest-ecidadania/index-*.ts` orchestrator emitting batched `out-*.sql` the apply step bulk-loads:
+The three live e-Cidadania corpora are owned by the **daily** Action (`.github/workflows/ingest-ecidadania.yml`), each with its own `scripts/ingest-ecidadania/index-*.ts` orchestrator emitting batched `out-*.sql` the apply step bulk-loads:
 
 - **`consultas`** — open consultations (detailed below).
 - **`eventos`** — audiências/eventos from the `principalaudiencia?p=N` HTML listing; status comes straight from the listing block (no `/processo` bridge).
 - **`ideias`** — ideias legislativas (~150k) from `pesquisaideia?situacao=N&p=M`, crawled **per `situacao` bucket** (the listing has no inline status) and emitted in ~10k-statement batches.
-- **`consultas_votos`** — a separate **historical** acervo of votes-by-UF parsed from the ~33 MB Arquimedes CSV (`Proposições-com-votos.csv`), aggregated to one record per matéria with a `votosPorUf` breakdown. The CSV's "dados atualizados até" stamp becomes the provenance `reference_period`; it is excluded from the row hash (`consultaVotoCore`) so a weekly stamp bump on these frozen votes doesn't churn `_history`. `STATUS ATUAL` is uniformly "Descontinuado", hence archival, not a migration of the open consultations. Served by `senado_ecidadania_consultas_votos` with provenance pointing at the CSV (`ECIDADANIA_ARQUIMEDES`).
+
+The fourth entity, **`consultas_votos`**, is a separate **historical** acervo of votes-by-UF parsed from the ~33 MB Arquimedes CSV (`Proposições-com-votos.csv`), aggregated to one record per matéria with a `votosPorUf` breakdown. The CSV's "dados atualizados até" stamp becomes the provenance `reference_period`; it is excluded from the row hash (`consultaVotoCore`) so a stamp bump on these frozen votes doesn't churn `_history`. `STATUS ATUAL` is uniformly "Descontinuado", hence archival, not a migration of the open consultations. Served by `senado_ecidadania_consultas_votos` with provenance pointing at the CSV (`ECIDADANIA_ARQUIMEDES`). Because it is a **frozen single-vintage acervo** (no time series — ROADMAP Etapa 2, decisão D1), it is **excluded from the daily job** and instead gets a **weekly integrity-check** Action (`.github/workflows/verify-consultas-votos.yml`, `INGEST_CONSULTAS_VOTOS_VERIFY=1`): it downloads + re-hashes the CSV against the registered vintage; if identical it records an `ok` run row and re-applies nothing; if it diverges (any matéria hash changed, or the count moved) it records an `anomalo` run row and the job **fails**, so the "acervo congelado" premise is never silently overwritten — re-ingesting a legitimately new vintage is an explicit `force` dispatch (`INGEST_FORCE=1`).
 
 The `consultas` job is the reference implementation:
 
 `consultas` covers the **full set of OPEN consultations** — every matter currently in tramitação (~7.7k), not just the ~5 highlights. Confirmed on the first run: the `pesquisamateria` listing is **in-tramitação-only**, so closed/historical consultations are **not** captured by this source (a pre-ingestion historical backfill is out of scope). Three settled design decisions:
 
-1. **Decoupled ingestion.** The open set is acquired by an **off-Worker TypeScript job** (`scripts/ingest-ecidadania/`, run by a weekly GitHub Action — `.github/workflows/ingest-ecidadania.yml`) that paginates the HTML listing (`pesquisamateria?p=1..N`, the only full-coverage source for open consultations) for ids + vote counts and **bulk-loads D1**; the Worker only reads. The brittle, long crawl is kept out of the request/Cron path.
+1. **Decoupled ingestion.** The open set is acquired by an **off-Worker TypeScript job** (`scripts/ingest-ecidadania/`, run by a daily GitHub Action — `.github/workflows/ingest-ecidadania.yml`) that paginates the HTML listing (`pesquisamateria?p=1..N`, the only full-coverage source for open consultations) for ids + vote counts and **bulk-loads D1**; the Worker only reads. The brittle, long crawl is kept out of the request/Cron path.
 2. **Status from `/processo`, not HTML.** A consultation runs from presentation until the end of tramitação, so `status` is a function of the matter: **aberta ⟺ the `codigoMateria` is in the `/processo` `tramitando=S` set**, derived from robust JSON (never scraped). Every consultation enters as `aberta` (the listing only yields in-tramitação matters); on each **complete** run the job re-derives status for **all stored rows** by `/processo` membership (not by listing-absence, which can be transient), so a consultation whose matter leaves tramitação flips to `encerrada`. The `encerrada`/`todas` sets therefore grow over time; consultations that closed **before** the first ingestion aren't captured (out of scope). The list/analysis tools default to `status: aberta`.
-3. **Two reconciled cadences (one shared writer contract).** The job **reuses** `contentHash` + the `ConsultaResumo` builder + `classifyRun` from `src/scraper/`, so its rows are byte-identical to the Cron's. The weekly job owns the long tail; the **2h Cron** keeps the ~5 hot/open highlights fresh via a *targeted metric splice* (recorded as `ok-metrica`, bypassing the corpus `classifyRun` baseline). Corpus freshness (`possivelDesatualizacao`) is computed from the last `status='ok'` run and uses a larger window (`ECIDADANIA_CORPUS_STALE_MAX_MIN`), and a stale consultas corpus is served from D1 flagged rather than collapsing back to the live highlights.
+3. **Two reconciled cadences (one shared writer contract).** The job **reuses** `contentHash` + the `ConsultaResumo` builder + `classifyRun` from `src/scraper/`, so its rows are byte-identical to the Cron's. The daily job owns the long tail; the **2h Cron** keeps the ~5 hot/open highlights fresh via a *targeted metric splice* (recorded as `ok-metrica`, bypassing the corpus `classifyRun` baseline). Corpus freshness (`possivelDesatualizacao`) is computed from the last `status='ok'` run and uses a larger window (`ECIDADANIA_CORPUS_STALE_MAX_MIN`), and a stale consultas corpus is served from D1 flagged rather than collapsing back to the live highlights.
 
-Write guards on the load: an **incomplete crawl** (any page failed) or an incomplete `/processo` status universe writes only an `erro` run row; even a complete crawl is rejected by a **catastrophic floor** (`ECIDADANIA_CORPUS_MIN_PCT`, default 80% of the last good corpus) to guard against a degraded page — overridable with `--force` / `INGEST_FORCE=1` for a legitimate large shrink. Run weekly via the Action, or manually:
+Write guards on the load: an **incomplete crawl** (any page failed) or an incomplete `/processo` status universe writes only an `erro` run row; even a complete crawl is rejected by a **catastrophic floor** (`ECIDADANIA_CORPUS_MIN_PCT`, default 80% of the last good corpus) to guard against a degraded page — overridable with `--force` / `INGEST_FORCE=1` for a legitimate large shrink. Run daily via the Action, or manually:
 
 ```bash
 CLOUDFLARE_API_TOKEN=… npm run ingest:ecidadania                 # writes scripts/ingest-ecidadania/out.sql
@@ -737,7 +739,7 @@ src/
 │   └── upstream.ts       # Upstream fetch with concurrency limit, retry, timeout
 ├── scraper/
 │   ├── ecidadania.ts     # Isolated e-Cidadania scraper (REST lists + regex HTML detail; buildConsultaResumo)
-│   ├── pipeline.ts       # 2h Cron: targeted highlight metric splice (consultas/eventos/ideias); corpora owned by the weekly jobs
+│   ├── pipeline.ts       # 2h Cron: targeted highlight metric splice (consultas/eventos/ideias); corpora owned by the off-Worker jobs
 │   ├── anomaly.ts        # Run classification (anomalous run never overwrites current)
 │   └── store.ts          # D1 reads (resolveList + per-entity staleness, lastGoodRunAt) + detail write-through
 ├── instrument.ts         # Per-tool call telemetry (in-memory + Analytics Engine)
@@ -765,15 +767,17 @@ src/
     ├── supridos.ts          # Group R — 1 petty-cash tool
     └── orcamento-senado.ts  # Group S — 1 budget execution tool
 scripts/
-└── ingest-ecidadania/    # Off-Worker weekly full-corpus consultas ingestion (run via `npm run ingest:ecidadania`)
+└── ingest-ecidadania/    # Off-Worker full-corpus consultas ingestion (run via `npm run ingest:ecidadania`)
     ├── index.ts          # Orchestrator: crawl → status (/processo) → normalize → guards → out.sql
     ├── listing.ts        # Pure listing parser (parseConsultaListingPage, findLastPage)
     ├── status.ts         # tramitando=S set from /processo → aberta/encerrada (deriveStatus)
     ├── restatus.ts       # Linger fix: re-status stored rows by /processo membership (close zombies)
     ├── http.ts           # Polite fetch (retry/backoff) for the unattended crawl
     ├── d1.ts             # D1 pre-reads (existing meta, payloads, last good rows) via wrangler
+    ├── verify.ts         # consultas_votos weekly integrity-check verdict (verifyAcervoIntegrity)
     └── sql.ts            # out.sql generation (mirrors SQL.upsert/SQL.history; reuses SyncRecord)
-.github/workflows/        # ingest-ecidadania.yml (weekly D1 corpus load), publish-mcp.yml (registry),
+.github/workflows/        # ingest-ecidadania.yml (daily D1 corpus load), verify-consultas-votos.yml
+                          # (weekly frozen-acervo integrity check), publish-mcp.yml (registry),
                           # usage-report.yml (monthly Analytics report), deprecate-registry.yml
                           # (all pinned to current Node 24 action majors — see each YAML for exact versions)
 migrations/               # D1 schema (0001 tables, 0002 indexes) for the e-Cidadania pipeline
@@ -791,9 +795,9 @@ tests/                    # Vitest unit tests mirroring src/ (parsers, cache, th
 | `API_KEY` | No (secret) | — | When set, requires `Authorization: Bearer <key>` on all requests except `/health`, `/metrics`, and CORS preflight |
 | `CACHE_KV` | Yes (binding) | — | KV namespace for L2 cache |
 | `ECIDADANIA_DB` | Yes (binding) | — | D1 database for the e-Cidadania pipeline (list persistence + history) |
-| `ECIDADANIA_CORPUS_STALE_MAX_MIN` | No | `14400` | Staleness window (minutes, ~10d) for the weekly full corpora (all e-Cidadania entities) — served flagged, never collapsed to highlights |
+| `ECIDADANIA_CORPUS_STALE_MAX_MIN` | No | `14400` | Staleness window (minutes, ~10d) for the off-Worker full corpora (all e-Cidadania entities) — served flagged, never collapsed to highlights |
 | `ECIDADANIA_CORPUS_MIN_PCT` | No | `80` | Catastrophic floor for the off-Worker corpus jobs: a complete crawl/parse below this % of the last good corpus is rejected |
-| `CLOUDFLARE_API_TOKEN` | No (secret) | — | GitHub Actions secret (D1 edit scope) for the weekly corpus ingestion job; not used by the Worker |
+| `CLOUDFLARE_API_TOKEN` | No (secret) | — | GitHub Actions secret (D1 edit scope) for the corpus ingestion / integrity-check jobs; not used by the Worker |
 | `CLOUDFLARE_ACCOUNT_ID` | No (Actions var) | — | GitHub Actions repo variable so wrangler skips `/memberships` account auto-discovery (a D1-scoped token can't read it); required alongside `CLOUDFLARE_API_TOKEN` in the ingestion job |
 | `SENADO_ANALYTICS` | No (binding) | — | Analytics Engine dataset for per-tool call telemetry |
 
