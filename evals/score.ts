@@ -126,7 +126,7 @@ export function scoreAll(
   return aggregate(items, maxK);
 }
 
-// --- Gate logic (mirrors docs/ROADMAP.md, Sessão 1) ------------------------
+// --- Gate logic (mirrors ROADMAP CIENTIFICO, Sessão 1 — planejamento local em docs/_local/) ---
 
 export type GateDecision = "remediar" | "despriorizar-refatoracao" | "zona-cinzenta";
 

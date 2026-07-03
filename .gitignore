@@ -19,11 +19,10 @@ scripts/ingest-ecidadania/out.sql
 .dev.vars
 .secrets/
 reports/
-docs/*
-!docs/openai-app-readiness.pt-BR.md
-!docs/openai-submission-package.pt-BR.md
-!docs/dataset-harmonization.md
-!docs/dataset-dictionary.md
+# docs/ é versionado por padrão (ciência auditável do dataset + doc técnica do MCP).
+# Só a área de trabalho DESCARTÁVEL é local/não-versionada (gestão, estratégia, renders .html,
+# notas de gestão de sessão). Fica em disco (OneDrive), fora do git.
+docs/_local/
 marketing/
 prompts/
 .api-spec/

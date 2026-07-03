@@ -3,7 +3,7 @@
 Harness reaproveitável que mede a **acurácia com que um modelo escolhe a tool certa** entre as
 ~66 tools do MCP senado-br, dada uma consulta em pt-BR de jornalista/pesquisador.
 
-É o *linchpin* da Sessão 1 do `docs/ROADMAP.md`: o resultado decide se o catálogo precisa de
+É o *linchpin* da Sessão 1 do ROADMAP CIENTIFICO (planejamento local, `docs/_local/`): o resultado decide se o catálogo precisa de
 refatoração (deferred loading / Code Mode / agrupamento). O item *"rodar evals após mudança de
 tool"* do bloco **Contínuo** depende deste harness ser barato de reexecutar — por isso o núcleo
 (catálogo + fixtures + scorer) roda **offline em `npm test`**, sem rede e sem modelo.
