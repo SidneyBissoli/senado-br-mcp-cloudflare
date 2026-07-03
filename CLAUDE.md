@@ -12,18 +12,22 @@ The upstream OpenAPI spec lives at `https://legis.senado.leg.br/dadosabertos/v3/
 
 ```bash
 npm run dev          # wrangler dev — local server on port 8787
-npm run typecheck    # tsc --noEmit
+npm run typecheck    # tsc --noEmit AND tsc -p scripts/tsconfig.json (two passes: src + ingest scripts)
 npm test             # vitest run (all tests)
 npm run test:watch   # vitest watch mode
 npx vitest run tests/tools/votacoes.test.ts   # single test file
+npm run build        # tsc -p tsconfig.build.json — compiles the npm/stdio package (dist/)
+npm run smoke:openai-app   # scripts/smoke-openai-app.mjs — exercises the ChatGPT-App MCP surface
 npm run deploy       # wrangler deploy
 ```
 
-There is no lint script. Config lives in `wrangler.toml` (KV binding `CACHE_KV`, vars `SENADO_BASE_URL`, `SENADO_ADM_BASE_URL`, `ALLOWED_ORIGIN`, `OPENAI_APPS_CHALLENGE_TOKEN` for the OpenAI Apps domain-verification endpoint). Optional `API_KEY` (Bearer auth) is set as a Wrangler secret; when absent, the server is open access.
+The `ingest:ecidadania*` scripts (run via `tsx`) are the off-Worker corpus crawlers invoked by GitHub Actions, not part of local dev. There is no lint script. Config lives in `wrangler.toml` (KV binding `CACHE_KV`, vars `SENADO_BASE_URL`, `SENADO_ADM_BASE_URL`, `ALLOWED_ORIGIN`, `OPENAI_APPS_CHALLENGE_TOKEN` for the OpenAI Apps domain-verification endpoint). Optional `API_KEY` (Bearer auth) is set as a Wrangler secret; when absent, the server is open access.
 
 ## Architecture
 
 **Request flow** (`src/index.ts`): Worker `fetch` → a chain of **public, pre-auth** short-circuits served before any Bearer check: `/health`, the OpenAI Apps domain-verification challenge (`/.well-known/openai-apps-challenge`, `src/openai-domain-verification.ts`), the legal HTML pages (`/privacy`, `/terms`, `src/legal.ts`), `/icon.jpg`, `/metrics`, `/status` (`src/status.ts` — version + deploy metadata), and `/.well-known/glama.json` (registry ownership) → Bearer auth check (`src/auth.ts`, constant-time compare, skipped for OPTIONS) → the request path selects a **tool profile** and MCP route (`src/app-surface.ts`) → a **new `McpServer` instance is created per request** (`src/server.ts` — SDK 1.26.0+ requirement) → `createMcpHandler` from `agents/mcp` serves the MCP endpoint (POST/GET/DELETE). Stateless — no Durable Objects.
+
+**Two delivery channels, one server.** Besides the hosted Worker, the same code ships as an npm package (`senado-br-mcp`) with a stdio entrypoint (`src/cli.ts`, run via `npx senado-br-mcp`). It calls the identical `createServer` over `StdioServerTransport` — no `agents/mcp`, no `ctx`. Cloudflare-specific paths degrade on their own: the L1 Cache API becomes a no-op (L0 in-memory Map still works), D1/Analytics/version bindings are absent, and the e-Cidadania corpus tools fall back to live scraping (flagged via `meta.fonte`/`possivelDesatualizacao`). Keep `createServer` and everything it touches Node-safe — don't import Workers-only APIs at module top level, or you break the CLI. `cli.ts` is never imported by `src/index.ts`.
 
 **MCP routes & tool profiles** (`src/app-surface.ts`): two surfaces coexist behind the same Worker. `/mcp` is the **`full`** profile (all 66 tools). `/mcp/openai-app-v2` (and legacy `/mcp/openai-app`) is the **`openai-app`** profile for ChatGPT Apps — a curated `OPENAI_APP_TOOL_ALLOWLIST` (~24 tools), reduced server instructions, an `_meta`/`openai/outputTemplate` pointing tools at the widget, and `minimizeToolResultForProfile` stripping `meta` from results. `toolProfileForRoute` maps the path to the profile; `createServer(env, ctx, { toolProfile })` builds the right surface (the `server.tool` override in `src/server.ts` skips tools not enabled for the profile). The widget itself is a self-contained HTML resource (`ui://senado-br-mcp/...`) registered only on the openai-app profile by `registerOpenAiAppWidget` (`src/openai-app-widget.ts`); it renders `structuredContent` (metrics/items/provenance) in the ChatGPT iframe. When changing tool output shape, keep it renderable by that widget's generic field logic.
 

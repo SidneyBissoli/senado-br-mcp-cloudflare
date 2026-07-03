@@ -26,7 +26,9 @@
     "ingest:ecidadania": "tsx scripts/ingest-ecidadania/index.ts",
     "ingest:ecidadania:eventos": "tsx scripts/ingest-ecidadania/index-eventos.ts",
     "ingest:ecidadania:ideias": "tsx scripts/ingest-ecidadania/index-ideias.ts",
-    "ingest:ecidadania:consultas-votos": "tsx scripts/ingest-ecidadania/index-consultas-votos.ts"
+    "ingest:ecidadania:consultas-votos": "tsx scripts/ingest-ecidadania/index-consultas-votos.ts",
+    "build:dataset": "tsx scripts/build-dataset/index.ts",
+    "dataset:dictionary": "tsx scripts/build-dataset/index.ts --dictionary-only"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
