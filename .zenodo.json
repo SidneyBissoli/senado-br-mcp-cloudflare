@@ -1,0 +1,32 @@
+{
+  "upload_type": "dataset",
+  "title": "Dataset de participação do e-Cidadania (Senado Federal)",
+  "description": "Dataset científico citável da camada de participação cidadã do portal e-Cidadania do Senado Federal do Brasil — consultas públicas (Apoie), ideias legislativas, eventos/audiências interativas e votos históricos por UF (acervo Arquimedes). Cada valor de cada registro carrega um envelope de proveniência por campo (value, sourceEndpoint, sourceField, retrievedAt, license, schemaVersion). Camada não coberta pelo pacote R congressbr. Dicionário de variáveis e caveats de cobertura temporal acompanham o pacote (dictionary.md, CHANGELOG-dataset.md). Licença do dado: Dados Abertos do Senado Federal (uso livre com atribuição da fonte).",
+  "creators": [
+    {
+      "name": "Bissoli, Sidney",
+      "orcid": "0009-0001-0442-3700",
+      "affiliation": "Independent researcher"
+    }
+  ],
+  "access_right": "open",
+  "keywords": [
+    "e-Cidadania",
+    "Senado Federal",
+    "participação cidadã",
+    "consultas públicas",
+    "ideias legislativas",
+    "dados abertos",
+    "Brazil",
+    "open government data",
+    "political science"
+  ],
+  "notes": "Licença do dado: Dados Abertos do Senado Federal — uso livre com atribuição da fonte (ver LICENSE-DATA.md; separada da licença de código, MIT). Se o Zenodo exigir um id de licença, use o mais próximo (CC-BY-4.0: uso livre com atribuição) e mantenha os termos exatos nesta nota.",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
+      "relation": "isDerivedFrom",
+      "scheme": "url"
+    }
+  ]
+}

@@ -28,7 +28,9 @@
     "ingest:ecidadania:ideias": "tsx scripts/ingest-ecidadania/index-ideias.ts",
     "ingest:ecidadania:consultas-votos": "tsx scripts/ingest-ecidadania/index-consultas-votos.ts",
     "build:dataset": "tsx scripts/build-dataset/index.ts",
-    "dataset:dictionary": "tsx scripts/build-dataset/index.ts --dictionary-only"
+    "dataset:dictionary": "tsx scripts/build-dataset/index.ts --dictionary-only",
+    "release:dataset": "tsx scripts/build-dataset/release.ts",
+    "release:zenodo": "tsx scripts/build-dataset/zenodo-publish.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",

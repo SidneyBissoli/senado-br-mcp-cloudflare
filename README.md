@@ -533,6 +533,18 @@ In addition to the `provenance` envelope, `structuredContent` carries a top-leve
 
 Coverage is **universal**: all 66 tools carry the envelope (verify with `grep -c 'resultWithProvenance(' src/tools/*.ts`). The **⊕** marks in the inventory below denote the original pilot tools (votes, bills, processes); the envelope now extends to every tool, so the marks are historical.
 
+## Citable dataset (e-Cidadania participation)
+
+Beyond the live server, this project publishes a **frozen, versioned, citable dataset** of the e-Cidadania participation layer (public consultations, legislative ideas, interactive events, historical votes by state) — the layer the R package `congressbr` never covered. Each value carries a per-field provenance envelope (`{ value, sourceEndpoint, sourceField, retrievedAt, license, schemaVersion }`); the data license (Dados Abertos do Senado Federal) is kept **separate** from the code license (MIT).
+
+- **How to cite** — [`CITATION.cff`](CITATION.cff) (dataset; cite the version-DOI of the snapshot you used, the concept-DOI for the dataset across versions).
+- **What's in each release** — [`CHANGELOG-dataset.md`](CHANGELOG-dataset.md) (cumulative, append-only; binds each release to its `schemaVersion`).
+- **Variable dictionary & field provenance** — [`docs/dataset-dictionary.md`](docs/dataset-dictionary.md) (generated from `src/dataset/schema.ts`).
+- **Data license** — [`LICENSE-DATA.md`](LICENSE-DATA.md).
+- **Cutting a release** (freeze → checksums → GitHub Release → Zenodo DOI) — [`docs/release-runbook.md`](docs/release-runbook.md); machinery in `src/dataset/`, `scripts/build-dataset/`, and `.github/workflows/release-dataset.yml`.
+
+The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on demand); a tagged `dataset-v*` release attaches the tarball + `SHA256SUMS` + `release.json` and archives them on Zenodo.
+
 ## Tool Inventory
 
 ### Group H — Reference/Metadata (1 tool)

@@ -1,0 +1,43 @@
+# Citation File Format 1.2.0 — https://citation-file-format.github.io/
+# CITA O DATASET (o objeto científico citável), não o servidor MCP. A citação do servidor, se o
+# Gate 3 do ROADMAP for aprovado, será um CITATION.cff próprio (ETAPA 10/C5).
+#
+# TODO(humano, antes de cortar dataset-v1.0.0): após o Zenodo cunhar, substituir os DOIs PENDENTE
+# pelo concept-DOI (em `identifiers`) e citar o version-DOI do snapshot no paper. Ver docs/release-runbook.md.
+cff-version: 1.2.0
+message: >-
+  Se você usar este dataset, cite-o usando os metadados abaixo. Cite o version-DOI do snapshot
+  específico que utilizou; o concept-DOI identifica o dataset através de todas as versões.
+title: Dataset de participação do e-Cidadania (Senado Federal)
+abstract: >-
+  Dataset científico citável da camada de participação cidadã do portal e-Cidadania do Senado
+  Federal do Brasil — consultas públicas (Apoie), ideias legislativas, eventos/audiências
+  interativas e votos históricos por UF (acervo Arquimedes). Cada valor de cada registro carrega
+  um envelope de proveniência por campo (fonte, campo de origem, instante de coleta, licença e
+  versão de schema). Camada não coberta pelo pacote R congressbr. Licença do dado declarada em
+  LICENSE-DATA.md (separada da licença de código, MIT).
+type: dataset
+version: 1.0.0
+date-released: "2026-07-03"
+authors:
+  - given-names: Sidney
+    family-names: Bissoli
+    orcid: "https://orcid.org/0009-0001-0442-3700"
+    affiliation: Independent researcher
+license-url: "https://www12.senado.leg.br/dados-abertos"
+url: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare"
+repository-code: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare"
+keywords:
+  - e-Cidadania
+  - Senado Federal
+  - participação cidadã
+  - consultas públicas
+  - ideias legislativas
+  - dados abertos
+  - Brazil
+  - open government data
+  - political science
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.PENDENTE" # TODO(humano): concept-DOI Zenodo (estável entre versões)
+    description: Concept-DOI (todas as versões do dataset)
