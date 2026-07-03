@@ -32,12 +32,18 @@ Corpus completo da camada de participação do e-Cidadania, num único data pack
 proveniência por campo** (`{ value, sourceEndpoint, sourceField, retrievedAt, license, schemaVersion }`)
 em cada valor de cada registro:
 
-| Entidade | Registros | Série temporal |
+| Entidade | Registros (vintage de ref. 02/07/2026) | Série temporal |
 |---|--:|---|
-| `consultas` — Consultas públicas (Apoie) | 7.773 | first-seen (censurada à esquerda) |
-| `ideias` — Ideias legislativas | 113.704 | first-seen (censurada à esquerda) |
-| `eventos` — Eventos interativos (audiências) | 5.443 | first-seen (censurada à esquerda) |
+| `consultas` — Consultas públicas (Apoie) | ~7.773 | first-seen (censurada à esquerda) |
+| `ideias` — Ideias legislativas | ~113.704 | first-seen (censurada à esquerda) |
+| `eventos` — Eventos interativos (audiências) | ~5.443 | first-seen (censurada à esquerda) |
 | `consultas_votos` — Votos históricos por UF (acervo Arquimedes) | 15.085 | **vintage único** (série = 1) |
+
+> **Contagens autoritativas do corte:** os números acima são a referência do vintage de 02/07/2026; o
+> corte congela o corpus do D1 **na data da tag** (as três entidades vivas crescem com o cron diário —
+> `consultas_votos` é acervo congelado, não muda). As contagens exatas por arquivo, com checksums, ficam
+> em **`release.json`** e **`datapackage.json`** dentro do bundle (o `datapackage.json` é coberto pelo
+> `SHA256SUMS`), que são a fonte autoritativa do que foi efetivamente congelado.
 
 Dicionário de variáveis, operacionalização e proveniência campo-a-campo em
 [`docs/dataset-dictionary.md`](docs/dataset-dictionary.md) (gerado da fonte única `src/dataset/schema.ts`).
