@@ -429,11 +429,11 @@ Used by Groups O, P, Q, R via `admFetch` (no `.json` suffix; HTTP 404 treated as
 
 ### e-Cidadania (D1-backed, Cron-refreshed)
 
-The e-Cidadania **list** data is persisted in a **D1 database** (`ecidadania_current/_history/_scrape_runs`, discriminated by `entidade`) and read from there instead of being scraped on every call. **Three cadences** write into it:
+The e-Cidadania **list** data is persisted in a **D1 database** (`ecidadania_current/_history/_scrape_runs`, discriminated by `entidade`; plus `ecidadania_comentarios` for the audiência comment level and `ecidadania_detalhe_cursor` for the resumable detail backfill — added in schema v2) and read from there instead of being scraped on every call. **Three cadences** write into it:
 
 - a **daily off-Worker GitHub Action** owns the **full corpus** of the three live entities (`consultas`, `eventos`, `ideias`; see below) — the source of truth. Daily (not weekly) because the first-seen series `MIN(scraped_at)` is the only measurable entry-rhythm signal and every skipped day permanently shortens it (ROADMAP Etapa 2, decisão D3);
 - a **weekly integrity-check Action** (`.github/workflows/verify-consultas-votos.yml`) for the frozen `consultas_votos` acervo — it re-hashes the CSV and, if unchanged, records an `ok` run row **without** re-applying the ~15k upserts; if it diverges from the registered vintage the job fails to alert (see below);
-- an in-Worker **Cron Trigger** (`0 */2 * * *`, `src/scraper/pipeline.ts → refreshEcidadania`) does only a **targeted metric splice** of the ~5 REST highlights per live entity (`restcolecaomaismateria/ideia/audiencia` — votos/comentários/apoios), recorded as `ok-metrica` so it never re-breaks the corpus baseline and never touches the long tail.
+- an in-Worker **Cron Trigger** (`0 */2 * * *`, `src/scraper/pipeline.ts → refreshEcidadania`) does only a **targeted metric splice** of the ~5 REST highlights per live entity (`restcolecaomaismateria/ideia/audiencia` — votos/comentários/apoios), recorded as `ok-metrica` so it never re-breaks the corpus baseline and never touches the long tail. In v2 the eventos splice **preserves** the corpus's canonical comment count (the daily crawl is the source of truth for `comentarios`, so the splice can't ping-pong it against the degraded REST count).
 
 Both writers build payloads through the canonical `buildXResumo` builders + shared `contentHash`, so their rows are byte-identical. Each write:
 
@@ -451,9 +451,9 @@ The **detail tools** (`obter_*`) stay **live** (HTML scraped with CSS-class-targ
 
 The three live e-Cidadania corpora are owned by the **daily** Action (`.github/workflows/ingest-ecidadania.yml`), each with its own `scripts/ingest-ecidadania/index-*.ts` orchestrator emitting batched `out-*.sql` the apply step bulk-loads:
 
-- **`consultas`** — open consultations (detailed below).
-- **`eventos`** — audiências/eventos from the `principalaudiencia?p=N` HTML listing; status comes straight from the listing block (no `/processo` bridge).
-- **`ideias`** — ideias legislativas (~150k) from `pesquisaideia?situacao=N&p=M`, crawled **per `situacao` bucket** (the listing has no inline status) and emitted in ~10k-statement batches.
+- **`consultas`** — open consultations (detailed below). In v2 each crawled matter is also **enriched from its detail page** (`visualizacaomateria`) for `autoria`/`relator`; those are immutable, so only rows not yet enriched are fetched.
+- **`eventos`** — audiências/eventos from the `principalaudiencia?p=N` HTML listing; status comes straight from the listing block (no `/processo` bridge). In v2 every event is **enriched from its detail page** (canonical `data`/`hora` + `comissaoNomeCompleto`/`local`/`descricao`/`pauta`/`convidados`/`videoUrl`) and its **AJAX comment fragment** (canonical count + one `ecidadania_comentarios` row per comment, diffed against the stored hashes and emitted as `out-eventos-comentarios-*.sql`).
+- **`ideias`** — ideias legislativas (~113.7k) from `pesquisaideia?situacao=N&p=M`, crawled **per `situacao` bucket** (the listing has no inline status) and emitted in ~10k-statement batches. In v2 the listing crawl **preserves** the immutable detail fields, and a **separate resumable backfill** (`index-ideias-detalhe.ts`, run via `ingest:ecidadania:ideias-detalhe`) fills them a chunk per run — because ~113.7k detail fetches don't fit one Action, it persists a cursor in `ecidadania_detalhe_cursor` and wraps around at the end.
 
 The fourth entity, **`consultas_votos`**, is a separate **historical** acervo of votes-by-UF parsed from the ~33 MB Arquimedes CSV (`Proposições-com-votos.csv`), aggregated to one record per matéria with a `votosPorUf` breakdown. The CSV's "dados atualizados até" stamp becomes the provenance `reference_period`; it is excluded from the row hash (`consultaVotoCore`) so a stamp bump on these frozen votes doesn't churn `_history`. `STATUS ATUAL` is uniformly "Descontinuado", hence archival, not a migration of the open consultations. Served by `senado_ecidadania_consultas_votos` with provenance pointing at the CSV (`ECIDADANIA_ARQUIMEDES`). Because it is a **frozen single-vintage acervo** (no time series — ROADMAP Etapa 2, decisão D1), it is **excluded from the daily job** and instead gets a **weekly integrity-check** Action (`.github/workflows/verify-consultas-votos.yml`, `INGEST_CONSULTAS_VOTOS_VERIFY=1`): it downloads + re-hashes the CSV against the registered vintage; if identical it records an `ok` run row and re-applies nothing; if it diverges (any matéria hash changed, or the count moved) it records an `anomalo` run row and the job **fails**, so the "acervo congelado" premise is never silently overwritten — re-ingesting a legitimately new vintage is an explicit `force` dispatch (`INGEST_FORCE=1`).
 
@@ -535,13 +535,32 @@ Coverage is **universal**: all 66 tools carry the envelope (verify with `grep -c
 
 ## Citable dataset (e-Cidadania participation)
 
-Beyond the live server, this project publishes a **frozen, versioned, citable dataset** of the e-Cidadania participation layer (public consultations, legislative ideas, interactive events, historical votes by state) — the layer the R package `congressbr` never covered. Each value carries a per-field provenance envelope (`{ value, sourceEndpoint, sourceField, retrievedAt, license, schemaVersion }`); the data license (Dados Abertos do Senado Federal) is kept **separate** from the code license (MIT).
+Beyond the live server, this project publishes a **frozen, versioned, citable dataset** of the e-Cidadania participation layer (public consultations, legislative ideas, interactive events + their comments, historical votes by state) — the layer the R package `congressbr` never covered. Each value carries a per-field provenance envelope (`{ value, sourceEndpoint, sourceField, retrievedAt, license, schemaVersion }`); the data license (Dados Abertos do Senado Federal) is kept **separate** from the code license (MIT).
 
 - **How to cite** — [`CITATION.cff`](CITATION.cff) (dataset; cite the version-DOI of the snapshot you used, the concept-DOI for the dataset across versions).
 - **What's in each release** — [`CHANGELOG-dataset.md`](CHANGELOG-dataset.md) (cumulative, append-only; binds each release to its `schemaVersion`).
-- **Variable dictionary & field provenance** — [`docs/dataset-dictionary.md`](docs/dataset-dictionary.md) (generated from `src/dataset/schema.ts`).
+- **Variable dictionary & field provenance** — [`docs/dataset-dictionary.md`](docs/dataset-dictionary.md) (generated from `src/dataset/schema.ts`, the single source of truth).
 - **Data license** — [`LICENSE-DATA.md`](LICENSE-DATA.md).
 - **Cutting a release** (freeze → checksums → GitHub Release → Zenodo DOI) — [`docs/release-runbook.md`](docs/release-runbook.md); machinery in `src/dataset/`, `scripts/build-dataset/`, and `.github/workflows/release-dataset.yml`.
+
+### Inventory — schema v2 (`schemaVersion` `2.0.0`)
+
+Each release ships one NDJSON resource per entity (one `HarmonizedRecord` per line: identity + a provenance envelope per field), plus a `datapackage.json` manifest and a copy of the dictionary. Five resources:
+
+| Resource (`*.ndjson`) | Grain | Key variables | Source(s) |
+|---|---|---|---|
+| `consultas` | 1 public consultation (matéria) | `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentual*`, **`autoria`ⁿ**, **`relator`ⁿ**, `status`, `url`, `firstSeenAt` | `pesquisamateria` listing + **detail** (`visualizacaomateria`)ⁿ + `/processo?tramitando=S` for status |
+| `ideias` | 1 legislative idea (~113.7k) | `titulo`, `apoios`, `status`, **`dataPublicacao`ⁿ**, **`autorUf`ⁿ**, **`descricao`ⁿ**, **`plConvertido`ⁿ**, `url`, `firstSeenAt` | `pesquisaideia` listing + **detail** (`visualizacaoideia`) via a resumable backfillⁿ |
+| `eventos` | 1 interactive event (audiência) | `titulo`, **`data`ᶜ**, **`hora`ᶜ**, `comissao`, **`comissaoNomeCompleto`ⁿ**, **`local`ⁿ**, **`descricao`ⁿ**, **`pauta`ⁿ**, **`convidados`ⁿ**, **`videoUrl`ⁿ**, **`comentarios`ᶜ**, `status`, `url`, `firstSeenAt` | `principalaudiencia` listing + **detail** (`visualizacaoaudiencia`)ⁿ + **AJAX comment fragment**ᶜ |
+| **`eventos_comentarios`ⁿ** | 1 comment (comment-level) | `eventoId`, `comentarioId`, `uf`, `texto`, `data`, `hora`, `momentoVideoUrl`, `convidadoAssociado` | AJAX fragment `ajaxcolecaocomentarioaudiencia?audienciaId=` |
+| `consultas_votos` | 1 matéria (historical acervo) | `materia`, `ementa`, `autoria`, `votosSim`/`votosNao`/`totalVotos`, `votosPorUf`, `status`, `url`, `referencePeriod` | Arquimedes CSV `Proposições-com-votos.csv` (single vintage) |
+
+**ⁿ = new/reopened in v2 · ᶜ = source corrected to the canonical one in v2.** What v2 (`2.0.0`) changed — the ingestion moved from **listing-only** to **listing + detail (+ AJAX comments for events)**:
+
+- **Eventos corrected & enriched.** `data`/`hora` now come from the detail page (canonical — the [estudo A3](docs/estudo-a3-reconciliacao-eventos.md) found the listing 57% divergent on `hora`), plus six new detail fields (`comissaoNomeCompleto`, `local`, `descricao`, `pauta`, `convidados`, `videoUrl`). `comentarios` is now the **canonical AJAX count** (the listing count was `0`-spurious in 82% of events, capturing only ~6.7% of engagement).
+- **New comment-level resource** `eventos_comentarios` — one row per audiência comment, the participation signal nobody else publishes versioned.
+- **Detail-only fields reopened** for `ideias` (`dataPublicacao`, `autorUf`, `descricao`, `plConvertido`) and `consultas` (`autoria`, `relator`) — previously always `null` by design.
+- **Privacy posture by data origin.** Citizen content (audiência comments, idea authors) keeps **UF only — never the name**, discarded at the parser; public agents (consulta authorship/rapporteur, event guests) keep the name (public by function). See `docs/schema-v2-inventario.md` for the field-by-field rationale (approved target).
 
 The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on demand); a tagged `dataset-v*` release attaches the tarball + `SHA256SUMS` + `release.json` and archives them on Zenodo.
 
@@ -792,7 +811,7 @@ scripts/
                           # (weekly frozen-acervo integrity check), publish-mcp.yml (registry),
                           # usage-report.yml (monthly Analytics report), deprecate-registry.yml
                           # (all pinned to current Node 24 action majors — see each YAML for exact versions)
-migrations/               # D1 schema (0001 tables, 0002 indexes) for the e-Cidadania pipeline
+migrations/               # D1 schema (0001 tables, 0002 indexes, 0003 comment level + detail cursor) for the e-Cidadania pipeline
 tests/                    # Vitest unit tests mirroring src/ (parsers, cache, throttle, auth, scraper,
                           # pipeline/anomaly/store, listing/sql/highlights, plus e-Cidadania contract tests)
 ```
