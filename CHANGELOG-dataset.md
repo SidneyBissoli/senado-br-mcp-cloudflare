@@ -19,10 +19,11 @@ release tem também seu **version-DOI**. Enquanto o Zenodo não cunha, os campos
 
 ---
 
-## [dataset-v1.0.0] — 2026-07 · Inaugural (bootstrap 2026)
+## [dataset-v1.0.0] — 2026-07-04 · Inaugural (bootstrap 2026)
 
 - **schemaVersion:** `1.0.0`
-- **concept-DOI:** `10.5281/zenodo.PENDENTE` · **version-DOI:** `10.5281/zenodo.PENDENTE`
+- **concept-DOI:** `10.5281/zenodo.21183940` · **version-DOI:** `10.5281/zenodo.21183941`
+- **Registro:** <https://zenodo.org/records/21183941> · licença **CC-BY-4.0** (equivalente SPDX de "Dados Abertos do Senado Federal — uso livre com atribuição").
 - **Licença do dado:** Dados Abertos do Senado Federal — uso livre com atribuição da fonte
   (ver [`LICENSE-DATA.md`](LICENSE-DATA.md); separada da licença de código, MIT).
 

@@ -2,8 +2,8 @@
 # CITA O DATASET (o objeto científico citável), não o servidor MCP. A citação do servidor, se o
 # Gate 3 do ROADMAP for aprovado, será um CITATION.cff próprio (ETAPA 10/C5).
 #
-# TODO(humano, antes de cortar dataset-v1.0.0): após o Zenodo cunhar, substituir os DOIs PENDENTE
-# pelo concept-DOI (em `identifiers`) e citar o version-DOI do snapshot no paper. Ver docs/release-runbook.md.
+# DOIs cunhados no Zenodo em 2026-07-04 (release dataset-v1.0.0). Cite o concept-DOI para "o dataset"
+# (todas as versões); cite o version-DOI do snapshot específico usado num paper. Ver docs/release-runbook.md.
 cff-version: 1.2.0
 message: >-
   Se você usar este dataset, cite-o usando os metadados abaixo. Cite o version-DOI do snapshot
@@ -18,7 +18,8 @@ abstract: >-
   LICENSE-DATA.md (separada da licença de código, MIT).
 type: dataset
 version: 1.0.0
-date-released: "2026-07-03"
+date-released: "2026-07-04"
+doi: "10.5281/zenodo.21183940"
 authors:
   - given-names: Sidney
     family-names: Bissoli
@@ -39,5 +40,8 @@ keywords:
   - political science
 identifiers:
   - type: doi
-    value: "10.5281/zenodo.PENDENTE" # TODO(humano): concept-DOI Zenodo (estável entre versões)
+    value: "10.5281/zenodo.21183940"
     description: Concept-DOI (todas as versões do dataset)
+  - type: doi
+    value: "10.5281/zenodo.21183941"
+    description: Version-DOI (dataset-v1.0.0, snapshot de 2026-07-04)
