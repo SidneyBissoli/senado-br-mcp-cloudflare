@@ -26,17 +26,65 @@ import { dirname, join } from "node:path";
 import { getText, sleep } from "./http.js";
 import { parseConsultaListingPage, findLastPage, type ListingItem } from "./listing.js";
 import { buildTramitandoSet, deriveStatus } from "./status.js";
-import { ECIDADANIA_BASE, buildConsultaResumo } from "../../src/scraper/ecidadania.js";
+import { ECIDADANIA_BASE, buildConsultaResumo, type ConsultaResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { classifyRun, parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
-import { readExistingMeta, readPayloads, readLastGoodRows } from "./d1.js";
+import { readExistingMeta, readPayloads, readAllPayloads, readLastGoodRows } from "./d1.js";
 import { selectRestatus, buildRestatusRecords } from "./restatus.js";
 import { generateLoadSql, generateRunOnlySql } from "./sql.js";
+import { fetchConsultaDetalheCorpus } from "./detalhe.js";
 
 const SENADO_BASE_URL = process.env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
 const PAGE_DELAY_MS = Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
+const DETAIL_DELAY_MS = Number(process.env.INGEST_CONSULTAS_DETAIL_DELAY_MS) || 250;
 const MAX_PAGES = 1000; // safety cap against a runaway pagination value
 const OUT_PATH = join(dirname(fileURLToPath(import.meta.url)), "out.sql");
+
+/**
+ * Enrich crawled consultas with detail-only `autoria`/`relator` (agentes públicos — name kept).
+ * These are IMMUTABLE, so we only fetch the detail page for rows NOT yet enriched (a stored payload
+ * that already carries the `autoria` key is preserved); after the first backfill only new consultas
+ * are fetched. Detail fetch failures fall back to preserved/null and are logged (never silenced).
+ */
+async function enrichConsulta(
+  it: ListingItem,
+  status: string,
+  existing: Map<number, string>,
+): Promise<ConsultaResumo> {
+  const id = it.codigoMateria;
+  const prev = existing.get(id);
+  let autoria: string | null = null;
+  let relator: string | null = null;
+  let enriched = false;
+  if (prev) {
+    const p = JSON.parse(prev) as Partial<ConsultaResumo>;
+    if ("autoria" in p) {
+      autoria = p.autoria ?? null;
+      relator = p.relator ?? null;
+      enriched = true;
+    }
+  }
+  if (!enriched) {
+    try {
+      const d = await fetchConsultaDetalheCorpus(id);
+      autoria = d.autoria;
+      relator = d.relator;
+    } catch (e) {
+      console.error(`[consultas][detalhe][gap] id=${id}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    await sleep(DETAIL_DELAY_MS);
+  }
+  return buildConsultaResumo({
+    id,
+    materia: it.identificacao ?? undefined,
+    ementa: it.ementa ?? undefined,
+    votosSim: it.votosSim,
+    votosNao: it.votosNao,
+    autoria,
+    relator,
+    status,
+  });
+}
 
 interface CrawlResult {
   items: ListingItem[];
@@ -108,17 +156,16 @@ async function main(): Promise<void> {
   }
 
   // 3. Normalize + hash (canonical ConsultaResumo via shared builder; metrica_principal = totalVotos).
-  const records: SyncRecord[] = crawl.items.map((it) => {
-    const cr = buildConsultaResumo({
-      id: it.codigoMateria,
-      materia: it.identificacao ?? undefined,
-      ementa: it.ementa ?? undefined,
-      votosSim: it.votosSim,
-      votosNao: it.votosNao,
-      status: deriveStatus(tramitando, it.codigoMateria),
-    });
+  //    v2: enrich with detail-only autoria/relator, preserving already-enriched rows (immutable).
+  const existingPayloads = readAllPayloads("consultas");
+  const records: SyncRecord[] = [];
+  let consultasEnriched = 0;
+  for (const it of crawl.items) {
+    const prev = existingPayloads.get(it.codigoMateria);
+    if (!prev || !prev.includes('"autoria"')) consultasEnriched++;
+    const cr = await enrichConsulta(it, deriveStatus(tramitando, it.codigoMateria), existingPayloads);
     const payloadJson = JSON.stringify(cr);
-    return {
+    records.push({
       entityId: cr.id,
       sourceUrl: cr.url,
       payloadJson,
@@ -126,8 +173,9 @@ async function main(): Promise<void> {
       metrica: cr.totalVotos,
       comissao: null,
       contentHash: contentHash(payloadJson),
-    };
-  });
+    });
+  }
+  console.log(`[consultas][enrich] detalhe buscado p/ ${consultasEnriched} consulta(s) não enriquecida(s)`);
 
   const abertas = records.filter((r) => r.status === "aberta").length;
   const encerradas = records.length - abertas;

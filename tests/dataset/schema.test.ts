@@ -5,8 +5,17 @@ import type { Entidade } from "../../src/scraper/pipeline.js";
 describe("ENTITY_SCHEMAS — integridade do esquema", () => {
   const entidades = Object.keys(ENTITY_SCHEMAS) as Entidade[];
 
-  it("cobre exatamente as 4 entidades do corpus", () => {
-    expect(entidades.sort()).toEqual(["consultas", "consultas_votos", "eventos", "ideias"]);
+  it("cobre as 4 entidades do corpus + o nível-comentário (v2)", () => {
+    expect(entidades.sort()).toEqual([
+      "consultas", "consultas_votos", "eventos", "eventos_comentarios", "ideias",
+    ]);
+  });
+
+  it("eventos_comentarios não guarda nome do comentarista (só UF)", () => {
+    const names = ENTITY_SCHEMAS.eventos_comentarios.variables.map((v) => v.name);
+    expect(names).toContain("uf");
+    expect(names).not.toContain("nome");
+    expect(names).not.toContain("autor");
   });
 
   it("toda variável tem nome/tipo/descrição/endpoint/campo/operacionalização não-vazios", () => {

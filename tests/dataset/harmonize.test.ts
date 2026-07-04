@@ -75,22 +75,30 @@ describe("harmonizeRow — consultas", () => {
   });
 });
 
-describe("harmonizeRow — ideias", () => {
+describe("harmonizeRow — ideias (v2: detail-only reaberto)", () => {
   const payload = {
     id: 80429,
     titulo: "Ideia X",
     apoios: 253804,
-    dataPublicacao: null,
+    dataPublicacao: "2024-08-15",
+    autorUf: "SP",
+    descricao: "Texto da ideia.",
+    plConvertido: null,
     status: "aberta",
-    autor: null,
     url: "https://www12.senado.leg.br/ecidadania/visualizacaoideia?id=80429",
   };
   const rec = harmonizeRow("ideias", { entityId: 80429, scrapedAt: RETRIEVED, payload, firstSeenAt: FIRST_SEEN });
 
-  it("dataPublicacao e autor são declarados null (detail-only, fora do corpus)", () => {
-    expect(rec.fields.dataPublicacao.value).toBeNull();
-    expect(rec.fields.autor.value).toBeNull();
-    expect(rec.fields.dataPublicacao.sourceField).toContain("ausente na listagem");
+  it("dataPublicacao/autorUf/descricao vêm do detalhe (reabertos na v2)", () => {
+    expect(rec.fields.dataPublicacao.value).toBe("2024-08-15");
+    expect(rec.fields.autorUf.value).toBe("SP");
+    expect(rec.fields.descricao.value).toBe("Texto da ideia.");
+    expect(rec.fields.dataPublicacao.sourceEndpoint).toContain("visualizacaoideia");
+  });
+
+  it("autorUf é UF-only (sem nome) e não existe mais o campo autor", () => {
+    expect(rec.fields.autor).toBeUndefined();
+    expect(rec.fields.autorUf.sourceField).toContain("(UF)");
   });
 
   it("status vem do parâmetro situacao da listagem", () => {
@@ -99,23 +107,74 @@ describe("harmonizeRow — ideias", () => {
   });
 });
 
-describe("harmonizeRow — eventos", () => {
+describe("harmonizeRow — eventos (v2: enriquecido pelo detalhe)", () => {
   const payload = {
     id: 39529,
     titulo: "Audiência X",
     data: "2026-06-24",
     hora: "10:00",
     comissao: "CCT",
-    comentarios: 0,
+    comissaoNomeCompleto: "Comissão de Ciência e Tecnologia",
+    local: "Plenário 2",
+    descricao: "Debater X.",
+    pauta: ["Item 1", "Item 2"],
+    convidados: ["Fulano de Tal"],
+    videoUrl: "https://www.youtube.com/embed/abc123",
+    comentarios: 62,
     status: "agendado",
     url: "https://www12.senado.leg.br/ecidadania/visualizacaoaudiencia?id=39529",
   };
   const rec = harmonizeRow("eventos", { entityId: 39529, scrapedAt: RETRIEVED, payload, firstSeenAt: FIRST_SEEN });
 
+  it("data/hora agora vêm do detalhe (canônicas — estudo A3)", () => {
+    expect(rec.fields.data.sourceEndpoint).toContain("visualizacaoaudiencia");
+    expect(rec.fields.hora.sourceEndpoint).toContain("visualizacaoaudiencia");
+  });
+
+  it("comentarios é a contagem canônica via AJAX", () => {
+    expect(rec.fields.comentarios.value).toBe(62);
+    expect(rec.fields.comentarios.sourceEndpoint).toContain("ajaxcolecaocomentarioaudiencia");
+  });
+
+  it("campos novos do detalhe são cobertos e envelopados", () => {
+    expect(rec.fields.comissaoNomeCompleto.value).toBe("Comissão de Ciência e Tecnologia");
+    expect(rec.fields.local.value).toBe("Plenário 2");
+    expect(rec.fields.pauta.value).toEqual(["Item 1", "Item 2"]);
+    expect(rec.fields.convidados.value).toEqual(["Fulano de Tal"]);
+    expect(rec.fields.videoUrl.value).toContain("youtube.com/embed");
+  });
+
   it("status documenta o fold REGISTRADO→agendado como caveat", () => {
     const def = ENTITY_SCHEMAS.eventos.variables.find((v) => v.name === "status")!;
     expect(def.caveat).toMatch(/REGISTRADO/);
     expect(rec.fields.comissao.sourceField).toContain("sigla");
+  });
+});
+
+describe("harmonizeRow — eventos_comentarios (nível-comentário, v2)", () => {
+  const payload = {
+    eventoId: 38311,
+    comentarioId: 386637,
+    uf: "PA",
+    texto: "A rotulagem clara de ultraprocessados é vital.",
+    data: "2026-05-28",
+    hora: "07:27",
+    momentoVideoUrl: null,
+    convidadoAssociado: null,
+  };
+  const rec = harmonizeRow("eventos_comentarios", { entityId: 386637, scrapedAt: RETRIEVED, payload });
+
+  it("cobre as variáveis do esquema na ordem, sem nome do comentarista", () => {
+    const schemaNames = ENTITY_SCHEMAS.eventos_comentarios.variables.map((v) => v.name);
+    expect(Object.keys(rec.fields)).toEqual(schemaNames);
+    expect(schemaNames).not.toContain("nome");
+  });
+
+  it("uf/texto/timestamp vêm do fragmento AJAX; eventoId liga ao nível-evento", () => {
+    expect(rec.fields.uf.value).toBe("PA");
+    expect(rec.fields.texto.value).toContain("rotulagem");
+    expect(rec.fields.eventoId.value).toBe(38311);
+    expect(rec.fields.uf.sourceEndpoint).toContain("ajaxcolecaocomentarioaudiencia");
   });
 });
 

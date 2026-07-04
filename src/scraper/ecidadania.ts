@@ -26,17 +26,23 @@ function ecidadaniaFetchError(message: string, retryable: boolean): Error {
 }
 const isTransientStatus = (status: number) => status >= 500 || status === 429;
 
-/** Fetch an HTML page from e-Cidadania with descriptive errors. */
-export async function fetchPage(path: string): Promise<string> {
+/**
+ * Fetch an HTML page from e-Cidadania with descriptive errors.
+ * `opts.ajax` sends the XHR headers the internal `ajax*` fragment endpoints expect
+ * (`X-Requested-With: XMLHttpRequest`, wider `Accept`).
+ */
+export async function fetchPage(
+  path: string,
+  opts: { ajax?: boolean; allowEmpty?: boolean } = {},
+): Promise<string> {
   const url = `${ECIDADANIA_BASE}${path}`;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
   try {
     const resp = await fetch(url, {
-      headers: {
-        Accept: "text/html",
-        "User-Agent": USER_AGENT,
-      },
+      headers: opts.ajax
+        ? { Accept: "text/html,*/*", "User-Agent": USER_AGENT, "X-Requested-With": "XMLHttpRequest" }
+        : { Accept: "text/html", "User-Agent": USER_AGENT },
       signal: controller.signal,
     });
     clearTimeout(timeout);
@@ -44,7 +50,11 @@ export async function fetchPage(path: string): Promise<string> {
       throw ecidadaniaFetchError(`e-Cidadania retornou HTTP ${resp.status} para ${path}`, isTransientStatus(resp.status));
     }
     const text = await resp.text();
-    if (!text.trim()) throw ecidadaniaFetchError(`e-Cidadania retornou página vazia para ${path}`, true);
+    // AJAX comment fragments are legitimately empty for events with zero comments — allowEmpty
+    // lets the caller treat "" as a valid (empty) result instead of a transient failure.
+    if (!opts.allowEmpty && !text.trim()) {
+      throw ecidadaniaFetchError(`e-Cidadania retornou página vazia para ${path}`, true);
+    }
     return text;
   } catch (e) {
     clearTimeout(timeout);
@@ -139,6 +149,9 @@ export interface ConsultaResumo {
   id: number; materia: string; ementa: string;
   votosSim: number; votosNao: number; totalVotos: number;
   percentualSim: number; percentualNao: number;
+  /** Detail-enriched fields (v2). Public agents — name kept. Null until the detail crawl fills them. */
+  autoria: string | null;
+  relator: string | null;
   status: string; url: string;
 }
 
@@ -157,6 +170,7 @@ export interface ConsultaResumo {
 export function buildConsultaResumo(fields: {
   id: number; materia?: string; ementa?: string;
   votosSim: number; votosNao: number; totalVotos?: number;
+  autoria?: string | null; relator?: string | null;
   status?: string; url?: string;
 }): ConsultaResumo {
   const votosSim = fields.votosSim;
@@ -173,9 +187,37 @@ export function buildConsultaResumo(fields: {
     totalVotos,
     percentualSim,
     percentualNao,
+    autoria: fields.autoria ?? null,
+    relator: fields.relator ?? null,
     status: fields.status || "aberta",
     url: fields.url || `${ECIDADANIA_BASE}/visualizacaomateria?id=${fields.id}`,
   };
+}
+
+/** Campos detail-only da consulta para o corpus (v2). Agentes públicos — nome mantido. */
+export interface ConsultaDetalheCorpus {
+  autoria: string | null;
+  relator: string | null;
+}
+
+/**
+ * Pure parser of a consulta detail page (`visualizacaomateria?id=`) for the CORPUS — extracts the
+ * public agents `autoria`/`relator` (name kept, per the privacy posture). Shares the anchors of
+ * `obterConsultaInternal`.
+ */
+export function parseConsultaDetalheCorpus(html: string): ConsultaDetalheCorpus {
+  const autorMatch = html.match(/<b>\s*Autoria:?\s*<\/b>\s*<span>([^<]+)<\/span>/i);
+  const relatorMatch = html.match(/<b>\s*Relator(?:a)?:?\s*<\/b>\s*<span>([^<]+)<\/span>/i);
+  return {
+    autoria: autorMatch ? stripHtml(autorMatch[1]) || null : null,
+    relator: relatorMatch ? stripHtml(relatorMatch[1]) || null : null,
+  };
+}
+
+/** Fetch + parse the corpus-facing consulta detail (autoria/relator). */
+export async function obterConsultaDetalheCorpus(id: number): Promise<ConsultaDetalheCorpus> {
+  const html = await fetchPage(`/visualizacaomateria?id=${id}`);
+  return parseConsultaDetalheCorpus(html);
 }
 
 export async function listarConsultasInternal(params: { pagina?: number; limite?: number }): Promise<ConsultaResumo[]> {
@@ -252,33 +294,84 @@ export async function obterConsultaInternal(id: number) {
 
 export interface IdeiaResumo {
   id: number; titulo: string; apoios: number;
-  dataPublicacao: string | null; status: string; autor: string | null; url: string;
+  /** Detail-enriched fields (v2). Null until the detail crawl fills them. */
+  dataPublicacao: string | null;
+  /** UF do cidadão autor (SEM nome — conteúdo de cidadão). */
+  autorUf: string | null;
+  descricao: string | null;
+  plConvertido: string | null;
+  status: string; url: string;
 }
 
 /**
  * Canonical `IdeiaResumo` builder — single source of the object's field order, so the JSON payload
- * (and `contentHash`) is byte-identical across the three writers into `ecidadania_current`: the 2h
- * highlight Cron (`listarIdeiasInternal`, REST source), the weekly full-corpus ingestion job
- * (`pesquisaideia` HTML listing, per-situacao status), and the metric splice. Diverging field order
+ * (and `contentHash`) is byte-identical across the writers into `ecidadania_current`: the 2h highlight
+ * Cron (`listarIdeiasInternal`, REST source), the daily full-corpus listing job (`pesquisaideia`,
+ * per-situacao status), the resumable detail backfill, and the metric splice. Diverging field order
  * would make every row read as "changed" forever, bloating `ecidadania_history`.
  *
- * `autor` and `dataPublicacao` are detail-only (the listing/REST sources never carry them), so they
- * default to `null` here — keep them out of the corpus payload to stay byte-compatible with the
- * highlight scrape, which also has only id/titulo/apoios/status.
+ * v2: the four detail fields (dataPublicacao/autorUf/descricao/plConvertido) are populated by the
+ * detail crawl and default to `null` so a listing-only writer stays byte-compatible. PRIVACIDADE:
+ * `autorUf` is UF-only — the citizen author's name is discarded at source, never carried here.
  */
 export function buildIdeiaResumo(fields: {
   id: number; titulo?: string; apoios?: number;
-  dataPublicacao?: string | null; status?: string; autor?: string | null; url?: string;
+  dataPublicacao?: string | null; autorUf?: string | null;
+  descricao?: string | null; plConvertido?: string | null;
+  status?: string; url?: string;
 }): IdeiaResumo {
   return {
     id: fields.id,
     titulo: fields.titulo || "",
     apoios: fields.apoios ?? 0,
     dataPublicacao: fields.dataPublicacao ?? null,
+    autorUf: fields.autorUf ?? null,
+    descricao: fields.descricao ?? null,
+    plConvertido: fields.plConvertido ?? null,
     status: fields.status || "aberta",
-    autor: fields.autor ?? null,
     url: fields.url || `${ECIDADANIA_BASE}/visualizacaoideia?id=${fields.id}`,
   };
+}
+
+/** Campos detail-only da ideia para o corpus (v2). UF-only — SEM nome do autor cidadão. */
+export interface IdeiaDetalheCorpus {
+  dataPublicacao: string | null;
+  autorUf: string | null;
+  descricao: string | null;
+  plConvertido: string | null;
+}
+
+/**
+ * Pure parser of an idea detail page (`visualizacaoideia?id=`) for the CORPUS — extracts only the
+ * four detail fields, keeping ONLY the UF of the citizen author (name discarded at source, never
+ * returned). Distinct from `obterIdeiaInternal` (the live tool), which still surfaces the portal's
+ * semi-anonymized author string; this corpus path never touches the name.
+ */
+export function parseIdeiaDetalheCorpus(html: string): IdeiaDetalheCorpus {
+  const text = stripHtml(html);
+
+  // "Ideia proposta por <span>NOME</span> <span>(UF)</span>" — capturamos SÓ a UF.
+  const autorMatch = html.match(/Ideia proposta por<\/div>\s*<div[^>]*>\s*<span>[^<]+<\/span>\s*<span>\s*\(([A-Z]{2})\)<\/span>/);
+  const autorUf = autorMatch ? autorMatch[1] : null;
+
+  const dataMatch = html.match(/Data limite[\s\S]*?<div[^>]*>\s*(\d{2}\/\d{2}\/\d{4})\s*<\/div>/i);
+  const dataPublicacao = dataMatch ? extractDate(dataMatch[1]) : null;
+
+  const descMatch = html.match(/<b><div[^>]*>[^<]+<\/div><\/b>\s*<div[^>]*>([\s\S]*?)<\/div>/);
+  const descricao = descMatch ? stripHtml(descMatch[1]).substring(0, 2000) || null : null;
+
+  const plMatch = text.match(/(SUGEST[ÃA]O|PEC|PL|PLP)\s*n?º?\s*(\d+)\s*(?:de\s*)?(\d{4})/i);
+  const plConvertido = plMatch
+    ? `${plMatch[1].toUpperCase().includes("SUGEST") ? "SUG" : plMatch[1].toUpperCase()} ${plMatch[2]}/${plMatch[3]}`
+    : null;
+
+  return { dataPublicacao, autorUf, descricao, plConvertido };
+}
+
+/** Fetch + parse the corpus-facing (UF-only) idea detail. */
+export async function obterIdeiaDetalheCorpus(id: number): Promise<IdeiaDetalheCorpus> {
+  const html = await fetchPage(`/visualizacaoideia?id=${id}`);
+  return parseIdeiaDetalheCorpus(html);
 }
 
 export async function listarIdeiasInternal(params: { status?: string; limite?: number; pagina?: number; ordenarPor?: string; ordem?: string }): Promise<IdeiaResumo[]> {
@@ -354,19 +447,36 @@ export async function obterIdeiaInternal(id: number) {
 
 export interface EventoResumo {
   id: number; titulo: string; data: string | null; hora: string | null;
-  comissao: string | null; comentarios: number; status: string; url: string;
+  comissao: string | null;
+  /** Detail-enriched fields (v2). Null/[] until the detail crawl fills them. */
+  comissaoNomeCompleto: string | null;
+  local: string | null;
+  descricao: string | null;
+  pauta: string[];
+  convidados: string[];
+  videoUrl: string | null;
+  /** Canonical AJAX comment count (v2). Volatile — recounted every crawl cycle. */
+  comentarios: number;
+  status: string; url: string;
 }
 
 /**
  * Canonical `EventoResumo` builder — single source of the object's field order, so the JSON payload
- * (and `contentHash`) is byte-identical across the three writers into `ecidadania_current`: the 2h
- * highlight Cron (`listarEventosInternal`, REST source), the weekly full-corpus ingestion job (HTML
- * listing source), and the metric splice. Diverging field order would make every row read as
- * "changed" forever, bloating `ecidadania_history`.
+ * (and `contentHash`) is byte-identical across the writers into `ecidadania_current`: the 2h
+ * highlight Cron (`listarEventosInternal`, REST source), the daily full-corpus ingestion job (HTML
+ * listing + detail + AJAX comments), and the metric splice. Diverging field order would make every
+ * row read as "changed" forever, bloating `ecidadania_history`.
+ *
+ * v2: `data`/`hora` are the DETAIL-canonical values (estudo A3); `comentarios` is the canonical AJAX
+ * count. The six detail fields (comissaoNomeCompleto/local/descricao/pauta/convidados/videoUrl) are
+ * populated by the detail crawl and default to null/[] so a listing-only writer stays byte-compatible.
  */
 export function buildEventoResumo(fields: {
   id: number; titulo?: string; data?: string | null; hora?: string | null;
-  comissao?: string | null; comentarios?: number; status?: string; url?: string;
+  comissao?: string | null;
+  comissaoNomeCompleto?: string | null; local?: string | null; descricao?: string | null;
+  pauta?: string[]; convidados?: string[]; videoUrl?: string | null;
+  comentarios?: number; status?: string; url?: string;
 }): EventoResumo {
   return {
     id: fields.id,
@@ -374,6 +484,12 @@ export function buildEventoResumo(fields: {
     data: fields.data ?? null,
     hora: fields.hora ?? null,
     comissao: fields.comissao ?? null,
+    comissaoNomeCompleto: fields.comissaoNomeCompleto ?? null,
+    local: fields.local ?? null,
+    descricao: fields.descricao ?? null,
+    pauta: fields.pauta ?? [],
+    convidados: fields.convidados ?? [],
+    videoUrl: fields.videoUrl ?? null,
     comentarios: fields.comentarios ?? 0,
     status: fields.status || "agendado",
     url: fields.url || `${ECIDADANIA_BASE}/visualizacaoaudiencia?id=${fields.id}`,
@@ -472,16 +588,36 @@ export function consultaVotoCore(v: ConsultaVotoResumo): Omit<ConsultaVotoResumo
   return core;
 }
 
-export async function obterEventoInternal(id: number) {
-  const html = await fetchPage(`/visualizacaoaudiencia?id=${id}`);
+/** Campos extraídos da página de detalhe de uma audiência (`visualizacaoaudiencia`). Puro. */
+export interface EventoDetalhe {
+  titulo: string;
+  descricao: string | null;
+  data: string | null;
+  hora: string | null;
+  comissao: string | null;
+  comissaoNomeCompleto: string | null;
+  local: string | null;
+  status: string;
+  pauta: string[];
+  convidados: string[];
+  videoUrl: string | null;
+}
 
+/**
+ * Pure parser of an event detail page (`visualizacaoaudiencia?id=`). Extracted from
+ * `obterEventoInternal` so both the live detail tool and the corpus detail crawl (v2) share one
+ * tested parser. `data`/`hora` here are the CANONICAL values (estudo A3). NOTE: the comment count is
+ * NOT in this HTML (the `#comentarios` container is populated by AJAX) — use
+ * `parseComentariosAudiencia` / `contarComentariosAudiencia` for the canonical count.
+ */
+export function parseEventoDetalhe(html: string): EventoDetalhe {
   // Title: <div class="audiencia-titulo">...</div>
   const tituloMatch = html.match(/class="audiencia-titulo"[^>]*>([^<]+)</);
   const titulo = tituloMatch ? stripHtml(tituloMatch[1]) : "";
 
   // Description/Finalidade: <div class="audiencia-finalidade">...</div>
   const descMatch = html.match(/class="audiencia-finalidade"[^>]*>([^<]+)</);
-  const descricao = descMatch ? stripHtml(descMatch[1]) : "";
+  const descricao = descMatch ? stripHtml(descMatch[1]) || null : null;
 
   // Date/time from <span class="audiencia-data">23/02/2026 - 10:00</span>
   const dataTagMatch = html.match(/class="audiencia-data"[^>]*>([^<]+)</);
@@ -498,11 +634,11 @@ export async function obterEventoInternal(id: number) {
 
   // Committee full name from <div class="audiencia-comissao">
   const comissaoFullMatch = html.match(/class="audiencia-comissao"[^>]*>([^<]+)</);
-  const comissaoFull = comissaoFullMatch ? stripHtml(comissaoFullMatch[1]) : null;
+  const comissaoFull = comissaoFullMatch ? stripHtml(comissaoFullMatch[1]) || null : null;
 
   // Local
   const localMatch = html.match(/class="audiencia-local"[^>]*>([^<]+)</);
-  const local = localMatch ? stripHtml(localMatch[1]) : null;
+  const local = localMatch ? stripHtml(localMatch[1]) || null : null;
 
   // Status from class on #audiencia div: situacao-audiencia-AGENDADO / REALIZADO / CANCELADO
   const statusClassMatch = html.match(/class="situacao-audiencia-([A-Z]+)"/);
@@ -517,7 +653,7 @@ export async function obterEventoInternal(id: number) {
     if (statusTag?.toLowerCase().includes("realizad") || statusTag?.toLowerCase().includes("encerrad")) status = "encerrado";
   }
 
-  // Convidados: <p class="titulo-convidados"><span>NAME</span></p>
+  // Convidados: <p class="titulo-convidados"><span>NAME</span></p> (nomes públicos — mantidos)
   const convidados: string[] = [];
   const convRegex = /class="titulo-convidados"[^>]*>\s*<span>([^<]+)<\/span>/g;
   let convMatch;
@@ -529,21 +665,169 @@ export async function obterEventoInternal(id: number) {
 
   // Pauta: <div class="audiencia-pauta">...</div>
   const pautaMatch = html.match(/class="audiencia-pauta"[^>]*>([\s\S]*?)<\/div>/);
-  const pauta = pautaMatch ? stripHtml(pautaMatch[1]).split(/[;\n]/).map((s) => s.trim()).filter((s) => s.length > 5) : [];
+  const pauta = pautaMatch
+    ? stripHtml(pautaMatch[1]).split(/[;\n]/).map((s) => s.trim()).filter((s) => s.length > 5).slice(0, 15)
+    : [];
 
+  return {
+    titulo, descricao, data, hora,
+    comissao: comissaoAbrev || comissaoFull,
+    comissaoNomeCompleto: comissaoFull,
+    local, status, pauta, convidados, videoUrl,
+  };
+}
+
+export async function obterEventoInternal(id: number) {
+  const html = await fetchPage(`/visualizacaoaudiencia?id=${id}`);
+  const d = parseEventoDetalhe(html);
   const comentarioMatch = stripHtml(html).match(/(\d+)\s*coment[aá]rio/i);
 
   return {
-    id, titulo, descricao, data, hora,
-    comissao: comissaoAbrev || comissaoFull,
-    comissaoNomeCompleto: comissaoFull,
-    local,
+    id,
+    titulo: d.titulo,
+    descricao: d.descricao ?? "",
+    data: d.data,
+    hora: d.hora,
+    comissao: d.comissao,
+    comissaoNomeCompleto: d.comissaoNomeCompleto,
+    local: d.local,
     comentarios: comentarioMatch ? parseInt(comentarioMatch[1]) : 0,
-    status,
+    status: d.status,
     url: `${ECIDADANIA_BASE}/visualizacaoaudiencia?id=${id}`,
-    pauta: pauta.slice(0, 15),
-    convidados,
-    videoUrl,
+    pauta: d.pauta,
+    convidados: d.convidados,
+    videoUrl: d.videoUrl,
     documentos: [] as string[],
   };
+}
+
+/** Fetch + parse the corpus-facing event detail (canonical data/hora + v2 detail fields). */
+export async function obterEventoDetalhe(id: number): Promise<EventoDetalhe> {
+  const html = await fetchPage(`/visualizacaoaudiencia?id=${id}`);
+  return parseEventoDetalhe(html);
+}
+
+// ── Eventos: comentários (nível-comentário, fragmento AJAX) ─────────────────
+// A contagem CANÔNICA de comentários e o nível-comentário vêm do fragmento AJAX
+// `ajaxcolecaocomentarioaudiencia?audienciaId={id}` — o container `#comentarios` da página de
+// detalhe é vazio no HTML (populado por JS). Estudo A3: a listagem tinha 0 espúrio em 82% dos
+// eventos. PRIVACIDADE: extraímos SÓ a UF; o nome do comentarista é descartado NA ORIGEM.
+
+/** Um comentário de audiência (nível-comentário). SEM o nome do comentarista (só UF). */
+export interface ComentarioAudiencia {
+  comentarioId: number;
+  /** UF do comentarista (só a sigla; o nome é descartado na origem). */
+  uf: string | null;
+  texto: string;
+  data: string | null;
+  hora: string | null;
+  /** Presente só em comentários ancorados a um momento do vídeo. */
+  momentoVideoUrl: string | null;
+  /** Convidado (público) associado ao momento, quando houver. */
+  convidadoAssociado: string | null;
+}
+
+/** Converte "HHhMM" (ex.: "07h27") em "HH:MM". */
+function parseHoraComentario(text: string): string | null {
+  const m = text.match(/(\d{1,2})h(\d{2})/);
+  return m ? `${m[1].padStart(2, "0")}:${m[2]}` : null;
+}
+
+/**
+ * Pure parser of the AJAX comment fragment. One `ComentarioAudiencia` per
+ * `<div class="comentario" ... data-id="N">` block. UF-only (name discarded at source).
+ * `momentoVideoUrl`/`convidadoAssociado` are best-effort (present only on video-anchored comments).
+ */
+export function parseComentariosAudiencia(html: string): ComentarioAudiencia[] {
+  const blocks = html.split(/<div class="comentario"/i).slice(1);
+  const out: ComentarioAudiencia[] = [];
+  for (const block of blocks) {
+    const idMatch = block.match(/data-id="(\d+)"/) || block.match(/id="comentario-(\d+)"/);
+    if (!idMatch) continue;
+    const comentarioId = parseInt(idMatch[1], 10);
+
+    // titulo-comentarios: "NOME (UF)" — mantemos SÓ a UF; o nome é descartado.
+    const tituloMatch = block.match(/class="titulo-comentarios"[^>]*>([\s\S]*?)<\/div>/i);
+    const tituloRaw = tituloMatch ? stripHtml(tituloMatch[1]) : "";
+    const ufMatch = tituloRaw.match(/\(([A-Z]{2})\)\s*$/);
+    const uf = ufMatch ? ufMatch[1] : null;
+
+    const textoMatch = block.match(/class="texto-comentarios"[^>]*>([\s\S]*?)<\/div>/i);
+    const texto = textoMatch ? stripHtml(textoMatch[1]) : "";
+
+    const horadataMatch = block.match(/class="horadata-comentarios"[^>]*>([\s\S]*?)<\/div>/i);
+    const horadataRaw = horadataMatch ? stripHtml(horadataMatch[1]) : "";
+    const data = extractDate(horadataRaw);
+    const hora = parseHoraComentario(horadataRaw);
+
+    // Momento do vídeo (best-effort; presente só em comentários ancorados a um instante).
+    const momentoLinkMatch = block.match(/class="momento-por-link"[^>]*href="([^"]+)"/i)
+      || block.match(/class="momento-comentario"[^>]*href="([^"]+)"/i);
+    const momentoVideoUrl = momentoLinkMatch ? momentoLinkMatch[1] : null;
+
+    // Convidado associado (público — nome mantido), quando houver.
+    const convNomeMatch = block.match(/class="momento-convidado-nome"[^>]*>([\s\S]*?)<\/[a-z]+>/i);
+    const convCargoMatch = block.match(/class="momento-convidado-cargo"[^>]*>([\s\S]*?)<\/[a-z]+>/i);
+    const convNome = convNomeMatch ? stripHtml(convNomeMatch[1]) : "";
+    const convCargo = convCargoMatch ? stripHtml(convCargoMatch[1]) : "";
+    const convidadoAssociado = convNome || convCargo
+      ? [convNome, convCargo].filter(Boolean).join(" — ") || null
+      : null;
+
+    out.push({ comentarioId, uf, texto, data, hora, momentoVideoUrl, convidadoAssociado });
+  }
+  return out;
+}
+
+/** Fetch the AJAX comment fragment of an audiência (Worker-safe). */
+export async function fetchComentariosAudienciaHtml(id: number): Promise<string> {
+  return fetchPage(`/ajaxcolecaocomentarioaudiencia?audienciaId=${id}`, { ajax: true, allowEmpty: true });
+}
+
+/** Fetch + parse the comments of an audiência (nível-comentário). UF-only. */
+export async function obterComentariosAudiencia(id: number): Promise<ComentarioAudiencia[]> {
+  const html = await fetchComentariosAudienciaHtml(id);
+  return parseComentariosAudiencia(html);
+}
+
+/** Canonical comment count of an audiência = number of comment blocks in the AJAX fragment. */
+export async function contarComentariosAudiencia(id: number): Promise<number> {
+  return (await obterComentariosAudiencia(id)).length;
+}
+
+/**
+ * Build the ENRICHED (v2) `EventoResumo` for the corpus: detail-canonical `data`/`hora`, the six new
+ * detail fields, and the canonical AJAX comment count. Detail overrides the listing (estudo A3), with
+ * the listing kept as a fallback for rows not yet detail-enriched. Centralized so the fallback rules
+ * live in one tested place and every writer produces byte-identical payloads.
+ */
+export function buildEventoResumoEnriquecido(fields: {
+  id: number;
+  titulo?: string;
+  comissao?: string | null;
+  status?: string;
+  /** Listing-derived provisional date/time (fallback when the detail lacks them). */
+  dataListagem?: string | null;
+  horaListagem?: string | null;
+  comentariosListagem?: number;
+  detalhe?: EventoDetalhe | null;
+  /** Canonical AJAX comment count; when null, falls back to the listing count. */
+  comentariosCanon?: number | null;
+}): EventoResumo {
+  const d = fields.detalhe ?? null;
+  return buildEventoResumo({
+    id: fields.id,
+    titulo: d?.titulo || fields.titulo,
+    data: d?.data ?? fields.dataListagem ?? null,
+    hora: d?.hora ?? fields.horaListagem ?? null,
+    comissao: fields.comissao ?? d?.comissao ?? null,
+    comissaoNomeCompleto: d?.comissaoNomeCompleto ?? null,
+    local: d?.local ?? null,
+    descricao: d?.descricao ?? null,
+    pauta: d?.pauta ?? [],
+    convidados: d?.convidados ?? [],
+    videoUrl: d?.videoUrl ?? null,
+    comentarios: fields.comentariosCanon ?? fields.comentariosListagem ?? 0,
+    status: fields.status ?? d?.status,
+  });
 }

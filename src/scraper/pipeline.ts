@@ -199,6 +199,8 @@ const consultasHighlightCfg: HighlightConfig<ConsultaResumo> = {
   scrape: () => listarConsultasInternal({ limite: 100 }),
   metrica: (c) => c.totalVotos,
   comissao: () => null,
+  // Preserves the corpus-authoritative detail fields (autoria/relator, v2) so the 2h metric splice
+  // never wipes them; only the volatile vote counts come from the fresh REST highlight.
   splice: (corpus, fresh) =>
     buildConsultaResumo({
       id: fresh.id,
@@ -207,6 +209,8 @@ const consultasHighlightCfg: HighlightConfig<ConsultaResumo> = {
       votosSim: fresh.votosSim,
       votosNao: fresh.votosNao,
       totalVotos: fresh.totalVotos,
+      autoria: corpus.autoria,
+      relator: corpus.relator,
       status: corpus.status,
       url: corpus.url,
     }),
@@ -217,14 +221,26 @@ const eventosHighlightCfg: HighlightConfig<EventoResumo> = {
   scrape: () => listarEventosInternal({ limite: 100 }),
   metrica: (e) => e.comentarios,
   comissao: (e) => e.comissao,
-  splice: (corpus, fresh) =>
+  // v2 decision (estudo A3): the CANONICAL comment count comes from the AJAX endpoint during the
+  // daily corpus crawl — the REST listing count is the degraded one (0-spurious in 82% of events).
+  // So this 2h splice PRESERVES `corpus.comentarios` (canonical) instead of overwriting it with the
+  // fresh REST count: it stays byte-stable (no ping-pong / history churn against the daily crawl) and
+  // also carries all v2 detail fields through untouched. The eventos splice is thus effectively inert
+  // between daily crawls — the daily crawl is the sole source of the canonical count.
+  splice: (corpus, _fresh) =>
     buildEventoResumo({
-      id: fresh.id,
+      id: corpus.id,
       titulo: corpus.titulo,
       data: corpus.data,
       hora: corpus.hora,
       comissao: corpus.comissao,
-      comentarios: fresh.comentarios,
+      comissaoNomeCompleto: corpus.comissaoNomeCompleto,
+      local: corpus.local,
+      descricao: corpus.descricao,
+      pauta: corpus.pauta,
+      convidados: corpus.convidados,
+      videoUrl: corpus.videoUrl,
+      comentarios: corpus.comentarios,
       status: corpus.status,
       url: corpus.url,
     }),
@@ -235,14 +251,18 @@ const ideiasHighlightCfg: HighlightConfig<IdeiaResumo> = {
   scrape: () => listarIdeiasInternal({ limite: 100 }),
   metrica: (i) => i.apoios,
   comissao: () => null,
+  // Preserves the corpus-authoritative detail fields (dataPublicacao/autorUf/descricao/plConvertido,
+  // v2) so the 2h apoios splice never wipes them.
   splice: (corpus, fresh) =>
     buildIdeiaResumo({
       id: fresh.id,
       titulo: corpus.titulo,
       apoios: fresh.apoios,
       dataPublicacao: corpus.dataPublicacao,
+      autorUf: corpus.autorUf,
+      descricao: corpus.descricao,
+      plConvertido: corpus.plConvertido,
       status: corpus.status,
-      autor: corpus.autor,
       url: corpus.url,
     }),
 };

@@ -117,3 +117,59 @@ export function countCurrent(entidade: Entidade): number {
   );
   return r.length ? Number(r[0].n) : 0;
 }
+
+interface ComentarioDbRow {
+  evento_id: number;
+  comentario_id: number;
+  scraped_at: string;
+  uf: string | null;
+  texto: string;
+  data: string | null;
+  hora: string | null;
+  momento_video_url: string | null;
+  convidado_associado: string | null;
+}
+
+/**
+ * Lê o nível-comentário de audiências (`ecidadania_comentarios`), paginado e ordenado por
+ * (evento_id, comentario_id) — determinístico. Cada linha vira um CorpusRow com entityId = comentarioId
+ * e payload no shape do schema `eventos_comentarios`. `limit` corta o total (amostra p/ ETAPA 4).
+ */
+export function readComentarios(limit?: number): CorpusRow[] {
+  const rows: CorpusRow[] = [];
+  let offset = 0;
+  for (;;) {
+    const remaining = limit != null ? limit - rows.length : PAGE_SIZE;
+    if (remaining <= 0) break;
+    const take = Math.min(PAGE_SIZE, remaining);
+    const page = queryD1<ComentarioDbRow>(
+      `SELECT evento_id, comentario_id, scraped_at, uf, texto, data, hora, momento_video_url, convidado_associado ` +
+        `FROM ecidadania_comentarios ORDER BY evento_id, comentario_id LIMIT ${take} OFFSET ${offset}`,
+    );
+    for (const r of page) {
+      rows.push({
+        entityId: Number(r.comentario_id),
+        scrapedAt: String(r.scraped_at),
+        payload: {
+          eventoId: Number(r.evento_id),
+          comentarioId: Number(r.comentario_id),
+          uf: r.uf ?? null,
+          texto: String(r.texto ?? ""),
+          data: r.data ?? null,
+          hora: r.hora ?? null,
+          momentoVideoUrl: r.momento_video_url ?? null,
+          convidadoAssociado: r.convidado_associado ?? null,
+        },
+      });
+    }
+    if (page.length < take) break;
+    offset += take;
+  }
+  return rows;
+}
+
+/** Contagem de linhas em `ecidadania_comentarios` (para o manifesto). */
+export function countComentarios(): number {
+  const r = queryD1<{ n: number }>(`SELECT COUNT(*) AS n FROM ecidadania_comentarios`);
+  return r.length ? Number(r[0].n) : 0;
+}

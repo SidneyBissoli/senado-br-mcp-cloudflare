@@ -65,6 +65,8 @@ export function buildRestatusRecords(flips: StatusFlip[], payloads: Map<number, 
       votosSim: old.votosSim,
       votosNao: old.votosNao,
       totalVotos: old.totalVotos,
+      autoria: old.autoria ?? null, // v2: preserve detail fields on a status-only flip
+      relator: old.relator ?? null,
       status: flip.newStatus,
       url: old.url,
     });

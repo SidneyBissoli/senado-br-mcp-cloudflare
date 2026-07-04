@@ -75,24 +75,28 @@ describe("buildIdeiaResumo byte-compatibility", () => {
       titulo: corpus.titulo,
       apoios: corpus.apoios,
       dataPublicacao: corpus.dataPublicacao,
+      autorUf: corpus.autorUf,
+      descricao: corpus.descricao,
+      plConvertido: corpus.plConvertido,
       status: corpus.status,
-      autor: corpus.autor,
       url: corpus.url,
     });
     expect(JSON.stringify(spliced)).toBe(JSON.stringify(corpus));
     expect(contentHash(JSON.stringify(spliced))).toBe(contentHash(JSON.stringify(corpus)));
   });
 
-  it("keeps the canonical field order", () => {
+  it("keeps the canonical field order (v2)", () => {
     expect(Object.keys(buildIdeiaResumo({ id: 1 }))).toEqual([
-      "id", "titulo", "apoios", "dataPublicacao", "status", "autor", "url",
+      "id", "titulo", "apoios", "dataPublicacao", "autorUf", "descricao", "plConvertido", "status", "url",
     ]);
   });
 
-  it("defaults autor/dataPublicacao to null (detail-only fields)", () => {
+  it("defaults the detail-only fields to null", () => {
     const r = buildIdeiaResumo({ id: 7, titulo: "x", apoios: 3, status: "aberta" });
-    expect(r.autor).toBeNull();
+    expect(r.autorUf).toBeNull();
     expect(r.dataPublicacao).toBeNull();
+    expect(r.descricao).toBeNull();
+    expect(r.plConvertido).toBeNull();
     expect(r.url).toContain("visualizacaoideia?id=7");
   });
 });

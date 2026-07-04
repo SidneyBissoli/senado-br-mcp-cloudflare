@@ -71,3 +71,70 @@ export function readLastGoodRows(entidade: string = "consultas"): number | null 
   );
   return rows.length ? Number(rows[0].rows_scraped) : null;
 }
+
+// ── v2: leituras para o enriquecimento por detalhe ──────────────────────────
+
+export interface CurrentPayloadRow {
+  id: number;
+  payload_json: string;
+  content_hash: string;
+}
+
+/**
+ * Uma faixa de linhas de `ecidadania_current` de uma entidade com entity_id > `afterId`, ordenada por
+ * entity_id, com no máximo `limit` linhas — o chunk do backfill de detalhe RESUMÍVEL (ideias ~113,7k
+ * não cabe num run). Retorna id + payload_json (para preservar os campos de listagem no merge) +
+ * content_hash (para diffar a escrita).
+ */
+export function readCurrentRange(entidade: string, afterId: number, limit: number): CurrentPayloadRow[] {
+  const rows = queryD1<{ entity_id: number; payload_json: string; content_hash: string }>(
+    `SELECT entity_id, payload_json, content_hash FROM ecidadania_current ` +
+      `WHERE entidade='${entidade}' AND entity_id > ${Math.trunc(afterId)} ORDER BY entity_id LIMIT ${Math.trunc(limit)}`,
+  );
+  return rows.map((r) => ({ id: Number(r.entity_id), payload_json: String(r.payload_json), content_hash: String(r.content_hash) }));
+}
+
+/**
+ * Todos os `payload_json` de uma entidade, chaveados por entity_id. Paginado por entity_id. Usado
+ * pelos crawls que PRESERVAM campos de detalhe imutáveis (só reenriquecem quem ainda não tem).
+ */
+export function readAllPayloads(entidade: string, pageSize = 5000): Map<number, string> {
+  const map = new Map<number, string>();
+  let offset = 0;
+  for (;;) {
+    const rows = queryD1<{ entity_id: number; payload_json: string }>(
+      `SELECT entity_id, payload_json FROM ecidadania_current ` +
+        `WHERE entidade='${entidade}' ORDER BY entity_id LIMIT ${pageSize} OFFSET ${offset}`,
+    );
+    for (const r of rows) map.set(Number(r.entity_id), String(r.payload_json));
+    if (rows.length < pageSize) break;
+    offset += pageSize;
+  }
+  return map;
+}
+
+/** Estado do cursor de backfill de detalhe de uma entidade (0/0 quando ainda não existe). */
+export function readDetalheCursor(entidade: string): { lastEntityId: number; fullPasses: number } {
+  const rows = queryD1<{ last_entity_id: number; full_passes: number }>(
+    `SELECT last_entity_id, full_passes FROM ecidadania_detalhe_cursor WHERE entidade='${entidade}'`,
+  );
+  return rows.length
+    ? { lastEntityId: Number(rows[0].last_entity_id), fullPasses: Number(rows[0].full_passes) }
+    : { lastEntityId: 0, fullPasses: 0 };
+}
+
+/** content_hash de TODOS os comentários já gravados, chaveado por `${eventoId}:${comentarioId}`. Paginado. */
+export function readComentarioHashes(pageSize = 20000): Map<string, string> {
+  const map = new Map<string, string>();
+  let offset = 0;
+  for (;;) {
+    const rows = queryD1<{ evento_id: number; comentario_id: number; content_hash: string }>(
+      `SELECT evento_id, comentario_id, content_hash FROM ecidadania_comentarios ` +
+        `ORDER BY evento_id, comentario_id LIMIT ${pageSize} OFFSET ${offset}`,
+    );
+    for (const r of rows) map.set(`${Number(r.evento_id)}:${Number(r.comentario_id)}`, String(r.content_hash));
+    if (rows.length < pageSize) break;
+    offset += pageSize;
+  }
+  return map;
+}

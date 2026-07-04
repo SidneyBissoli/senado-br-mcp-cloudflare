@@ -96,6 +96,12 @@ describe("buildEventoResumo byte-compatibility", () => {
       data: corpus.data,
       hora: corpus.hora,
       comissao: corpus.comissao,
+      comissaoNomeCompleto: corpus.comissaoNomeCompleto,
+      local: corpus.local,
+      descricao: corpus.descricao,
+      pauta: corpus.pauta,
+      convidados: corpus.convidados,
+      videoUrl: corpus.videoUrl,
       comentarios: corpus.comentarios,
       status: corpus.status,
       url: corpus.url,
@@ -104,9 +110,10 @@ describe("buildEventoResumo byte-compatibility", () => {
     expect(contentHash(JSON.stringify(spliced))).toBe(contentHash(JSON.stringify(corpus)));
   });
 
-  it("keeps the canonical field order", () => {
+  it("keeps the canonical field order (v2)", () => {
     expect(Object.keys(buildEventoResumo({ id: 1 }))).toEqual([
-      "id", "titulo", "data", "hora", "comissao", "comentarios", "status", "url",
+      "id", "titulo", "data", "hora", "comissao", "comissaoNomeCompleto", "local",
+      "descricao", "pauta", "convidados", "videoUrl", "comentarios", "status", "url",
     ]);
   });
 });

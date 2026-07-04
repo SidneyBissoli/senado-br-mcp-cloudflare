@@ -77,6 +77,20 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler d1 execute senado-ecidadania --remote --file=scripts/ingest-ecidadania/out-eventos.sql
 
+      # ── Eventos nível-comentário (fragmento AJAX; tabela ecidadania_comentarios) ──
+      # Emitido junto com o corpus de eventos (out-eventos-comentarios-NNN.sql); pode não existir
+      # quando não há comentário novo/alterado no ciclo — aplicar em ordem, tolerando ausência.
+      - name: Apply eventos comentários to D1 (batched files, in order)
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          for f in $(ls scripts/ingest-ecidadania/out-eventos-comentarios-*.sql 2>/dev/null | sort); do
+            echo "Applying $f"
+            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
+          done
+
       # ── Ideias corpus (HTML listing pesquisaideia?situacao=N&p=M; status per situacao bucket) ──
       # Emitted as multiple out-ideias-NNN.sql batches (~150k items); apply them in lexical order.
       - name: Generate ideias corpus load SQL
@@ -93,7 +107,28 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          for f in $(ls scripts/ingest-ecidadania/out-ideias-*.sql | sort); do
+          for f in $(ls scripts/ingest-ecidadania/out-ideias-[0-9]*.sql 2>/dev/null | sort); do
+            echo "Applying $f"
+            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
+          done
+
+      # ── Ideias DETALHE backfill (resumível por cursor; reabre dataPublicacao/autorUf/descricao/plConvertido) ──
+      # ~113,7k ideias não cabem num run; processa um chunk por execução e persiste o cursor. Roda DEPOIS
+      # do crawl de listagem (que preserva o detalhe já gravado). Emite out-ideias-detalhe-NNN.sql.
+      - name: Generate ideias detail backfill SQL
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run ingest:ecidadania:ideias-detalhe
+
+      - name: Apply ideias detail backfill to D1 (batched files, in order)
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          for f in $(ls scripts/ingest-ecidadania/out-ideias-detalhe-*.sql 2>/dev/null | sort); do
             echo "Applying $f"
             npx wrangler d1 execute senado-ecidadania --remote --file="$f"
           done

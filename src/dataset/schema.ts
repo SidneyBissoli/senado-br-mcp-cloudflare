@@ -25,8 +25,17 @@
 import type { Entidade } from "../scraper/pipeline.js";
 import { ECIDADANIA_ARQUIMEDES_CSV_URL, ECIDADANIA_BASE_URL } from "../utils/provenance.js";
 
+/**
+ * Chave de entidade do DATASET. Superconjunto de `Entidade` (o discriminador do corpus soberano
+ * `ecidadania_current`, que tem 1 linha por (entidade, entity_id)) com `eventos_comentarios` — o
+ * nível-comentário das audiências, que NÃO cabe no modelo 1-linha-por-entidade e mora em tabela
+ * própria (`ecidadania_comentarios`). Só o dataset/dicionário/harmonizador conhecem essa chave extra;
+ * o pipeline do corpus (`pipeline.ts`) segue com `Entidade` puro.
+ */
+export type DatasetEntity = Entidade | "eventos_comentarios";
+
 /** Versão do esquema harmonizado. Gravada em CADA registro (load-bearing na máquina de releases, C2). */
-export const DATASET_SCHEMA_VERSION = "1.0.0";
+export const DATASET_SCHEMA_VERSION = "2.0.0";
 
 /** Licença do DADO (separada da licença de código). Mesma string do registry de proveniência. */
 export const DATASET_LICENSE = "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.";
@@ -79,8 +88,12 @@ export interface EntitySchema {
 
 // ── Endpoints canônicos (strings de proveniência) ───────────────────────────
 const EP_CONSULTAS_LISTING = `GET ${ECIDADANIA_BASE_URL}/pesquisamateria?p={N}`;
+const EP_CONSULTAS_DETALHE = `GET ${ECIDADANIA_BASE_URL}/visualizacaomateria?id={ID}`;
 const EP_IDEIAS_LISTING = `GET ${ECIDADANIA_BASE_URL}/pesquisaideia?situacao={S}&p={N}`;
+const EP_IDEIAS_DETALHE = `GET ${ECIDADANIA_BASE_URL}/visualizacaoideia?id={ID}`;
 const EP_EVENTOS_LISTING = `GET ${ECIDADANIA_BASE_URL}/principalaudiencia?p={N}`;
+const EP_EVENTOS_DETALHE = `GET ${ECIDADANIA_BASE_URL}/visualizacaoaudiencia?id={ID}`;
+const EP_EVENTOS_COMENTARIOS = `GET ${ECIDADANIA_BASE_URL}/ajaxcolecaocomentarioaudiencia?audienciaId={ID}`;
 const EP_PROCESSO_TRAMITANDO = "GET https://legis.senado.leg.br/dadosabertos/processo?sigla={SIGLA}&tramitando=S";
 const EP_CSV_ARQUIMEDES = `GET ${ECIDADANIA_ARQUIMEDES_CSV_URL}`;
 const EP_HISTORY = "derived:ecidadania_history";
@@ -157,6 +170,26 @@ const consultasSchema: EntitySchema = {
       derived: true,
     },
     {
+      name: "autoria",
+      type: "string",
+      description: "Autoria da matéria em consulta (parlamentar/órgão — agente público).",
+      sourceEndpoint: EP_CONSULTAS_DETALHE,
+      sourceField: "página de detalhe: <b>Autoria:</b> <span>…</span>",
+      operationalization:
+        "Lido da página de detalhe (visualizacaomateria) no crawl enriquecido; null quando o detalhe não expõe. Nome MANTIDO (informação pública por função — ver postura de privacidade).",
+      caveat: "Detail-only (v2): populado pelo crawl de detalhe; null nas linhas ainda não enriquecidas.",
+    },
+    {
+      name: "relator",
+      type: "string",
+      description: "Relator(a) da matéria (agente público).",
+      sourceEndpoint: EP_CONSULTAS_DETALHE,
+      sourceField: "página de detalhe: <b>Relator(a):</b> <span>…</span>",
+      operationalization:
+        "Lido da página de detalhe (visualizacaomateria); null quando não há relatoria ou o detalhe não a expõe. Nome MANTIDO (público por função).",
+      caveat: "Detail-only (v2): populado pelo crawl de detalhe; null nas linhas ainda não enriquecidas.",
+    },
+    {
       name: "status",
       type: "string",
       description: "Situação da consulta: \"aberta\" | \"encerrada\".",
@@ -229,22 +262,40 @@ const ideiasSchema: EntitySchema = {
     {
       name: "dataPublicacao",
       type: "date",
-      description: "Data limite/publicação da ideia — indisponível na listagem.",
-      sourceEndpoint: EP_IDEIAS_LISTING,
-      sourceField: "(ausente na listagem; só na página de detalhe)",
-      operationalization: "Nulo no corpus: a listagem não carrega data; só o detalhe (visualizacaoideia) a expõe. Declarado nulo, não inferido.",
-      caveat: "Sempre null no dataset harmonizado (campo detail-only fora do crawl de corpus).",
-      select: () => null,
+      description: "Data limite para atingir os 20.000 apoios (única âncora temporal upstream da ideia).",
+      sourceEndpoint: EP_IDEIAS_DETALHE,
+      sourceField: "página de detalhe: bloco \"Data limite\" (DD/MM/AAAA)",
+      operationalization:
+        "extractDate sobre a data-limite exibida no detalhe (visualizacaoideia) → ISO YYYY-MM-DD; lido no crawl de detalhe. Reaberto na v2 (era null por design na v1).",
+      caveat: "Detail-only (v2): null nas ideias ainda não enriquecidas pelo backfill de detalhe (censura à esquerda residual nesses campos até o backfill completar).",
     },
     {
-      name: "autor",
+      name: "autorUf",
       type: "string",
-      description: "Autor(a) da ideia — indisponível na listagem.",
-      sourceEndpoint: EP_IDEIAS_LISTING,
-      sourceField: "(ausente na listagem; só na página de detalhe)",
-      operationalization: "Nulo no corpus pelo mesmo motivo de dataPublicacao (detail-only).",
-      caveat: "Sempre null no dataset harmonizado (campo detail-only fora do crawl de corpus).",
-      select: () => null,
+      description: "UF do cidadão autor da ideia (SEM nome — conteúdo de cidadão).",
+      sourceEndpoint: EP_IDEIAS_DETALHE,
+      sourceField: "página de detalhe: \"Ideia proposta por … (UF)\" — apenas o \"(UF)\"",
+      operationalization:
+        "Extrai só a sigla de UF entre parênteses; o NOME do cidadão é descartado NA ORIGEM (nunca gravado no corpus). Postura de privacidade: conteúdo de cidadão → só UF.",
+      caveat: "Detail-only (v2): null nas ideias ainda não enriquecidas. Nome do autor deliberadamente não coletado.",
+    },
+    {
+      name: "descricao",
+      type: "string",
+      description: "Texto/corpo da ideia legislativa (conteúdo deliberativo do cidadão).",
+      sourceEndpoint: EP_IDEIAS_DETALHE,
+      sourceField: "página de detalhe: corpo da ideia (visualizacaoideia)",
+      operationalization: "Texto do detalhe, com tags removidas; lido no crawl de detalhe. É conteúdo, não identidade.",
+      caveat: "Detail-only (v2): null nas ideias ainda não enriquecidas.",
+    },
+    {
+      name: "plConvertido",
+      type: "string",
+      description: "Proposição gerada pela ideia (ex.: \"SUG 12/2024\"), quando convertida.",
+      sourceEndpoint: EP_IDEIAS_DETALHE,
+      sourceField: "página de detalhe: identificação da proposição (SUG/PL nº)",
+      operationalization: "Regex de identificação de proposição no detalhe; null quando a ideia não gerou proposição.",
+      caveat: "Detail-only (v2): null nas ideias ainda não enriquecidas ou não convertidas.",
     },
     {
       name: "url",
@@ -285,20 +336,22 @@ const eventosSchema: EntitySchema = {
     {
       name: "data",
       type: "date",
-      description: "Data do evento.",
-      sourceEndpoint: EP_EVENTOS_LISTING,
-      sourceField: "span.data (parte DD/MM/AA)",
-      operationalization: "extractDate sobre \"DD/MM/AA | HH:MM\" → ISO YYYY-MM-DD.",
-      caveat: "PROVISÓRIO (A3, ETAPA 4): data vem da listagem `principalaudiencia`, que pode divergir da página de detalhe (`visualizacaoaudiencia`). Divergência de horário observada em amostra; magnitude/fonte canônica não caracterizadas — ver estudo de reconciliação listagem×detalhe (C2).",
+      description: "Data do evento (canônica, da página de detalhe).",
+      sourceEndpoint: EP_EVENTOS_DETALHE,
+      sourceField: "span.audiencia-data (parte DD/MM/AAAA)",
+      operationalization:
+        "extractDate sobre \"DD/MM/AAAA - HH:MM\" do detalhe → ISO YYYY-MM-DD. Corrigido do detalhe na v2 (estudo A3: listagem fiel em 98,9%, mas o detalhe é canônico). Fallback para a data da listagem nas linhas ainda não enriquecidas.",
+      caveat: "Detalhe é canônico (estudo A3). Divergência de borda de 1 dia possível vs. listagem; linhas pré-enriquecimento carregam a data da listagem como provisória.",
     },
     {
       name: "hora",
       type: "string",
-      description: "Hora do evento (HH:MM).",
-      sourceEndpoint: EP_EVENTOS_LISTING,
-      sourceField: "span.data (parte HH:MM)",
-      operationalization: "extractTime sobre a mesma célula de data.",
-      caveat: "PROVISÓRIO (A3, ETAPA 4): hora vem da listagem `principalaudiencia`. Observada divergência de minutos vs. a página de detalhe (ex.: 15127 listagem 10:16 vs detalhe 10:00; 13835 10:58 vs 10:30). Fonte canônica não determinada — não use `hora` para cruzamento fino sem antes conferir o detalhe. Estudo de reconciliação na C2.",
+      description: "Hora do evento (HH:MM, canônica, da página de detalhe).",
+      sourceEndpoint: EP_EVENTOS_DETALHE,
+      sourceField: "span.audiencia-data (parte HH:MM)",
+      operationalization:
+        "extractTime sobre a mesma célula do detalhe. Corrigido do detalhe na v2 — a listagem era degradada (placeholder 00:00 em eventos antigos + offset mediano +15 min; estudo A3: 57% divergente). Fallback para a hora da listagem nas linhas ainda não enriquecidas.",
+      caveat: "Detalhe é canônico (estudo A3). A hora da listagem não serve para cruzamento fino; linhas pré-enriquecimento carregam a hora da listagem como provisória.",
     },
     {
       name: "comissao",
@@ -309,14 +362,70 @@ const eventosSchema: EntitySchema = {
       operationalization: "Célula \" | CCT\": mantém o token após o último \"|\".",
     },
     {
+      name: "comissaoNomeCompleto",
+      type: "string",
+      description: "Nome completo da comissão promotora.",
+      sourceEndpoint: EP_EVENTOS_DETALHE,
+      sourceField: "div.audiencia-comissao",
+      operationalization: "Texto do bloco de comissão no detalhe; null nas linhas ainda não enriquecidas.",
+      caveat: "Detail-only (v2).",
+    },
+    {
+      name: "local",
+      type: "string",
+      description: "Local de realização do evento.",
+      sourceEndpoint: EP_EVENTOS_DETALHE,
+      sourceField: "div.audiencia-local",
+      operationalization: "Texto do bloco de local no detalhe; null quando ausente ou não enriquecido.",
+      caveat: "Detail-only (v2).",
+    },
+    {
+      name: "descricao",
+      type: "string",
+      description: "Finalidade/descrição do evento.",
+      sourceEndpoint: EP_EVENTOS_DETALHE,
+      sourceField: "div.audiencia-finalidade",
+      operationalization: "Texto do bloco de finalidade no detalhe; null quando ausente ou não enriquecido.",
+      caveat: "Detail-only (v2).",
+    },
+    {
+      name: "pauta",
+      type: "object",
+      description: "Itens de pauta do evento (lista de strings).",
+      sourceEndpoint: EP_EVENTOS_DETALHE,
+      sourceField: "div.audiencia-pauta (itens)",
+      operationalization: "Bloco de pauta do detalhe, dividido em itens; [] quando ausente ou não enriquecido.",
+      caveat: "Detail-only (v2).",
+    },
+    {
+      name: "convidados",
+      type: "object",
+      description: "Convidados do evento (nomes — agentes públicos por função).",
+      sourceEndpoint: EP_EVENTOS_DETALHE,
+      sourceField: "p.titulo-convidados > span (nomes)",
+      operationalization:
+        "Lista de nomes dos convidados do detalhe; [] quando ausente ou não enriquecido. Nome MANTIDO (convidado é agente público na função — ver postura de privacidade).",
+      caveat: "Detail-only (v2).",
+    },
+    {
+      name: "videoUrl",
+      type: "url",
+      description: "URL do vídeo (embed do YouTube) do evento, quando houver.",
+      sourceEndpoint: EP_EVENTOS_DETALHE,
+      sourceField: "embed YouTube (src do iframe)",
+      operationalization: "URL do embed do YouTube no detalhe; null até haver vídeo ou nas linhas não enriquecidas.",
+      caveat: "Detail-only (v2); null é o estado comum (nem todo evento tem vídeo).",
+    },
+    {
       name: "comentarios",
       type: "integer",
       unit: "comentários",
-      description: "Número de comentários no evento.",
-      sourceEndpoint: EP_EVENTOS_LISTING,
-      sourceField: "bloco do evento (\"N comentário(s)\"), best-effort",
-      operationalization: "Regex de \"N comentário\" no bloco; 0 quando ausente na listagem.",
-      caveat: "PROVISÓRIO (A3, ETAPA 4): valor lido só da listagem `principalaudiencia`, que nem sempre expõe a contagem — quando ausente, o campo recebe 0, indistinguível de zero real. Na amostra da ETAPA 4: dataset 0 vs detalhe 62/8/1 (eventos 38311/15127/13835). Frequência do 0 espúrio no corpus e fonte canônica não caracterizadas. Não use como medida de engajamento antes do estudo de reconciliação listagem×detalhe (C2).",
+      description: "Número CANÔNICO de comentários no evento.",
+      sourceEndpoint: EP_EVENTOS_COMENTARIOS,
+      sourceField: "nº de blocos <div class=\"comentario\"> no fragmento AJAX",
+      operationalization:
+        "Contagem dos blocos de comentário retornados por ajaxcolecaocomentarioaudiencia (fragmento sem paginação) — a fonte canônica (estudo A3: a listagem tinha 0 espúrio em 82% dos eventos, captando só ~6,7% do engajamento). VOLÁTIL: recontado a cada ciclo de crawl. 0 nas linhas ainda não enriquecidas.",
+      caveat: "Contagem canônica via AJAX (estudo A3). Volátil (comentários acumulam) → re-crawl por ciclo. O nível-comentário está na entidade `eventos_comentarios`.",
     },
     {
       name: "status",
@@ -349,6 +458,86 @@ const eventosSchema: EntitySchema = {
       derived: true,
       caveat: "Censura à esquerda: piso 14/06/2026; baseline de eventos = 29/06/2026 (~99,5% do corpus — primeiro crawl completo pós-ruptura do container) deve ser excluído de análises de ritmo; série interpretável a partir de 30/06/2026. Resolução = cadência do crawl de corpus completo.",
       select: (ctx) => ctx.meta.firstSeenAt ?? null,
+    },
+  ],
+};
+
+// ── eventos_comentarios (nível-comentário das audiências; tabela NOVA na v2) ──
+// Linha = UM comentário de audiência. Fonte = fragmento AJAX ajaxcolecaocomentarioaudiencia
+// (sem paginação). VOLÁTIL (comentários acumulam) → re-crawl por ciclo. Privacidade: conteúdo de
+// cidadão → guarda UF + texto + timestamp; o NOME do comentarista é descartado NA ORIGEM.
+const eventosComentariosSchema: EntitySchema = {
+  titulo: "Comentários de audiências (nível-comentário)",
+  fonteResumo:
+    "Fragmento AJAX `ajaxcolecaocomentarioaudiencia?audienciaId={ID}` (blocos `<div class=\"comentario\">`). Nível-comentário das audiências; sem nome do comentarista (só UF).",
+  variables: [
+    {
+      name: "eventoId",
+      type: "integer",
+      description: "Id da audiência a que o comentário pertence (FK para a entidade `eventos`).",
+      sourceEndpoint: EP_EVENTOS_COMENTARIOS,
+      sourceField: "parâmetro audienciaId da chamada AJAX",
+      operationalization: "audienciaId usado na requisição do fragmento de comentários; liga ao nível-evento.",
+    },
+    {
+      name: "comentarioId",
+      type: "integer",
+      description: "Id estável do comentário no portal.",
+      sourceEndpoint: EP_EVENTOS_COMENTARIOS,
+      sourceField: "atributo data-id do bloco <div class=\"comentario\">",
+      operationalization: "Inteiro do data-id (equivalente ao sufixo de id=\"comentario-N\").",
+    },
+    {
+      name: "uf",
+      type: "string",
+      description: "UF do cidadão comentarista (SEM nome — conteúdo de cidadão).",
+      sourceEndpoint: EP_EVENTOS_COMENTARIOS,
+      sourceField: "div.titulo-comentarios, parte \"(XX)\"",
+      operationalization:
+        "Extrai só a sigla de UF entre parênteses de \"NOME (XX)\"; o NOME é descartado NA ORIGEM (nunca gravado). Postura de privacidade: conteúdo de cidadão → só UF.",
+      caveat: "Nome do comentarista deliberadamente não coletado; null quando o bloco não traz \"(UF)\".",
+    },
+    {
+      name: "texto",
+      type: "string",
+      description: "Texto do comentário (verbatim — conteúdo deliberativo).",
+      sourceEndpoint: EP_EVENTOS_COMENTARIOS,
+      sourceField: "div.texto-comentarios",
+      operationalization: "Texto do bloco, com tags removidas; preservado verbatim.",
+    },
+    {
+      name: "data",
+      type: "date",
+      description: "Data do comentário.",
+      sourceEndpoint: EP_EVENTOS_COMENTARIOS,
+      sourceField: "div.horadata-comentarios (parte DD/MM/AAAA)",
+      operationalization: "extractDate sobre \"HHhMM - DD/MM/AAAA\" → ISO YYYY-MM-DD.",
+    },
+    {
+      name: "hora",
+      type: "string",
+      description: "Hora do comentário (HH:MM).",
+      sourceEndpoint: EP_EVENTOS_COMENTARIOS,
+      sourceField: "div.horadata-comentarios (parte HHhMM)",
+      operationalization: "Converte \"HHhMM\" da mesma célula em HH:MM.",
+    },
+    {
+      name: "momentoVideoUrl",
+      type: "url",
+      description: "URL do momento do vídeo ancorado ao comentário, quando houver.",
+      sourceEndpoint: EP_EVENTOS_COMENTARIOS,
+      sourceField: "momento-comentario / momento-por-link (quando presente)",
+      operationalization: "Subconjunto: comentário ancorado a um instante do vídeo; null quando ausente.",
+      caveat: "Presente só em comentários ancorados a um momento do vídeo.",
+    },
+    {
+      name: "convidadoAssociado",
+      type: "string",
+      description: "Convidado a quem o comentário se dirige (nome — agente público), quando houver.",
+      sourceEndpoint: EP_EVENTOS_COMENTARIOS,
+      sourceField: "momento-convidado-nome / momento-convidado-cargo (quando presente)",
+      operationalization: "Nome/cargo do convidado associado ao momento; null quando ausente. Convidado é público (nome mantido).",
+      caveat: "Presente só quando o comentário está associado a um convidado.",
     },
   ],
 };
@@ -453,10 +642,11 @@ const consultasVotosSchema: EntitySchema = {
   ],
 };
 
-export const ENTITY_SCHEMAS: Record<Entidade, EntitySchema> = {
+export const ENTITY_SCHEMAS: Record<DatasetEntity, EntitySchema> = {
   consultas: consultasSchema,
   ideias: ideiasSchema,
   eventos: eventosSchema,
+  eventos_comentarios: eventosComentariosSchema,
   consultas_votos: consultasVotosSchema,
 };
 

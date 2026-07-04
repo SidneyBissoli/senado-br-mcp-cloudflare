@@ -84,6 +84,97 @@ export function generateRunOnlySql(now: string, status: string, rowsScraped: num
 }
 
 /**
+ * Load SQL do backfill de DETALHE (resumível), em lotes. Emite upsert + history-on-change das linhas
+ * `changed` e, no FIM do ÚLTIMO arquivo, o upsert do cursor (`tailStmt`) — para o cursor só avançar
+ * depois que todos os upserts do chunk aplicaram. NÃO grava run row 'ok' (não é um crawl de corpus;
+ * não deve mexer no baseline de freshness). Sempre retorna ≥1 arquivo (o do cursor), mesmo sem mudança.
+ */
+export function generateDetalheLoadSqlBatches(
+  annotated: Array<{ rec: SyncRecord; changed: boolean }>,
+  now: string,
+  entidade: string,
+  tailStmt: string,
+  maxStmtsPerFile = 10000,
+): string[] {
+  const lines: string[] = [];
+  for (const { rec, changed } of annotated) {
+    lines.push(upsertStmt(entidade, rec, now));
+    if (changed) lines.push(historyStmt(entidade, rec, now));
+  }
+  lines.push(tailStmt);
+
+  const files: string[] = [];
+  for (let i = 0; i < lines.length; i += maxStmtsPerFile) {
+    files.push(lines.slice(i, i + maxStmtsPerFile).join("\n") + "\n");
+  }
+  return files;
+}
+
+// ── e-Cidadania v2: nível-comentário de audiências (tabela ecidadania_comentarios) ──
+
+/** Uma linha do nível-comentário pronta para persistir. `contentHash` cobre só o núcleo (sem scraped_at). */
+export interface ComentarioRecord {
+  eventoId: number;
+  comentarioId: number;
+  uf: string | null;
+  texto: string;
+  data: string | null;
+  hora: string | null;
+  momentoVideoUrl: string | null;
+  convidadoAssociado: string | null;
+  contentHash: string;
+}
+
+function comentarioUpsertStmt(rec: ComentarioRecord, now: string): string {
+  const cols = [
+    rec.eventoId, rec.comentarioId, now, rec.contentHash,
+    rec.uf, rec.texto, rec.data, rec.hora, rec.momentoVideoUrl, rec.convidadoAssociado,
+  ];
+  return (
+    "INSERT INTO ecidadania_comentarios (evento_id, comentario_id, scraped_at, content_hash, uf, texto, data, hora, momento_video_url, convidado_associado) VALUES (" +
+    cols.map(sqlValue).join(", ") +
+    ") ON CONFLICT(evento_id, comentario_id) DO UPDATE SET " +
+    "scraped_at=excluded.scraped_at, content_hash=excluded.content_hash, uf=excluded.uf, texto=excluded.texto, " +
+    "data=excluded.data, hora=excluded.hora, momento_video_url=excluded.momento_video_url, convidado_associado=excluded.convidado_associado;"
+  );
+}
+
+/**
+ * Upsert do cursor de backfill de detalhe (retomada resumível). Idempotente por `entidade`.
+ */
+export function cursorUpsertStmt(entidade: string, lastEntityId: number, fullPasses: number, now: string): string {
+  const cols = [entidade, lastEntityId, fullPasses, now];
+  return (
+    "INSERT INTO ecidadania_detalhe_cursor (entidade, last_entity_id, full_passes, updated_at) VALUES (" +
+    cols.map(sqlValue).join(", ") +
+    ") ON CONFLICT(entidade) DO UPDATE SET last_entity_id=excluded.last_entity_id, full_passes=excluded.full_passes, updated_at=excluded.updated_at;"
+  );
+}
+
+/**
+ * Load SQL do nível-comentário, em lotes de no máximo `maxStmtsPerFile` statements. Só as linhas
+ * `changed` (novas/alteradas) entram — o re-crawl por ciclo diffa contra o content_hash já gravado,
+ * então em regime permanente só comentários novos geram statements. Upserts são idempotentes; a
+ * aplicação em vários arquivos NÃO é atômica entre arquivos (mesma disciplina de `generateLoadSqlBatches`).
+ */
+export function generateComentariosSqlBatches(
+  annotated: Array<{ rec: ComentarioRecord; changed: boolean }>,
+  now: string,
+  maxStmtsPerFile = 10000,
+): string[] {
+  const lines: string[] = [];
+  for (const { rec, changed } of annotated) {
+    if (changed) lines.push(comentarioUpsertStmt(rec, now));
+  }
+  if (lines.length === 0) return [];
+  const files: string[] = [];
+  for (let i = 0; i < lines.length; i += maxStmtsPerFile) {
+    files.push(lines.slice(i, i + maxStmtsPerFile).join("\n") + "\n");
+  }
+  return files;
+}
+
+/**
  * Same load as `generateLoadSql`, but split into multiple files of at most `maxStmtsPerFile`
  * statements each — for a large corpus (ideias is ~150k items → ~300k statements) a single .sql
  * file exceeds what `wrangler d1 execute --file` will apply in one shot.

@@ -8,8 +8,7 @@
  */
 
 import { assembleRecord, type HarmonizedRecord } from "./provenance.js";
-import type { HarmonizeMeta } from "./schema.js";
-import type { Entidade } from "../scraper/pipeline.js";
+import type { DatasetEntity, HarmonizeMeta } from "./schema.js";
 
 /** Uma linha do corpus pronta para harmonizar (payload já parseado do payload_json). */
 export interface CorpusRow {
@@ -33,7 +32,7 @@ function metaFor(row: CorpusRow): HarmonizeMeta {
 }
 
 /** Harmoniza uma linha do corpus. */
-export function harmonizeRow(entidade: Entidade, row: CorpusRow): HarmonizedRecord {
+export function harmonizeRow(entidade: DatasetEntity, row: CorpusRow): HarmonizedRecord {
   return assembleRecord(entidade, row.entityId, row.payload, metaFor(row));
 }
 
@@ -42,7 +41,7 @@ export function harmonizeRow(entidade: Entidade, row: CorpusRow): HarmonizedReco
  * parte do contrato de saída: dois runs sobre o mesmo corpus produzem NDJSON byte-idêntico, então
  * um diff entre vintages só mostra mudança real (não ruído de ordem).
  */
-export function harmonizeEntity(entidade: Entidade, rows: CorpusRow[]): HarmonizedRecord[] {
+export function harmonizeEntity(entidade: DatasetEntity, rows: CorpusRow[]): HarmonizedRecord[] {
   return [...rows]
     .sort((a, b) => a.entityId - b.entityId)
     .map((row) => harmonizeRow(entidade, row));

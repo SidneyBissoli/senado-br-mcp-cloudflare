@@ -11,10 +11,10 @@ import {
   DATASET_LICENSE,
   DATASET_SCHEMA_VERSION,
   ENTITY_SCHEMAS,
+  type DatasetEntity,
   type EntitySchema,
   type VariableDef,
 } from "./schema.js";
-import type { Entidade } from "../scraper/pipeline.js";
 
 /** Escapa `|` e quebras de linha para uma célula de tabela Markdown. */
 function cell(s: string | undefined): string {
@@ -28,7 +28,7 @@ function variableRow(v: VariableDef): string {
   return `| \`${v.name}\`${derived} | ${cell(tipo)} | ${cell(v.description)} | \`${cell(v.sourceEndpoint)}\` | ${cell(v.sourceField)} | ${cell(v.operationalization)} | ${cell(v.caveat)} |`;
 }
 
-function entitySection(entidade: Entidade, schema: EntitySchema): string {
+function entitySection(entidade: DatasetEntity, schema: EntitySchema): string {
   const lines: string[] = [];
   lines.push(`## \`${entidade}\` — ${schema.titulo}`);
   lines.push("");
@@ -121,7 +121,7 @@ export function buildDictionaryMarkdown(generatedAt?: string): string {
   );
   lines.push("");
 
-  for (const entidade of Object.keys(ENTITY_SCHEMAS) as Entidade[]) {
+  for (const entidade of Object.keys(ENTITY_SCHEMAS) as DatasetEntity[]) {
     lines.push(entitySection(entidade, ENTITY_SCHEMAS[entidade]));
   }
 

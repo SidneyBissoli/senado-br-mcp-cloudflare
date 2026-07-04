@@ -1,31 +1,39 @@
 /**
  * e-Cidadania EVENTOS full-corpus ingestion job — runs OFF-Worker (scheduled GitHub Action).
  *
- * Mirrors the consultas job (`index.ts`) but for `entidade='eventos'`, with two differences:
- *   - source is the `principalaudiencia?p=N` HTML listing (parseEventoListingPage);
- *   - status comes straight from the listing block (no `/processo` bridge), so there is no
- *     status-universe gate and no linger re-status (events never leave the listing; they just
- *     flip agendado→encerrado, which the next crawl picks up).
+ * v2 (ROADMAP ETAPA 5.5): passou de só-listagem para listagem + DETALHE + AJAX de comentários.
+ *   1. Crawl the `principalaudiencia?p=N` HTML listing (ids + provisional listing fields + status).
+ *      Guards unchanged: crawl-completeness + catastrophic floor (classifyRun) on the LISTING count.
+ *   2. ENRICH each event: fetch the detail page (canonical data/hora + comissaoNomeCompleto/local/
+ *      descricao/pauta/convidados/videoUrl) and the AJAX comment fragment (canonical comment count +
+ *      the nível-comentário rows). Decisão 👤: re-crawl comments of ALL events every cycle.
+ *   3. Emit `out-eventos.sql` (enriched corpus, upsert + history-on-change) and
+ *      `out-eventos-comentarios-NNN.sql` batches (nível-comentário, diffed against the stored hashes).
  *
- * Guards kept identical: crawl-completeness (every page 1..lastPage parses) + catastrophic floor
- * (classifyRun at ECIDADANIA_CORPUS_MIN_PCT vs the last good 'eventos' corpus). Emits out-eventos.sql.
+ * Detail/comment fetch failures are best-effort: the event falls back to its listing fields (detail)
+ * or the listing comment count (AJAX), and the gap is LOGGED (never silenced). The listing guards
+ * still decide whether the corpus is written at all. PRIVACIDADE: comentários guardam só UF (sem nome).
  */
 
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { getText, sleep } from "./http.js";
 import { parseEventoListingPage, findLastPageEventos, type EventoListingItem } from "./eventos-listing.js";
-import { ECIDADANIA_BASE, buildEventoResumo } from "../../src/scraper/ecidadania.js";
+import { ECIDADANIA_BASE, buildEventoResumoEnriquecido } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { classifyRun, parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
-import { readExistingMeta, readLastGoodRows } from "./d1.js";
-import { generateLoadSql, generateRunOnlySql } from "./sql.js";
+import { readExistingMeta, readLastGoodRows, readComentarioHashes } from "./d1.js";
+import { generateLoadSql, generateRunOnlySql, generateComentariosSqlBatches, type ComentarioRecord } from "./sql.js";
+import { fetchEventoDetalhe, fetchComentariosAudiencia, toComentarioRecord, planComentariosSync } from "./detalhe.js";
 
 const ENTIDADE = "eventos";
 const PAGE_DELAY_MS = Number(process.env.INGEST_EVENTOS_PAGE_DELAY_MS) || Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
+const DETAIL_DELAY_MS = Number(process.env.INGEST_EVENTOS_DETAIL_DELAY_MS) || 250;
 const MAX_PAGES = 500;
-const OUT_PATH = join(dirname(fileURLToPath(import.meta.url)), "out-eventos.sql");
+const OUT_DIR = dirname(fileURLToPath(import.meta.url));
+const OUT_PATH = join(OUT_DIR, "out-eventos.sql");
+const COMENT_PREFIX = "out-eventos-comentarios-";
 
 interface CrawlResult {
   items: EventoListingItem[];
@@ -57,11 +65,85 @@ async function crawlAllPages(now: Date): Promise<CrawlResult> {
   return { items: [...byId.values()], lastPage, failedPages, complete: failedPages.length === 0 };
 }
 
+/** Remove any out-eventos-comentarios-*.sql from a prior run so a smaller run never re-applies stale files. */
+function cleanOldComentarios(): void {
+  for (const f of readdirSync(OUT_DIR)) {
+    if (f.startsWith(COMENT_PREFIX) && f.endsWith(".sql")) unlinkSync(join(OUT_DIR, f));
+  }
+}
+
+interface EnrichResult {
+  eventoRecords: SyncRecord[];
+  comentarioRecords: ComentarioRecord[];
+  detailFails: number;
+  commentFails: number;
+}
+
+/** Fetch detail + AJAX comments for every event; build enriched corpus rows + comment rows. */
+async function enrichAll(items: EventoListingItem[]): Promise<EnrichResult> {
+  const eventoRecords: SyncRecord[] = [];
+  const comentarioRecords: ComentarioRecord[] = [];
+  let detailFails = 0;
+  let commentFails = 0;
+
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+
+    let detalhe = null;
+    try {
+      detalhe = await fetchEventoDetalhe(it.id);
+    } catch (e) {
+      detailFails++;
+      console.error(`[eventos][detalhe][gap] id=${it.id}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    await sleep(DETAIL_DELAY_MS);
+
+    let comentariosCanon: number | null = null;
+    try {
+      const cs = await fetchComentariosAudiencia(it.id);
+      comentariosCanon = cs.length;
+      for (const c of cs) comentarioRecords.push(toComentarioRecord(it.id, c));
+    } catch (e) {
+      commentFails++;
+      console.error(`[eventos][comentarios][gap] id=${it.id}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    await sleep(DETAIL_DELAY_MS);
+
+    const ev = buildEventoResumoEnriquecido({
+      id: it.id,
+      titulo: it.titulo,
+      comissao: it.comissao,
+      status: it.status,
+      dataListagem: it.data,
+      horaListagem: it.hora,
+      comentariosListagem: it.comentarios,
+      detalhe,
+      comentariosCanon,
+    });
+    const payloadJson = JSON.stringify(ev);
+    eventoRecords.push({
+      entityId: ev.id,
+      sourceUrl: ev.url,
+      payloadJson,
+      status: ev.status,
+      metrica: ev.comentarios,
+      comissao: ev.comissao,
+      contentHash: contentHash(payloadJson),
+    });
+
+    if ((i + 1) % 250 === 0) console.log(`[eventos][enrich] ${i + 1}/${items.length}`);
+  }
+
+  return { eventoRecords, comentarioRecords, detailFails, commentFails };
+}
+
 async function main(): Promise<void> {
   const nowDate = new Date();
   const now = nowDate.toISOString();
   const force = process.env.INGEST_FORCE === "1" || process.argv.includes("--force");
   const corpusMinPct = parseAnomalyMinPct(process.env.ECIDADANIA_CORPUS_MIN_PCT, 80);
+
+  cleanOldComentarios();
 
   const crawl = await crawlAllPages(nowDate);
   console.log(`[eventos][crawl] lastPage=${crawl.lastPage} items=${crawl.items.length} failedPages=${crawl.failedPages.length}`);
@@ -73,35 +155,38 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const records: SyncRecord[] = crawl.items.map((it) => {
-    const ev = buildEventoResumo(it);
-    const payloadJson = JSON.stringify(ev);
-    return {
-      entityId: ev.id,
-      sourceUrl: ev.url,
-      payloadJson,
-      status: ev.status,
-      metrica: ev.comentarios,
-      comissao: ev.comissao,
-      contentHash: contentHash(payloadJson),
-    };
-  });
-
+  // Catastrophic floor on the LISTING count (detail/comment enrichment is best-effort, not a gate).
   const verdict = classifyRun(
-    { rowsScraped: records.length, lastGoodRows: force ? null : readLastGoodRows(ENTIDADE), error: undefined },
+    { rowsScraped: crawl.items.length, lastGoodRows: force ? null : readLastGoodRows(ENTIDADE), error: undefined },
     corpusMinPct,
   );
   if (verdict !== "ok") {
-    const err = `catastrophic floor: ${records.length} linhas (< ${corpusMinPct}% do último bom); use --force se legítimo`;
+    const err = `catastrophic floor: ${crawl.items.length} linhas (< ${corpusMinPct}% do último bom); use --force se legítimo`;
     console.error(`[eventos][gate] verdict=${verdict} — ${err}`);
-    writeFileSync(OUT_PATH, generateRunOnlySql(now, verdict, records.length, err, ENTIDADE));
+    writeFileSync(OUT_PATH, generateRunOnlySql(now, verdict, crawl.items.length, err, ENTIDADE));
     process.exit(1);
   }
 
+  const { eventoRecords, comentarioRecords, detailFails, commentFails } = await enrichAll(crawl.items);
+  console.log(
+    `[eventos][enrich] done: ${eventoRecords.length} eventos, ${comentarioRecords.length} comentários; ` +
+      `gaps: detalhe=${detailFails} comentarios=${commentFails}`,
+  );
+
+  // Corpus load (rows_scraped = crawled listing count, the floor baseline).
   const existingHashes = new Map(readExistingMeta(ENTIDADE).map((r) => [r.id, r.content_hash]));
-  const { annotated, rowsChanged } = planEntitySync(records, existingHashes);
-  writeFileSync(OUT_PATH, generateLoadSql(annotated, now, records.length, rowsChanged, ENTIDADE));
-  console.log(`[eventos][load] wrote ${OUT_PATH}: ${records.length} upserts, ${rowsChanged} changed, 1 ok run row`);
+  const { annotated, rowsChanged } = planEntitySync(eventoRecords, existingHashes);
+  writeFileSync(OUT_PATH, generateLoadSql(annotated, now, crawl.items.length, rowsChanged, ENTIDADE));
+  console.log(`[eventos][load] wrote ${OUT_PATH}: ${eventoRecords.length} upserts, ${rowsChanged} changed, 1 ok run row`);
+
+  // Nível-comentário: diff vs stored hashes, emit only changed/new rows (batched).
+  const existingComentHashes = readComentarioHashes();
+  const { annotated: comentAnnotated, rowsChanged: comentChanged } = planComentariosSync(comentarioRecords, existingComentHashes);
+  const comentFiles = generateComentariosSqlBatches(comentAnnotated, now);
+  comentFiles.forEach((content, i) => {
+    writeFileSync(join(OUT_DIR, `${COMENT_PREFIX}${String(i + 1).padStart(3, "0")}.sql`), content);
+  });
+  console.log(`[eventos][comentarios] ${comentarioRecords.length} coletados, ${comentChanged} novos/alterados → ${comentFiles.length} arquivo(s)`);
   process.exit(0);
 }
 

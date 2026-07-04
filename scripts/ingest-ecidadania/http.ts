@@ -29,6 +29,10 @@ interface GetOpts {
   charset?: string;
   timeoutMs?: number;
   retries?: number;
+  /** Send the XHR header the e-Cidadania `ajax*` fragment endpoints expect. */
+  xhr?: boolean;
+  /** Treat an empty body as a valid (empty) result instead of an error (AJAX fragments of 0 comments). */
+  allowEmpty?: boolean;
 }
 
 /** Fetch with retry/backoff. Returns the raw Response on the final successful attempt. */
@@ -37,10 +41,12 @@ async function fetchWithRetry(url: string, opts: GetOpts): Promise<Response> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   let lastErr: unknown;
 
+  const headers: Record<string, string> = { Accept: opts.accept ?? "*/*", "User-Agent": USER_AGENT };
+  if (opts.xhr) headers["X-Requested-With"] = "XMLHttpRequest";
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const resp = await fetch(url, {
-        headers: { Accept: opts.accept ?? "*/*", "User-Agent": USER_AGENT },
+        headers,
         signal: AbortSignal.timeout(timeoutMs),
       });
       // 429 / 5xx are transient — retry; other non-2xx are fatal.
@@ -70,7 +76,7 @@ export async function getText(url: string, opts: GetOpts = {}): Promise<string> 
   const text = opts.charset
     ? new TextDecoder(opts.charset).decode(await resp.arrayBuffer())
     : await resp.text();
-  if (!text.trim()) throw new HttpError(`Empty response body for ${url}`);
+  if (!opts.allowEmpty && !text.trim()) throw new HttpError(`Empty response body for ${url}`);
   return text;
 }
 

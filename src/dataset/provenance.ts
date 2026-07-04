@@ -22,10 +22,10 @@ import {
   DATASET_SCHEMA_VERSION,
   ENTITY_SCHEMAS,
   selectValue,
+  type DatasetEntity,
   type HarmonizeMeta,
   type VariableDef,
 } from "./schema.js";
-import type { Entidade } from "../scraper/pipeline.js";
 
 /** Envelope de proveniência de UM valor. Ordem de chaves fixa (JSON estável / diffável). */
 export interface FieldEnvelope {
@@ -40,7 +40,7 @@ export interface FieldEnvelope {
 
 /** Um registro harmonizado: identidade + um envelope por variável (ordem do esquema). */
 export interface HarmonizedRecord {
-  entidade: Entidade;
+  entidade: DatasetEntity;
   entityId: number;
   fields: Record<string, FieldEnvelope>;
 }
@@ -81,7 +81,7 @@ export function envelopeFor(v: VariableDef, value: unknown, retrievedAt: string)
  * `meta.retrievedAt` é o scraped_at da linha.
  */
 export function assembleRecord(
-  entidade: Entidade,
+  entidade: DatasetEntity,
   entityId: number,
   payload: Record<string, unknown>,
   meta: HarmonizeMeta,

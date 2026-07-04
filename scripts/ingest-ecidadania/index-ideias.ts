@@ -23,10 +23,10 @@ import {
   SITUACAO_STATUS,
   type IdeiaListingItem,
 } from "./ideias-listing.js";
-import { ECIDADANIA_BASE, buildIdeiaResumo } from "../../src/scraper/ecidadania.js";
+import { ECIDADANIA_BASE, buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { classifyRun, parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
-import { readExistingMeta, readLastGoodRows } from "./d1.js";
+import { readExistingMeta, readAllPayloads, readLastGoodRows } from "./d1.js";
 import { generateLoadSqlBatches, generateRunOnlySql } from "./sql.js";
 
 const ENTIDADE = "ideias";
@@ -122,8 +122,24 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // v2: the listing owns titulo/apoios/status; the four detail-only fields
+  // (dataPublicacao/autorUf/descricao/plConvertido) are IMMUTABLE and filled by the separate resumable
+  // detail backfill (index-ideias-detalhe.ts). PRESERVE them from the stored payload so this daily
+  // listing crawl never wipes the enrichment.
+  const existingPayloads = readAllPayloads("ideias");
   const records: SyncRecord[] = crawl.items.map((it) => {
-    const ideia = buildIdeiaResumo({ id: it.id, titulo: it.titulo, apoios: it.apoios, status: it.status });
+    const prev = existingPayloads.get(it.id);
+    const p = prev ? (JSON.parse(prev) as Partial<IdeiaResumo>) : undefined;
+    const ideia = buildIdeiaResumo({
+      id: it.id,
+      titulo: it.titulo,
+      apoios: it.apoios,
+      status: it.status,
+      dataPublicacao: p?.dataPublicacao ?? null,
+      autorUf: p?.autorUf ?? null,
+      descricao: p?.descricao ?? null,
+      plConvertido: p?.plConvertido ?? null,
+    });
     const payloadJson = JSON.stringify(ideia);
     return {
       entityId: ideia.id,
