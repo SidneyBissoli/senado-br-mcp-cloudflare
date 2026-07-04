@@ -79,6 +79,8 @@ jobs:
         if: always()
         env:
           INGEST_FORCE: ${{ inputs.force && '1' || '0' }}
+          # Faster-but-still-polite detail cadence so ~10.8k detail+AJAX fetches finish inside the job budget.
+          INGEST_EVENTOS_DETAIL_DELAY_MS: "150"
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run ingest:ecidadania:eventos
@@ -131,6 +133,11 @@ jobs:
       - name: Generate ideias detail backfill SQL
         if: always()
         env:
+          # Bounded chunk so this last step reliably COMPLETES (it emits SQL + advances the cursor only
+          # at the end — a chunk too large to finish on a flaky portal persists nothing). ~113.7k are
+          # covered over many daily runs via the cursor; a smaller chunk just means more, safer passes.
+          INGEST_IDEIAS_DETALHE_CHUNK: "2000"
+          INGEST_IDEIAS_DETAIL_DELAY_MS: "150"
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run ingest:ecidadania:ideias-detalhe
