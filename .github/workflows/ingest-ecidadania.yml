@@ -44,6 +44,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Ensure the D1 schema exists before any load. All migrations are CREATE ... IF NOT EXISTS,
+      # so re-applying them every run is idempotent and self-heals schema drift (e.g. the v2
+      # ecidadania_comentarios + ecidadania_detalhe_cursor tables the enrichment jobs read/write).
+      - name: Apply D1 migrations (idempotent)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          for f in $(ls migrations/*.sql | sort); do
+            echo "Applying migration $f"
+            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
+          done
+
       - name: Generate corpus load SQL
         id: ingest
         env:
