@@ -1,0 +1,147 @@
+{
+  "geradoEm": "2026-07-04T02:00:55.202Z",
+  "design": {
+    "nAlvo": 100,
+    "hash": "(id*2654435761)%2147483647",
+    "allocStatus": {
+      "agendado": "censo",
+      "cancelado": 23,
+      "encerrado": 70
+    },
+    "epocaBins": "historico ≤2018 · intermediario 2019–2022 · recente 2023–2027 · sem-data"
+  },
+  "allocLog": {
+    "agendado": {
+      "(censo)": 7
+    },
+    "cancelado": {
+      "historico": 11,
+      "intermediario": 7,
+      "recente": 5
+    },
+    "encerrado": {
+      "historico": 28,
+      "intermediario": 20,
+      "recente": 22
+    }
+  },
+  "amostra": 100,
+  "detalhesOk": 100,
+  "erros": 0,
+  "errosIds": [],
+  "data": {
+    "paresComparaveis": 94,
+    "divergentes": 1,
+    "pctDivergente": 1.1,
+    "deltaDiasDist": {
+      "-1": 1
+    }
+  },
+  "hora": {
+    "paresComparaveis": 94,
+    "divergentes": 54,
+    "pctDivergente": 57.4,
+    "deltaMinResumo": {
+      "n": 54,
+      "min": -870,
+      "p25": 2,
+      "mediana": 15,
+      "p75": 28,
+      "max": 52
+    },
+    "deltaMinDist": {
+      "1": 2,
+      "2": 2,
+      "3": 1,
+      "4": 1,
+      "5": 2,
+      "6": 1,
+      "8": 1,
+      "10": 1,
+      "11": 2,
+      "12": 1,
+      "15": 4,
+      "16": 1,
+      "17": 1,
+      "20": 4,
+      "23": 1,
+      "24": 1,
+      "25": 3,
+      "28": 1,
+      "29": 1,
+      "30": 1,
+      "31": 1,
+      "33": 1,
+      "35": 2,
+      "38": 1,
+      "39": 1,
+      "43": 1,
+      "45": 1,
+      "46": 1,
+      "50": 1,
+      "52": 1,
+      "-870": 1,
+      "-630": 1,
+      "-600": 1,
+      "-585": 1,
+      "-540": 3,
+      "-265": 1,
+      "-3": 1,
+      "-2": 1,
+      "-1": 1
+    }
+  },
+  "comentarios": {
+    "canonicoObtido": 100,
+    "canonErros": 0,
+    "listagemZero": 94,
+    "listagemZeroComCanonMaior": 77,
+    "pctZeroEspurio": 81.9,
+    "canonMaiorQueZeroDist": {
+      "n": 77,
+      "min": 1,
+      "p25": 6,
+      "mediana": 15,
+      "p75": 49,
+      "max": 345
+    },
+    "somaComentariosCanon": 2638,
+    "somaComentariosListagem": 176,
+    "listagemNaoZero": [
+      {
+        "id": 39590,
+        "listagem": 17,
+        "canon": 17
+      },
+      {
+        "id": 39610,
+        "listagem": 35,
+        "canon": 35
+      },
+      {
+        "id": 39630,
+        "listagem": 38,
+        "canon": 38
+      },
+      {
+        "id": 39730,
+        "listagem": 49,
+        "canon": 52
+      },
+      {
+        "id": 39750,
+        "listagem": 1,
+        "canon": 1
+      },
+      {
+        "id": 39770,
+        "listagem": 36,
+        "canon": 36
+      }
+    ],
+    "somaComentariosDetalheHtml": 0
+  },
+  "statusFold": {
+    "agendadoListDetalheDiverge": []
+  }
+}
