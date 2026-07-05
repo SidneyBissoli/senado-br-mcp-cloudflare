@@ -14,9 +14,22 @@ name: Ingest e-Cidadania corpus
 # writes only a scrape-runs row, never a shrunken corpus. The apply step runs with if: always() so
 # that 'erro'/'anomalo' run row is still recorded even when the ingest step is marked failed.
 
+# RUNS ON A SELF-HOSTED RUNNER. e-Cidadania (www12.senado.leg.br) silently drops connections from
+# GitHub's cloud (Azure) egress IPs — every hosted crawl fails with `curl: (28) Connection timed out`.
+# The block is Azure-range-specific, NOT datacenter-wide nor geographic (verified 05/07 via check-host.net:
+# 38/40 worldwide datacenter nodes incl. Germany/Nuremberg reached the portal HTTP 200). So this crawl
+# runs from a DEDICATED Hetzner (Germany) box registered as a self-hosted runner with the `ecidadania`
+# label.
+#
+# ── Runner registration (one-time, on the dedicated box) ─────────────────────────────────────────
+#   Settings ▸ Actions ▸ Runners ▸ New self-hosted runner (Linux/X64). Run ./config.sh as a NON-root
+#   user and add the label `ecidadania`; install as a service (./svc.sh install <user> && ./svc.sh start).
+# ── Security (repo is PUBLIC) ────────────────────────────────────────────────────────────────────
+#   Safe only because this triggers on schedule/workflow_dispatch alone — NEVER add a pull_request or
+#   pull_request_target trigger, which would let a forked PR run code on the box.
 on:
   schedule:
-    - cron: "0 5 * * *" # daily 05:00 UTC
+    - cron: "0 5 * * *" # daily 05:00 UTC (02:00 America/Sao_Paulo)
   workflow_dispatch:
     inputs:
       force:
@@ -30,10 +43,15 @@ concurrency:
 
 jobs:
   ingest:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ecidadania]
+    # Bound the whole job so a portal hang frees the runner instead of blocking it for hours
+    # (a hosted run once sat ~4h stuck on the detail backfill before we cancelled it).
+    timeout-minutes: 180
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        # Default clean:true (git clean -ffdx) wipes stale out*.sql from a prior run on the
+        # persistent self-hosted workspace, so the apply steps never re-load last run's SQL.
 
       - name: Setup Node
         uses: actions/setup-node@v5
