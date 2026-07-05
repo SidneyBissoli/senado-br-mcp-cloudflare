@@ -37,34 +37,41 @@ import { fetchConsultaDetalheCorpus } from "./detalhe.js";
 const SENADO_BASE_URL = process.env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
 const PAGE_DELAY_MS = Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
 const DETAIL_DELAY_MS = Number(process.env.INGEST_CONSULTAS_DETAIL_DELAY_MS) || 250;
+/** Máximo de consultas a enriquecer (fetch de detalhe) por execução; o resto fica p/ o próximo run. */
+const DETAIL_CHUNK = Number(process.env.INGEST_CONSULTAS_CHUNK) || 3000;
 const MAX_PAGES = 1000; // safety cap against a runaway pagination value
 const OUT_PATH = join(dirname(fileURLToPath(import.meta.url)), "out.sql");
 
+/** Uma consulta ainda NÃO enriquecida = seu payload não carrega a chave `autoria` (v1 ou nova). */
+function needsEnrich(prev: string | undefined): boolean {
+  return !prev || !prev.includes('"autoria"');
+}
+
 /**
  * Enrich crawled consultas with detail-only `autoria`/`relator` (agentes públicos — name kept).
- * These are IMMUTABLE, so we only fetch the detail page for rows NOT yet enriched (a stored payload
- * that already carries the `autoria` key is preserved); after the first backfill only new consultas
- * are fetched. Detail fetch failures fall back to preserved/null and are logged (never silenced).
+ * These are IMMUTABLE, so a stored payload that already carries the `autoria` key is preserved; only
+ * rows NOT yet enriched are fetched, and only up to a per-run cap (`doFetch`) so a first backfill of
+ * ~7,8k não estoure o orçamento do job — o resto fica para o próximo run. Detail fetch failures fall
+ * back to null and are logged (never silenced).
  */
 async function enrichConsulta(
   it: ListingItem,
   status: string,
   existing: Map<number, string>,
+  doFetch: boolean,
 ): Promise<ConsultaResumo> {
   const id = it.codigoMateria;
   const prev = existing.get(id);
   let autoria: string | null = null;
   let relator: string | null = null;
-  let enriched = false;
   if (prev) {
     const p = JSON.parse(prev) as Partial<ConsultaResumo>;
     if ("autoria" in p) {
       autoria = p.autoria ?? null;
       relator = p.relator ?? null;
-      enriched = true;
     }
   }
-  if (!enriched) {
+  if (needsEnrich(prev) && doFetch) {
     try {
       const d = await fetchConsultaDetalheCorpus(id);
       autoria = d.autoria;
@@ -158,12 +165,14 @@ async function main(): Promise<void> {
   // 3. Normalize + hash (canonical ConsultaResumo via shared builder; metrica_principal = totalVotos).
   //    v2: enrich with detail-only autoria/relator, preserving already-enriched rows (immutable).
   const existingPayloads = readAllPayloads("consultas");
+  const pendentes = crawl.items.filter((it) => needsEnrich(existingPayloads.get(it.codigoMateria))).length;
   const records: SyncRecord[] = [];
-  let consultasEnriched = 0;
+  let fetched = 0;
   for (const it of crawl.items) {
     const prev = existingPayloads.get(it.codigoMateria);
-    if (!prev || !prev.includes('"autoria"')) consultasEnriched++;
-    const cr = await enrichConsulta(it, deriveStatus(tramitando, it.codigoMateria), existingPayloads);
+    const doFetch = needsEnrich(prev) && fetched < DETAIL_CHUNK;
+    if (doFetch) fetched++;
+    const cr = await enrichConsulta(it, deriveStatus(tramitando, it.codigoMateria), existingPayloads, doFetch);
     const payloadJson = JSON.stringify(cr);
     records.push({
       entityId: cr.id,
@@ -175,7 +184,7 @@ async function main(): Promise<void> {
       contentHash: contentHash(payloadJson),
     });
   }
-  console.log(`[consultas][enrich] detalhe buscado p/ ${consultasEnriched} consulta(s) não enriquecida(s)`);
+  console.log(`[consultas][enrich] detalhe buscado p/ ${fetched} consulta(s) neste run (pendentes no total: ${pendentes})`);
 
   const abertas = records.filter((r) => r.status === "aberta").length;
   const encerradas = records.length - abertas;

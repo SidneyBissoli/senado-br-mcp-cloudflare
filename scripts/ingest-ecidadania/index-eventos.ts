@@ -4,11 +4,15 @@
  * v2 (ROADMAP ETAPA 5.5): passou de só-listagem para listagem + DETALHE + AJAX de comentários.
  *   1. Crawl the `principalaudiencia?p=N` HTML listing (ids + provisional listing fields + status).
  *      Guards unchanged: crawl-completeness + catastrophic floor (classifyRun) on the LISTING count.
- *   2. ENRICH each event: fetch the detail page (canonical data/hora + comissaoNomeCompleto/local/
- *      descricao/pauta/convidados/videoUrl) and the AJAX comment fragment (canonical comment count +
- *      the nível-comentário rows). Decisão 👤: re-crawl comments of ALL events every cycle.
- *   3. Emit `out-eventos.sql` (enriched corpus, upsert + history-on-change) and
- *      `out-eventos-comentarios-NNN.sql` batches (nível-comentário, diffed against the stored hashes).
+ *   2. ENRICH a BOUNDED SLICE of events per run (RESUMÍVEL por cursor — o detalhe+AJAX de todos os
+ *      ~5,4k eventos não cabe no orçamento de um job): fetch the detail page (canonical data/hora +
+ *      comissaoNomeCompleto/local/descricao/pauta/convidados/videoUrl) and the AJAX comment fragment
+ *      (canonical comment count + the nível-comentário rows) só para a fatia [cursor .. cursor+CHUNK].
+ *      Os demais eventos PRESERVAM o detalhe já gravado (só os campos de listagem — titulo/comissao/
+ *      status — são atualizados). O cursor dá a volta ao fim, então TODOS os eventos são re-visitados
+ *      em rodízio a cada poucos ciclos (o "re-crawl de todos por ciclo" vira "todos por rodízio",
+ *      necessário para caber no tempo).
+ *   3. Emit `out-eventos.sql` (enriched corpus + cursor) and `out-eventos-comentarios-NNN.sql` batches.
  *
  * Detail/comment fetch failures are best-effort: the event falls back to its listing fields (detail)
  * or the listing comment count (AJAX), and the gap is LOGGED (never silenced). The listing guards
@@ -20,16 +24,18 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { getText, sleep } from "./http.js";
 import { parseEventoListingPage, findLastPageEventos, type EventoListingItem } from "./eventos-listing.js";
-import { ECIDADANIA_BASE, buildEventoResumoEnriquecido } from "../../src/scraper/ecidadania.js";
+import { ECIDADANIA_BASE, buildEventoResumo, buildEventoResumoEnriquecido, type EventoResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { classifyRun, parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
-import { readExistingMeta, readLastGoodRows, readComentarioHashes } from "./d1.js";
-import { generateLoadSql, generateRunOnlySql, generateComentariosSqlBatches, type ComentarioRecord } from "./sql.js";
+import { readExistingMeta, readLastGoodRows, readComentarioHashes, readAllPayloads, readDetalheCursor } from "./d1.js";
+import { generateLoadSql, generateRunOnlySql, generateComentariosSqlBatches, cursorUpsertStmt, type ComentarioRecord } from "./sql.js";
 import { fetchEventoDetalhe, fetchComentariosAudiencia, toComentarioRecord, planComentariosSync } from "./detalhe.js";
 
 const ENTIDADE = "eventos";
 const PAGE_DELAY_MS = Number(process.env.INGEST_EVENTOS_PAGE_DELAY_MS) || Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
 const DETAIL_DELAY_MS = Number(process.env.INGEST_EVENTOS_DETAIL_DELAY_MS) || 250;
+/** Quantos eventos enriquecer (detalhe+AJAX) por execução — o resto preserva o detalhe já gravado. */
+const CHUNK = Number(process.env.INGEST_EVENTOS_CHUNK) || 1500;
 const MAX_PAGES = 500;
 const OUT_DIR = dirname(fileURLToPath(import.meta.url));
 const OUT_PATH = join(OUT_DIR, "out-eventos.sql");
@@ -77,17 +83,69 @@ interface EnrichResult {
   comentarioRecords: ComentarioRecord[];
   detailFails: number;
   commentFails: number;
+  enrichedCount: number;
 }
 
-/** Fetch detail + AJAX comments for every event; build enriched corpus rows + comment rows. */
-async function enrichAll(items: EventoListingItem[]): Promise<EnrichResult> {
+/** SyncRecord de um evento a partir do EventoResumo montado. */
+function toSyncRecord(ev: EventoResumo): SyncRecord {
+  const payloadJson = JSON.stringify(ev);
+  return {
+    entityId: ev.id,
+    sourceUrl: ev.url,
+    payloadJson,
+    status: ev.status,
+    metrica: ev.comentarios,
+    comissao: ev.comissao,
+    contentHash: contentHash(payloadJson),
+  };
+}
+
+/**
+ * Preserve an event NOT in this run's slice: keep the detail already stored (data/hora canônicas +
+ * campos v2 + contagem de comentários) e só atualiza os campos que a LISTAGEM manda (titulo/comissao/
+ * status). Se o evento nunca foi enriquecido (sem payload anterior), cai no fallback da listagem.
+ */
+function preserveEvento(it: EventoListingItem, prevJson: string | undefined): EventoResumo {
+  const prev = prevJson ? (JSON.parse(prevJson) as Partial<EventoResumo>) : undefined;
+  return buildEventoResumo({
+    id: it.id,
+    titulo: it.titulo,
+    comissao: it.comissao,
+    status: it.status,
+    data: prev?.data ?? it.data,
+    hora: prev?.hora ?? it.hora,
+    comissaoNomeCompleto: prev?.comissaoNomeCompleto ?? null,
+    local: prev?.local ?? null,
+    descricao: prev?.descricao ?? null,
+    pauta: prev?.pauta ?? [],
+    convidados: prev?.convidados ?? [],
+    videoUrl: prev?.videoUrl ?? null,
+    comentarios: prev?.comentarios ?? it.comentarios ?? 0,
+  });
+}
+
+/**
+ * Build ALL corpus rows: fetch detail+AJAX for the `slice` (enriched), preserve the rest.
+ * Returns the corpus records for every crawled event + the comment rows for the slice only.
+ */
+async function enrichSlice(
+  items: EventoListingItem[],
+  sliceIds: Set<number>,
+  existingPayloads: Map<number, string>,
+): Promise<EnrichResult> {
   const eventoRecords: SyncRecord[] = [];
   const comentarioRecords: ComentarioRecord[] = [];
   let detailFails = 0;
   let commentFails = 0;
+  let enrichedCount = 0;
+  let done = 0;
 
-  for (let i = 0; i < items.length; i++) {
-    const it = items[i];
+  for (const it of items) {
+    if (!sliceIds.has(it.id)) {
+      // Fora da fatia: preserva o detalhe já gravado, atualiza só campos de listagem.
+      eventoRecords.push(toSyncRecord(preserveEvento(it, existingPayloads.get(it.id))));
+      continue;
+    }
 
     let detalhe = null;
     try {
@@ -109,7 +167,7 @@ async function enrichAll(items: EventoListingItem[]): Promise<EnrichResult> {
     }
     await sleep(DETAIL_DELAY_MS);
 
-    const ev = buildEventoResumoEnriquecido({
+    eventoRecords.push(toSyncRecord(buildEventoResumoEnriquecido({
       id: it.id,
       titulo: it.titulo,
       comissao: it.comissao,
@@ -119,22 +177,12 @@ async function enrichAll(items: EventoListingItem[]): Promise<EnrichResult> {
       comentariosListagem: it.comentarios,
       detalhe,
       comentariosCanon,
-    });
-    const payloadJson = JSON.stringify(ev);
-    eventoRecords.push({
-      entityId: ev.id,
-      sourceUrl: ev.url,
-      payloadJson,
-      status: ev.status,
-      metrica: ev.comentarios,
-      comissao: ev.comissao,
-      contentHash: contentHash(payloadJson),
-    });
-
-    if ((i + 1) % 250 === 0) console.log(`[eventos][enrich] ${i + 1}/${items.length}`);
+    })));
+    enrichedCount++;
+    if (++done % 250 === 0) console.log(`[eventos][enrich] ${done}/${sliceIds.size}`);
   }
 
-  return { eventoRecords, comentarioRecords, detailFails, commentFails };
+  return { eventoRecords, comentarioRecords, detailFails, commentFails, enrichedCount };
 }
 
 async function main(): Promise<void> {
@@ -167,17 +215,39 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const { eventoRecords, comentarioRecords, detailFails, commentFails } = await enrichAll(crawl.items);
+  // Fatia a enriquecer neste run: eventos com id > cursor, até CHUNK; dá a volta ao chegar ao fim.
+  const cursor = readDetalheCursor(ENTIDADE);
+  const sorted = [...crawl.items].sort((a, b) => a.id - b.id);
+  let afterId = cursor.lastEntityId;
+  let fullPasses = cursor.fullPasses;
+  let slice = sorted.filter((it) => it.id > afterId).slice(0, CHUNK);
+  if (slice.length === 0 && afterId > 0) {
+    console.log(`[eventos] fim da passada de detalhe (cursor=${afterId}); reiniciando do começo`);
+    afterId = 0;
+    fullPasses += 1;
+    slice = sorted.slice(0, CHUNK);
+  }
+  const sliceIds = new Set(slice.map((it) => it.id));
+  const nextCursor = slice.length ? slice[slice.length - 1].id : afterId;
+  const existingPayloads = readAllPayloads(ENTIDADE);
+  console.log(`[eventos][slice] enriquecendo ${sliceIds.size} de ${crawl.items.length} (cursor ${afterId}→${nextCursor}, passadas=${fullPasses})`);
+
+  const { eventoRecords, comentarioRecords, detailFails, commentFails, enrichedCount } = await enrichSlice(
+    crawl.items,
+    sliceIds,
+    existingPayloads,
+  );
   console.log(
-    `[eventos][enrich] done: ${eventoRecords.length} eventos, ${comentarioRecords.length} comentários; ` +
+    `[eventos][enrich] ${enrichedCount} enriquecidos, ${comentarioRecords.length} comentários; ` +
       `gaps: detalhe=${detailFails} comentarios=${commentFails}`,
   );
 
-  // Corpus load (rows_scraped = crawled listing count, the floor baseline).
+  // Corpus load (rows_scraped = crawled listing count, the floor baseline) + cursor no fim.
   const existingHashes = new Map(readExistingMeta(ENTIDADE).map((r) => [r.id, r.content_hash]));
   const { annotated, rowsChanged } = planEntitySync(eventoRecords, existingHashes);
-  writeFileSync(OUT_PATH, generateLoadSql(annotated, now, crawl.items.length, rowsChanged, ENTIDADE));
-  console.log(`[eventos][load] wrote ${OUT_PATH}: ${eventoRecords.length} upserts, ${rowsChanged} changed, 1 ok run row`);
+  const loadSql = generateLoadSql(annotated, now, crawl.items.length, rowsChanged, ENTIDADE);
+  writeFileSync(OUT_PATH, loadSql + cursorUpsertStmt(ENTIDADE, nextCursor, fullPasses, now) + "\n");
+  console.log(`[eventos][load] wrote ${OUT_PATH}: ${eventoRecords.length} upserts, ${rowsChanged} changed, cursor→${nextCursor}, 1 ok run row`);
 
   // Nível-comentário: diff vs stored hashes, emit only changed/new rows (batched).
   const existingComentHashes = readComentarioHashes();
