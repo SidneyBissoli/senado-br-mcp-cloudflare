@@ -1,0 +1,60 @@
+name: Probe e-Cidadania reachability
+
+# Diagnostic ONLY — no D1, no writes, no secrets. Answers a single question: can a GitHub Actions
+# runner reach www12.senado.leg.br/ecidadania right now, and if not, how does it fail? Compare the
+# result against the same curl from a residential IP (which currently returns 200) to tell a transient
+# outage apart from a persistent cloud-IP block. Manual trigger only.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Runner egress IP
+        run: |
+          echo "Runner public egress IP (which range is being blocked, if any):"
+          curl -s --max-time 15 https://api.ipify.org || echo "(ipify unreachable)"
+          echo
+
+      - name: Control — reach a known-good host (proves the runner has general internet)
+        run: |
+          set +e
+          echo "== https://example.com =="
+          curl -sS -o /dev/null --max-time 15 -w "http=%{http_code} time=%{time_total}s\n" https://example.com
+          echo "curl exit code: $?"
+
+      - name: Probe e-Cidadania endpoints (listing + detail + AJAX)
+        run: |
+          set +e
+          UA="Mozilla/5.0 (reachability-probe; senado-br-mcp)"
+          for url in \
+            "https://www12.senado.leg.br/ecidadania/principalaudiencia?p=1" \
+            "https://www12.senado.leg.br/ecidadania/visualizacaoideia?id=80429" \
+            "https://www12.senado.leg.br/ecidadania/ajaxcolecaocomentarioaudiencia?audienciaId=38311" ; do
+            echo "== $url =="
+            curl -sS -o /dev/null --max-time 30 -A "$UA" \
+              -w "http=%{http_code} time=%{time_total}s size=%{size_download}\n" "$url"
+            echo "curl exit code: $?"
+            echo
+          done
+
+      - name: Verbose TLS/connection trace (first e-Cidadania endpoint)
+        run: |
+          set +e
+          echo "Verbose handshake — reveals connect refused / reset / timeout / TLS vs an HTTP 403:"
+          curl -v --max-time 30 -A "Mozilla/5.0" -o /dev/null \
+            "https://www12.senado.leg.br/ecidadania/principalaudiencia?p=1" 2>&1 | tail -50
+          echo "curl exit code: ${PIPESTATUS[0]}"
+
+      - name: Retry over a short window (5 quick attempts, 20s apart)
+        run: |
+          set +e
+          UA="Mozilla/5.0 (reachability-probe; senado-br-mcp)"
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null --max-time 20 -A "$UA" -w "%{http_code}" \
+              "https://www12.senado.leg.br/ecidadania/principalaudiencia?p=1")
+            echo "attempt $i: http=$code (curl exit $?)"
+            sleep 20
+          done
