@@ -1,0 +1,142 @@
+name: Ingest e-Cidadania (reusable)
+
+# REUSABLE workflow (called via `workflow_call`) — never runs on its own. It holds the SINGLE copy of
+# the ingest job logic; the four thin scheduler stubs (ingest-ecidadania-{consultas,eventos,ideias,
+# ideias-detalhe}.yml) each call it with a different `entity`, so every corpus has its OWN cron,
+# timeout, run status and observability while the logic lives in one place.
+#
+# RUNS ON A SELF-HOSTED RUNNER. e-Cidadania (www12.senado.leg.br) silently drops connections from
+# GitHub's cloud (Azure) egress IPs (curl: (28) Connection timed out). The block is Azure-range-specific,
+# NOT datacenter-wide nor geographic (verified 05/07 via check-host.net: 38/40 worldwide datacenter nodes
+# incl. Germany/Nuremberg reached the portal HTTP 200). So the crawl runs from a DEDICATED Hetzner
+# (Germany) box registered as a self-hosted runner with the `ecidadania` label.
+#
+# ── Runner registration (one-time, on the dedicated box) ─────────────────────────────────────────
+#   Settings ▸ Actions ▸ Runners ▸ New self-hosted runner (Linux/X64). Run ./config.sh as a NON-root
+#   user and add the label `ecidadania`; install as a service (./svc.sh install <user> && ./svc.sh start).
+# ── Security (repo is PUBLIC) ────────────────────────────────────────────────────────────────────
+#   The stubs trigger on schedule/workflow_dispatch ONLY — NEVER add a pull_request or
+#   pull_request_target trigger to a stub, which would let a forked PR run code on the box.
+
+on:
+  workflow_call:
+    inputs:
+      entity:
+        description: "Which corpus to ingest: consultas | eventos | ideias | ideias-detalhe"
+        required: true
+        type: string
+      force:
+        description: "Override the catastrophic floor (write even a large legitimate shrink)"
+        type: boolean
+        default: false
+      timeout_minutes:
+        description: "Job hang-guard. Self-hosted has no 6h cap; each entity finishes well under this."
+        type: number
+        default: 200
+
+# Shared across ALL four entities: the single dedicated runner serves one job at a time anyway, but
+# this makes it explicit that two entities never crawl the portal in parallel. cancel-in-progress:false
+# so a still-running crawl is never killed by the next scheduled entity — the newcomer queues.
+concurrency:
+  group: ecidadania-ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: [self-hosted, ecidadania]
+    timeout-minutes: ${{ inputs.timeout_minutes }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # A D1-scoped API token can't read /memberships for account auto-discovery, so wrangler
+      # needs the account id explicitly (otherwise: "request to /memberships failed", code 9106).
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      INGEST_FORCE: ${{ inputs.force && '1' || '0' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        # Default clean:true (git clean -ffdx) wipes stale out*.sql from a prior run on the
+        # persistent self-hosted workspace, so the apply steps never re-load last run's SQL.
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Ensure the D1 schema exists before any load. All migrations are CREATE ... IF NOT EXISTS,
+      # so re-applying them every run is idempotent and self-heals schema drift (e.g. the v2
+      # ecidadania_comentarios + ecidadania_detalhe_cursor tables the enrichment jobs read/write).
+      - name: Apply D1 migrations (idempotent)
+        run: |
+          for f in $(ls migrations/*.sql | sort); do
+            echo "Applying migration $f"
+            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
+          done
+
+      # ── consultas ────────────────────────────────────────────────────────────────────────────────
+      - name: Generate corpus load SQL (consultas)
+        if: inputs.entity == 'consultas'
+        run: npm run ingest:ecidadania
+
+      # if: always() so the 'erro'/'anomalo' run row (which the generate step writes AND then exits 1)
+      # is still recorded into ecidadania_scrape_runs even on a gate failure.
+      - name: Apply consultas to D1
+        if: ${{ always() && inputs.entity == 'consultas' }}
+        run: npx wrangler d1 execute senado-ecidadania --remote --file=scripts/ingest-ecidadania/out.sql
+
+      # ── eventos (listing principalaudiencia?p=N + detalhe/AJAX de uma fatia rotativa por cursor) ──
+      - name: Generate eventos corpus load SQL
+        if: inputs.entity == 'eventos'
+        env:
+          # Bounded per-run slice: the portal answers in ~2-4s/request and eventos does 2 fetches/event,
+          # so ~600 events ≈ 1h. The cursor rotates through all ~5.4k over ~9 days (by design).
+          INGEST_EVENTOS_CHUNK: "600"
+          INGEST_EVENTOS_DETAIL_DELAY_MS: "150"
+        run: npm run ingest:ecidadania:eventos
+
+      - name: Apply eventos to D1
+        if: ${{ always() && inputs.entity == 'eventos' }}
+        run: npx wrangler d1 execute senado-ecidadania --remote --file=scripts/ingest-ecidadania/out-eventos.sql
+
+      # Nível-comentário (fragmento AJAX; tabela ecidadania_comentarios). Emitido junto com o corpus de
+      # eventos (out-eventos-comentarios-NNN.sql); pode não existir quando nada mudou — tolerar ausência.
+      - name: Apply eventos comentários to D1 (batched files, in order)
+        if: ${{ always() && inputs.entity == 'eventos' }}
+        run: |
+          for f in $(ls scripts/ingest-ecidadania/out-eventos-comentarios-*.sql 2>/dev/null | sort); do
+            echo "Applying $f"
+            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
+          done
+
+      # ── ideias (listing pesquisaideia?situacao=N&p=M; batches out-ideias-NNN.sql) ──────────────────
+      - name: Generate ideias corpus load SQL
+        if: inputs.entity == 'ideias'
+        run: npm run ingest:ecidadania:ideias
+
+      - name: Apply ideias to D1 (batched files, in order)
+        if: ${{ always() && inputs.entity == 'ideias' }}
+        run: |
+          for f in $(ls scripts/ingest-ecidadania/out-ideias-[0-9]*.sql 2>/dev/null | sort); do
+            echo "Applying $f"
+            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
+          done
+
+      # ── ideias-detalhe (backfill resumível por cursor de ~113,7k; reabre dataPublicacao/autorUf/…) ──
+      # Tem cron próprio e roda VÁRIAS vezes/dia (ver stub) para queimar o backfill mais rápido.
+      - name: Generate ideias detail backfill SQL
+        if: inputs.entity == 'ideias-detalhe'
+        env:
+          INGEST_IDEIAS_DETALHE_CHUNK: "2000"
+          INGEST_IDEIAS_DETAIL_DELAY_MS: "150"
+        run: npm run ingest:ecidadania:ideias-detalhe
+
+      - name: Apply ideias detail backfill to D1 (batched files, in order)
+        if: ${{ always() && inputs.entity == 'ideias-detalhe' }}
+        run: |
+          for f in $(ls scripts/ingest-ecidadania/out-ideias-detalhe-*.sql 2>/dev/null | sort); do
+            echo "Applying $f"
+            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
+          done

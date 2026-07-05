@@ -1,0 +1,21 @@
+name: Ingest e-Cidadania — consultas
+
+# Scheduler stub: crawls the full consultas listing + enriches a bounded (conditional) detail slice.
+# All logic lives in the reusable ingest-ecidadania-entity.yml.
+on:
+  schedule:
+    - cron: "0 5 * * *" # daily 05:00 UTC (02:00 America/Sao_Paulo)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Override the catastrophic floor (write even a large legitimate shrink)"
+        type: boolean
+        default: false
+
+jobs:
+  call:
+    uses: ./.github/workflows/ingest-ecidadania-entity.yml
+    with:
+      entity: consultas
+      force: ${{ inputs.force || false }}
+    secrets: inherit

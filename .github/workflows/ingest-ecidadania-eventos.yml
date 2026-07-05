@@ -1,0 +1,21 @@
+name: Ingest e-Cidadania — eventos
+
+# Scheduler stub: crawls the eventos listing + enriches a rotating slice (detalhe + AJAX comentários)
+# of ~600 events/run via cursor. All logic lives in the reusable ingest-ecidadania-entity.yml.
+on:
+  schedule:
+    - cron: "0 8 * * *" # daily 08:00 UTC (05:00 America/Sao_Paulo)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Override the catastrophic floor (write even a large legitimate shrink)"
+        type: boolean
+        default: false
+
+jobs:
+  call:
+    uses: ./.github/workflows/ingest-ecidadania-entity.yml
+    with:
+      entity: eventos
+      force: ${{ inputs.force || false }}
+    secrets: inherit

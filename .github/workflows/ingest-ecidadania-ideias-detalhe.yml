@@ -1,0 +1,17 @@
+name: Ingest e-Cidadania — ideias-detalhe
+
+# Scheduler stub: resumable detail backfill of the ~113.7k ideias corpus (2000/run via cursor).
+# Runs THREE times a day to burn down the backfill faster (~113.7k / 6000/day ≈ 19 days vs ~57 at 1x).
+# Drop back to once daily after the cursor completes its first full pass.
+# All logic lives in the reusable ingest-ecidadania-entity.yml.
+on:
+  schedule:
+    - cron: "0 2,14,20 * * *" # 3x/day: 02:00, 14:00, 20:00 UTC
+  workflow_dispatch:
+
+jobs:
+  call:
+    uses: ./.github/workflows/ingest-ecidadania-entity.yml
+    with:
+      entity: ideias-detalhe
+    secrets: inherit
