@@ -58,3 +58,26 @@ jobs:
             echo "attempt $i: http=$code (curl exit $?)"
             sleep 20
           done
+
+      # THE decisive test: Node's fetch (undici) — the exact client the ingest uses — from the SAME
+      # runner/IP that curl just succeeded on. If curl=200 but node-fetch fails here, the problem is the
+      # HTTP client (undici TLS fingerprint / headers tripping a WAF), NOT reachability or the IP.
+      # Prints error.cause (the real reason undici hides behind the generic "fetch failed").
+      - name: Node fetch (undici) test — same runner as the curl above
+        run: |
+          node -e '
+            const url = "https://www12.senado.leg.br/ecidadania/principalaudiencia?p=1";
+            (async () => {
+              for (let i = 1; i <= 3; i++) {
+                try {
+                  const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/html" }, signal: AbortSignal.timeout(30000) });
+                  const t = await r.text();
+                  console.log(`node-fetch attempt ${i}: status=${r.status} bytes=${t.length}`);
+                } catch (e) {
+                  const c = e && e.cause ? (e.cause.code || e.cause.message || String(e.cause)) : "(no cause)";
+                  console.log(`node-fetch attempt ${i}: FAILED msg="${e && e.message}" cause="${c}"`);
+                }
+                await new Promise(r => setTimeout(r, 3000));
+              }
+            })();
+          '
