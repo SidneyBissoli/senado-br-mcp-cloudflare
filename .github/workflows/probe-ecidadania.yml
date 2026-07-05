@@ -81,3 +81,25 @@ jobs:
               }
             })();
           '
+
+      # PROPOSED FIX: same Node fetch but with dns.setDefaultResultOrder("ipv4first") — forces IPv4,
+      # like curl. If these come back status=200, that one-liner in the ingest client fixes the ingest.
+      - name: Node fetch with IPv4-first (proposed fix)
+        run: |
+          node -e '
+            require("node:dns").setDefaultResultOrder("ipv4first");
+            const url = "https://www12.senado.leg.br/ecidadania/principalaudiencia?p=1";
+            (async () => {
+              for (let i = 1; i <= 3; i++) {
+                try {
+                  const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0", "Accept": "text/html" }, signal: AbortSignal.timeout(30000) });
+                  const t = await r.text();
+                  console.log(`ipv4first attempt ${i}: status=${r.status} bytes=${t.length}`);
+                } catch (e) {
+                  const c = e && e.cause ? (e.cause.code || e.cause.message || String(e.cause)) : "(no cause)";
+                  console.log(`ipv4first attempt ${i}: FAILED msg="${e && e.message}" cause="${c}"`);
+                }
+                await new Promise(r => setTimeout(r, 3000));
+              }
+            })();
+          '
