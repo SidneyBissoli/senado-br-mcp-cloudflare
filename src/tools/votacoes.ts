@@ -12,6 +12,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { computarPlacar } from "../utils/placar.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 
@@ -32,6 +33,20 @@ export function lastDayOfMonth(year: number, month: number): number {
 
 /** Parse a single vote item from the /votacao endpoint (flat camelCase). */
 export function parseVotacaoItem(v: any, includeVotos = false) {
+  const votosRaw = Array.isArray(v.votos) ? v.votos : [];
+  let totalSim = v.totalVotosSim ?? null;
+  let totalNao = v.totalVotosNao ?? null;
+  let totalAbstencao = v.totalVotosAbstencao ?? null;
+  let placarComputado = false;
+  // Open roll calls return null totals but still carry votos[]; recompute the tally
+  // (counting only Sim/Nao/Abstencao and excluding non-vote codes like P-NRV/AP/LS).
+  if (totalSim == null && totalNao == null && totalAbstencao == null && votosRaw.length > 0) {
+    const placar = computarPlacar(votosRaw);
+    totalSim = placar.sim;
+    totalNao = placar.nao;
+    totalAbstencao = placar.abstencao;
+    placarComputado = true;
+  }
   const result: any = {
     codigoSessao: v.codigoSessao || null,
     codigoVotacao: v.codigoSessaoVotacao || null,
@@ -41,13 +56,14 @@ export function parseVotacaoItem(v: any, includeVotos = false) {
     ementa: v.ementa || null,
     descricao: v.descricaoVotacao || null,
     resultado: v.resultadoVotacao || null,
-    totalSim: v.totalVotosSim ?? null,
-    totalNao: v.totalVotosNao ?? null,
-    totalAbstencao: v.totalVotosAbstencao ?? null,
+    totalSim,
+    totalNao,
+    totalAbstencao,
+    ...(placarComputado ? { placarComputado: true } : {}),
     secreta: v.votacaoSecreta === "S",
   };
-  if (includeVotos && Array.isArray(v.votos) && v.votos.length > 0) {
-    result.votos = v.votos.map((vt: any) => ({
+  if (includeVotos && votosRaw.length > 0) {
+    result.votos = votosRaw.map((vt: any) => ({
       codigoSenador: vt.codigoParlamentar || 0,
       nomeSenador: vt.nomeParlamentar || "",
       partido: vt.siglaPartidoParlamentar || null,

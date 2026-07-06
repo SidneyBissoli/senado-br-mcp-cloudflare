@@ -74,8 +74,8 @@ describe("parseVotacaoItem", () => {
       dataSessao: "2024-03-15T14:30:00",
       identificacao: "PEC 45/2024",
       codigoMateria: "151234",
-      ementa: "Altera a Constituição",
-      descricaoVotacao: "Aprovação do texto",
+      ementa: "Altera a Constitui\u00e7\u00e3o",
+      descricaoVotacao: "Aprova\u00e7\u00e3o do texto",
       resultadoVotacao: "Aprovada",
       totalVotosSim: 55,
       totalVotosNao: 20,
@@ -139,5 +139,31 @@ describe("parseVotacaoItem", () => {
   it("handles empty/missing votos gracefully", () => {
     const result = parseVotacaoItem({}, true);
     expect(result.votos).toBeUndefined();
+  });
+
+  // BUG-005: open roll calls return null totals but carry votos[]; recompute the tally.
+  it("computes the placar from votos when totals are null (open vote)", () => {
+    const item = {
+      votos: [
+        { siglaVotoParlamentar: "Sim" },
+        { siglaVotoParlamentar: "Sim" },
+        { siglaVotoParlamentar: "N\u00e3o" },
+        { siglaVotoParlamentar: "Absten\u00e7\u00e3o" },
+        { siglaVotoParlamentar: "P-NRV" }, // non-vote, excluded
+        { siglaVotoParlamentar: "AP" }, // non-vote, excluded
+      ],
+    };
+    const r = parseVotacaoItem(item);
+    expect(r.totalSim).toBe(2);
+    expect(r.totalNao).toBe(1);
+    expect(r.totalAbstencao).toBe(1);
+    expect(r.placarComputado).toBe(true);
+  });
+
+  it("does not recompute when totals are already present", () => {
+    const item = { totalVotosSim: 55, totalVotosNao: 20, totalVotosAbstencao: 2, votos: [{ siglaVotoParlamentar: "Sim" }] };
+    const r = parseVotacaoItem(item);
+    expect(r.totalSim).toBe(55);
+    expect(r.placarComputado).toBeUndefined();
   });
 });
