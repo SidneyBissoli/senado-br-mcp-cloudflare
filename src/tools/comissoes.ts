@@ -16,7 +16,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolError, errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { toolError, errorFrom, ensureArray, safeInt, toBool } from "../utils/validation.js";
 import { digArrayRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
@@ -305,7 +305,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E6. senado_reuniao_comissao
   server.tool(
     "senado_reuniao_comissao",
-    "Detalha uma reunião de comissão pelo `codigoReuniao`. Retorna um objeto com `codigo`, `titulo`, `comissao`, `data`, `hora`, `local`, `situacao`, `realizada`, `secreta`, `presidente`, links `urlPauta`/`urlResultado`/`urlAta` e `partes` (cada parte com `evento` e `itens` apreciados: `identificacao`, `ementa`, `relator`, `resultado`). Obtenha o `codigoReuniao` em `senado_agenda_comissoes` ou `senado_reunioes_comissao`.",
+    "Detalha uma reunião de comissão pelo `codigoReuniao`. Retorna um objeto com `codigo`, `titulo`, `comissao`, `data`, `hora`, `local`, `situacao`, `realizada`, `secreta`, `presidente`, links `urlPauta`/`urlResultado`/`urlAta` e `partes` (cada parte com `evento` e `itens` apreciados: `identificacao`, `ementa`, `autoria`, `relatoria`, `resultado`, `codigoMateria`). Obtenha o `codigoReuniao` em `senado_agenda_comissoes` ou `senado_reunioes_comissao`.",
     {
       codigoReuniao: z.number().int().positive().describe("Código da reunião (campo 'codigo' na agenda de comissões)"),
     },
@@ -333,8 +333,9 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
           hora: re.dataInicio ? String(re.dataInicio).split("T")[1]?.slice(0, 5) || null : null,
           local: re.local || null,
           situacao: re.situacao || null,
-          realizada: re.realizada === "S" || re.realizada === true,
-          secreta: re.secreta === "S" || re.secreta === true,
+          // Upstream sends these as the strings "true"/"false" (some legacy paths use "S").
+          realizada: toBool(re.realizada) || re.realizada === "S",
+          secreta: toBool(re.secreta) || re.secreta === "S",
           presidente: re.presidente?.nome || re.presidente || null,
           urlPauta: re.urlUltimaPautaCheiaPublicada || re.urlUltimaPautaSimplesPublicada || null,
           urlResultado: re.urlUltimoResultadoPublicado || null,
@@ -348,11 +349,17 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
               resultado: p.evento.resultadoTexto || null,
               convidados: ensureArray(p.evento.convidados).map((c: any) => c.nome).filter(Boolean),
             } : undefined,
+            // Item identification/ementa live under item.doma; relatoria under
+            // item.siglaRelatorio/relatorio; resultado is an object {descricao, texto}.
             itens: ensureArray(p.itens?.item ?? p.itens).map((i: any) => ({
-              identificacao: i.nomeFormatado || i.identificacao || i.materia || null,
-              ementa: i.ementa || null,
-              relator: i.relator || i.nomeRelator || null,
-              resultado: i.resultado || i.descricaoResultado || i.resultadoTexto || null,
+              identificacao: i.nome || i.nomeFormatadoComOrdem || i.descricao || null,
+              ementa: i.doma?.ementa || i.ementa || null,
+              autoria: i.doma?.autoria || null,
+              relatoria: i.siglaRelatorio || i.relatorio || null,
+              resultado:
+                (i.resultado && typeof i.resultado === "object" ? i.resultado.descricao : i.resultado) ||
+                i.descricaoResultado || i.siglaResultado || null,
+              codigoMateria: safeInt(i.doma?.idProcesso) || null,
             })),
           })),
         }, prov);
