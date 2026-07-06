@@ -13,6 +13,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
 import { errorFrom, ensureArray } from "../utils/validation.js";
+import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
 import { matchesFiltro } from "./contratacoes.js";
@@ -235,7 +236,9 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
           isQuantitativo ? CACHE_STATIC : CACHE_SEMI_STATIC,
           () => admFetch(path, {}, admBaseUrl),
         );
-        let registros = ensureArray(response);
+        // Some adm endpoints (estagiarios) wrap the payload in {statusCode,msg,data};
+        // others serve a flat array. unwrapAdmEnvelope handles both.
+        let registros = ensureArray(unwrapAdmEnvelope(response));
         if (params.filtro) {
           const f = params.filtro;
           registros = registros.filter((item: any) => matchesFiltro(JSON.stringify(item), f));

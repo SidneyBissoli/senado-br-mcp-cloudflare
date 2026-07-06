@@ -1,5 +1,51 @@
 import { describe, it, expect } from "vitest";
 import { filtrarCeaps, agregarCeaps, parseCeapsItem } from "../../src/tools/senadores-admin.js";
+import { unwrapAdmEnvelope } from "../../src/utils/upstream-parse.js";
+
+describe("senadores_admin envelope (BUG-036)", () => {
+  // auxilio-moradia / escritorios wrap the payload in {statusCode,msg,data}; escritorios
+  // records nest parlamentar/setor. The tool treated the envelope as a single record.
+  it("unwraps auxilio-moradia and maps the flat fields", () => {
+    const response = {
+      statusCode: 200,
+      msg: "ok",
+      data: [{ nomeParlamentar: "ALAN RICK", estadoEleito: "AC", partidoEleito: "REPUBLICANOS", auxilioMoradia: "N", imovelFuncional: "S" }],
+    };
+    const senadores = unwrapAdmEnvelope(response) as any[];
+    const mapped = senadores.map((s: any) => ({
+      nome: s.nomeParlamentar || "",
+      uf: s.estadoEleito || null,
+      partido: s.partidoEleito || null,
+      auxilioMoradia: s.auxilioMoradia || null,
+      imovelFuncional: s.imovelFuncional || null,
+    }));
+    expect(mapped).toHaveLength(1);
+    expect(mapped[0]).toEqual({ nome: "ALAN RICK", uf: "AC", partido: "REPUBLICANOS", auxilioMoradia: "N", imovelFuncional: "S" });
+  });
+
+  it("unwraps escritorios and maps the nested parlamentar/setor", () => {
+    const response = {
+      statusCode: 200,
+      msg: "ok",
+      data: [{
+        parlamentar: { nome: "ALAN RICK", partido: null, estado: "AC" },
+        setor: { nome: "Escritório de Apoio nº 1", telefone: null, endereco: "RUA BOM DESTINO, 90. RIO BRANCO, AC." },
+      }],
+    };
+    const escritorios = (unwrapAdmEnvelope(response) as any[]).map((e: any) => ({
+      senador: e.parlamentar?.nome || "",
+      uf: e.parlamentar?.estado || null,
+      partido: e.parlamentar?.partido || null,
+      setor: e.setor?.nome || null,
+      endereco: e.setor?.endereco || null,
+      telefone: e.setor?.telefone || null,
+    }));
+    expect(escritorios[0].senador).toBe("ALAN RICK");
+    expect(escritorios[0].uf).toBe("AC");
+    expect(escritorios[0].setor).toBe("Escritório de Apoio nº 1");
+    expect(escritorios[0].endereco).toContain("RUA BOM DESTINO");
+  });
+});
 
 const DESPESAS = [
   { id: 1, mes: 7, codSenador: 5953, nomeSenador: "FABIANO CONTARATO", tipoDespesa: "Locomoção, hospedagem, alimentação", cpfCnpj: "17.895.646/0001-87", fornecedor: "UBER DO BRASIL", data: "2025-07-21", detalhamento: "Transporte", valorReembolsado: 50.02 },

@@ -1,5 +1,30 @@
 import { describe, it, expect } from "vitest";
 import { parseServidor, resumoRemuneracao } from "../../src/tools/servidores.js";
+import { unwrapAdmEnvelope } from "../../src/utils/upstream-parse.js";
+import { ensureArray } from "../../src/utils/validation.js";
+
+describe("pessoal_tabelas estagiarios envelope (BUG-034)", () => {
+  // /servidores/estagiarios wraps its list in {statusCode,msg,data}; the tool used to
+  // ensureArray the envelope itself (count 1 with all 478 rows nested in data).
+  it("unwraps the envelope into the real rows", () => {
+    const response = {
+      statusCode: 200,
+      msg: "Dados gerados com sucesso",
+      data: [
+        { nome: "Ada Brígida", curso: "Letras", siglaOrgao: "SERVSO", nomeOrgao: "SERVIÇO DE REVISÃO" },
+        { nome: "Beto", curso: "Direito", siglaOrgao: "X", nomeOrgao: "Y" },
+      ],
+    };
+    const registros = ensureArray(unwrapAdmEnvelope(response));
+    expect(registros).toHaveLength(2);
+    expect((registros[0] as any).curso).toBe("Letras");
+  });
+
+  it("leaves a flat array (pensionistas/aposentados) unchanged", () => {
+    const flat = [{ nome: "A" }, { nome: "B" }];
+    expect(ensureArray(unwrapAdmEnvelope(flat))).toHaveLength(2);
+  });
+});
 
 describe("parseServidor", () => {
   it("parses a snake_case servant item", () => {

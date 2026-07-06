@@ -13,6 +13,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
 import { errorFrom, ensureArray, normalizeText } from "../utils/validation.js";
+import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
 
@@ -157,13 +158,14 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
             "senado_escritorios_apoio", {}, CACHE_SEMI_STATIC,
             () => admFetch("/senadores/escritorios", {}, admBaseUrl),
           );
-          let escritorios = ensureArray(response).map((e: any) => ({
-            senador: e.nome || "",
-            uf: e.estado || null,
-            partido: e.partido || null,
-            setor: e.setor || null,
-            endereco: e.endereco || null,
-            telefone: e.telefone || null,
+          // Enveloped ({statusCode,msg,data}); each record nests parlamentar/setor.
+          let escritorios = ensureArray(unwrapAdmEnvelope(response)).map((e: any) => ({
+            senador: e.parlamentar?.nome || "",
+            uf: e.parlamentar?.estado || null,
+            partido: e.parlamentar?.partido || null,
+            setor: e.setor?.nome || null,
+            endereco: e.setor?.endereco || null,
+            telefone: e.setor?.telefone || null,
           }));
           if (params.uf) {
             const uf = params.uf.toUpperCase();
@@ -181,7 +183,7 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
             "senado_senadores_aposentados", {}, CACHE_SEMI_STATIC,
             () => admFetch("/senadores/aposentados", {}, admBaseUrl),
           );
-          let aposentados = ensureArray(response).map((a: any) => ({
+          let aposentados = ensureArray(unwrapAdmEnvelope(response)).map((a: any) => ({
             nome: a.nome || "",
             tipo: a.tipo || null,
             dataInicial: a.dataInicial || null,
@@ -199,7 +201,7 @@ export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: strin
           "senado_auxilio_moradia", {}, CACHE_SEMI_STATIC,
           () => admFetch("/senadores/auxilio-moradia", {}, admBaseUrl),
         );
-        let senadores = ensureArray(response).map((s: any) => ({
+        let senadores = ensureArray(unwrapAdmEnvelope(response)).map((s: any) => ({
           nome: s.nomeParlamentar || "",
           uf: s.estadoEleito || null,
           partido: s.partidoEleito || null,
