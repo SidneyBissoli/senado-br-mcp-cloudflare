@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseContrato, parseTerceirizado, matchesFiltro } from "../../src/tools/contratacoes.js";
+import { parseContrato, parseTerceirizado, matchesFiltro, matchesFiltroCampo } from "../../src/tools/contratacoes.js";
 
 describe("parseContrato", () => {
   it("parses a snake_case contract item", () => {
@@ -58,5 +58,25 @@ describe("matchesFiltro", () => {
   it("returns false for non-strings and non-matches", () => {
     expect(matchesFiltro(123, "1")).toBe(false);
     expect(matchesFiltro("abc", "xyz")).toBe(false);
+  });
+});
+
+describe("matchesFiltroCampo (BUG-004/035)", () => {
+  // lotacao is {sigla,nome}; cargo is {nome}. String matcher over the object never matches.
+  it("matches against a {sigla,nome} lotacao by sigla or nome", () => {
+    const lotacao = { sigla: "SEGRAF", nome: "Secretaria de Editoração e Publicações" };
+    expect(matchesFiltroCampo(lotacao, "SEGRAF")).toBe(true);
+    expect(matchesFiltroCampo(lotacao, "editoracao")).toBe(true); // accent-insensitive
+    expect(matchesFiltroCampo(lotacao, "infraestrutura")).toBe(false);
+  });
+
+  it("matches against a {nome} cargo", () => {
+    expect(matchesFiltroCampo({ nome: "ADVOGADO" }, "advogado")).toBe(true);
+  });
+
+  it("still matches plain strings and rejects null/other", () => {
+    expect(matchesFiltroCampo("SINFRA", "sinfra")).toBe(true);
+    expect(matchesFiltroCampo(null, "x")).toBe(false);
+    expect(matchesFiltroCampo({ outro: "SEGRAF" }, "SEGRAF")).toBe(false);
   });
 });

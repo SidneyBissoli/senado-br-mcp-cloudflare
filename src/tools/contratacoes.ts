@@ -49,6 +49,23 @@ export function matchesFiltro(value: unknown, filtro: string): boolean {
   return normalizeText(value).includes(normalizeText(filtro));
 }
 
+/**
+ * Match a filter against a value that may be a plain string OR a nested object
+ * exposing `sigla`/`nome` (e.g. lotacao {sigla,nome}, cargo {nome}). Matching such
+ * objects with the string matcher yields "[object Object]" and never matches.
+ */
+export function matchesFiltroCampo(value: unknown, filtro: string): boolean {
+  if (typeof value === "string") return matchesFiltro(value, filtro);
+  if (value && typeof value === "object") {
+    const v = value as Record<string, unknown>;
+    return (
+      (typeof v.sigla === "string" && matchesFiltro(v.sigla, filtro)) ||
+      (typeof v.nome === "string" && matchesFiltro(v.nome, filtro))
+    );
+  }
+  return false;
+}
+
 export function registerContratacoesTools(server: McpServer, admBaseUrl: string) {
   // Q1. senado_contratos
   server.tool(
@@ -201,7 +218,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
         let lista = ensureArray(response).map(parseTerceirizado);
         if (params.nome) lista = lista.filter((t) => matchesFiltro(t.nome, params.nome!));
         if (params.empresa) lista = lista.filter((t) => matchesFiltro(t.empresa || "", params.empresa!));
-        if (params.lotacao) lista = lista.filter((t) => matchesFiltro(t.lotacao || "", params.lotacao!));
+        if (params.lotacao) lista = lista.filter((t) => matchesFiltroCampo(t.lotacao, params.lotacao!));
         const limite = params.limite ?? 50;
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/terceirizados", {
           retrieved_at: fetchedAt,

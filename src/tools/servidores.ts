@@ -16,7 +16,7 @@ import { errorFrom, ensureArray } from "../utils/validation.js";
 import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
-import { matchesFiltro } from "./contratacoes.js";
+import { matchesFiltro, matchesFiltroCampo } from "./contratacoes.js";
 
 /** Parse a civil-servant list item (snake_case). */
 export function parseServidor(s: any) {
@@ -77,8 +77,9 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
         );
         let lista = ensureArray(response).map(parseServidor);
         if (params.nome) lista = lista.filter((s) => matchesFiltro(s.nome, params.nome!));
-        if (params.lotacao) lista = lista.filter((s) => matchesFiltro(s.lotacao || "", params.lotacao!));
-        if (params.cargo) lista = lista.filter((s) => matchesFiltro(s.cargo || "", params.cargo!));
+        // lotacao is {sigla,nome} and cargo is {nome} — match against the subfields.
+        if (params.lotacao) lista = lista.filter((s) => matchesFiltroCampo(s.lotacao, params.lotacao!));
+        if (params.cargo) lista = lista.filter((s) => matchesFiltroCampo(s.cargo, params.cargo!));
         const limite = params.limite ?? 50;
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1/servidores/servidores/${situacao}`, {
           dataset_id: `servidores; situacao=${situacao}`, retrieved_at: fetchedAt,
