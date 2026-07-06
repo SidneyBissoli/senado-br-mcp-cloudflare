@@ -1,5 +1,41 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { formatDateYMD, resolveComissaoCodigo } from "../../src/tools/comissoes.js";
+import { digArrayRoot } from "../../src/utils/upstream-parse.js";
+import { safeInt } from "../../src/utils/validation.js";
+
+describe("obter_comissao membros (BUG-030)", () => {
+  // With ?ativas=S the endpoint answers under ComposicaoAtivaComissaoSf; the item carries
+  // CodigoMembro/NomeMembro (was read as CodigoParlamentar under UltimaComposicao... -> empty).
+  it("resolves members at the ComposicaoAtivaComissaoSf root and maps CodigoMembro", () => {
+    const response = {
+      ComposicaoAtivaComissaoSf: {
+        ComposicaoComissao: {
+          Membros: {
+            Membro: [
+              { NomeMembro: "Alan Rick", CodigoMembro: "5672", TipoVaga: "Suplente", IndicadorVagaAtiva: "Sim", DataInicioMembroVaga: "2026-04-07" },
+            ],
+          },
+        },
+      },
+    };
+    const membros = digArrayRoot(
+      response,
+      [["ComposicaoAtivaComissaoSf", "ComposicaoComissao", "Membros", "Membro"]],
+      "t",
+    ).map((m: any) => ({
+      codigo: safeInt(m.CodigoMembro || m.CodigoParlamentar) || null,
+      nome: m.NomeMembro || "",
+      tipoVaga: m.TipoVaga || null,
+      ativo: m.IndicadorVagaAtiva === "Sim",
+      dataInicio: m.DataInicioMembroVaga || null,
+    }));
+    expect(membros).toHaveLength(1);
+    expect(membros[0].codigo).toBe(5672);
+    expect(membros[0].nome).toBe("Alan Rick");
+    expect(membros[0].tipoVaga).toBe("Suplente");
+    expect(membros[0].ativo).toBe(true);
+  });
+});
 
 // Mock the cache and upstream modules
 vi.mock("../../src/cache/manager.js", () => ({

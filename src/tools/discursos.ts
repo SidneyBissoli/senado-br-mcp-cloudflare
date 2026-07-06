@@ -165,7 +165,10 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
           { codigo: params.codigoPronunciamento },
           CACHE_ON_DEMAND,
           async () => {
-            const url = `${baseUrl}/discurso/texto-integral/${params.codigoPronunciamento}.json`;
+            // This endpoint serves ONLY text/plain; the ".json" suffix (or Accept:
+            // application/json) forces content negotiation to JSON -> HTTP 406. No suffix
+            // + Accept including text/plain -> 200.
+            const url = `${baseUrl}/discurso/texto-integral/${params.codigoPronunciamento}`;
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
             try {

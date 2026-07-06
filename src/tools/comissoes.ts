@@ -16,7 +16,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolError, errorFrom, ensureArray } from "../utils/validation.js";
+import { toolError, errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { digArrayRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
 import { USER_AGENT } from "../version.js";
@@ -107,14 +108,20 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         if (secao === "membros") {
           const membrosPath = `/composicao/comissao/${codigo}`;
           const { value: response, fetchedAt } = await cachedFetchWithMeta(
-            "senado_membros_comissao", { codigo }, CACHE_SEMI_STATIC,
-            () => upstreamFetch(membrosPath, {}, baseUrl),
+            "senado_membros_comissao", { codigo, ativas: "S" }, CACHE_SEMI_STATIC,
+            // Endpoint requires the `ativas` query param (400 otherwise) and answers
+            // under ComposicaoAtivaComissaoSf.
+            () => upstreamFetch(membrosPath, { ativas: "S" }, baseUrl),
           );
-          const r = response as any;
-          const membros = ensureArray(
-            r?.UltimaComposicaoComissaoSf?.ComposicaoComissao?.Membros?.Membro,
+          const membros = digArrayRoot(
+            response,
+            [
+              ["ComposicaoAtivaComissaoSf", "ComposicaoComissao", "Membros", "Membro"],
+              ["UltimaComposicaoComissaoSf", "ComposicaoComissao", "Membros", "Membro"],
+            ],
+            "senado_obter_comissao:membros",
           ).map((m: any) => ({
-            codigo: parseInt(m.CodigoParlamentar || "0"),
+            codigo: safeInt(m.CodigoMembro || m.CodigoParlamentar) || null,
             nome: m.NomeMembro || "",
             tipoVaga: m.TipoVaga || null,
             ativo: m.IndicadorVagaAtiva === "Sim",
