@@ -58,11 +58,19 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
           () => upstreamFetch(path, qp, baseUrl),
         );
         const r = response as any;
+        // The parliamentarian name lives once at Parlamentar.IdentificacaoParlamentar,
+        // not per pronunciamento — inject it into each item.
+        const nomeParlamentar =
+          r?.DiscursosParlamentar?.Parlamentar?.IdentificacaoParlamentar?.NomeParlamentar ??
+          r?.ApartesParlamentar?.Parlamentar?.IdentificacaoParlamentar?.NomeParlamentar ??
+          null;
         const discursos = ensureArray(
           tipo === "apartes"
             ? (r?.ApartesParlamentar?.Parlamentar?.Apartes?.Aparte ?? r?.Apartes?.Aparte)
             : (r?.DiscursosParlamentar?.Parlamentar?.Pronunciamentos?.Pronunciamento ?? r?.Pronunciamentos?.Pronunciamento),
-        ).map(parseDiscursoResumo);
+        )
+          .map(parseDiscursoResumo)
+          .map((d) => ({ ...d, nomeParlamentar: d.nomeParlamentar ?? nomeParlamentar }));
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `codigoParlamentar=${params.codigoSenador}; tipo=${tipo}`,
           reference_period: params.dataInicio && params.dataFim

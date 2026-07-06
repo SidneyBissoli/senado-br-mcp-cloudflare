@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador, parseLicenca, parseComissaoMembro, parseCargoSenador } from "../../src/tools/senadores.js";
+import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador, parseLicenca, parseMandato, parseComissaoMembro, parseCargoSenador } from "../../src/tools/senadores.js";
+import { digArrayRoot } from "../../src/utils/upstream-parse.js";
 
 describe("parseSenadorResumo", () => {
   it("parses full parlamentar object", () => {
@@ -238,6 +239,62 @@ describe("parseLicenca", () => {
     expect(result.codigo).toBe(24703);
     expect(result.dataInicio).toBe("2025-10-20");
     expect(result.descricao).toBe("Licença particular");
+  });
+
+  // BUG-008: real upstream field is DescricaoTipoAfastamento (was mapped from a
+  // non-existent field -> descricao always null).
+  it("maps descricao/sigla from the real DescricaoTipoAfastamento (BUG-008)", () => {
+    const result = parseLicenca({
+      Codigo: "24703",
+      DataInicio: "2025-10-20",
+      DataFim: "2025-11-19",
+      SiglaTipoAfastamento: "LICENCA_ATIVIDADE_PARLAMENTAR",
+      DescricaoTipoAfastamento: "Licença para tratar de interesse particular",
+    });
+    expect(result.descricao).toBe("Licença para tratar de interesse particular");
+    expect(result.sigla).toBe("LICENCA_ATIVIDADE_PARLAMENTAR");
+  });
+});
+
+describe("parseMandato (BUG-007)", () => {
+  it("parses a mandate spanning two legislaturas from the /mandatos sub-endpoint", () => {
+    const result = parseMandato({
+      CodigoMandato: "523",
+      UfParlamentar: "RS",
+      PrimeiraLegislaturaDoMandato: { NumeroLegislatura: "56", DataInicio: "2019-02-01", DataFim: "2023-01-31" },
+      SegundaLegislaturaDoMandato: { NumeroLegislatura: "57", DataInicio: "2023-02-01", DataFim: "2027-01-31" },
+      DescricaoParticipacao: "Titular",
+    });
+    expect(result.legislatura).toBe(56);
+    expect(result.uf).toBe("RS");
+    expect(result.participacao).toBe("Titular");
+    expect(result.dataInicio).toBe("2019-02-01");
+    expect(result.dataFim).toBe("2027-01-31"); // ends at the second legislatura
+  });
+
+  it("resolves mandates at the real /mandatos root", () => {
+    const resp = {
+      MandatoParlamentar: { Parlamentar: { Mandatos: { Mandato: [{ UfParlamentar: "RS", PrimeiraLegislaturaDoMandato: { NumeroLegislatura: "57" } }] } } },
+    };
+    const mandatos = digArrayRoot(resp, [["MandatoParlamentar", "Parlamentar", "Mandatos", "Mandato"]], "t").map(parseMandato);
+    expect(mandatos).toHaveLength(1);
+    expect(mandatos[0].legislatura).toBe(57);
+  });
+});
+
+describe("profissoes root (BUG-009)", () => {
+  // /profissao responds under the anomalous HistoricoAcademicoParlamentar wrapper.
+  it("resolves professions under HistoricoAcademicoParlamentar", () => {
+    const resp = {
+      HistoricoAcademicoParlamentar: { Parlamentar: { Profissoes: { Profissao: { NomeProfissao: "Metalúrgico" } } } },
+    };
+    const itens = digArrayRoot(
+      resp,
+      [["HistoricoAcademicoParlamentar", "Parlamentar", "Profissoes", "Profissao"]],
+      "t",
+    );
+    expect(itens).toHaveLength(1);
+    expect((itens[0] as any).NomeProfissao).toBe("Metalúrgico");
   });
 });
 

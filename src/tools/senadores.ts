@@ -11,7 +11,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { errorFrom, ensureArray, normalizeText } from "../utils/validation.js";
+import { errorFrom, ensureArray, normalizeText, safeInt } from "../utils/validation.js";
+import { digArrayRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
@@ -89,7 +90,21 @@ export function parseLicenca(l: any) {
     codigo: parseInt(l.Codigo || "0") || null,
     dataInicio: l.DataInicio || null,
     dataFim: l.DataFim || l.DataFimPrevista || null,
-    descricao: l.DescricaoFinalidade || l.Descricao || l.TipoAfastamento?.Descricao || null,
+    sigla: l.SiglaTipoAfastamento || null,
+    descricao: l.DescricaoTipoAfastamento || l.DescricaoFinalidade || l.Descricao || null,
+  };
+}
+
+/** Parse a mandate entry from /senador/{codigo}/mandatos (not in the /senador/{codigo} detail). */
+export function parseMandato(m: any) {
+  const primeira = m.PrimeiraLegislaturaDoMandato || {};
+  const segunda = m.SegundaLegislaturaDoMandato || {};
+  return {
+    legislatura: safeInt(primeira.NumeroLegislatura) || null,
+    uf: m.UfParlamentar || null,
+    participacao: m.DescricaoParticipacao || null,
+    dataInicio: primeira.DataInicio || null,
+    dataFim: segunda.DataFim || primeira.DataFim || null,
   };
 }
 
@@ -204,11 +219,31 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
           () => upstreamFetch(path, {}, baseUrl),
         );
         const dados = (response as any).DetalheParlamentar || response;
+        const detalhe = parseSenadorDetalhe(dados);
+        // The /senador/{codigo} detail carries no Mandatos; fetch the sub-endpoint.
+        // Degrade to an empty list if it fails, keeping the biographical data.
+        let mandatos: ReturnType<typeof parseMandato>[] = [];
+        try {
+          const mandatosPath = `/senador/${params.codigoSenador}/mandatos`;
+          const { value: mResp } = await cachedFetchWithMeta(
+            "senado_obter_senador_mandatos",
+            { codigo: params.codigoSenador },
+            CACHE_ON_DEMAND,
+            () => upstreamFetch(mandatosPath, {}, baseUrl),
+          );
+          mandatos = digArrayRoot(
+            mResp,
+            [["MandatoParlamentar", "Parlamentar", "Mandatos", "Mandato"]],
+            "senado_obter_senador:mandatos",
+          ).map(parseMandato);
+        } catch {
+          // sub-endpoint unavailable — keep the (empty) mandatos from the detail
+        }
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `codigoParlamentar=${params.codigoSenador}`,
           retrieved_at: fetchedAt,
         });
-        return resultWithProvenance(parseSenadorDetalhe(dados), prov);
+        return resultWithProvenance({ ...detalhe, mandatos }, prov);
       } catch (e) {
         return errorFrom(e, "Senador não encontrado");
       }
@@ -295,7 +330,11 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
         let itens: any[];
         switch (params.tipo) {
           case "licencas":
-            itens = ensureArray(r?.LicencaParlamentar?.Parlamentar?.Licencas?.Licenca).map(parseLicenca);
+            itens = digArrayRoot(
+              r,
+              [["LicencaParlamentar", "Parlamentar", "Licencas", "Licenca"]],
+              "senado_senador_historico:licencas",
+            ).map(parseLicenca);
             break;
           case "comissoes":
             itens = ensureArray(r?.MembroComissaoParlamentar?.Parlamentar?.MembroComissoes?.Comissao).map(parseComissaoMembro);
@@ -307,7 +346,17 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
             itens = ensureArray(r?.FiliacaoParlamentar?.Parlamentar?.Filiacoes?.Filiacao ?? r?.Filiacoes?.Filiacao).map(parseFiliacao);
             break;
           case "profissoes":
-            itens = ensureArray(r?.ProfissaoParlamentar?.Parlamentar?.Profissoes?.Profissao ?? r?.Profissoes?.Profissao).map(parseProfissao);
+            // Anomalous root: /profissao responds under HistoricoAcademicoParlamentar
+            // (same wrapper as historico-academico), not ProfissaoParlamentar.
+            itens = digArrayRoot(
+              r,
+              [
+                ["HistoricoAcademicoParlamentar", "Parlamentar", "Profissoes", "Profissao"],
+                ["ProfissaoParlamentar", "Parlamentar", "Profissoes", "Profissao"],
+                ["Profissoes", "Profissao"],
+              ],
+              "senado_senador_historico:profissoes",
+            ).map(parseProfissao);
             break;
           default: {
             const p = r?.HistoricoAcademicoParlamentar?.Parlamentar;

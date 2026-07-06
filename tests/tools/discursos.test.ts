@@ -1,5 +1,37 @@
 import { describe, it, expect } from "vitest";
 import { parseDiscursoResumo } from "../../src/tools/discursos.js";
+import { ensureArray } from "../../src/utils/validation.js";
+
+describe("discursos_senador nomeParlamentar (BUG-025)", () => {
+  // The name lives once at Parlamentar.IdentificacaoParlamentar, not per pronunciamento;
+  // parseDiscursoResumo alone leaves it null, so the handler injects it.
+  it("parseDiscursoResumo leaves nomeParlamentar null for a per-item pronunciamento", () => {
+    const item = { CodigoPronunciamento: "522586", DataPronunciamento: "2026-04-01", TextoResumo: "x" };
+    expect(parseDiscursoResumo(item).nomeParlamentar).toBeNull();
+  });
+
+  it("the response-level name injection populates every item", () => {
+    const r = {
+      DiscursosParlamentar: {
+        Parlamentar: {
+          IdentificacaoParlamentar: { NomeParlamentar: "Paulo Paim" },
+          Pronunciamentos: {
+            Pronunciamento: [
+              { CodigoPronunciamento: "1", DataPronunciamento: "2026-04-01" },
+              { CodigoPronunciamento: "2", DataPronunciamento: "2026-05-01" },
+            ],
+          },
+        },
+      },
+    };
+    const nome = r.DiscursosParlamentar.Parlamentar.IdentificacaoParlamentar.NomeParlamentar;
+    const discursos = ensureArray(r.DiscursosParlamentar.Parlamentar.Pronunciamentos.Pronunciamento)
+      .map(parseDiscursoResumo)
+      .map((d) => ({ ...d, nomeParlamentar: d.nomeParlamentar ?? nome }));
+    expect(discursos).toHaveLength(2);
+    expect(discursos.every((d) => d.nomeParlamentar === "Paulo Paim")).toBe(true);
+  });
+});
 
 describe("parseDiscursoResumo", () => {
   it("parses a PascalCase speech summary", () => {
