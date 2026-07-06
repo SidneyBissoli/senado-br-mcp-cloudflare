@@ -12,7 +12,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
-import { errorFrom, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray, normalizeText } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
 
@@ -24,7 +24,7 @@ export interface CeapsFiltros {
   fornecedor?: string;
 }
 
-const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const norm = normalizeText;
 
 /** Apply in-Worker filters to raw CEAPS items. */
 export function filtrarCeaps(itens: any[], f: CeapsFiltros): any[] {

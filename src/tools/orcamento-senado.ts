@@ -14,7 +14,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { errorFrom, ensureArray, safeInt, parseBRL } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_STATIC } from "../types.js";
 
@@ -22,12 +22,13 @@ const FINANCEIRO_BASE = "https://www.senado.gov.br";
 const PATH_DESPESAS = "/bi-arqs/Arquimedes/Financeiro/DespesaSenadoDadosAbertos.json";
 const PATH_RECEITAS = "/bi-arqs/Arquimedes/Financeiro/ReceitasSenadoDadosAbertos.json";
 
-/** Parse a Brazilian decimal string ("1.234,56" or "1234,56") into a number. */
+/**
+ * Parse a Brazilian decimal string ("1.234,56" or "1234,56") into a number.
+ * Thin wrapper over the shared `parseBRL` (kept as a named export for existing tests
+ * and call sites in this module).
+ */
 export function parseValorBR(v: unknown): number {
-  if (typeof v === "number") return v;
-  if (typeof v !== "string") return 0;
-  const n = parseFloat(v.replace(/\./g, "").replace(",", "."));
-  return Number.isNaN(n) ? 0 : n;
+  return parseBRL(v);
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;

@@ -11,7 +11,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
-import { toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { toolError, errorFrom, buildParams, ensureArray, normalizeText } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_ON_DEMAND } from "../types.js";
 
@@ -46,8 +46,7 @@ export function parseTerceirizado(t: any) {
 /** Case/accent-insensitive substring match. */
 export function matchesFiltro(value: unknown, filtro: string): boolean {
   if (typeof value !== "string") return false;
-  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  return norm(value).includes(norm(filtro));
+  return normalizeText(value).includes(normalizeText(filtro));
 }
 
 export function registerContratacoesTools(server: McpServer, admBaseUrl: string) {

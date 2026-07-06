@@ -12,7 +12,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolError, errorFrom, buildParams, ensureArray, safeInt } from "../utils/validation.js";
+import { toolError, errorFrom, buildParams, ensureArray, safeInt, normalizeText } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND, CACHE_STATIC, CACHE_SEMI_STATIC } from "../types.js";
 
@@ -326,9 +326,8 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
           autores = autores.filter((a) => a.uf?.toUpperCase() === uf);
         }
         if (params.nome) {
-          const norm = params.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-          autores = autores.filter((a) =>
-            a.nome.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(norm));
+          const alvo = normalizeText(params.nome);
+          autores = autores.filter((a) => normalizeText(a.nome).includes(alvo));
         }
         const limite = params.limite ?? 50;
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/autor/lista/atual", {

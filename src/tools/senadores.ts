@@ -11,7 +11,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { errorFrom, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray, normalizeText } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
@@ -137,9 +137,8 @@ export function parseProfissao(p: any) {
 
 /** Case/accent-insensitive substring match against a senator's full or short name. */
 export function matchesNome(s: { nome: string; nomeCompleto: string }, nome: string): boolean {
-  const norm = (v: string) => v.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-  const alvo = norm(nome);
-  return norm(s.nomeCompleto).includes(alvo) || norm(s.nome).includes(alvo);
+  const alvo = normalizeText(nome);
+  return normalizeText(s.nomeCompleto).includes(alvo) || normalizeText(s.nome).includes(alvo);
 }
 
 export function registerSenadoresTools(server: McpServer, baseUrl: string) {

@@ -89,3 +89,54 @@ export function ensureArray<T>(value: T | T[] | undefined | null): T[] {
   if (value === undefined || value === null) return [];
   return Array.isArray(value) ? value : [value];
 }
+
+/**
+ * Parse a Brazilian-format monetary string ("1.234,56", "-7.139,64") into a number.
+ * Thousands separator is `.`, decimal separator is `,`. Already-numeric input is
+ * returned unchanged (guards against `String(123.45)` losing the decimal dot when
+ * dots are stripped). null/undefined/""/unparseable → `fallback`.
+ *
+ * NOT applied blanket-wide: the administrative API is heterogeneous (some endpoints
+ * serve native numbers). Apply per-endpoint where the upstream field is a pt-BR string.
+ */
+export function parseBRL(value: unknown, fallback = 0): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : fallback;
+  if (value === null || value === undefined) return fallback;
+  const s = String(value).trim();
+  if (s === "") return fallback;
+  const n = Number(s.replace(/\./g, "").replace(",", "."));
+  return Number.isNaN(n) ? fallback : n;
+}
+
+/**
+ * Coerce a string-or-boolean into a real boolean. The legacy APIs sometimes return
+ * `"true"`/`"false"` as strings, which break a strict `=== true` check. Strictly for
+ * true/false semantics — domain flags like "S"/"N" are mapped per-tool, not here.
+ */
+export function toBool(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") return value.trim().toLowerCase() === "true";
+  return false;
+}
+
+/**
+ * Case- and accent-insensitive normalizer for textual filters (lowercase + strip
+ * combining diacritics). The single home for the expression that was duplicated
+ * across tool modules; reuse it in every textual substring filter.
+ */
+export function normalizeText(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  return String(value).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
+/**
+ * Sanity invariant: a monetary aggregate of exactly 0 while N > 0 records were
+ * processed almost always signals a parsing failure (e.g. pt-BR strings summed via
+ * `Number()` → NaN → 0). Returns a warning string to surface in the output, or null.
+ */
+export function avisoAgregadoZero(total: number, n: number): string | null {
+  if (total === 0 && n > 0) {
+    return `Agregado monetário zerado com ${n} registro(s) presente(s): possível falha de parsing dos valores. Confira a fonte oficial.`;
+  }
+  return null;
+}
