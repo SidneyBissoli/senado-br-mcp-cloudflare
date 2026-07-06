@@ -1,6 +1,60 @@
 import { describe, it, expect } from "vitest";
-import { parseDiscursoResumo } from "../../src/tools/discursos.js";
+import { parseDiscursoResumo, parseDiscursoPlenario } from "../../src/tools/discursos.js";
 import { ensureArray } from "../../src/utils/validation.js";
+import { digArrayRoot } from "../../src/utils/upstream-parse.js";
+
+describe("parseDiscursoPlenario (BUG-024)", () => {
+  // v4 plenary shape: Data/Resumo/NomeAutor (not DataPronunciamento/TextoResumo/NomeParlamentar).
+  it("parses a v4 plenary pronouncement", () => {
+    const p = {
+      CodigoPronunciamento: "522783",
+      Data: "2026-06-15",
+      Casa: "Senado Federal",
+      TipoUsoPalavra: { Descricao: "Não classificado" },
+      Resumo: "Encerramento de Sessão Especial.",
+      Indexacao: "ENCERRAMENTO, SESSÃO ESPECIAL.",
+      TextoIntegral: "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/522783",
+      NomeAutor: "Eduardo Girão",
+      CodigoParlamentar: "5976",
+      Partido: "NOVO",
+      UF: "CE",
+    };
+    const r = parseDiscursoPlenario(p);
+    expect(r.codigo).toBe("522783");
+    expect(r.data).toBe("2026-06-15");
+    expect(r.tipoUsoPalavra).toBe("Não classificado");
+    expect(r.nomeParlamentar).toBe("Eduardo Girão");
+    expect(r.codigoParlamentar).toBe(5976);
+    expect(r.partido).toBe("NOVO");
+    expect(r.uf).toBe("CE");
+  });
+
+  it("flatMaps Sessoes.Sessao[].Pronunciamentos.Pronunciamento[] from the real root", () => {
+    const response = {
+      DiscursosSessao: {
+        Sessoes: {
+          Sessao: [
+            {
+              CodigoSessao: "1",
+              Pronunciamentos: {
+                Pronunciamento: [
+                  { CodigoPronunciamento: "a", NomeAutor: "X" },
+                  { CodigoPronunciamento: "b", NomeAutor: "Y" },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    };
+    const sessoes = digArrayRoot(response, [["DiscursosSessao", "Sessoes", "Sessao"]], "t");
+    const discursos = sessoes.flatMap((s: any) =>
+      ensureArray(s?.Pronunciamentos?.Pronunciamento).map(parseDiscursoPlenario),
+    );
+    expect(discursos).toHaveLength(2);
+    expect(discursos.map((d) => d.codigo)).toEqual(["a", "b"]);
+  });
+});
 
 describe("discursos_senador nomeParlamentar (BUG-025)", () => {
   // The name lives once at Parlamentar.IdentificacaoParlamentar, not per pronunciamento;

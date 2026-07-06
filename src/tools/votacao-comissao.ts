@@ -7,31 +7,56 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { toolError, errorFrom, buildParams, ensureArray, normalizeText } from "../utils/validation.js";
+import { digArrayRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_DYNAMIC } from "../types.js";
 
-/** Parse a committee vote item. */
+const VOTACAO_COMISSAO_ROOT = [["VotacoesComissao", "Votacoes", "Votacao"]];
+
+/** Parse a committee vote item (VotacoesComissao.Votacoes.Votacao[]). */
 export function parseVotacaoComissao(v: any) {
   const votacao = v.Votacao || v;
-  return {
-    codigo: votacao.CodigoVotacao || votacao.codigoVotacao || votacao.Codigo || null,
-    data: votacao.DataVotacao || votacao.dataVotacao || votacao.Data || null,
-    comissao: votacao.SiglaComissao || votacao.siglaComissao || votacao.Comissao || null,
-    materia: votacao.IdentificacaoMateria || votacao.identificacaoMateria ||
-      votacao.DescricaoMateria || votacao.descricaoMateria || null,
-    descricao: votacao.DescricaoVotacao || votacao.descricaoVotacao || null,
-    resultado: votacao.Resultado || votacao.resultado || null,
-    totalSim: votacao.TotalVotosSim ?? votacao.totalVotosSim ?? null,
-    totalNao: votacao.TotalVotosNao ?? votacao.totalVotosNao ?? null,
-    totalAbstencao: votacao.TotalVotosAbstencao ?? votacao.totalVotosAbstencao ?? null,
-    votos: ensureArray(votacao.Votos?.Voto ?? votacao.votos).map((vt: any) => ({
+  const votosRaw = ensureArray(votacao.Votos?.Voto ?? votacao.votos);
+  let totalSim = 0, totalNao = 0, totalAbstencao = 0;
+  const votos = votosRaw.map((vt: any) => {
+    const q = normalizeText(vt.QualidadeVoto || vt.DescricaoVoto || vt.voto);
+    if (q === "s" || q === "sim") totalSim++;
+    else if (q === "n" || q === "nao") totalNao++;
+    else if (q === "a" || q === "abstencao") totalAbstencao++;
+    return {
       codigoSenador: vt.CodigoParlamentar || vt.codigoParlamentar || null,
       nome: vt.NomeParlamentar || vt.nomeParlamentar || null,
-      partido: vt.SiglaPartido || vt.siglaPartido || null,
-      voto: vt.DescricaoVoto || vt.descricaoVoto || vt.Voto || null,
-    })),
+      partido: vt.SiglaPartidoParlamentar || vt.SiglaPartido || vt.siglaPartido || null,
+      voto: vt.QualidadeVoto || vt.DescricaoVoto || vt.descricaoVoto || vt.Voto || null,
+    };
+  });
+  return {
+    codigo: votacao.CodigoVotacao || votacao.codigoVotacao || null,
+    data: votacao.DataHoraInicioReuniao || votacao.DataVotacao || votacao.Data || null,
+    comissao: votacao.SiglaColegiado || votacao.SiglaComissao || votacao.siglaComissao || null,
+    reuniao: votacao.CodigoReuniao || null,
+    materia: votacao.IdentificacaoMateria || votacao.DescricaoIdentificacaoMateria || null,
+    descricao: votacao.DescricaoVotacao || votacao.descricaoVotacao || null,
+    totalSim, totalNao, totalAbstencao,
+    votos,
   };
+}
+
+/**
+ * Filter parsed committee votes locally by reunion date. The upstream serves the full
+ * history regardless of the date query params, so the window is enforced in-Worker.
+ * `data` is an ISO datetime ("2015-10-21T10:25:00"); di/df are YYYYMMDD.
+ */
+export function filtrarPorData<T extends { data: string | null }>(itens: T[], di?: string, df?: string): T[] {
+  if (!di && !df) return itens;
+  return itens.filter((v) => {
+    const d = (v.data || "").slice(0, 10).replace(/-/g, "");
+    if (!d) return false;
+    if (di && d < di) return false;
+    if (df && d > df) return false;
+    return true;
+  });
 }
 
 export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string) {
@@ -42,7 +67,7 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
       "`por: comissao` → exige `siglaComissao`; lista as votações daquela comissão. " +
       "`por: senador` → exige `codigoSenador`; lista os votos do senador em comissões (filtro opcional `comissao`). " +
       "`por: materia` → exige `sigla`, `numero` e `ano` (ex.: PL 2630/2020); lista as votações da proposição em comissões (filtro opcional `comissao`). " +
-      "Em todos os casos aceita período opcional `dataInicio`/`dataFim` (YYYYMMDD) e retorna `{ por, ...contexto, count, votacoes }`, cada votação com `codigo`, `data`, `comissao`, `materia`, `descricao`, `resultado`, totais (`totalSim`/`totalNao`/`totalAbstencao`) e `votos` (senador, partido, voto). Sem paginação. " +
+      "Em todos os casos aceita período opcional `dataInicio`/`dataFim` (YYYYMMDD, filtrado pela data da reunião) e retorna `{ por, ...contexto, count, votacoes }`, cada votação com `codigo`, `data`, `comissao`, `reuniao`, `materia`, `descricao`, totais computados dos votos (`totalSim`/`totalNao`/`totalAbstencao`) e `votos` (senador, partido, voto). Sem paginação. " +
       "Obtenha siglas via `senado_listar_comissoes`, `codigoSenador` via `senado_listar_senadores`; para votações no plenário use `senado_votos_materia`.",
     {
       por: z.enum(["comissao", "senador", "materia"]).optional().default("comissao").describe("Eixo da consulta: comissao, senador ou materia"),
@@ -73,11 +98,11 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
             CACHE_DYNAMIC,
             () => upstreamFetch(path, qp, baseUrl),
           );
-          const r = response as any;
-          const votacoes = ensureArray(
-            r?.VotacaoComissaoParlamentar?.Votacoes?.Votacao ??
-            r?.Votacoes?.Votacao,
-          ).map(parseVotacaoComissao);
+          const votacoes = filtrarPorData(
+            digArrayRoot(response, VOTACAO_COMISSAO_ROOT, "senado_votacao_comissao:senador").map(parseVotacaoComissao),
+            params.dataInicio,
+            params.dataFim,
+          );
           const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
             dataset_id: `codigoParlamentar=${params.codigoSenador}`,
             reference_period: params.dataInicio && params.dataFim
@@ -107,12 +132,11 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
             CACHE_DYNAMIC,
             () => upstreamFetch(path, qp, baseUrl),
           );
-          const r = response as any;
-          const votacoes = ensureArray(
-            r?.VotacoesComissao?.Votacoes?.Votacao ??
-            r?.VotacaoComissaoMateria?.Votacoes?.Votacao ??
-            r?.Votacoes?.Votacao,
-          ).map(parseVotacaoComissao);
+          const votacoes = filtrarPorData(
+            digArrayRoot(response, VOTACAO_COMISSAO_ROOT, "senado_votacao_comissao:materia").map(parseVotacaoComissao),
+            params.dataInicio,
+            params.dataFim,
+          );
           const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
             dataset_id: `materia=${sigla} ${params.numero}/${params.ano}`,
             reference_period: String(params.ano),
@@ -138,11 +162,11 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
           CACHE_DYNAMIC,
           () => upstreamFetch(path, qp, baseUrl),
         );
-        const r = response as any;
-        const votacoes = ensureArray(
-          r?.VotacaoComissao?.Votacoes?.Votacao ??
-          r?.Votacoes?.Votacao,
-        ).map(parseVotacaoComissao);
+        const votacoes = filtrarPorData(
+          digArrayRoot(response, VOTACAO_COMISSAO_ROOT, "senado_votacao_comissao:comissao").map(parseVotacaoComissao),
+          params.dataInicio,
+          params.dataFim,
+        );
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `comissao=${sigla}`,
           reference_period: params.dataInicio && params.dataFim

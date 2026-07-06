@@ -9,7 +9,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { errorFrom, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { digArrayRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
 import { USER_AGENT } from "../version.js";
@@ -27,6 +28,27 @@ export function parseDiscursoResumo(d: any) {
     indexacao: pronunciamento.Indexacao || pronunciamento.indexacao || null,
     url: pronunciamento.UrlTexto || pronunciamento.urlTexto || null,
     nomeParlamentar: pronunciamento.NomeParlamentar || pronunciamento.nomeParlamentar || null,
+  };
+}
+
+/**
+ * Parse a plenary pronouncement from the v4 service
+ * (DiscursosSessao.Sessoes.Sessao[].Pronunciamentos.Pronunciamento[]) — different field
+ * names from the per-senator endpoint (Data/Resumo/NomeAutor, not DataPronunciamento/...).
+ */
+export function parseDiscursoPlenario(p: any) {
+  return {
+    codigo: p.CodigoPronunciamento || p.id || null,
+    data: p.Data || null,
+    casa: p.Casa || null,
+    tipoUsoPalavra: p.TipoUsoPalavra?.Descricao || null,
+    resumo: p.Resumo || null,
+    indexacao: p.Indexacao || null,
+    url: p.TextoIntegral || null,
+    nomeParlamentar: p.NomeAutor || null,
+    codigoParlamentar: p.CodigoParlamentar ? safeInt(p.CodigoParlamentar) : null,
+    partido: p.Partido || null,
+    uf: p.UF || null,
   };
 }
 
@@ -90,7 +112,7 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
   // I2. senado_discursos_plenario
   server.tool(
     "senado_discursos_plenario",
-    "Lista todos os discursos realizados em plenário num período de datas (`dataInicio`/`dataFim` obrigatórias, formato YYYYMMDD). Retorna `{ periodo, count, discursos }`, cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `url` e `nomeParlamentar`. Para discursos de um parlamentar específico use `senado_discursos_senador`; obtenha o texto integral com `senado_discurso_texto`.",
+    "Lista todos os discursos realizados em plenário num período de datas (`dataInicio`/`dataFim` obrigatórias, formato YYYYMMDD). Retorna `{ periodo, count, discursos }`, cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `indexacao`, `url`, `nomeParlamentar`, `codigoParlamentar`, `partido` e `uf`. Para discursos de um parlamentar específico use `senado_discursos_senador`; obtenha o texto integral com `senado_discurso_texto`.",
     {
       dataInicio: z.string().regex(/^\d{8}$/).describe("Data início (YYYYMMDD)"),
       dataFim: z.string().regex(/^\d{8}$/).describe("Data fim (YYYYMMDD)"),
@@ -104,11 +126,16 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
           CACHE_DYNAMIC,
           () => upstreamFetch(path, {}, baseUrl),
         );
-        const r = response as any;
-        const discursos = ensureArray(
-          r?.DiscursosPlenario?.Pronunciamentos?.Pronunciamento ??
-          r?.Pronunciamentos?.Pronunciamento,
-        ).map(parseDiscursoResumo);
+        // v4: DiscursosSessao.Sessoes.Sessao[] each carrying Pronunciamentos.Pronunciamento[].
+        // Sessao/Pronunciamento come as arrays even when unitary; ensureArray defends the rest.
+        const sessoes = digArrayRoot(
+          response,
+          [["DiscursosSessao", "Sessoes", "Sessao"]],
+          "senado_discursos_plenario",
+        );
+        const discursos = sessoes.flatMap((s: any) =>
+          ensureArray(s?.Pronunciamentos?.Pronunciamento).map(parseDiscursoPlenario),
+        );
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           reference_period: `${params.dataInicio}/${params.dataFim}`,
           retrieved_at: fetchedAt,

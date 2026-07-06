@@ -1,76 +1,73 @@
 import { describe, it, expect } from "vitest";
-import { parseVotacaoComissao } from "../../src/tools/votacao-comissao.js";
+import { parseVotacaoComissao, filtrarPorData } from "../../src/tools/votacao-comissao.js";
+import { digArrayRoot } from "../../src/utils/upstream-parse.js";
 
-describe("parseVotacaoComissao", () => {
-  it("parses a PascalCase committee vote with nominal votes", () => {
+describe("parseVotacaoComissao (BUG-017)", () => {
+  // Real shape: VotacoesComissao.Votacoes.Votacao[] with DataHoraInicioReuniao,
+  // SiglaColegiado, IdentificacaoMateria and per-member QualidadeVoto (S/N/A).
+  it("parses a real committee vote and tallies QualidadeVoto", () => {
     const v = {
       Votacao: {
-        CodigoVotacao: "777",
-        DataVotacao: "2024-05-20",
-        SiglaComissao: "CCJ",
-        DescricaoMateria: "PL 100/2024",
-        DescricaoVotacao: "Aprovação do relatório",
-        Resultado: "Aprovado",
-        TotalVotosSim: 15,
-        TotalVotosNao: 3,
-        TotalVotosAbstencao: 1,
+        CodigoVotacao: "6932",
+        CodigoReuniao: "4097",
+        DataHoraInicioReuniao: "2015-10-21T10:25:00",
+        SiglaColegiado: "CCJ",
+        IdentificacaoMateria: "PLS 562/2011",
+        DescricaoVotacao: "PLS 562/2011",
         Votos: {
           Voto: [
-            { CodigoParlamentar: "1001", NomeParlamentar: "Senador A", SiglaPartido: "PT", DescricaoVoto: "Sim" },
-            { CodigoParlamentar: "1002", NomeParlamentar: "Senador B", SiglaPartido: "PL", DescricaoVoto: "Não" },
+            { CodigoParlamentar: "5006", NomeParlamentar: "Gleisi Hoffmann", SiglaPartidoParlamentar: "PT", QualidadeVoto: "S" },
+            { CodigoParlamentar: "5008", NomeParlamentar: "Humberto Costa", SiglaPartidoParlamentar: "PT", QualidadeVoto: "S" },
+            { CodigoParlamentar: "3", NomeParlamentar: "C", SiglaPartidoParlamentar: "PL", QualidadeVoto: "N" },
+            { CodigoParlamentar: "4", NomeParlamentar: "D", SiglaPartidoParlamentar: "MDB", QualidadeVoto: "A" },
           ],
         },
       },
     };
-    const result = parseVotacaoComissao(v);
-    expect(result.codigo).toBe("777");
-    expect(result.data).toBe("2024-05-20");
-    expect(result.comissao).toBe("CCJ");
-    expect(result.resultado).toBe("Aprovado");
-    expect(result.totalSim).toBe(15);
-    expect(result.totalNao).toBe(3);
-    expect(result.votos).toHaveLength(2);
-    expect(result.votos[0].nome).toBe("Senador A");
-    expect(result.votos[0].voto).toBe("Sim");
-    expect(result.votos[1].voto).toBe("Não");
+    const r = parseVotacaoComissao(v);
+    expect(r.codigo).toBe("6932");
+    expect(r.data).toBe("2015-10-21T10:25:00");
+    expect(r.comissao).toBe("CCJ");
+    expect(r.reuniao).toBe("4097");
+    expect(r.materia).toBe("PLS 562/2011");
+    expect(r.totalSim).toBe(2);
+    expect(r.totalNao).toBe(1);
+    expect(r.totalAbstencao).toBe(1);
+    expect(r.votos).toHaveLength(4);
+    expect(r.votos[0].nome).toBe("Gleisi Hoffmann");
+    expect(r.votos[0].partido).toBe("PT");
+    expect(r.votos[0].voto).toBe("S");
   });
 
-  it("parses flat camelCase committee vote", () => {
-    const v = {
-      codigoVotacao: 888,
-      dataVotacao: "2024-06-10",
-      siglaComissao: "CAE",
-      descricaoMateria: "PEC 45/2024",
-      resultado: "Rejeitado",
-    };
-    const result = parseVotacaoComissao(v);
-    expect(result.codigo).toBe(888);
-    expect(result.comissao).toBe("CAE");
-    expect(result.resultado).toBe("Rejeitado");
-    expect(result.votos).toEqual([]);
+  it("returns nulls/zeros for empty object", () => {
+    const r = parseVotacaoComissao({});
+    expect(r.codigo).toBeNull();
+    expect(r.comissao).toBeNull();
+    expect(r.totalSim).toBe(0);
+    expect(r.votos).toEqual([]);
   });
 
-  it("returns nulls for empty object", () => {
-    const result = parseVotacaoComissao({});
-    expect(result.codigo).toBeNull();
-    expect(result.data).toBeNull();
-    expect(result.comissao).toBeNull();
-    expect(result.resultado).toBeNull();
-    expect(result.totalSim).toBeNull();
-    expect(result.votos).toEqual([]);
+  it("resolves votes at the real VotacoesComissao root", () => {
+    const response = { VotacoesComissao: { Votacoes: { Votacao: [{ CodigoVotacao: "1" }] } } };
+    const votacoes = digArrayRoot(response, [["VotacoesComissao", "Votacoes", "Votacao"]], "t").map(parseVotacaoComissao);
+    expect(votacoes).toHaveLength(1);
+    expect(votacoes[0].codigo).toBe("1");
+  });
+});
+
+describe("filtrarPorData (BUG-017 local date filter)", () => {
+  const itens = [
+    { data: "2015-10-21T10:25:00", codigo: "old" },
+    { data: "2026-07-01T14:00:00", codigo: "new" },
+  ];
+
+  it("keeps only reunions within the YYYYMMDD window", () => {
+    const out = filtrarPorData(itens, "20260601", "20260705");
+    expect(out).toHaveLength(1);
+    expect(out[0].codigo).toBe("new");
   });
 
-  it("handles single vote (not array)", () => {
-    const v = {
-      Votacao: {
-        CodigoVotacao: "999",
-        Votos: {
-          Voto: { CodigoParlamentar: "2001", NomeParlamentar: "Senador Solo", DescricaoVoto: "Sim" },
-        },
-      },
-    };
-    const result = parseVotacaoComissao(v);
-    expect(result.votos).toHaveLength(1);
-    expect(result.votos[0].nome).toBe("Senador Solo");
+  it("returns everything when no window is given", () => {
+    expect(filtrarPorData(itens)).toHaveLength(2);
   });
 });
