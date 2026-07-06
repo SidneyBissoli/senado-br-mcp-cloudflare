@@ -63,6 +63,34 @@ export function extractSessoesResultado(response: any): any[] {
   return ensureArray(body?.Sessoes?.Sessao ?? body?.Sessao);
 }
 
+/** Parse a session from the plenary agenda (AgendaPlenario.Sessoes.Sessao[]). */
+export function parseSessaoAgenda(s: any) {
+  const materias = ensureArray(s.Materias?.Materia);
+  // TipoSessao/SituacaoSessao are plain strings in this dataset (were mapped from
+  // non-existent nested fields -> null).
+  const tipo = typeof s.TipoSessao === "string" ? s.TipoSessao.trim()
+    : s.TipoSessao?.DescricaoTipoSessao || s.DescricaoTipoSessao || null;
+  const situacao = typeof s.SituacaoSessao === "string" ? s.SituacaoSessao
+    : s.SituacaoSessao?.DescricaoSituacaoSessao || null;
+  return {
+    codigo: safeInt(s.CodigoSessao || s.Codigo) || null,
+    data: s.DataSessao || s.Data || null,
+    hora: s.Hora || s.HoraInicioSessao || null,
+    tipo: tipo || null,
+    situacao: situacao || null,
+    pauta: materias.length > 0
+      ? materias.map((m: any) => ({
+          materia:
+            m.DescricaoIdentificacaoMateria ||
+            (m.SiglaMateria ? `${m.SiglaMateria} ${safeInt(m.NumeroMateria)}/${m.AnoMateria}` : null),
+          ementa: m.Ementa || m.EmentaMateria || null,
+          autor: m.NomeAutor || null,
+          parecer: typeof m.Parecer === "string" ? m.Parecer.trim() : null,
+        }))
+      : undefined,
+  };
+}
+
 /** Parse a session from a plenary result response. */
 export function parseSessaoResultado(s: any) {
   return {
@@ -74,9 +102,11 @@ export function parseSessaoResultado(s: any) {
     casa: s.siglaCasa || s.SiglaCasa || null,
     itens: ensureArray(s.Itens?.Item ?? s.itens).map((i: any) => ({
       codigoMateria: safeInt(i.codigoMateria || i.CodigoMateria) || null,
-      identificacao: (i.identificacao || i.Identificacao || "").trim() || null,
-      ementa: i.ementa || i.Ementa || null,
-      resultado: i.descricaoResultado || i.DescricaoResultado || i.resultado || null,
+      identificacao: i.DescricaoIdentificacaoMateria || (i.identificacao || i.Identificacao || "").trim() || null,
+      ementa: i.ementaPapeleta || i.ementa || i.Ementa || null,
+      // textoResultado is populated once deliberated and an empty string otherwise
+      // (distinguishable from a genuinely absent field -> null).
+      resultado: ((i.textoResultado ?? i.descricaoResultado ?? i.DescricaoResultado ?? i.resultado) || "").trim() || null,
       parecer: typeof (i.parecer ?? i.Parecer) === "string" ? (i.parecer ?? i.Parecer).trim() : null,
     })),
   };
@@ -115,8 +145,11 @@ export function parseVeto(v: any) {
       codigo: safeInt(vetada.Codigo) || null,
       identificacao: `${vetada.Sigla} ${vetada.Numero}/${vetada.Ano}`,
     } : null,
-    dataLimiteVotacao: v.DataLimiteVotacao || v.PrazoVotacao || null,
-    tipo: v.TipoVeto || v.DescricaoTipoVeto || null,
+    // Real fields: Total ("Sim"=veto total / "Nao"=parcial) and DataSobrestacaoPauta
+    // (constitutional agenda-obstruction deadline), not TipoVeto/DataLimiteVotacao.
+    dataLimiteVotacao: v.DataSobrestacaoPauta || v.DataLimiteVotacao || v.PrazoVotacao || null,
+    tipo: v.Total ? (v.Total === "Sim" ? "total" : "parcial") : (v.TipoVeto || v.DescricaoTipoVeto || null),
+    assunto: v.Assunto || null,
   };
 }
 
@@ -124,7 +157,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F1. senado_agenda_plenario
   server.tool(
     "senado_agenda_plenario",
-    "Obtém a agenda de sessões de plenário (Senado ou Congresso Nacional), por dia ou mês, com a pauta de matérias a votar. Retorna `{ data, escopo, count, sessoes }`, onde cada sessão traz `codigo`, `data`, `hora`, `tipo`, `situacao` e `pauta` (matéria, ementa, relator). Use `escopo` dia/mes/cn; sem `data` assume hoje. Para o resultado já apreciado use `senado_resultado_plenario`; detalhes de uma sessão via `senado_encontro_plenario`.",
+    "Obtém a agenda de sessões de plenário (Senado ou Congresso Nacional), por dia ou mês, com a pauta de matérias a votar. Retorna `{ data, escopo, count, sessoes }`, onde cada sessão traz `codigo`, `data`, `hora`, `tipo`, `situacao` e `pauta` (matéria, ementa, autor, parecer). Use `escopo` dia/mes/cn; sem `data` assume hoje. Para o resultado já apreciado use `senado_resultado_plenario`; detalhes de uma sessão via `senado_encontro_plenario`.",
     {
       data: z.string().regex(/^\d{8}$/).optional().describe("Data específica (YYYYMMDD; padrão: hoje)"),
       escopo: z.enum(["dia", "mes", "cn"]).optional().default("dia").describe("dia = SF+CN no dia; mes = mês inteiro; cn = plenário do Congresso"),
@@ -154,25 +187,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
           r?.AgendaPlenario?.Sessoes?.Sessao ??
           r?.Sessoes?.Sessao ??
           firstArrayDeep(stripWrapper(r)),
-        ).map((s: any) => {
-          const materias = ensureArray(s.Materias?.Materia);
-          return {
-            codigo: parseInt(s.CodigoSessao || s.Codigo || "0"),
-            data: s.DataSessao || s.Data || "",
-            hora: s.HoraInicioSessao || s.Hora || null,
-            tipo: s.TipoSessao?.DescricaoTipoSessao || s.DescricaoTipoSessao || s.Tipo || null,
-            situacao: s.SituacaoSessao?.DescricaoSituacaoSessao || s.Situacao || null,
-            pauta: materias.length > 0
-              ? materias.map((m: any) => ({
-                  materia:
-                    m.IdentificacaoMateria?.DescricaoIdentificacaoMateria ||
-                    `${m.SiglaSubtipoMateria || ""} ${m.NumeroMateria || ""}/${m.AnoMateria || ""}`.trim() || null,
-                  ementa: m.EmentaMateria || m.Ementa || null,
-                  relator: m.Relator?.NomeRelator || null,
-                }))
-              : undefined,
-          };
-        });
+        ).map(parseSessaoAgenda);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           reference_period: data, retrieved_at: fetchedAt,
         });
@@ -255,7 +270,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F4. senado_vetos
   server.tool(
     "senado_vetos",
-    "Lista vetos presidenciais em apreciação pelo Congresso Nacional, por ano ou por status de tramitação. Retorna `{ count, total, aviso?, vetos }`, com cada veto trazendo `codigo`, `identificacao`, `ementa`, `emTramitacao`, `materiaVetada` e `dataLimiteVotacao`. `limite` controla o corte (padrão 100; `aviso` indica truncagem). Informe `ano` OU `status` (tramitando/antes-rcn/encerrados). Para o resultado da votação de um veto use `senado_resultado_veto`.",
+    "Lista vetos presidenciais em apreciação pelo Congresso Nacional, por ano ou por status de tramitação. Retorna `{ count, total, aviso?, vetos }`, com cada veto trazendo `codigo`, `identificacao`, `ementa`, `emTramitacao`, `materiaVetada`, `tipo` (total/parcial), `assunto` e `dataLimiteVotacao` (prazo de sobrestamento de pauta). `limite` controla o corte (padrão 100; `aviso` indica truncagem). Informe `ano` OU `status` (tramitando/antes-rcn/encerrados). Para o resultado da votação de um veto use `senado_resultado_veto`.",
     {
       ano: z.number().int().min(1990).max(2100).optional().describe("Vetos do ano informado"),
       status: z.enum(["tramitando", "antes-rcn", "encerrados"]).optional().describe("tramitando = pós-RCN 1/2013 em tramitação (padrão); antes-rcn = anteriores à RCN; encerrados = tramitação encerrada"),

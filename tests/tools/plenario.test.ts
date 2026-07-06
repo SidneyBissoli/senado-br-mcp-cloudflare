@@ -3,10 +3,52 @@ import {
   stripWrapper,
   firstArrayDeep,
   extractSessoesResultado,
+  parseSessaoAgenda,
   parseSessaoResultado,
   parseOrientacaoVotacao,
   parseVeto,
 } from "../../src/tools/plenario.js";
+
+describe("parseSessaoAgenda (BUG-016)", () => {
+  // TipoSessao/SituacaoSessao are plain strings; pauta materia carries a sigla.
+  it("maps string tipo/situacao and a sigla-bearing pauta materia", () => {
+    const s = {
+      CodigoSessao: "564661",
+      Data: "16/06/2026",
+      Hora: "14:00",
+      TipoSessao: "SESSÃO DELIBERATIVA ORDINÁRIA ",
+      SituacaoSessao: "Encerrada",
+      Materias: {
+        Materia: [
+          {
+            SiglaMateria: "PL",
+            NumeroMateria: "00096",
+            AnoMateria: "2024",
+            DescricaoIdentificacaoMateria: "PL 96/2024",
+            Ementa: "Altera a LDB.",
+            NomeAutor: "Idilvan Alencar",
+            Parecer: "Parecer favorável nº 35, de 2026. ",
+          },
+        ],
+      },
+    };
+    const r = parseSessaoAgenda(s);
+    expect(r.codigo).toBe(564661);
+    expect(r.tipo).toBe("SESSÃO DELIBERATIVA ORDINÁRIA"); // trimmed
+    expect(r.situacao).toBe("Encerrada");
+    expect(r.pauta).toHaveLength(1);
+    expect(r.pauta![0].materia).toBe("PL 96/2024"); // has sigla, not "00096/2024"
+    expect(r.pauta![0].ementa).toBe("Altera a LDB.");
+    expect(r.pauta![0].autor).toBe("Idilvan Alencar");
+    expect(r.pauta![0].parecer).toBe("Parecer favorável nº 35, de 2026.");
+  });
+
+  it("has no pauta for a ceremonial session (Evento, no Materias)", () => {
+    const r = parseSessaoAgenda({ CodigoSessao: "1", TipoSessao: "SESSÃO DE PREMIAÇÕES ", SituacaoSessao: "Encerrada" });
+    expect(r.pauta).toBeUndefined();
+    expect(r.situacao).toBe("Encerrada");
+  });
+});
 
 describe("stripWrapper", () => {
   it("unwraps single-key wrappers and drops Metadados", () => {
@@ -128,5 +170,50 @@ describe("parseVeto", () => {
     expect(result.codigo).toBeNull();
     expect(result.identificacao).toBeNull();
     expect(result.materiaVetada).toBeNull();
+  });
+
+  // BUG-023: tipo/dataLimiteVotacao came from non-existent fields (always null).
+  it("maps tipo from Total and dataLimiteVotacao from DataSobrestacaoPauta", () => {
+    const result = parseVeto({
+      Codigo: "18449",
+      Total: "Não",
+      DataSobrestacaoPauta: "2026-08-18",
+      Assunto: "Trabalho em Condição Análoga à de Escravo",
+      Materia: { Sigla: "VET", Numero: "36", Ano: "2026", EmTramitacao: "Sim" },
+      MateriaVetada: { Codigo: "166703", Sigla: "PL", Numero: "5760", Ano: "2023" },
+    });
+    expect(result.tipo).toBe("parcial"); // Total = "Não"
+    expect(result.dataLimiteVotacao).toBe("2026-08-18");
+    expect(result.assunto).toBe("Trabalho em Condição Análoga à de Escravo");
+  });
+
+  it("maps a total veto (Total = 'Sim')", () => {
+    expect(parseVeto({ Codigo: "1", Total: "Sim" }).tipo).toBe("total");
+  });
+});
+
+describe("parseSessaoResultado items (BUG-028)", () => {
+  // resultado <- textoResultado, ementa <- ementaPapeleta; empty textoResultado -> null.
+  it("maps textoResultado/ementaPapeleta and distinguishes non-deliberated items", () => {
+    const s = {
+      codigoSessao: "564661",
+      Itens: {
+        Item: [
+          {
+            codigoMateria: "172498",
+            identificacao: "PROJETO DE LEI Nº 96, DE 2024\n\n",
+            DescricaoIdentificacaoMateria: "Projeto de Lei nº 96, de 2024",
+            ementaPapeleta: "altera a LDB.",
+            textoResultado: "Resultado da matéria: Aprovado o projeto.\n\n",
+          },
+          { codigoMateria: "999", textoResultado: "" }, // not deliberated
+        ],
+      },
+    };
+    const r = parseSessaoResultado(s);
+    expect(r.itens[0].identificacao).toBe("Projeto de Lei nº 96, de 2024");
+    expect(r.itens[0].ementa).toBe("altera a LDB.");
+    expect(r.itens[0].resultado).toContain("Aprovado o projeto");
+    expect(r.itens[1].resultado).toBeNull(); // empty string -> null, not ""
   });
 });
