@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { parseServidor, resumoRemuneracao } from "../../src/tools/servidores.js";
 import { unwrapAdmEnvelope } from "../../src/utils/upstream-parse.js";
-import { ensureArray } from "../../src/utils/validation.js";
+import { ensureArray, parseBRL } from "../../src/utils/validation.js";
 
 describe("pessoal_tabelas estagiarios envelope (BUG-034)", () => {
   // /servidores/estagiarios wraps its list in {statusCode,msg,data}; the tool used to
@@ -80,5 +80,34 @@ describe("resumoRemuneracao", () => {
   it("treats non-numeric fields as zero", () => {
     const result = resumoRemuneracao({ nome: "X", remuneracao_basica: "n/a" });
     expect(result.bruto).toBe(0);
+  });
+
+  // BUG-001: the API returns pt-BR strings ("20.529,64", "-2.777,41"); num() returned 0.
+  it("parses real pt-BR string amounts (BUG-001)", () => {
+    const result = resumoRemuneracao({
+      nome: "ADRIANA",
+      tipo_folha: "Suplementar",
+      remuneracao_basica: "-2.777,41",
+      vantagens_pessoais: "2.777,41",
+      funcao_comissionada: "0,00",
+      gratificacao_natalina: "20.529,64",
+      horas_extras: "0,00",
+      outras_eventuais: "0,00",
+      abono_permanencia: "0,00",
+    });
+    expect(result.remuneracaoBasica).toBe(-2777.41);
+    expect(result.gratificacaoNatalina).toBe(20529.64);
+    expect(result.bruto).toBe(20529.64); // sum of components, no longer 0
+  });
+});
+
+describe("horas_extras aggregate (BUG-002)", () => {
+  // valorTotal comes as a pt-BR string; the aggregate summed only numbers -> 0.
+  it("sums parsed pt-BR valorTotal values", () => {
+    const itens = [{ valorTotal: "127,50" }, { valorTotal: "1.953,14" }, { valorTotal: "0,00" }]
+      .map((h) => ({ valorTotal: parseBRL(h.valorTotal) }));
+    const total = Math.round(itens.reduce((s, h) => s + h.valorTotal, 0) * 100) / 100;
+    expect(itens[1].valorTotal).toBe(1953.14); // individual is now a number
+    expect(total).toBe(2080.64);
   });
 });

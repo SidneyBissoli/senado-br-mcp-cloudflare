@@ -12,7 +12,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
-import { errorFrom, ensureArray } from "../utils/validation.js";
+import { errorFrom, ensureArray, parseBRL } from "../utils/validation.js";
 import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
@@ -36,7 +36,8 @@ export function parseServidor(s: any) {
 
 /** Sum the numeric fields of a remuneration item (gross composition). */
 export function resumoRemuneracao(r: any) {
-  const num = (v: unknown) => (typeof v === "number" ? v : 0);
+  // Values arrive as pt-BR strings ("41.441,26", "-2.777,41"); a plain Number() -> NaN -> 0.
+  const num = (v: unknown) => parseBRL(v);
   return {
     nome: r.nome || "",
     tipoFolha: r.tipo_folha || null,
@@ -182,13 +183,13 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
         );
         let itens = ensureArray(response).map((h: any) => ({
           nome: h.nome || "",
-          valorTotal: h.valorTotal ?? null,
+          valorTotal: parseBRL(h.valorTotal), // pt-BR string -> number
           competencia: h.mes_ano_prestacao || null,
           pagamento: h.mes_ano_pagamento || null,
           horasExtras: h.horas_extras ?? null,
         }));
         if (params.nome) itens = itens.filter((h) => matchesFiltro(h.nome, params.nome!));
-        const valorTotal = Math.round(itens.reduce((s, h) => s + (typeof h.valorTotal === "number" ? h.valorTotal : 0), 0) * 100) / 100;
+        const valorTotal = Math.round(itens.reduce((s, h) => s + h.valorTotal, 0) * 100) / 100;
         const limite = params.limite ?? 100;
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1/servidores/horas-extras/${params.ano}/${params.mes}`, {
           dataset_id: `horas-extras; ${params.ano}/${params.mes}`,
