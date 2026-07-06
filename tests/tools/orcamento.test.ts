@@ -2,37 +2,42 @@ import { describe, it, expect } from "vitest";
 import { parseEmenda, parseOficio } from "../../src/tools/orcamento.js";
 
 describe("parseEmenda", () => {
-  it("parses a budget amendment", () => {
+  // Real shape from ListaLoteEmendas.LotesEmendasOrcamento.LoteEmendasOrcamento[].
+  it("parses a real budget amendment batch (LoteEmendasOrcamento)", () => {
     const e = {
-      Codigo: "500",
-      Numero: "123",
-      Ano: "2024",
-      TipoEmenda: "Individual",
-      Autor: "Senador Fulano",
-      Valor: "1000000.00",
-      Descricao: "Emenda para saúde",
+      NomeAutorOrcamento: "Abilio Brunini",
+      IndicadorAtivo: "Não",
+      CodigoAutorOrcamento: "4290",
+      DataOperacao: "2023-11-29",
+      QuantidadeEmendas: "10",
+      AnoExecucao: "2024",
+      NumeroMateria: "29",
+      AnoMateria: "2023",
+      SiglaTipoPlOrcamento: "LOA",
+      DescricaoTipoPlOrcamento: "Lei Orçamentária Anual",
     };
     const result = parseEmenda(e);
-    expect(result.codigo).toBe("500");
-    expect(result.numero).toBe("123");
-    expect(result.ano).toBe("2024");
-    expect(result.tipo).toBe("Individual");
-    expect(result.autor).toBe("Senador Fulano");
-    expect(result.valor).toBe("1000000.00");
-    expect(result.descricao).toBe("Emenda para saúde");
+    expect(result.autor).toBe("Abilio Brunini");
+    expect(result.codigoAutor).toBe(4290);
+    expect(result.quantidadeEmendas).toBe(10);
+    expect(result.anoExecucao).toBe("2024");
+    expect(result.materia).toBe("LOA 29/2023");
+    expect(result.tipoPl).toBe("Lei Orçamentária Anual");
+    expect(result.dataOperacao).toBe("2023-11-29");
+    expect(result.ativo).toBe(false);
   });
 
-  it("returns nulls for empty object", () => {
+  it("maps IndicadorAtivo 'Sim' to ativo true", () => {
+    expect(parseEmenda({ IndicadorAtivo: "Sim" }).ativo).toBe(true);
+  });
+
+  it("returns nulls/zeros for empty object", () => {
     const result = parseEmenda({});
-    expect(result.codigo).toBeNull();
-    expect(result.numero).toBeNull();
-    expect(result.tipo).toBeNull();
-    expect(result.descricao).toBeNull();
-  });
-
-  it("falls back to Ementa for descricao", () => {
-    const result = parseEmenda({ Ementa: "Ementa alternativa" });
-    expect(result.descricao).toBe("Ementa alternativa");
+    expect(result.autor).toBeNull();
+    expect(result.codigoAutor).toBeNull();
+    expect(result.quantidadeEmendas).toBe(0);
+    expect(result.materia).toBeNull();
+    expect(result.ativo).toBe(false);
   });
 });
 

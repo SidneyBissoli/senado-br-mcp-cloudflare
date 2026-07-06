@@ -9,10 +9,21 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { digArrayRoot, digObjectRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_ON_DEMAND } from "../types.js";
 
-/** Parse a parliamentary bloc summary. */
+/** Convert a "DD/MM/AAAA" date to ISO "AAAA-MM-DD"; passes through other strings. */
+function brDateToISO(v: any): string | null {
+  if (typeof v !== "string") return null;
+  const m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : v;
+}
+
+/**
+ * Parse a parliamentary bloc from the LIST dump (ListaBlocoParlamentar.Blocos.Bloco[]):
+ * PascalCase, DataCriacao already ISO, members under Membros.Membro[].Partido.
+ */
 export function parseBlocoResumo(b: any) {
   const bloco = b.Bloco || b;
   return {
@@ -22,37 +33,73 @@ export function parseBlocoResumo(b: any) {
     dataCriacao: bloco.DataCriacao || bloco.dataCriacao || null,
     dataExtincao: bloco.DataExtincao || bloco.dataExtincao || null,
     partidos: ensureArray(bloco.Membros?.Membro ?? bloco.membros).map((m: any) => ({
-      sigla: m.SiglaPartido || m.siglaPartido || m.Sigla || null,
-      nome: m.NomePartido || m.nomePartido || m.Nome || null,
+      sigla: m.Partido?.SiglaPartido || m.SiglaPartido || m.siglaPartido || null,
+      nome: m.Partido?.NomePartido || m.NomePartido || m.nomePartido || null,
       dataAdesao: m.DataAdesao || m.dataAdesao || null,
     })),
   };
 }
 
-/** Parse a leadership entry. */
-export function parseLideranca(l: any) {
+/**
+ * Parse a parliamentary bloc from the DETAIL endpoint (blocos.bloco): lowercase keys,
+ * dataCriacao as "DD/MM/AAAA", members under composicaoBloco.composicao_bloco[].partido.
+ */
+export function parseBlocoDetalhe(bloco: any) {
   return {
-    tipo: l.SiglaTipoLideranca || l.TipoLideranca || l.tipo || null,
-    descricao: l.DescricaoTipoLideranca || l.descricao || null,
-    unidadeLideranca: l.UnidadeLideranca?.NomeUnidadeLideranca ||
-      l.nomeUnidadeLideranca || null,
-    parlamentar: l.Lider ? {
-      codigo: l.Lider.CodigoParlamentar || null,
-      nome: l.Lider.NomeParlamentar || null,
-      partido: l.Lider.SiglaPartido || null,
-      uf: l.Lider.SiglaUf || null,
-    } : null,
+    codigo: bloco.id || bloco.idBloco || null,
+    nome: bloco.nomeBloco || null,
+    nomeApelido: bloco.nomeApelidoBloco || null,
+    dataCriacao: brDateToISO(bloco.dataCriacao),
+    dataExtincao: brDateToISO(bloco.dataExtincao),
+    partidos: ensureArray(bloco.composicaoBloco?.composicao_bloco).map((c: any) => ({
+      sigla: c.partido?.siglaPartido || null,
+      nome: c.partido?.nomePartido || null,
+      dataAdesao: brDateToISO(c.dataAdesao),
+    })),
   };
 }
 
-/** Parse a Mesa Diretora member. */
-export function parseMembroMesa(m: any) {
+/**
+ * Parse a leadership entry from /composicao/lideranca (flat camelCase array).
+ * The payload carries the parliamentarian fields flat on the item (no nested Lider,
+ * no UF). Legacy PascalCase fallbacks are kept defensively.
+ */
+export function parseLideranca(l: any) {
+  const hasParlamentar = l.codigoParlamentar != null || l.Lider != null;
   return {
-    cargo: m.DescricaoCargo || m.Cargo || null,
-    codigo: m.CodigoParlamentar || null,
-    nome: m.NomeParlamentar || null,
-    partido: m.SiglaPartido || null,
-    uf: m.SiglaUf || null,
+    tipo: l.siglaTipoLideranca || l.SiglaTipoLideranca || l.TipoLideranca || null,
+    descricao: l.descricaoTipoLideranca || l.DescricaoTipoLideranca || null,
+    unidadeLideranca:
+      l.descricaoTipoUnidadeLideranca ||
+      l.UnidadeLideranca?.NomeUnidadeLideranca ||
+      l.nomeUnidadeLideranca ||
+      null,
+    parlamentar: hasParlamentar
+      ? {
+          codigo: l.codigoParlamentar ?? l.Lider?.CodigoParlamentar ?? null,
+          nome: l.nomeParlamentar || l.Lider?.NomeParlamentar || null,
+          partido: l.siglaPartidoFiliacao || l.Lider?.SiglaPartido || null,
+          uf: l.UfParlamentar || l.Lider?.SiglaUf || null,
+        }
+      : null,
+  };
+}
+
+/**
+ * Parse a Mesa Diretora member from the current dump
+ * (MesaSenado/MesaCongresso.Colegiados.Colegiado[].Cargos.Cargo[]).
+ * `Cargo` is a string array, `Http` is the parliamentarian code, and `Bancada`
+ * embeds party/UF as "(UNIAO-AP)". Legacy flat fields are kept as fallbacks.
+ */
+export function parseMembroMesa(m: any) {
+  const bancada = typeof m.Bancada === "string" ? m.Bancada : "";
+  const match = bancada.match(/\(([^)]+)-([A-Za-z]{2})\)/);
+  return {
+    cargo: ensureArray(m.Cargo)[0] ?? m.DescricaoCargo ?? null,
+    codigo: m.Http ?? m.CodigoParlamentar ?? null,
+    nome: (m.NomeParlamentar || "").trim() || null,
+    partido: match ? match[1].trim() : m.SiglaPartido ?? null,
+    uf: match ? match[2].trim() : m.SiglaUf ?? null,
   };
 }
 
@@ -70,10 +117,10 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
           CACHE_SEMI_STATIC,
           () => upstreamFetch("/composicao/lista/blocos", {}, baseUrl),
         );
-        const r = response as any;
-        const blocos = ensureArray(
-          r?.ListaBlocoParlamentar?.BlocosParlamentares?.BlocoParlamentar ??
-          r?.BlocosParlamentares?.BlocoParlamentar,
+        const blocos = digArrayRoot(
+          response,
+          [["ListaBlocoParlamentar", "Blocos", "Bloco"]],
+          "senado_listar_blocos",
         ).map(parseBlocoResumo);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/composicao/lista/blocos", {
           retrieved_at: fetchedAt,
@@ -101,12 +148,16 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
           CACHE_ON_DEMAND,
           () => upstreamFetch(path, {}, baseUrl),
         );
-        const r = response as any;
-        const bloco = r?.BlocoParlamentar?.Bloco || r?.Bloco || r;
+        const bloco = digObjectRoot(
+          response,
+          [["blocos", "bloco"], ["BlocoParlamentar", "Bloco"]],
+          "senado_obter_bloco",
+          { notFoundMessage: "Bloco parlamentar nao encontrado" },
+        );
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `bloco=${params.codigo}`, retrieved_at: fetchedAt,
         });
-        return resultWithProvenance(parseBlocoResumo(bloco), prov);
+        return resultWithProvenance(parseBlocoDetalhe(bloco), prov);
       } catch (e) {
         return errorFrom(e, "Bloco parlamentar não encontrado");
       }
@@ -137,11 +188,9 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
           CACHE_SEMI_STATIC,
           () => upstreamFetch("/composicao/lideranca", qp, baseUrl),
         );
-        const r = response as any;
-        const liderancas = ensureArray(
-          r?.LiderancaList?.Liderancas?.Lideranca ??
-          r?.Liderancas?.Lideranca,
-        ).map(parseLideranca);
+        // Upstream serves a flat JSON array at the root and honors the query params
+        // server-side (casa, codigoParlamentar, siglaTipoLideranca, vigente).
+        const liderancas = digArrayRoot(response, [[]], "senado_liderancas").map(parseLideranca);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/composicao/lideranca", {
           retrieved_at: fetchedAt,
         });
@@ -170,12 +219,17 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
           CACHE_SEMI_STATIC,
           () => upstreamFetch(path, {}, baseUrl),
         );
-        const r = response as any;
-        const membros = ensureArray(
-          r?.MesaSF?.Cargos?.Cargo ??
-          r?.MesaCN?.Cargos?.Cargo ??
-          r?.Cargos?.Cargo,
-        ).map(parseMembroMesa);
+        const colegiados = digArrayRoot(
+          response,
+          [
+            ["MesaSenado", "Colegiados", "Colegiado"],
+            ["MesaCongresso", "Colegiados", "Colegiado"],
+          ],
+          "senado_mesa",
+        );
+        const membros = colegiados.flatMap((col: any) =>
+          ensureArray(col?.Cargos?.Cargo).map(parseMembroMesa),
+        );
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `mesa=${casa}`, retrieved_at: fetchedAt,
         });

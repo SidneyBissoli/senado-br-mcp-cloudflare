@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseBlocoResumo, parseLideranca, parseMembroMesa } from "../../src/tools/composicao.js";
+import {
+  parseBlocoResumo,
+  parseBlocoDetalhe,
+  parseLideranca,
+  parseMembroMesa,
+} from "../../src/tools/composicao.js";
 
 describe("parseBlocoResumo", () => {
   it("parses a PascalCase bloc with member parties", () => {
@@ -99,5 +104,97 @@ describe("parseMembroMesa", () => {
     expect(result.cargo).toBeNull();
     expect(result.codigo).toBeNull();
     expect(result.nome).toBeNull();
+  });
+});
+
+// ---- Regression fixtures from the live upstream (padrao f) ----
+
+describe("parseBlocoResumo — real nested Membro.Partido (BUG-012)", () => {
+  it("reads sigla from the nested Partido object of the list dump", () => {
+    const b = {
+      Bloco: {
+        CodigoBloco: "346",
+        NomeBloco: "Bloco Parlamentar Aliança",
+        NomeApelido: "BLALIANÇA",
+        DataCriacao: "2023-03-20",
+        Membros: {
+          Membro: [
+            { Partido: { SiglaPartido: "PP", NomePartido: "Progressistas" }, DataAdesao: "2023-03-20" },
+          ],
+        },
+      },
+    };
+    const r = parseBlocoResumo(b);
+    expect(r.codigo).toBe("346");
+    expect(r.partidos).toHaveLength(1);
+    expect(r.partidos[0].sigla).toBe("PP");
+    expect(r.partidos[0].nome).toBe("Progressistas");
+  });
+});
+
+describe("parseBlocoDetalhe — real detail shape (BUG-013)", () => {
+  it("parses the lowercase blocos.bloco detail with DD/MM dates and composicao_bloco", () => {
+    const bloco = {
+      id: "346",
+      idBloco: "346",
+      siglaCasa: "SF",
+      nomeBloco: "Bloco Parlamentar Aliança",
+      nomeApelidoBloco: "BLALIANÇA",
+      dataCriacao: "20/03/2023",
+      composicaoBloco: {
+        composicao_bloco: [
+          { partido: { siglaPartido: "PP", nomePartido: "Progressistas" }, dataAdesao: "20/03/2023" },
+        ],
+      },
+    };
+    const r = parseBlocoDetalhe(bloco);
+    expect(r.codigo).toBe("346");
+    expect(r.nome).toBe("Bloco Parlamentar Aliança");
+    expect(r.nomeApelido).toBe("BLALIANÇA");
+    expect(r.dataCriacao).toBe("2023-03-20"); // DD/MM/AAAA -> ISO
+    expect(r.partidos).toHaveLength(1);
+    expect(r.partidos[0].sigla).toBe("PP");
+    expect(r.partidos[0].dataAdesao).toBe("2023-03-20");
+  });
+});
+
+describe("parseLideranca — real flat camelCase (BUG-011)", () => {
+  it("parses a flat leadership item with parliamentarian fields on the item", () => {
+    const l = {
+      casa: "CN",
+      codigoParlamentar: 5012,
+      dataDesignacao: "2023-01-06",
+      descricaoTipoLideranca: "Líder do Congresso Nacional",
+      siglaTipoLideranca: "L",
+      descricaoTipoUnidadeLideranca: "Liderança do Governo no Congresso Nacional",
+      nomeParlamentar: "Randolfe Rodrigues",
+      siglaPartidoFiliacao: "PT",
+    };
+    const r = parseLideranca(l);
+    expect(r.tipo).toBe("L");
+    expect(r.descricao).toBe("Líder do Congresso Nacional");
+    expect(r.unidadeLideranca).toBe("Liderança do Governo no Congresso Nacional");
+    expect(r.parlamentar).not.toBeNull();
+    expect(r.parlamentar!.codigo).toBe(5012);
+    expect(r.parlamentar!.nome).toBe("Randolfe Rodrigues");
+    expect(r.parlamentar!.partido).toBe("PT");
+    expect(r.parlamentar!.uf).toBeNull(); // not present in the flat payload
+  });
+});
+
+describe("parseMembroMesa — real dump shape (BUG-010)", () => {
+  it("reads Cargo[], Http and Bancada (UNIAO-AP)", () => {
+    const m = {
+      Cargo: ["PRESIDENTE"],
+      NomeParlamentar: "Senador Davi Alcolumbre",
+      Bancada: "(UNIÃO-AP)",
+      Http: "3830",
+    };
+    const r = parseMembroMesa(m);
+    expect(r.cargo).toBe("PRESIDENTE");
+    expect(r.codigo).toBe("3830");
+    expect(r.nome).toBe("Senador Davi Alcolumbre");
+    expect(r.partido).toBe("UNIÃO");
+    expect(r.uf).toBe("AP");
   });
 });

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseProcessoResumo, parseProcessoDetalhe, ensureISODate, parseEmendaProcesso, parseRelatoriaProcesso, parseAutorAtual, TABELAS_PROCESSO } from "../../src/tools/processos.js";
+import { digArrayRoot } from "../../src/utils/upstream-parse.js";
 
 describe("parseProcessoResumo", () => {
   it("parses a process search result", () => {
@@ -155,5 +156,25 @@ describe("TABELAS_PROCESSO", () => {
     for (const path of Object.values(TABELAS_PROCESSO)) {
       expect(path.startsWith("/processo/")).toBe(true);
     }
+  });
+});
+
+describe("autores root (BUG-032)", () => {
+  // Live dump: ListaAutores.Autores.Autor[]; the old parser read .Autores.Parlamentar.
+  it("resolves authors at the real root and parses them", () => {
+    const response = {
+      ListaAutores: {
+        Autores: {
+          Autor: [
+            { CodigoParlamentar: "4981", NomeParlamentar: "Acir Gurgacz", UfParlamentar: "RO", QuantidadeMaterias: "56" },
+          ],
+        },
+      },
+    };
+    const autores = digArrayRoot(response, [["ListaAutores", "Autores", "Autor"]], "t").map(parseAutorAtual);
+    expect(autores).toHaveLength(1);
+    expect(autores[0].quantidadeMaterias).toBe(56);
+    // The old (wrong) path yields nothing.
+    expect((response as any).ListaAutores.Autores.Parlamentar).toBeUndefined();
   });
 });

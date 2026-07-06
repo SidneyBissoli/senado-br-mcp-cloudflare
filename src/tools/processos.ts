@@ -13,6 +13,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolError, errorFrom, buildParams, ensureArray, safeInt, normalizeText } from "../utils/validation.js";
+import { digArrayRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND, CACHE_STATIC, CACHE_SEMI_STATIC } from "../types.js";
 
@@ -317,8 +318,11 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
           CACHE_SEMI_STATIC,
           () => upstreamFetch("/autor/lista/atual", {}, baseUrl),
         );
-        const r = response as any;
-        let autores = ensureArray(r?.ListaAutores?.Autores?.Parlamentar ?? r?.Autores?.Parlamentar)
+        let autores = digArrayRoot(
+          response,
+          [["ListaAutores", "Autores", "Autor"]],
+          "senado_autores_atuais",
+        )
           .map(parseAutorAtual)
           .sort((a, b) => b.quantidadeMaterias - a.quantidadeMaterias);
         if (params.uf) {

@@ -10,6 +10,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray } from "../utils/validation.js";
+import { digArrayRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_STATIC } from "../types.js";
 
@@ -182,10 +183,10 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
               "senado_tipos_norma", {}, CACHE_STATIC,
               () => upstreamFetch("/legislacao/tiposNorma", {}, baseUrl),
             );
-            const r = response as any;
-            const tipos = ensureArray(
-              r?.ListaTiposNorma?.TiposNorma?.TipoNorma ??
-              r?.TiposNorma?.TipoNorma,
+            const tipos = digArrayRoot(
+              response,
+              [["ListaTiposDocumento", "TiposDocumento", "TipoDocumento"]],
+              "senado_tabelas_referencia:tipos-norma",
             ).map((t: any) => ({
               sigla: t.Sigla || t.sigla || null,
               descricao: t.Descricao || t.descricao || null,

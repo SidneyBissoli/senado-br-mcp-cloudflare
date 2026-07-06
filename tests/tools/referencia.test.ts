@@ -1,5 +1,29 @@
 import { describe, it, expect } from "vitest";
 import { TIPOS_MATERIA, UFS, extractParlamentares } from "../../src/tools/referencia.js";
+import { digArrayRoot } from "../../src/utils/upstream-parse.js";
+
+describe("tipos-norma root (BUG-027)", () => {
+  // tiposNorma 301-redirects to dados/ListaTiposDocumento.json:
+  // ListaTiposDocumento.TiposDocumento.TipoDocumento[] (was read as ListaTiposNorma.TiposNorma.TipoNorma).
+  it("resolves the norm types at the real dump root", () => {
+    const response = {
+      ListaTiposDocumento: {
+        TiposDocumento: {
+          TipoDocumento: [
+            { Codigo: "18", Sigla: "ACD", Descricao: "Ato do Presidente da Câmara dos Deputados" },
+          ],
+        },
+      },
+    };
+    const tipos = digArrayRoot(
+      response,
+      [["ListaTiposDocumento", "TiposDocumento", "TipoDocumento"]],
+      "t",
+    ).map((t: any) => ({ sigla: t.Sigla, descricao: t.Descricao }));
+    expect(tipos).toHaveLength(1);
+    expect(tipos[0].sigla).toBe("ACD");
+  });
+});
 
 describe("TIPOS_MATERIA", () => {
   it("is a non-empty array", () => {
