@@ -126,7 +126,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C1. senado_search_processos
   server.tool(
     "senado_search_processos",
-    "Busca processos legislativos no endpoint v3 `/processo` (parâmetros complementares ao `senado_buscar_materias`). Retorna `{ count, processos }`, cada item com `id`, `codigoMateria`, `identificacao`, `ementa`, `tipoDocumento`, `dataApresentacao`, `autoria`, `tramitando` e `normaGerada`. É obrigatório ao menos um filtro (sigla, número, ano, autor ou período; janela de datas máx. 1 ano). Use o `id` retornado em `senado_obter_processo` para detalhes.",
+    "Busca processos legislativos no endpoint v3 `/processo` (parâmetros complementares ao `senado_buscar_materias`). Retorna `{ count, processos }`, cada item com `id`, `codigoMateria`, `identificacao`, `ementa`, `tipoDocumento`, `dataApresentacao`, `autoria`, `tramitando` e `normaGerada`. É obrigatório ao menos um filtro (sigla, número, ano, autor ou período). Use o `id` retornado em `senado_obter_processo` para detalhes.",
     {
       sigla: z.string().optional().describe("Sigla do tipo de processo (ex: PL, PEC)"),
       numero: z.number().int().optional().describe("Número do processo"),
@@ -134,7 +134,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
       autor: z.string().optional().describe("Nome do autor"),
       codigoParlamentarAutor: z.number().int().optional().describe("Código do parlamentar autor"),
       tramitando: z.enum(["S", "N"]).optional().describe("Em tramitação (S/N)"),
-      dataInicioApresentacao: z.string().optional().describe("Data início da apresentação (YYYYMMDD ou YYYY-MM-DD; janela máxima de 1 ano)"),
+      dataInicioApresentacao: z.string().optional().describe("Data início da apresentação (YYYYMMDD ou YYYY-MM-DD)"),
       dataFimApresentacao: z.string().optional().describe("Data fim da apresentação (YYYYMMDD ou YYYY-MM-DD)"),
     },
     async (params) => {

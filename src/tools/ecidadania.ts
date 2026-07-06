@@ -125,7 +125,9 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         const status = params.status ?? "aberta";
         let filtered = items as ConsultaResumo[];
         if (status !== "todas") filtered = filtered.filter((c) => c.status === status);
-        const out = filtered.slice(0, params.limite);
+        const limite = params.limite ?? 20;
+        const offset = ((params.pagina ?? 1) - 1) * limite;
+        const out = filtered.slice(offset, offset + limite);
         return resultWithProvenance(
           { count: out.length, consultas: tagUntrustedList("consultas", out as unknown as Record<string, unknown>[]), meta },
           provLista("/principalmateria", "consultas", meta),
@@ -232,7 +234,9 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         if (params.ordenarPor === "apoios") {
           arr = [...arr].sort((a, b) => (params.ordem === "asc" ? a.apoios - b.apoios : b.apoios - a.apoios));
         }
-        arr = arr.slice(0, params.limite ?? 20);
+        const limite = params.limite ?? 20;
+        const offset = ((params.pagina ?? 1) - 1) * limite;
+        arr = arr.slice(offset, offset + limite);
         return resultWithProvenance(
           { count: arr.length, ideias: tagUntrustedList("ideias", arr as unknown as Record<string, unknown>[]), meta },
           provLista("/principalideia", "ideias", meta),

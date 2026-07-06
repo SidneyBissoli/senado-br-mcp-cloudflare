@@ -16,7 +16,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { toolError, errorFrom, ensureArray, safeInt, toBool } from "../utils/validation.js";
+import { toolError, errorFrom, ensureArray, safeInt, toBool, normalizeText } from "../utils/validation.js";
 import { digArrayRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
@@ -64,12 +64,15 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
           casa: c.SiglaCasa || null,
           ativa: true, // this endpoint only returns active committees
         }));
-        if (params.tipo) {
+        if (params.tipo === "mista") {
+          // No DescricaoTipoColegiado equals "mista"; the mistas (CMO, CCAI, CMMC, CMCVM,
+          // CMMIR and the CMMPVs) are identifiable by "Mista" in the name.
+          comissoes = comissoes.filter((c) => normalizeText(c.nome).includes("mista"));
+        } else if (params.tipo) {
           const tipoMap: Record<string, string[]> = {
             permanente: ["permanente"],
             temporaria: ["temporária", "temporaria"],
             cpi: ["cpi", "comissão parlamentar de inquérito"],
-            mista: ["mista"],
           };
           const valid = tipoMap[params.tipo] || [];
           comissoes = comissoes.filter((c) => c.tipo && valid.some((t) => c.tipo!.toLowerCase().includes(t)));
@@ -486,13 +489,29 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
           );
           fetchedAt = fa;
           const r = response as any;
-          parlamentares = ensureArray(r?.DistribuicaodeRelatoria?.Totais?.Parlamentares).map((p: any) => ({
-            codigo: parseInt(p.CodigoParlamentar || "0") || null,
-            nome: p.Parlamentar || "",
-            partido: p.Partido || null,
-            uf: typeof p.Uf === "string" ? p.Uf : (Array.isArray(p.Uf) ? p.Uf[0] : null),
-            quantidade: parseInt(p.Quantidade || "0"),
-          }));
+          // Upstream emits one row per (parlamentar, UnidadeTramitacaoAtual), so a relator
+          // can appear more than once. Aggregate by CodigoParlamentar (sum Quantidade) and
+          // strip the honorific so names match the autoria axis.
+          const acc = new Map<string, { codigo: number | null; nome: string; partido: string | null; uf: string | null; quantidade: number }>();
+          for (const p of ensureArray(r?.DistribuicaodeRelatoria?.Totais?.Parlamentares)) {
+            const pp = p as any;
+            const codigo = parseInt(pp.CodigoParlamentar || "0") || null;
+            const key = String(codigo ?? pp.Parlamentar ?? "");
+            const qtd = parseInt(pp.Quantidade || "0");
+            const existing = acc.get(key);
+            if (existing) {
+              existing.quantidade += qtd;
+            } else {
+              acc.set(key, {
+                codigo,
+                nome: (pp.Parlamentar || "").replace(/^Senador(a)?\s+/i, "").trim(),
+                partido: pp.Partido || null,
+                uf: typeof pp.Uf === "string" ? pp.Uf : (Array.isArray(pp.Uf) ? pp.Uf[0] : null),
+                quantidade: qtd,
+              });
+            }
+          }
+          parlamentares = [...acc.values()];
         }
         parlamentares.sort((a, b) => b.quantidade - a.quantidade);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {

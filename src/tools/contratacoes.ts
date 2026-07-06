@@ -70,7 +70,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q1. senado_contratos
   server.tool(
     "senado_contratos",
-    "Busca contratos administrativos do Senado por fornecedor, CNPJ, ano, número, objeto ou mão de obra (filtros aplicados pela API upstream). Retorna `{ count, total, contratos }`, onde cada item traz `id`, `numero`, `objeto`, `empresa {nome, cnpj}`, `subEspecie`, `dataAssinatura`, `vigencia` e `unidadeGestora`. Limitado a `limite` itens (padrão 50, máx 500), com `aviso` quando há truncamento. Use o `id` retornado em `senado_contratacao_detalhe` para itens, pagamentos, garantias ou aditivos.",
+    "Busca contratos administrativos do Senado por fornecedor, CNPJ, ano, número, objeto ou mão de obra (base completa baixada e filtrada no Worker; busca parcial sem acento em objeto/fornecedor/número). Retorna `{ count, total, contratos }`, onde cada item traz `id`, `numero`, `objeto`, `empresa {nome, cnpj}`, `subEspecie`, `dataAssinatura`, `vigencia` e `unidadeGestora`. Limitado a `limite` itens (padrão 50, máx 500), com `aviso` quando há truncamento. Use o `id` retornado em `senado_contratacao_detalhe` para itens, pagamentos, garantias ou aditivos.",
     {
       fornecedor: z.string().optional().describe("Nome do fornecedor (busca parcial)"),
       cnpj: z.string().optional().describe("CNPJ/CPF exato do fornecedor"),
@@ -82,29 +82,33 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
     },
     async (params) => {
       try {
-        const qp = buildParams({
-          nomeFornecedorContains: params.fornecedor,
-          cnpjCpfEquals: params.cnpj,
-          anoEquals: params.ano,
-          numeroContains: params.numero,
-          objetoDescricaoContains: params.objeto,
-          maoDeObraEquals: params.maoDeObra !== undefined ? (params.maoDeObra ? "S" : "N") : undefined,
-        });
+        // The upstream filters server-side but case/accent-sensitively (and rejects the
+        // mao-de-obra param with HTTP 400), so fetch the full base once (cached) and filter
+        // in-Worker for reliable, accent-insensitive results.
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
-          "senado_contratos", qp, CACHE_SEMI_STATIC,
-          () => admFetch("/contratacoes/contratos", qp, admBaseUrl),
+          "senado_contratos", {}, CACHE_SEMI_STATIC,
+          () => admFetchLarge("/contratacoes/contratos", {}, admBaseUrl),
         );
-        const todos = ensureArray(response).map(parseContrato);
+        let filtrados = ensureArray(response).map(parseContrato);
+        if (params.objeto) filtrados = filtrados.filter((c) => matchesFiltro(c.objeto, params.objeto!));
+        if (params.fornecedor) filtrados = filtrados.filter((c) => matchesFiltro(c.empresa?.nome, params.fornecedor!));
+        if (params.numero) filtrados = filtrados.filter((c) => matchesFiltro(c.numero, params.numero!));
+        if (params.cnpj) {
+          const alvo = params.cnpj.replace(/\D/g, "");
+          filtrados = filtrados.filter((c) => (c.empresa?.cnpj || "").replace(/\D/g, "") === alvo);
+        }
+        if (params.ano) filtrados = filtrados.filter((c) => String(c.dataAssinatura || "").startsWith(String(params.ano)));
+        if (params.maoDeObra !== undefined) filtrados = filtrados.filter((c) => c.maoDeObra === params.maoDeObra);
         const limite = params.limite ?? 50;
-        const contratos = todos.slice(0, limite);
+        const contratos = filtrados.slice(0, limite);
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/contratos", {
           reference_period: params.ano ? String(params.ano) : undefined,
           retrieved_at: fetchedAt,
         });
         return resultWithProvenance({
           count: contratos.length,
-          total: todos.length,
-          ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} contratos. Refine os filtros.` } : {}),
+          total: filtrados.length,
+          ...(filtrados.length > limite ? { aviso: `Exibindo ${limite} de ${filtrados.length} contratos. Refine os filtros.` } : {}),
           contratos,
         }, prov);
       } catch (e) {

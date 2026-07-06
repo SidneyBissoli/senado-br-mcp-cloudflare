@@ -1,4 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+describe("e-Cidadania pagination offset (BUG-018)", () => {
+  // listar_consultas/listar_ideias sliced [0, limite], ignoring `pagina`.
+  const page = <T>(arr: T[], pagina: number, limite: number) =>
+    arr.slice((pagina - 1) * limite, pagina * limite);
+  it("returns disjoint pages via OFFSET", () => {
+    const items = Array.from({ length: 12 }, (_, i) => i);
+    expect(page(items, 1, 5)).toEqual([0, 1, 2, 3, 4]);
+    expect(page(items, 2, 5)).toEqual([5, 6, 7, 8, 9]);
+    expect(page(items, 3, 5)).toEqual([10, 11]); // last partial page
+    const p1 = page(items, 1, 5);
+    expect(page(items, 2, 5).some((x) => p1.includes(x))).toBe(false); // disjoint
+  });
+});
+
 import {
   parseBrNum,
   extractId,

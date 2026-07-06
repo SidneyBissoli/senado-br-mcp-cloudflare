@@ -61,6 +61,30 @@ describe("matchesFiltro", () => {
   });
 });
 
+describe("senado_contratos local filters (BUG-003/033)", () => {
+  // Filters now run in-Worker over the full base (upstream is case-sensitive + 400s on maoDeObra).
+  const base = [
+    parseContrato({ id: 1, objeto: "Serviço de Vigilância armada", empresa: { nome: "SEG LTDA", cpf_cnpj: "11.222.333/0001-00" }, ind_mao_de_obra: true, data_assinatura: "2025-01-10" }),
+    parseContrato({ id: 2, objeto: "vigilância eletrônica", empresa: { nome: "X" }, ind_mao_de_obra: false, data_assinatura: "2024-06-01" }),
+    parseContrato({ id: 3, objeto: "Limpeza e conservação", empresa: { nome: "Y" }, ind_mao_de_obra: true, data_assinatura: "2025-03-03" }),
+  ];
+
+  it("matches objeto case/accent-insensitively (BUG-003)", () => {
+    expect(base.filter((c) => matchesFiltro(c.objeto, "vigilancia")).length).toBe(2); // both "Vigilância" and "vigilância"
+  });
+
+  it("filters maoDeObra as a boolean (BUG-033)", () => {
+    expect(base.filter((c) => c.maoDeObra === true).length).toBe(2);
+    expect(base.filter((c) => c.maoDeObra === false).length).toBe(1);
+  });
+
+  it("filters cnpj by digits and ano by data_assinatura prefix", () => {
+    const alvo = "11222333000100";
+    expect(base.filter((c) => (c.empresa?.cnpj || "").replace(/\D/g, "") === alvo).length).toBe(1);
+    expect(base.filter((c) => String(c.dataAssinatura || "").startsWith("2025")).length).toBe(2);
+  });
+});
+
 describe("matchesFiltroCampo (BUG-004/035)", () => {
   // lotacao is {sigla,nome}; cargo is {nome}. String matcher over the object never matches.
   it("matches against a {sigla,nome} lotacao by sigla or nome", () => {

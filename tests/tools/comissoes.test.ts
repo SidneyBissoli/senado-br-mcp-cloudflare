@@ -1,7 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { formatDateYMD, resolveComissaoCodigo } from "../../src/tools/comissoes.js";
 import { digArrayRoot } from "../../src/utils/upstream-parse.js";
-import { safeInt, toBool } from "../../src/utils/validation.js";
+import { safeInt, toBool, normalizeText } from "../../src/utils/validation.js";
+
+describe("listar_comissoes mista (BUG-029)", () => {
+  // No DescricaoTipoColegiado is "mista"; the mistas are identified by "Mista" in the name.
+  it("selects committees with 'Mista' in the name", () => {
+    const cols = [
+      { sigla: "CMO", nome: "Comissão Mista de Planos, Orçamentos Públicos e Fiscalização" },
+      { sigla: "CCAI", nome: "Comissão Mista de Controle das Atividades de Inteligência" },
+      { sigla: "CCJ", nome: "Comissão de Constituição, Justiça e Cidadania" },
+    ];
+    const mistas = cols.filter((c) => normalizeText(c.nome).includes("mista"));
+    expect(mistas.map((c) => c.sigla)).toEqual(["CMO", "CCAI"]);
+  });
+});
+
+describe("distribuicao relatoria aggregation (BUG-031)", () => {
+  // Upstream emits one row per (parlamentar, unidade); aggregate by CodigoParlamentar.
+  it("aggregates duplicate CodigoParlamentar and strips the honorific", () => {
+    const rows = [
+      { CodigoParlamentar: "5783", Parlamentar: "Senadora Zenaide Maia", Quantidade: "2" },
+      { CodigoParlamentar: "5783", Parlamentar: "Senadora Zenaide Maia", Quantidade: "1" },
+      { CodigoParlamentar: "5385", Parlamentar: "Senador Irajá", Quantidade: "1" },
+    ];
+    const acc = new Map<string, any>();
+    for (const x of rows) {
+      const codigo = parseInt(x.CodigoParlamentar) || null;
+      const key = String(codigo);
+      const qtd = parseInt(x.Quantidade);
+      if (acc.has(key)) acc.get(key).quantidade += qtd;
+      else acc.set(key, { codigo, nome: x.Parlamentar.replace(/^Senador(a)?\s+/i, "").trim(), quantidade: qtd });
+    }
+    const agg = [...acc.values()];
+    expect(agg).toHaveLength(2);
+    expect(agg[0]).toEqual({ codigo: 5783, nome: "Zenaide Maia", quantidade: 3 });
+    expect(agg[1].nome).toBe("Irajá");
+  });
+});
 
 describe("reuniao_comissao (BUG-014/BUG-015)", () => {
   // Real reuniao 14786 (CCJ): realizada/secreta come as strings "true"/"false"; pauta item
