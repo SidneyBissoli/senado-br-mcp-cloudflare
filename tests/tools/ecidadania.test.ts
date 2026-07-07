@@ -1,5 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
+describe("obter_evento comentarios splice (BUG-020)", () => {
+  // The static detail scrape returns comentarios 0 (AJAX-loaded); splice from the corpus.
+  const spliceComentarios = (detalhe: { comentarios: number }, corpus: { id: number; comentarios: number }[], id: number) => {
+    const item = corpus.find((e) => e.id === id);
+    return { ...detalhe, comentarios: item ? item.comentarios : null };
+  };
+  it("uses the corpus count over the detail's spurious 0", () => {
+    const corpus = [{ id: 39730, comentarios: 52 }];
+    expect(spliceComentarios({ comentarios: 0 }, corpus, 39730).comentarios).toBe(52);
+  });
+  it("returns null (unknown) when the event is not in the corpus", () => {
+    expect(spliceComentarios({ comentarios: 0 }, [], 999).comentarios).toBeNull();
+  });
+});
+
 describe("e-Cidadania pagination offset (BUG-018)", () => {
   // listar_consultas/listar_ideias sliced [0, limite], ignoring `pagina`.
   const page = <T>(arr: T[], pagina: number, limite: number) =>

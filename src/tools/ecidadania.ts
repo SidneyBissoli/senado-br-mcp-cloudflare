@@ -317,8 +317,23 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           obterEventoInternal(params.id),
         );
         writeDetalheThrough(db, ctx, "eventos", params.id, r as Record<string, unknown>);
+        // The static detail scrape can't read the AJAX-loaded comentarios count (always 0);
+        // the listing corpus carries the authoritative qtdComentario. Splice it in, or null
+        // when the event is not in the corpus (unknown, not a spurious 0).
+        const detalhe = { ...(r as Record<string, unknown>) };
+        try {
+          const { items } = await resolveList(
+            db, "eventos", corpusStaleMaxMin(),
+            () => listarEventosInternal({ limite: 100 }),
+            undefined, CORPUS_RESOLVE,
+          );
+          const corpusItem = (items as EventoResumo[]).find((e) => e.id === params.id);
+          detalhe.comentarios = corpusItem ? corpusItem.comentarios : null;
+        } catch {
+          detalhe.comentarios = null;
+        }
         return resultWithProvenance(
-          tagUntrustedFields("eventos", r as Record<string, unknown>),
+          tagUntrustedFields("eventos", detalhe),
           provDetalhe(r, `/visualizacaoaudiencia?id=${params.id}`, `evento=${params.id}`, fetchedAt),
         );
       } catch (e) { return ecidadaniaError(e); }
