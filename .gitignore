@@ -23,6 +23,8 @@ reports/
 # Só a área de trabalho DESCARTÁVEL é local/não-versionada (gestão, estratégia, renders .html,
 # notas de gestão de sessão). Fica em disco (OneDrive), fora do git.
 docs/_local/
+# Render .html descartável do estudo A3 (a fonte versionada é o .md homônimo).
+docs/estudo-a3-reconciliacao-eventos.html
 marketing/
 prompts/
 .api-spec/
