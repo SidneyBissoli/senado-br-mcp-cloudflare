@@ -700,7 +700,7 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 | Tool | Description |
 |------|-------------|
 | `senado_servidores` | Civil servants by status (active/effective/commissioned/inactive), filterable by name, unit, position |
-| `senado_remuneracoes_servidores` | Monthly payroll — summary by payroll type or per-person composition with computed gross |
+| `senado_remuneracoes_servidores` | Monthly payroll — summary by payroll type or per-person composition with computed gross; `estatisticas=true` returns whole-payroll stats (min/max/mean/median/percentiles) + top/bottom ranking, with `campo`, `consolidarPorServidor`, `agruparPor` and `topN` |
 | `senado_horas_extras` | Overtime payments by month with totals |
 | `senado_pessoal_tabelas` | Tabelas de pessoal via `tabela` enum: quantitativos (pessoal, cargos-funcoes, previsao-aposentadoria, senadores) e listas (estagiarios, pensionistas, lotacoes, cargos) |
 
