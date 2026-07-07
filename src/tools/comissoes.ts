@@ -26,6 +26,30 @@ export function formatDateYMD(d: Date): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 }
 
+/**
+ * Aviso emitido quando o upstream de requerimentos de CPI devolve lista vazia.
+ * O endpoint `/comissao/cpi/{sigla}/requerimentos` costuma responder HTTP 200
+ * com corpo vazio mesmo para CPIs em atividade (OBS-7), e não há fonte
+ * alternativa limpa na API para esse dado — por isso distinguimos o caso
+ * degenerado da simples ausência de resultados com um aviso explícito.
+ */
+export const REQUERIMENTOS_CPI_AVISO_VAZIO =
+  "Nenhum requerimento retornado. O endpoint de requerimentos de CPI do Senado costuma " +
+  "responder vazio mesmo para CPIs em atividade, e não há fonte alternativa limpa na API " +
+  "para esse dado. A ausência de resultados aqui não significa necessariamente que a CPI " +
+  "não possua requerimentos.";
+
+/**
+ * Monta o payload de `senado_requerimentos_cpi`, anexando `aviso` quando a
+ * lista vem vazia (upstream degenerado — ver REQUERIMENTOS_CPI_AVISO_VAZIO).
+ */
+export function buildRequerimentosCpiResult(sigla: string, pagina: number, requerimentos: any[]) {
+  const count = requerimentos.length;
+  const payload: Record<string, unknown> = { siglaCpi: sigla, pagina, count, requerimentos };
+  if (count === 0) payload.aviso = REQUERIMENTOS_CPI_AVISO_VAZIO;
+  return payload;
+}
+
 /** Resolve a committee sigla to its numeric code via the list endpoint. */
 export async function resolveComissaoCodigo(sigla: string, baseUrl: string): Promise<number | null> {
   const response = await cachedFetch("senado_listar_comissoes", {}, CACHE_SEMI_STATIC, () =>
@@ -378,7 +402,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // fetches directly and maps empty to an empty list.
   server.tool(
     "senado_requerimentos_cpi",
-    "Lista requerimentos de uma CPI (Comissão Parlamentar de Inquérito) em atividade, pela `siglaCpi`, com paginação por `pagina` (índice baseado em 0, definido pelo upstream). Retorna `{ siglaCpi, pagina, count, requerimentos }`, onde `requerimentos` é a lista de registros brutos da página (campos conforme a API: tipicamente número, data, ementa, autor e situação do requerimento). `count` é o tamanho da página; uma página além do total retorna `count` 0 — use isso para saber que as páginas acabaram. CPIs sem requerimentos retornam lista vazia. Descubra as siglas via `senado_listar_comissoes` com `tipo=cpi`.",
+    "Lista requerimentos de uma CPI (Comissão Parlamentar de Inquérito) em atividade, pela `siglaCpi`, com paginação por `pagina` (índice baseado em 0, definido pelo upstream). Retorna `{ siglaCpi, pagina, count, requerimentos }`, onde `requerimentos` é a lista de registros brutos da página (campos conforme a API: tipicamente número, data, ementa, autor e situação do requerimento). `count` é o tamanho da página; uma página além do total retorna `count` 0 — use isso para saber que as páginas acabaram. Descubra as siglas via `senado_listar_comissoes` com `tipo=cpi`. Limitação conhecida: o endpoint upstream costuma responder vazio mesmo para CPIs em atividade, e não há fonte alternativa limpa na API; nesses casos o retorno traz `count` 0 e um campo `aviso` explicando — não interprete lista vazia como certeza de que a CPI não possui requerimentos.",
     {
       siglaCpi: z.string().min(3).describe("Sigla da CPI (ex: CPIVD, CPIPED)"),
       pagina: z.number().int().min(0).optional().default(0).describe("Página da lista (padrão: 0)"),
@@ -431,12 +455,10 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/comissao/cpi/${sigla}/requerimentos`, {
           dataset_id: `cpi=${sigla}; pagina=${pagina}`, retrieved_at: fetchedAt,
         });
-        return resultWithProvenance({
-          siglaCpi: sigla,
-          pagina,
-          count: (requerimentos as any[]).length,
-          requerimentos,
-        }, prov);
+        return resultWithProvenance(
+          buildRequerimentosCpiResult(sigla, pagina, requerimentos as any[]),
+          prov,
+        );
       } catch (e) {
         return errorFrom(e, "Erro ao obter requerimentos da CPI");
       }

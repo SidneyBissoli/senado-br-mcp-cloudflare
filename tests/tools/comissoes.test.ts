@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { formatDateYMD, resolveComissaoCodigo } from "../../src/tools/comissoes.js";
+import {
+  formatDateYMD,
+  resolveComissaoCodigo,
+  buildRequerimentosCpiResult,
+  REQUERIMENTOS_CPI_AVISO_VAZIO,
+} from "../../src/tools/comissoes.js";
 import { digArrayRoot } from "../../src/utils/upstream-parse.js";
 import { safeInt, toBool, normalizeText } from "../../src/utils/validation.js";
 
@@ -107,6 +112,27 @@ describe("obter_comissao membros (BUG-030)", () => {
     expect(membros[0].nome).toBe("Alan Rick");
     expect(membros[0].tipoVaga).toBe("Suplente");
     expect(membros[0].ativo).toBe(true);
+  });
+});
+
+describe("requerimentos_cpi aviso (OBS-7 / pendência #3)", () => {
+  // Upstream frequently returns an empty body even for active CPIs, and there is no clean
+  // alternative source in the API. When the list is empty we attach an explicit `aviso`
+  // so an empty result is not read as "the CPI has no requerimentos".
+  it("attaches aviso when the list is empty", () => {
+    const r = buildRequerimentosCpiResult("CPIPED", 0, []);
+    expect(r.count).toBe(0);
+    expect(r.requerimentos).toEqual([]);
+    expect(r.aviso).toBe(REQUERIMENTOS_CPI_AVISO_VAZIO);
+    expect(r.siglaCpi).toBe("CPIPED");
+    expect(r.pagina).toBe(0);
+  });
+
+  it("omits aviso when there are requerimentos", () => {
+    const r = buildRequerimentosCpiResult("CPIVD", 1, [{ numero: "REQ 1/2026" }]);
+    expect(r.count).toBe(1);
+    expect(r.aviso).toBeUndefined();
+    expect(r.pagina).toBe(1);
   });
 });
 

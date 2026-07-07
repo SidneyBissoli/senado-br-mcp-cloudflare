@@ -360,7 +360,7 @@ Used by Groups A, E, F, H, I, J, K, L, M, N. The `.json` suffix is appended auto
 | `/comissao/agenda/{data}` | `senado_agenda_comissoes` |
 | `/comissao/agenda/{dataInicio}/{dataFim}` | `senado_reunioes_comissao` |
 | `/comissao/reuniao/{codigoReuniao}` | `senado_reuniao_comissao` |
-| `/comissao/cpi/{sigla}/requerimentos` | `senado_requerimentos_cpi` (empty body = no requests) |
+| `/comissao/cpi/{sigla}/requerimentos` | `senado_requerimentos_cpi` (upstream often empty even for active CPIs — empty result carries an `aviso`) |
 | `/materia/distribuicao/autoria`, `/distribuicao/relatoria/{sigla}` | `senado_distribuicao_materias` |
 | `/plenario/agenda/dia/{data}`, `/agenda/mes/{data}`, `/agenda/cn/...` | `senado_agenda_plenario` |
 | `/plenario/resultado/{data}`, `/resultado/cn/{data}`, `/resultado/mes/{data}` | `senado_resultado_plenario` |
@@ -616,7 +616,7 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 | `senado_reunioes_comissao` | Reuniões de uma comissão num período (lida com intervalos entre anos) |
 | `senado_agenda_comissoes` | Agenda de reuniões de todas as comissões numa data |
 | `senado_reuniao_comissao` | Detalhe completo de uma reunião: partes, itens, convidados, resultados, links pauta/ata |
-| `senado_requerimentos_cpi` | Requerimentos protocolados numa CPI em atividade, paginados |
+| `senado_requerimentos_cpi` | Requerimentos protocolados numa CPI em atividade, paginados (upstream costuma vir vazio mesmo para CPIs ativas; retorno vazio traz `aviso`) |
 | `senado_distribuicao_materias` | Estatísticas de carga por senador numa comissão: autoria ou relatoria |
 
 ### Group F — Plenary (7 tools)
