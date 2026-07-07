@@ -451,7 +451,7 @@ As quatro entidades do e-Cidadania são corpora completos, cada um dono de um or
 
 - **`consultas`** — consultas abertas (detalhado abaixo).
 - **`eventos`** — audiências/eventos da listagem HTML `principalaudiencia?p=N`; o status vem direto do bloco da listagem (sem ponte por `/processo`).
-- **`ideias`** — ideias legislativas (~150 mil) de `pesquisaideia?situacao=N&p=M`, varridas **por bucket de `situacao`** (a listagem não traz status inline) e emitidas em lotes de ~10k statements.
+- **`ideias`** — ideias legislativas (~113,7 mil) de `pesquisaideia?situacao=N&p=M`, varridas **por bucket de `situacao`** (a listagem não traz status inline) e emitidas em lotes de ~10k statements.
 - **`consultas_votos`** — acervo **histórico** separado de votos por UF, lido do CSV Arquimedes de ~33 MB (`Proposições-com-votos.csv`), agregado a uma linha por matéria com quebra `votosPorUf`. O carimbo "dados atualizados até" do CSV vira o `reference_period` da proveniência; fica **fora** do hash da linha (`consultaVotoCore`) para que um bump semanal do carimbo sobre esses votos congelados não suje o `_history`. `STATUS ATUAL` é uniformemente "Descontinuado" — por isso é acervo, não migração das consultas abertas. Servido por `senado_ecidadania_consultas_votos` com proveniência apontando para o CSV (`ECIDADANIA_ARQUIMEDES`).
 
 O job de `consultas` é a implementação de referência:
