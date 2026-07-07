@@ -342,8 +342,9 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         );
         writeDetalheThrough(db, ctx, "eventos", params.id, r as Record<string, unknown>);
         // The static detail scrape can't read the AJAX-loaded comentarios count (always 0);
-        // the listing corpus carries the authoritative qtdComentario. Splice it in, or null
-        // when the event is not in the corpus (unknown, not a spurious 0).
+        // the corpus carries the canonical count from the AJAX fragment (estudo A3 — the
+        // listing count is spurious, 0 in ~82%). Splice it in, or null when the event is not
+        // in the corpus (unknown, not a spurious 0).
         const detalhe = { ...(r as Record<string, unknown>) };
         try {
           const { items } = await resolveList(
