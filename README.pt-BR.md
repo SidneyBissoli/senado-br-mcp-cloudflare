@@ -349,13 +349,13 @@ Usados pelos Grupos A, E, F, H, I, J, K, L, M, N. O sufixo `.json` é anexado au
 |---------------|---------|
 | `/senador/lista/atual` | `senado_listar_senadores` |
 | `/senador/lista/legislatura/{legislatura}` | `senado_listar_senadores` (param `legislatura`) |
-| `/senador/{codigo}` | `senado_obter_senador` |
+| `/senador/{codigo}` (+ `/mandatos`) | `senado_obter_senador` (biografia + mandatos via chamada extra) |
 | `/senador/{codigo}/licencas`, `/comissoes`, `/cargos`, `/historicoAcademico`, `/filiacoes`, `/profissao` | `senado_senador_historico` (`tipo` enum) |
 | `/senador/afastados` | `senado_senadores_afastados` |
 | `/senador/{codigo}/apartes` | `senado_discursos_senador` (`tipo=apartes`) |
 | `/comissao/lista/colegiados` | `senado_listar_comissoes` (+ resolução sigla→código) |
 | `/comissao/{codigo}` | `senado_obter_comissao` (`secao=resumo`; código numérico, não sigla) |
-| `/composicao/comissao/{codigo}` | `senado_obter_comissao` (`secao=membros`) |
+| `/composicao/comissao/{codigo}` (+ `?ativas=S`) | `senado_obter_comissao` (`secao=membros`) |
 | `/comissao/agenda/{data}` | `senado_agenda_comissoes` |
 | `/comissao/agenda/{dataInicio}/{dataFim}` | `senado_reunioes_comissao` |
 | `/comissao/reuniao/{codigoReuniao}` | `senado_reuniao_comissao` |
@@ -608,7 +608,7 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 
 | Ferramenta | Descrição |
 |------|-------------|
-| `senado_orcamento_parlamentar` | Dados de emendas orçamentárias via `tipo` enum: emendas (lotes) ou oficios (ofícios de apoio) |
+| `senado_orcamento_parlamentar` | Emendas parlamentares ao orçamento via `tipo` enum: emendas (lotes por autor) ou oficios (indicação de destino — filtrável por `ano` da emenda, paginado, `incluirEmendas` opcional) |
 
 ### Grupo L — Legislação Federal (2 ferramentas)
 
@@ -650,7 +650,7 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 
 | Ferramenta | Descrição |
 |------|-------------|
-| `senado_contratos` | Contratos com filtros no servidor: fornecedor, CNPJ, ano, número, objeto, mão de obra |
+| `senado_contratos` | Contratos filtrados no Worker sobre a base completa (sem acento): fornecedor, CNPJ, ano, número, objeto, mão de obra |
 | `senado_contratacao_detalhe` | Itens, pagamentos, garantias, aditivos ou ativações de um contrato/ata/empenho |
 | `senado_licitacoes` | Licitações por número ou texto do objeto |
 | `senado_terceirizados` | Colaboradores terceirizados por nome, empresa ou unidade |

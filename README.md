@@ -350,13 +350,13 @@ Used by Groups A, E, F, H, I, J, K, L, M, N. The `.json` suffix is appended auto
 |---------------|---------|
 | `/senador/lista/atual` | `senado_listar_senadores` |
 | `/senador/lista/legislatura/{legislatura}` | `senado_listar_senadores` (param `legislatura`) |
-| `/senador/{codigo}` | `senado_obter_senador` |
+| `/senador/{codigo}` (+ `/mandatos`) | `senado_obter_senador` (biografia + mandatos via chamada extra) |
 | `/senador/{codigo}/licencas`, `/comissoes`, `/cargos`, `/historicoAcademico`, `/filiacoes`, `/profissao` | `senado_senador_historico` (`tipo` enum) |
 | `/senador/afastados` | `senado_senadores_afastados` |
 | `/senador/{codigo}/apartes` | `senado_discursos_senador` (`tipo=apartes`) |
 | `/comissao/lista/colegiados` | `senado_listar_comissoes` (+ sigla-to-code resolution) |
 | `/comissao/{codigo}` | `senado_obter_comissao` (`secao=resumo`; numeric code, not sigla) |
-| `/composicao/comissao/{codigo}` | `senado_obter_comissao` (`secao=membros`) |
+| `/composicao/comissao/{codigo}` (+ `?ativas=S`) | `senado_obter_comissao` (`secao=membros`) |
 | `/comissao/agenda/{data}` | `senado_agenda_comissoes` |
 | `/comissao/agenda/{dataInicio}/{dataFim}` | `senado_reunioes_comissao` |
 | `/comissao/reuniao/{codigoReuniao}` | `senado_reuniao_comissao` |
@@ -666,7 +666,7 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 
 | Tool | Description |
 |------|-------------|
-| `senado_orcamento_parlamentar` | Dados de emendas orçamentárias via `tipo` enum: emendas (lotes) ou oficios (ofícios de apoio) |
+| `senado_orcamento_parlamentar` | Emendas parlamentares ao orçamento via `tipo` enum: emendas (lotes por autor) ou oficios (indicação de destino — filtrável por `ano` da emenda, paginado, `incluirEmendas` opcional) |
 
 ### Group L — Federal Law (2 tools)
 
@@ -708,7 +708,7 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 
 | Tool | Description |
 |------|-------------|
-| `senado_contratos` | Contracts with server-side filters: supplier, CNPJ, year, number, object, labor |
+| `senado_contratos` | Contracts filtered in-Worker over the full base (accent-insensitive): supplier, CNPJ, year, number, object, labor |
 | `senado_contratacao_detalhe` | Items, payments, guarantees, amendments or activations of a contract/ata/empenho |
 | `senado_licitacoes` | Biddings by number or object text |
 | `senado_terceirizados` | Outsourced collaborators by name, company or unit |
