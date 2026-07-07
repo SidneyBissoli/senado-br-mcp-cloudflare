@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { parseServidor, resumoRemuneracao } from "../../src/tools/servidores.js";
+import {
+  parseServidor,
+  resumoRemuneracao,
+  normalizarRemuneracao,
+  consolidarPorSequencial,
+  estatisticasRemuneracoes,
+} from "../../src/tools/servidores.js";
 import { unwrapAdmEnvelope } from "../../src/utils/upstream-parse.js";
 import { ensureArray, parseBRL } from "../../src/utils/validation.js";
 
@@ -98,6 +104,101 @@ describe("resumoRemuneracao", () => {
     expect(result.remuneracaoBasica).toBe(-2777.41);
     expect(result.gratificacaoNatalina).toBe(20529.64);
     expect(result.bruto).toBe(20529.64); // sum of components, no longer 0
+  });
+});
+
+describe("normalizarRemuneracao", () => {
+  it("parses every value column and derives bruto (unrounded) + liquida", () => {
+    const rec = normalizarRemuneracao({
+      sequencial: 42,
+      nome: "FULANA",
+      tipo_folha: "Normal",
+      remuneracao_basica: "10.000,00",
+      vantagens_pessoais: "500,50",
+      funcao_comissionada: "1.000,00",
+      gratificacao_natalina: "0,00",
+      horas_extras: "250,25",
+      outras_eventuais: "0,00",
+      abono_permanencia: "0,00",
+      diarias: "300,00",
+      auxilios: "100,00",
+      remuneracao_liquida: "9.123,45",
+    });
+    expect(rec.sequencial).toBe(42);
+    expect(rec.remuneracaoBasica).toBe(10000);
+    expect(rec.bruto).toBe(11750.75); // 10000 + 500.5 + 1000 + 250.25
+    expect(rec.liquida).toBe(9123.45);
+    expect(rec.diarias).toBe(300);
+  });
+
+  it("coerces a string sequencial to a number and null when absent", () => {
+    expect(normalizarRemuneracao({ sequencial: "7", nome: "A" }).sequencial).toBe(7);
+    expect(normalizarRemuneracao({ nome: "B" }).sequencial).toBeNull();
+  });
+});
+
+describe("consolidarPorSequencial", () => {
+  it("nets Normal + Suplementar (estorno) rows of the same servant into one", () => {
+    // Same person, two rows sharing sequencial 100; Suplementar is a negative estorno.
+    const linhas = [
+      { sequencial: 100, nome: "MARIA", tipo_folha: "Normal", remuneracao_basica: "40.000,00", remuneracao_liquida: "30.000,00" },
+      { sequencial: 100, nome: "MARIA", tipo_folha: "Suplementar", remuneracao_basica: "-5.000,00", remuneracao_liquida: "-4.000,00" },
+      { sequencial: 200, nome: "JOÃO", tipo_folha: "Normal", remuneracao_basica: "20.000,00", remuneracao_liquida: "15.000,00" },
+    ].map(normalizarRemuneracao);
+
+    const consolidado = consolidarPorSequencial(linhas);
+    expect(consolidado).toHaveLength(2);
+    const maria = consolidado.find((r) => r.sequencial === 100)!;
+    expect(maria.remuneracaoBasica).toBe(35000); // 40000 - 5000
+    expect(maria.bruto).toBe(35000);
+    expect(maria.liquida).toBe(26000); // 30000 - 4000
+    expect(maria.tipoFolha).toBe("consolidado");
+  });
+
+  it("keeps rows with a missing sequencial un-merged", () => {
+    const linhas = [
+      { nome: "X", tipo_folha: "Normal", remuneracao_basica: "1.000,00" },
+      { nome: "Y", tipo_folha: "Normal", remuneracao_basica: "2.000,00" },
+    ].map(normalizarRemuneracao);
+    expect(consolidarPorSequencial(linhas)).toHaveLength(2);
+  });
+});
+
+describe("estatisticasRemuneracoes", () => {
+  // Two servants, each with a Normal + Suplementar line. Consolidated brutos: seq 1 = 30000, seq 2 = 12000.
+  const folha = [
+    { sequencial: 1, nome: "ALICE", tipo_folha: "Normal", remuneracao_basica: "35.000,00" },
+    { sequencial: 1, nome: "ALICE", tipo_folha: "Suplementar", remuneracao_basica: "-5.000,00" },
+    { sequencial: 2, nome: "BRUNO", tipo_folha: "Normal", remuneracao_basica: "10.000,00" },
+    { sequencial: 2, nome: "BRUNO", tipo_folha: "Suplementar", remuneracao_basica: "2.000,00" },
+  ];
+
+  it("consolidates by servant and ranks the top by bruto", () => {
+    const out = estatisticasRemuneracoes(folha, { campo: "bruto", consolidar: true, topN: 10 }) as any;
+    expect(out.consolidadoPorServidor).toBe(true);
+    expect(out.totalServidores).toBe(2);
+    expect(out.estatisticas.maximo).toBe(30000);
+    expect(out.estatisticas.minimo).toBe(12000);
+    expect(out.estatisticas.media).toBe(21000);
+    expect(out.top[0]).toMatchObject({ sequencial: 1, nome: "ALICE", valor: 30000 });
+    expect(out.bottom[0]).toMatchObject({ sequencial: 2, valor: 12000 });
+  });
+
+  it("per-line (não consolidado) sees the 4 raw rows and their max", () => {
+    const out = estatisticasRemuneracoes(folha, { campo: "bruto", consolidar: false, topN: 10 }) as any;
+    expect(out.consolidadoPorServidor).toBe(false);
+    expect(out.totalRegistros).toBe(4);
+    expect(out.estatisticas.maximo).toBe(35000); // ALICE's Normal line, un-netted
+  });
+
+  it("agruparPor=tipoFolha forces per-line and returns groups", () => {
+    const out = estatisticasRemuneracoes(folha, { campo: "bruto", consolidar: true, agruparPor: "tipoFolha", topN: 5 }) as any;
+    expect(out.consolidadoPorServidor).toBe(false); // agruparPor overrides consolidation
+    expect(out.agrupadoPor).toBe("tipoFolha");
+    expect(out.totalGrupos).toBe(2);
+    const grupos = Object.fromEntries(out.grupos.map((g: any) => [g.grupo, g]));
+    expect(grupos["Normal"].estatisticas.soma).toBe(45000); // 35000 + 10000
+    expect(grupos["Suplementar"].estatisticas.soma).toBe(-3000); // -5000 + 2000
   });
 });
 

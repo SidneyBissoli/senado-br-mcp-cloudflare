@@ -15,6 +15,7 @@ import { admFetch, admFetchLarge } from "../throttle/adm.js";
 import { errorFrom, ensureArray, parseBRL } from "../utils/validation.js";
 import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { computarEstatisticas, type Estatisticas, type EstatisticasPorGrupo } from "../utils/estatisticas.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
 import { matchesFiltro, matchesFiltroCampo } from "./contratacoes.js";
 
@@ -52,6 +53,193 @@ export function resumoRemuneracao(r: any) {
     auxilios: num(r.auxilios),
     bruto: Math.round((num(r.remuneracao_basica) + num(r.vantagens_pessoais) + num(r.funcao_comissionada) +
       num(r.gratificacao_natalina) + num(r.horas_extras) + num(r.outras_eventuais) + num(r.abono_permanencia)) * 100) / 100,
+  };
+}
+
+/** The 7 columns that sum into `bruto` (identical composition to `resumoRemuneracao`). */
+const COMPONENTES_BRUTO = [
+  "remuneracaoBasica", "vantagensPessoais", "funcaoComissionada", "gratificacaoNatalina",
+  "horasExtras", "outrasEventuais", "abonoPermanencia",
+] as const;
+
+/** Every numeric column carried through consolidation (summed line-by-line per servant). */
+const COLUNAS_NUMERICAS = [
+  ...COMPONENTES_BRUTO,
+  "previdencia", "faltas", "diarias", "auxilios", "impostoRenda",
+  "reversaoTetoConstitucional", "vantagensIndenizatorias", "liquida",
+] as const;
+
+export interface RemuneracaoNormalizada {
+  sequencial: number | null;
+  nome: string;
+  tipoFolha: string | null;
+  remuneracaoBasica: number;
+  vantagensPessoais: number;
+  funcaoComissionada: number;
+  gratificacaoNatalina: number;
+  horasExtras: number;
+  outrasEventuais: number;
+  abonoPermanencia: number;
+  previdencia: number;
+  faltas: number;
+  diarias: number;
+  auxilios: number;
+  impostoRenda: number;
+  reversaoTetoConstitucional: number;
+  vantagensIndenizatorias: number;
+  liquida: number;
+  bruto: number;
+}
+
+const somaBruto = (rec: Pick<RemuneracaoNormalizada, (typeof COMPONENTES_BRUTO)[number]>) =>
+  COMPONENTES_BRUTO.reduce((s, c) => s + rec[c], 0);
+
+/**
+ * Fully normalize a raw payroll row: every value column parsed to a number (pt-BR
+ * strings), carrying `sequencial` (the servant's internal id, shared between the
+ * Normal and Suplementar lines of the same person), `nome`, `tipoFolha`, plus the
+ * derived `bruto` (sum of the 7 components) and native `liquida`. Unlike
+ * `resumoRemuneracao` (kept lean for `modo=detalhe`), this feeds the statistics path,
+ * so `bruto` is NOT rounded here — rounding for display happens at the final shape.
+ */
+export function normalizarRemuneracao(r: any): RemuneracaoNormalizada {
+  const num = (v: unknown) => parseBRL(v);
+  const rec = {
+    sequencial: typeof r.sequencial === "number" ? r.sequencial : (r.sequencial != null ? Number(r.sequencial) : null),
+    nome: r.nome || "",
+    tipoFolha: r.tipo_folha || null,
+    remuneracaoBasica: num(r.remuneracao_basica),
+    vantagensPessoais: num(r.vantagens_pessoais),
+    funcaoComissionada: num(r.funcao_comissionada),
+    gratificacaoNatalina: num(r.gratificacao_natalina),
+    horasExtras: num(r.horas_extras),
+    outrasEventuais: num(r.outras_eventuais),
+    abonoPermanencia: num(r.abono_permanencia),
+    previdencia: num(r.previdencia),
+    faltas: num(r.faltas),
+    diarias: num(r.diarias),
+    auxilios: num(r.auxilios),
+    impostoRenda: num(r.imposto_renda),
+    reversaoTetoConstitucional: num(r.reversao_teto_constitucional),
+    vantagensIndenizatorias: num(r.vantagens_indenizatorias),
+    liquida: num(r.remuneracao_liquida),
+    bruto: 0,
+  };
+  rec.bruto = somaBruto(rec);
+  return rec;
+}
+
+/**
+ * Consolidate the month's rows by `sequencial`: the payroll carries ~2 rows per person
+ * (Normal + Suplementar sharing the same id, and Suplementar can be negative — estornos),
+ * so summing per servant nets those out before statistics. Grouping by NAME instead would
+ * merge homonyms (~249 in a live month), hence sequencial. `tipoFolha` loses meaning after
+ * the merge (marked "consolidado"); `bruto` is recomputed from the summed components (linear).
+ * Rows with a missing `sequencial` are left un-merged (each keeps its own bucket).
+ */
+export function consolidarPorSequencial(normalizados: RemuneracaoNormalizada[]): RemuneracaoNormalizada[] {
+  const porSeq = new Map<string, RemuneracaoNormalizada>();
+  normalizados.forEach((rec, i) => {
+    const chave = rec.sequencial != null ? `s${rec.sequencial}` : `l${i}`;
+    const alvo = porSeq.get(chave);
+    if (!alvo) {
+      porSeq.set(chave, { ...rec, tipoFolha: "consolidado" });
+    } else {
+      for (const c of COLUNAS_NUMERICAS) alvo[c] += rec[c];
+    }
+  });
+  for (const rec of porSeq.values()) rec.bruto = somaBruto(rec);
+  return Array.from(porSeq.values());
+}
+
+/** Which numeric field the statistics run over, per the `campo` param (default `bruto`). */
+const ACESSOR_CAMPO: Record<string, (r: RemuneracaoNormalizada) => number> = {
+  bruto: (r) => r.bruto,
+  liquida: (r) => r.liquida,
+  remuneracaoBasica: (r) => r.remuneracaoBasica,
+  vantagensPessoais: (r) => r.vantagensPessoais,
+  funcaoComissionada: (r) => r.funcaoComissionada,
+  gratificacaoNatalina: (r) => r.gratificacaoNatalina,
+  horasExtras: (r) => r.horasExtras,
+  outrasEventuais: (r) => r.outrasEventuais,
+  abonoPermanencia: (r) => r.abonoPermanencia,
+};
+
+export const CAMPOS_ESTATISTICA = Object.keys(ACESSOR_CAMPO) as [string, ...string[]];
+
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/** Round the statistics block to 2 decimals (money) for display; helper returns raw. */
+function arredondarEstatisticas(e: Estatisticas) {
+  return {
+    n: e.n,
+    soma: r2(e.soma),
+    minimo: r2(e.minimo),
+    maximo: r2(e.maximo),
+    media: r2(e.media),
+    mediana: r2(e.mediana),
+    desvioPadrao: r2(e.desvioPadrao),
+    percentis: {
+      p25: r2(e.percentis.p25),
+      p50: r2(e.percentis.p50),
+      p75: r2(e.percentis.p75),
+      p90: r2(e.percentis.p90),
+      p95: r2(e.percentis.p95),
+      p99: r2(e.percentis.p99),
+    },
+  };
+}
+
+const arredondarEntradas = (entradas: Estatisticas["top"]) =>
+  entradas.map((x) => ({ ...x, valor: r2(x.valor) }));
+
+/**
+ * Build the `estatisticas=true` response for the payroll tool: normalize rows, optionally
+ * consolidate per servant, then crunch the whole set through `computarEstatisticas` and
+ * shape a compact block + top/bottom ranking. `agruparPor` forces per-line internally
+ * (consolidation erases `tipoFolha`), overriding `consolidar`.
+ */
+export function estatisticasRemuneracoes(
+  itens: any[],
+  opts: { campo: string; consolidar: boolean; agruparPor?: "tipoFolha"; topN: number },
+) {
+  // agruparPor implies per-line: consolidation erases tipoFolha, so it can't coexist.
+  const consolidar = opts.agruparPor ? false : opts.consolidar;
+  const normalizados = itens.map(normalizarRemuneracao);
+  const registros = consolidar ? consolidarPorSequencial(normalizados) : normalizados;
+  const acessor = ACESSOR_CAMPO[opts.campo] ?? ACESSOR_CAMPO.bruto;
+  const resultado = computarEstatisticas(registros as any, acessor as any, {
+    topN: opts.topN,
+    ...(opts.agruparPor ? { agruparPor: (r: any) => r.tipoFolha || "(sem tipo)" } : {}),
+    identificar: (r: any) => ({ sequencial: r.sequencial ?? null, nome: r.nome }),
+    desempate: (r: any) => (r.sequencial ?? Number.MAX_SAFE_INTEGER),
+  });
+
+  if (opts.agruparPor) {
+    const porGrupo = resultado as EstatisticasPorGrupo;
+    return {
+      campo: opts.campo,
+      consolidadoPorServidor: false,
+      agrupadoPor: opts.agruparPor,
+      totalGrupos: porGrupo.totalGrupos,
+      ...(porGrupo.aviso ? { aviso: porGrupo.aviso } : {}),
+      grupos: porGrupo.grupos.map((g) => ({
+        grupo: g.grupo,
+        estatisticas: arredondarEstatisticas(g),
+        top: arredondarEntradas(g.top),
+        bottom: arredondarEntradas(g.bottom),
+      })),
+    };
+  }
+
+  const e = resultado as Estatisticas;
+  return {
+    campo: opts.campo,
+    consolidadoPorServidor: consolidar,
+    [consolidar ? "totalServidores" : "totalRegistros"]: e.n,
+    estatisticas: arredondarEstatisticas(e),
+    top: arredondarEntradas(e.top),
+    bottom: arredondarEntradas(e.bottom),
   };
 }
 
@@ -101,11 +289,16 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P2. senado_remuneracoes_servidores
   server.tool(
     "senado_remuneracoes_servidores",
-    "Remunerações dos servidores do Senado em `ano`/`mes` de referência (a partir de 2013). `modo=resumo` (padrão) retorna `{ ano, mes, totalRegistros, resumo[] }` agregado por `tipoFolha` com `registros`, `totalBruto` e `mediaBruta`; `modo=detalhe` retorna `{ count, total, remuneracoes[] }` com a composição individual (`remuneracaoBasica`, `vantagensPessoais`, `funcaoComissionada`, `horasExtras`, `bruto` etc.), limitada por `limite` (padrão 50, máx 500) com `aviso` se truncado. Filtre por `nome` ou `tipoFolha` no detalhe para evitar listas longas. Para o cadastro de servidores use `senado_servidores`.",
+    "Remunerações dos servidores do Senado em `ano`/`mes` de referência (a partir de 2013). Para perguntas de **maior/menor/média/mediana/ranking** ('quem ganhou mais em junho/2026', 'remuneração média') use `estatisticas=true`: computa min/máx/média/mediana/desvio/percentis sobre a folha INTEIRA e devolve `top`/`bottom` (padrão 10) com `nome` e `sequencial` — o modo `resumo`/`detalhe` só vê uma fatia e não acha o extremo real. `campo` escolhe a coluna (padrão `bruto`; ex.: `liquida`, `horasExtras`); `consolidarPorServidor` (padrão true) soma as linhas Normal+Suplementar da mesma pessoa antes das estatísticas; `agruparPor='tipoFolha'` devolve estatísticas por grupo (implica não-consolidado). Sem `estatisticas`: `modo=resumo` (padrão) retorna `{ ano, mes, totalRegistros, resumo[] }` agregado por `tipoFolha`; `modo=detalhe` retorna `{ count, total, remuneracoes[] }` com a composição individual, limitada por `limite` (padrão 50, máx 500). Filtros `nome`/`tipoFolha` aplicam antes de tudo. Para o cadastro de servidores use `senado_servidores`.",
     {
       ano: z.number().int().min(2013).max(2100).describe("Ano de referência"),
       mes: z.number().int().min(1).max(12).describe("Mês de referência"),
-      modo: z.enum(["resumo", "detalhe"]).optional().default("resumo").describe("resumo = totais por tipo de folha (padrão); detalhe = composição individual"),
+      modo: z.enum(["resumo", "detalhe"]).optional().default("resumo").describe("resumo = totais por tipo de folha (padrão); detalhe = composição individual. Ignorado quando estatisticas=true"),
+      estatisticas: z.boolean().optional().default(false).describe("Computa estatísticas (min/máx/média/mediana/percentis) + ranking top/bottom sobre a folha inteira. Use para 'quem ganhou mais/menos', 'média', 'ranking'"),
+      campo: z.enum(CAMPOS_ESTATISTICA).optional().default("bruto").describe("Coluna sob análise quando estatisticas=true (padrão: bruto). Opções: bruto, liquida, remuneracaoBasica, vantagensPessoais, funcaoComissionada, gratificacaoNatalina, horasExtras, outrasEventuais, abonoPermanencia"),
+      consolidarPorServidor: z.boolean().optional().default(true).describe("Soma as linhas (Normal+Suplementar) do mesmo servidor por `sequencial` antes das estatísticas (padrão: true). Ignorado — forçado a false — quando agruparPor está definido"),
+      agruparPor: z.enum(["tipoFolha"]).optional().describe("Quando estatisticas=true, devolve estatísticas por grupo (só `tipoFolha`); implica dados por linha (não consolidados)"),
+      topN: z.number().int().min(1).max(100).optional().default(10).describe("Tamanho das listas top/bottom quando estatisticas=true (padrão: 10, máx: 100)"),
       nome: z.string().optional().describe("Nome do servidor (busca parcial)"),
       tipoFolha: z.string().optional().describe("Filtrar por tipo de folha (busca parcial)"),
       limite: z.number().int().min(1).max(500).optional().default(50).describe("Máximo de linhas no modo detalhe (padrão: 50)"),
@@ -127,6 +320,20 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
           reference_period: `${params.ano}-${String(params.mes).padStart(2, "0")}`,
           retrieved_at: fetchedAt,
         });
+
+        if (params.estatisticas) {
+          return resultWithProvenance({
+            ano: params.ano,
+            mes: params.mes,
+            ...estatisticasRemuneracoes(itens, {
+              campo: params.campo ?? "bruto",
+              consolidar: params.consolidarPorServidor ?? true,
+              agruparPor: params.agruparPor,
+              topN: params.topN ?? 10,
+            }),
+          }, prov);
+        }
+
         if ((params.modo ?? "resumo") === "detalhe") {
           const limite = params.limite ?? 50;
           return resultWithProvenance({
