@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseProcessoResumo, parseProcessoDetalhe, ensureISODate, parseEmendaProcesso, parseRelatoriaProcesso, parseAutorAtual, TABELAS_PROCESSO } from "../../src/tools/processos.js";
+import { parseProcessoResumo, parseProcessoDetalhe, ensureISODate, parseEmendaProcesso, parseRelatoriaProcesso, parseAutorAtual, TABELAS_PROCESSO, normalizeTramitando, compactAutoria } from "../../src/tools/processos.js";
 import { digArrayRoot } from "../../src/utils/upstream-parse.js";
 
 describe("parseProcessoResumo", () => {
@@ -19,7 +19,21 @@ describe("parseProcessoResumo", () => {
     expect(result.codigoMateria).toBe(151234);
     expect(result.identificacao).toBe("PL 100/2024");
     expect(result.ementa).toBe("Dispõe sobre...");
-    expect(result.tramitando).toBe("S");
+    // OBS-3: tramitando normalized to boolean
+    expect(result.tramitando).toBe(true);
+    // OBS-2: single author kept as-is with count
+    expect(result.autoria).toBe("Senador Fulano");
+    expect(result.totalAutores).toBe(1);
+  });
+
+  it("normalizes tramitando 'Não' and compacts a long author list (OBS-2/3)", () => {
+    const autoria = "Senador A (PT/BA), Senador B (PL/SP), Senador C (MDB/RJ), Senador D (PP/RS), Senador E (PSD/CE)";
+    const result = parseProcessoResumo({ autoria, tramitando: "Não" });
+    expect(result.tramitando).toBe(false);
+    expect(result.totalAutores).toBe(5);
+    expect(result.autoria).toContain("Senador A (PT/BA)");
+    expect(result.autoria).toContain("e mais 2");
+    expect(result.autoria).toContain("(5 no total)");
   });
 
   it("returns null for missing fields", () => {
@@ -48,7 +62,12 @@ describe("parseProcessoDetalhe", () => {
         indexacao: "educação; saúde",
         url: "https://example.com/doc.pdf",
       },
-      tramitando: "S",
+      tramitando: "Sim",
+      situacaoAtual: "REMETIDA À CÂMARA DOS DEPUTADOS",
+      siglaSituacaoAtual: "REMET_CD",
+      dataSituacaoAtual: "2026-06-16",
+      deliberacao: { data: "2026-06-16", siglaTipo: "APROVADA_NO_PLENARIO", tipoDeliberacao: "Aprovada pelo Plenário", siglaDestino: "CAMARA", destino: "À Câmara dos Deputados" },
+      normaGerada: {},
     };
     const result = parseProcessoDetalhe(p);
     expect(result.id).toBe(12345);
@@ -58,6 +77,12 @@ describe("parseProcessoDetalhe", () => {
     expect(result.dataApresentacao).toBe("2024-03-15");
     expect(result.autoria).toBe("Senador Fulano");
     expect(result.urlDocumento).toBe("https://example.com/doc.pdf");
+    // OBS-3 + OBS-17
+    expect(result.tramitando).toBe(true);
+    expect(result.situacaoAtual).toBe("REMETIDA À CÂMARA DOS DEPUTADOS");
+    expect(result.deliberacao).toEqual({ data: "2026-06-16", tipo: "Aprovada pelo Plenário", destino: "À Câmara dos Deputados" });
+    // empty {} normaGerada collapses to null
+    expect(result.normaGerada).toBeNull();
   });
 
   it("handles missing nested objects", () => {
@@ -83,7 +108,7 @@ describe("ensureISODate", () => {
 });
 
 describe("parseEmendaProcesso", () => {
-  it("parses a v3 emenda item", () => {
+  it("parses a v3 emenda item with structured decisoes (OBS-18)", () => {
     const result = parseEmendaProcesso({
       id: 99,
       identificacao: "EMENDA 1 - PLEN",
@@ -93,20 +118,63 @@ describe("parseEmendaProcesso", () => {
       dataApresentacao: "2020-06-20",
       siglaColegiado: "PLEN",
       descricaoDocumentoEmenda: "Emenda de plenário",
-      decisoes: [{ descricao: "Aprovada" }],
+      // upstream shape: array of objects, descricaoTipo carries a trailing space
+      decisoes: [{ casa: "SF", data: "2026-06-16", descricaoTipo: "Rejeitada ", siglaColegiado: "CI", nomeColegiado: "Comissão de Serviços de Infraestrutura" }],
       urlDocumentoEmenda: "https://legis.senado.gov.br/e1",
     });
     expect(result.id).toBe(99);
     expect(result.numero).toBe(1);
     expect(result.colegiado).toBe("PLEN");
-    expect(result.decisoes).toEqual(["Aprovada"]);
+    expect(result.decisoes).toEqual([
+      { casa: "SF", data: "2026-06-16", tipo: "Rejeitada", comissao: "CI", nomeComissao: "Comissão de Serviços de Infraestrutura" },
+    ]);
     expect(result.url).toBe("https://legis.senado.gov.br/e1");
+  });
+
+  it("parses decisoes delivered as JSON-serialized strings", () => {
+    const result = parseEmendaProcesso({
+      id: 5,
+      decisoes: ['{"casa":"SF","data":"2026-06-16","descricaoTipo":"Aprovada ","siglaColegiado":"PLEN","nomeColegiado":"Plenário"}'],
+    });
+    expect(result.decisoes).toEqual([
+      { casa: "SF", data: "2026-06-16", tipo: "Aprovada", comissao: "PLEN", nomeComissao: "Plenário" },
+    ]);
   });
 
   it("handles empty input", () => {
     const result = parseEmendaProcesso({});
     expect(result.id).toBeNull();
     expect(result.decisoes).toEqual([]);
+  });
+});
+
+describe("normalizeTramitando (OBS-3)", () => {
+  it("maps string and boolean forms", () => {
+    expect(normalizeTramitando("Sim")).toBe(true);
+    expect(normalizeTramitando("Não")).toBe(false);
+    expect(normalizeTramitando("Nao")).toBe(false);
+    expect(normalizeTramitando("S")).toBe(true);
+    expect(normalizeTramitando("N")).toBe(false);
+    expect(normalizeTramitando(true)).toBe(true);
+    expect(normalizeTramitando(false)).toBe(false);
+    expect(normalizeTramitando(null)).toBeNull();
+    expect(normalizeTramitando("")).toBeNull();
+  });
+});
+
+describe("compactAutoria (OBS-2)", () => {
+  it("keeps short lists intact", () => {
+    const r = compactAutoria("Senador A (PT/BA), Senador B (PL/SP)");
+    expect(r.totalAutores).toBe(2);
+    expect(r.autoria).toBe("Senador A (PT/BA), Senador B (PL/SP)");
+  });
+  it("summarizes long lists", () => {
+    const r = compactAutoria("Senador A (PT/BA), Senador B (PL/SP), Senador C (MDB/RJ), Senador D (PP/RS)");
+    expect(r.totalAutores).toBe(4);
+    expect(r.autoria).toContain("e mais 1");
+  });
+  it("handles empty", () => {
+    expect(compactAutoria(null)).toEqual({ autoria: null, totalAutores: 0 });
   });
 });
 

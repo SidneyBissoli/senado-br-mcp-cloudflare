@@ -31,6 +31,25 @@ export function parseContrato(c: any) {
   };
 }
 
+/**
+ * Prune the circular parent `licitacao` object each item of `detalhamentos[]` carries
+ * (OBS-20). The upstream repeats the full parent inside every detail, roughly doubling
+ * the payload; drop it since the parent is the record itself.
+ */
+export function podarLicitacao(l: any): any {
+  if (!l || typeof l !== "object" || !Array.isArray(l.detalhamentos)) return l;
+  return {
+    ...l,
+    detalhamentos: l.detalhamentos.map((d: any) => {
+      if (d && typeof d === "object" && "licitacao" in d) {
+        const { licitacao: _omit, ...rest } = d;
+        return rest;
+      }
+      return d;
+    }),
+  };
+}
+
 /** Parse an outsourced collaborator item. */
 export function parseTerceirizado(t: any) {
   return {
@@ -195,7 +214,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
         return resultWithProvenance({
           count: Math.min(todos.length, limite),
           total: todos.length,
-          licitacoes: todos.slice(0, limite),
+          licitacoes: todos.slice(0, limite).map(podarLicitacao),
         }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao buscar licitações");
@@ -242,7 +261,7 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q5. senado_empresas_contratadas
   server.tool(
     "senado_empresas_contratadas",
-    "Busca empresas que contratam com o Senado por nome (mín. 3 caracteres) ou CNPJ/CPF (busca parcial). Retorna `{ count, total, empresas }`, cada item com `id`, `nome`, `cnpj`, `contratos` (até 30 números), `totalContratos`, `totalAtas` e `totalNotasEmpenho`. Exige `nome` ou `cnpj` (a base completa é grande); limitado a `limite` (padrão 20, máx 100). Use o `id`/número de contrato em `senado_contratos` ou `senado_contratacao_detalhe` para o detalhamento.",
+    "Busca empresas que contratam com o Senado por nome (mín. 3 caracteres) ou CNPJ/CPF (busca parcial). Retorna `{ count, total, empresas }`, cada item com `id`, `nome`, `cnpj`, `contratos` (até 30 números) e `totalContratos`. Exige `nome` ou `cnpj` (a base completa é grande); limitado a `limite` (padrão 20, máx 100). Use o `id`/número de contrato em `senado_contratos` ou `senado_contratacao_detalhe` para o detalhamento.",
     {
       nome: z.string().min(3).optional().describe("Nome da empresa (busca parcial, mín. 3 caracteres)"),
       cnpj: z.string().optional().describe("CNPJ/CPF (busca parcial)"),
@@ -265,14 +284,15 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
             typeof e.cpf_cnpj === "string" && e.cpf_cnpj.replace(/\D/g, "").includes(alvo));
         }
         const limite = params.limite ?? 20;
+        // OBS-19: upstream serves identical lists in contratos/atas_registro_preco/notas_empenho
+        // for every empresa (degenerate data), so totalAtas/totalNotasEmpenho were always equal to
+        // totalContratos and semantically empty — dropped.
         const resultado = empresas.slice(0, limite).map((e: any) => ({
           id: e.id ?? null,
           nome: e.nome || "",
           cnpj: e.cpf_cnpj || null,
           contratos: ensureArray(e.contratos).map((c: any) => c.numero_formatado || c.numero || c.id).slice(0, 30),
           totalContratos: ensureArray(e.contratos).length,
-          totalAtas: ensureArray(e.atas_registro_preco).length,
-          totalNotasEmpenho: ensureArray(e.notas_empenho).length,
         }));
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/empresas", {
           retrieved_at: fetchedAt,

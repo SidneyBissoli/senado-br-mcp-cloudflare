@@ -123,10 +123,13 @@ describe("parseOrientacaoVotacao", () => {
       anoMateria: 2025,
       descricaoMateria: "Requerimento nº 911, de 2025",
       dataInicioVotacao: "2025-12-09T17:18:08",
+      dataTerminoVotacao: "2025-12-09T17:25:00",
       qtdVotosSim: 48,
       qtdVotosNao: 21,
       qtdVotosAbstencao: 0,
       qtdObstrucoes: 0,
+      quorumInicial: 69,
+      quorumFinal: 71,
       orientacoesLideranca: [
         { dataHora: "2025-12-09T17:21:37", partido: "PSD", voto: "NÃO" },
         { partido: "PT", voto: "SIM" },
@@ -135,6 +138,10 @@ describe("parseOrientacaoVotacao", () => {
     expect(result.codigoVotacao).toBe(12150);
     expect(result.materia).toBe("Requerimento nº 911, de 2025");
     expect(result.totalSim).toBe(48);
+    // OBS-5: enriched fields
+    expect(result.dataTermino).toBe("2025-12-09T17:25:00");
+    expect(result.quorumInicial).toBe(69);
+    expect(result.quorumFinal).toBe(71);
     expect(result.orientacoes).toEqual([
       { partido: "PSD", voto: "NÃO" },
       { partido: "PT", voto: "SIM" },

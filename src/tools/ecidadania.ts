@@ -59,6 +59,12 @@ export {
   obterEventoInternal,
 };
 
+/** Format an integer with pt-BR thousands separators ("253804" → "253.804").
+ *  Avoids toLocaleString, whose Intl data is not guaranteed on Workers (OBS-12). */
+export function formatIntBR(n: number): string {
+  return Math.trunc(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // Tool registration
 // ══════════════════════════════════════════════════════════════════════════
@@ -139,7 +145,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G2. senado_ecidadania_obter_consulta
   server.tool(
     "senado_ecidadania_obter_consulta",
-    "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `comentarios`, `url` (campos como `comissao` e datas podem vir `null`). Obtenha o `id` antes via `senado_ecidadania_listar_consultas` ou `senado_ecidadania_consultas_analise`.",
+    "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `url` (campos como `comissao` e datas podem vir `null`). O campo `comentarios` vem `null`: a página de consulta não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_consultas` ou `senado_ecidadania_consultas_analise`.",
     { id: z.number().int().positive().describe("ID da consulta pública") },
     async (params) => {
       try {
@@ -147,8 +153,11 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           obterConsultaInternal(params.id),
         );
         writeDetalheThrough(db, ctx, "consultas", params.id, r as Record<string, unknown>);
+        // OBS-9: consulta pages have no comments resource — the scraped count is a spurious 0.
+        // Serve null (indisponível) instead of implying "zero comments".
+        const detalhe = { ...(r as Record<string, unknown>), comentarios: null };
         return resultWithProvenance(
-          tagUntrustedFields("consultas", r as Record<string, unknown>),
+          tagUntrustedFields("consultas", detalhe),
           provDetalhe(r, `/visualizacaomateria?id=${params.id}`, `consulta=${params.id}`, fetchedAt),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -214,7 +223,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G5. senado_ecidadania_listar_ideias
   server.tool(
     "senado_ecidadania_listar_ideias",
-    "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1, atualizado semanalmente; ~150 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`) e `url` (`autor` e `dataPublicacao` só aparecem no detalhe, vêm `null` aqui). Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
+    "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1, atualizado semanalmente; ~114 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`) e `url` (`autor` e `dataPublicacao` só aparecem no detalhe, vêm `null` aqui). Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
     {
       status: z.enum(["aberta", "encerrada", "convertida", "todas"]).optional().describe("Filtrar por status"),
       ordenarPor: z.enum(["apoios", "data", "comentarios"]).optional().describe("Campo para ordenação (apoios é o disponível no corpus; data/comentarios só no detalhe)"),
@@ -248,7 +257,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G6. senado_ecidadania_obter_ideia
   server.tool(
     "senado_ecidadania_obter_ideia",
-    "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `status`, `autor`, `comentarios`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
+    "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `status`, `autor`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). O campo `comentarios` vem `null`: a página de ideia não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
     { id: z.number().int().positive().describe("ID da ideia legislativa") },
     async (params) => {
       try {
@@ -256,8 +265,10 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           obterIdeiaInternal(params.id),
         );
         writeDetalheThrough(db, ctx, "ideias", params.id, r as Record<string, unknown>);
+        // OBS-9: idea pages have no comments resource — serve null instead of a spurious 0.
+        const detalhe = { ...(r as Record<string, unknown>), comentarios: null };
         return resultWithProvenance(
-          tagUntrustedFields("ideias", r as Record<string, unknown>),
+          tagUntrustedFields("ideias", detalhe),
           provDetalhe(r, `/visualizacaoideia?id=${params.id}`, `ideia=${params.id}`, fetchedAt),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -298,8 +309,21 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           });
         }
         eventos = eventos.slice(0, limite);
+        // OBS-10: the corpus carries the detail-enriched fields (descricao, pauta, convidados,
+        // local, videoUrl, comissaoNomeCompleto). The listing should stay compact — reserve those
+        // for senado_ecidadania_obter_evento.
+        const compactos = eventos.map((e) => ({
+          id: e.id,
+          titulo: e.titulo,
+          data: e.data,
+          hora: e.hora,
+          comissao: e.comissao,
+          comentarios: e.comentarios,
+          status: e.status,
+          url: e.url,
+        }));
         return resultWithProvenance(
-          { count: eventos.length, eventos: tagUntrustedList("eventos", eventos as unknown as Record<string, unknown>[]), meta },
+          { count: compactos.length, eventos: tagUntrustedList("eventos", compactos as unknown as Record<string, unknown>[]), meta },
           provLista("/principalaudiencia", "eventos", meta),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -343,7 +367,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G8. senado_ecidadania_sugerir_tema_enquete
   server.tool(
     "senado_ecidadania_sugerir_tema_enquete",
-    "Sugere temas para uma enquete pública mensal (seleção de pauta): analisa o conjunto completo de consultas (abertas) e as ideias do e-Cidadania e elege as de maior engajamento cidadão, filtrando por polarização/consenso e participação mínima. Retorna `{ criteriosAplicados, totalAnalisados, count, sugestoes }` (até 10), cada sugestão com `tipo` (`consulta`/`ideia`), `id`, `titulo`, `motivo`, `metricas` (participação/polarização) e `url`, ordenadas por participação. Critérios opcionais em `criterios`: `evitarPolarizacao`/`evitarConsenso` (padrão true), `minimoParticipacao` (padrão 500), `apenasEmTramitacao` (padrão true → considera só consultas abertas, com base no status real). Para investigar uma sugestão, use `senado_ecidadania_obter_consulta` ou `senado_ecidadania_obter_ideia` conforme o `tipo`.",
+    "Sugere temas para uma enquete pública mensal (seleção de pauta): analisa o conjunto completo de consultas (abertas) e as ideias do e-Cidadania e elege as de maior engajamento cidadão, filtrando por polarização/consenso e participação mínima. Retorna `{ criteriosAplicados, totalAnalisados, count, totalQualificados, sugestoes }` (até 10), cada sugestão com `tipo` (`consulta`/`ideia`), `id`, `titulo`, `motivo`, `metricas` (participação/polarização) e `url`, ordenadas por participação. `count` é o número de sugestões retornadas (≤10) e `totalQualificados` é quantas passaram nos critérios. Critérios opcionais em `criterios`: `evitarPolarizacao`/`evitarConsenso` (padrão true), `minimoParticipacao` (padrão 500), `apenasEmTramitacao` (padrão true → considera só consultas abertas, com base no status real). Para investigar uma sugestão, use `senado_ecidadania_obter_consulta` ou `senado_ecidadania_obter_ideia` conforme o `tipo`.",
     {
       criterios: z.object({
         evitarPolarizacao: z.boolean().optional().default(true).describe("Evita temas com ~50/50"),
@@ -377,7 +401,11 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
         const consultas = (cRes.items as ConsultaResumo[]).filter(
           (c) => !apenasEmTramitacao || c.status === "aberta",
         );
-        const ideias = iRes.items as IdeiaResumo[];
+        // OBS-12(i): apenasEmTramitacao must also gate ideias, else 2017–2020
+        // encerradas/convertidas get suggested as current poll topics.
+        const ideias = (iRes.items as IdeiaResumo[]).filter(
+          (i) => !apenasEmTramitacao || i.status === "aberta",
+        );
 
         const sugestoes: any[] = [];
 
@@ -400,18 +428,22 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           if (i.apoios < (criterios.minimoParticipacao ?? 500)) continue;
           sugestoes.push({
             tipo: "ideia", id: i.id, titulo: neutralizeUntrustedText(i.titulo.substring(0, 200)),
-            motivo: `Ideia popular com ${i.apoios.toLocaleString()} apoios`,
+            motivo: `Ideia popular com ${formatIntBR(i.apoios)} apoios`,
             metricas: { participacao: i.apoios }, url: i.url,
           });
         }
 
         sugestoes.sort((a, b) => b.metricas.participacao - a.metricas.participacao);
 
+        const retornadas = sugestoes.slice(0, 10);
         return resultWithProvenance({
           criteriosAplicados: criterios,
           totalAnalisados: consultas.length + ideias.length,
-          count: sugestoes.length,
-          sugestoes: sugestoes.slice(0, 10),
+          // OBS-12(ii): `count` now means "itens retornados" (consistent with the other tools);
+          // the full qualified count moves to `totalQualificados`.
+          count: retornadas.length,
+          totalQualificados: sugestoes.length,
+          sugestoes: retornadas,
           meta: { consultas: cRes.meta, ideias: iRes.meta },
         }, provLista("/principalmateria", "consultas+ideias", cRes.meta));
       } catch (e) { return ecidadaniaError(e); }

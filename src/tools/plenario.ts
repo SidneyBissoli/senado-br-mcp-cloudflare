@@ -120,11 +120,16 @@ export function parseOrientacaoVotacao(v: any) {
     materia: v.descricaoMateria ||
       (v.siglaTipoMateria ? `${v.siglaTipoMateria} ${v.numeroMateria}/${v.anoMateria}` : null),
     dataInicio: v.dataInicioVotacao || null,
+    // OBS-5: expose fields the upstream provides but the flattener used to drop —
+    // useful for discipline/quorum analysis.
+    dataTermino: v.dataTerminoVotacao || null,
     sessao: v.descricaoSessao || null,
     totalSim: v.qtdVotosSim ?? null,
     totalNao: v.qtdVotosNao ?? null,
     totalAbstencao: v.qtdVotosAbstencao ?? null,
     obstrucoes: v.qtdObstrucoes ?? null,
+    quorumInicial: v.quorumInicial ?? null,
+    quorumFinal: v.quorumFinal ?? null,
     orientacoes: ensureArray(v.orientacoesLideranca).map((o: any) => ({
       partido: o.partido || null,
       voto: o.voto || null,
@@ -232,7 +237,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F3. senado_orientacao_bancada
   server.tool(
     "senado_orientacao_bancada",
-    "Orientação de bancada nas votações de plenário: como cada liderança partidária orientou o voto, com placar — essencial para análise de disciplina partidária. Retorna `{ count, votacoes }`, com cada votação trazendo `codigoVotacao`, `descricao`, `materia`, `dataInicio`, `sessao`, totais (`totalSim`, `totalNao`, `totalAbstencao`, `obstrucoes`) e `orientacoes` (`partido`, `voto`). Informe `data` (um dia) ou o período `dataInicio`/`dataFim`. Para o resultado das sessões use `senado_resultado_plenario`.",
+    "Orientação de bancada nas votações de plenário: como cada liderança partidária orientou o voto, com placar — essencial para análise de disciplina partidária. Retorna `{ count, votacoes }`, com cada votação trazendo `codigoVotacao`, `descricao`, `materia`, `dataInicio`, `dataTermino`, `sessao`, totais (`totalSim`, `totalNao`, `totalAbstencao`, `obstrucoes`), `quorumInicial`/`quorumFinal` e `orientacoes` (`partido`, `voto`). Informe `data` (um dia) ou o período `dataInicio`/`dataFim`. Para o resultado das sessões use `senado_resultado_plenario`.",
     {
       data: z.string().regex(/^\d{8}$/).optional().describe("Data da sessão (YYYYMMDD)"),
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início do período (YYYYMMDD)"),
@@ -312,7 +317,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F5. senado_resultado_veto
   server.tool(
     "senado_resultado_veto",
-    "Resultado da votação nominal de um veto presidencial. Retorna `{ codigo, tipo, resultado }`, onde `resultado` é o objeto bruto da API (já sem wrappers), com campos variáveis conforme o veto — tipicamente identificação do veto, sessão/data, placar e situação da apreciação; pode vir objeto vazio quando o veto ainda não foi votado, e a chamada retorna erro se o `codigo` não existir. Informe `codigo` e `tipo`: veto (código do veto, padrão), materia (código do projeto vetado) ou dispositivo (dispositivo de veto parcial). Obtenha o código do veto via `senado_vetos`.",
+    "Resultado da apreciação de um veto presidencial. Retorna `{ codigo, tipo, resultado }`, onde `resultado` é o objeto bruto da API (já sem wrappers), com campos variáveis conforme o veto — tipicamente identificação do veto, situação por dispositivo (ex.: \"Rejeitado\"/\"Mantido\") e link do PDF do resultado nominal (`PdfsResultadoVotacao`). Observação: a API NÃO fornece um placar numérico (sim/não) neste endpoint — o detalhamento nominal está no PDF. Pode vir objeto vazio quando o veto ainda não foi votado, e a chamada retorna erro se o `codigo` não existir. Informe `codigo` e `tipo`: veto (código do veto, padrão), materia (código do projeto vetado) ou dispositivo (dispositivo de veto parcial). Obtenha o código do veto via `senado_vetos`.",
     {
       codigo: z.number().int().positive().describe("Código do veto, da matéria ou do dispositivo, conforme o tipo"),
       tipo: z.enum(["veto", "materia", "dispositivo"]).optional().default("veto").describe("veto = código do veto (padrão); materia = código do projeto vetado; dispositivo = dispositivo de veto parcial"),
@@ -358,7 +363,15 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
           () => upstreamFetch(path, {}, baseUrl),
         );
         const body = stripWrapper(response);
-        const encontros = ensureArray((body as any)?.encontros?.encontro ?? body);
+        // OBS-15: `detalhes` embeds the full `encontroRealizado` (42+ usos da palavra, pauta
+        // duplicada — ~275 KB), which is already served by the pauta/resultado seções. Prune it.
+        const encontros = ensureArray((body as any)?.encontros?.encontro ?? body).map((e: any) => {
+          if (e && typeof e === "object" && !Array.isArray(e) && "encontroRealizado" in e) {
+            const { encontroRealizado: _omit, ...rest } = e;
+            return rest;
+          }
+          return e;
+        });
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `encontro=${params.codigo}; secao=${secao}`, retrieved_at: fetchedAt,
         });

@@ -113,7 +113,7 @@ export function registerReferenciaTools(server: McpServer, baseUrl: string) {
   server.tool(
     "senado_tabelas_referencia",
     "Consulta tabelas de referência do Senado pelo parâmetro `tabela`. Valores: " +
-      "`tipos-materia` → `{ count, tipos }` (sigla/nome/descricao dos tipos de proposição, p.ex. PEC, PL, MPV) — use para achar a `sigla` correta antes de `senado_buscar_materias`/`senado_search_processos`; " +
+      "`tipos-materia` → `{ count, tipos }` (sigla/nome/descricao dos tipos de proposição, p.ex. PEC, PL, MPV) — **catálogo curado mantido neste servidor** (12 tipos mais comuns, não é a lista viva do upstream `processo/siglas`, que tem ~184 siglas); use para achar a `sigla` correta antes de `senado_buscar_materias`/`senado_search_processos`; " +
       "`partidos` → `{ count, totalSenadores, partidos }` (partidos com bancada atual, ordenados por nº de senadores); " +
       "`ufs` → `{ count, totalSenadores, ufs }` (as 27 UFs com a contagem de senadores em exercício); " +
       "`legislatura-atual` → `{ numero, periodo, dataInicio, dataFim }` da legislatura vigente; " +

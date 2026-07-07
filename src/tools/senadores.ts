@@ -30,6 +30,21 @@ export function parseSenadorResumo(parlamentar: any) {
   };
 }
 
+/**
+ * Match a party filter tolerantly (OBS-6). The upstream stores the official sigla
+ * ("PODEMOS"), so an exact match against a common short form ("PODE") silently
+ * returned 0. Accept an exact match, or a prefix relationship when the shorter side
+ * has ≥4 chars (catches PODE↔PODEMOS without collapsing PP↔PPS).
+ */
+export function matchesPartido(sigla: unknown, filtro: string): boolean {
+  const sp = String(sigla ?? "").trim().toUpperCase();
+  const p = filtro.trim().toUpperCase();
+  if (!sp || !p) return false;
+  if (sp === p) return true;
+  const shorter = Math.min(sp.length, p.length);
+  return shorter >= 4 && (sp.startsWith(p) || p.startsWith(sp));
+}
+
 export function parseSenadorDetalhe(dados: any) {
   const p = dados.Parlamentar || dados;
   const id = p.IdentificacaoParlamentar || {};
@@ -166,7 +181,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
       legislatura: z.number().int().min(1).optional().describe("Número da legislatura (ex: 57 para 2023-2027)"),
       nome: z.string().optional().describe("Nome ou parte do nome (busca parcial, sem acento)"),
       uf: z.string().max(2).optional().describe("Sigla do estado (ex: SP, RJ, MG)"),
-      partido: z.string().optional().describe("Sigla do partido (ex: PT, PL, MDB)"),
+      partido: z.string().optional().describe("Sigla do partido (ex: PT, PL, MDB); tolera formas curtas como PODE→PODEMOS"),
     },
     async (params) => {
       try {
@@ -188,8 +203,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
           senadores = senadores.filter((s) => s.uf.toUpperCase() === uf);
         }
         if (params.partido) {
-          const p = params.partido.toUpperCase();
-          senadores = senadores.filter((s) => s.partido?.toUpperCase() === p);
+          senadores = senadores.filter((s) => matchesPartido(s.partido, params.partido!));
         }
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: params.legislatura ? `legislatura=${params.legislatura}` : "lista/atual",

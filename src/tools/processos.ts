@@ -23,6 +23,53 @@ export function ensureISODate(d: string | undefined): string | undefined {
   return /^\d{8}$/.test(d) ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}` : d;
 }
 
+/**
+ * Normalize the `tramitando` flag to a boolean (OBS-3). The v3 /processo family
+ * returns it as the string "Sim"/"Não" (search and detail), while
+ * buscar_materias/obter_materia already expose a boolean — unify on boolean.
+ */
+export function normalizeTramitando(v: any): boolean | null {
+  if (v == null || v === "") return null;
+  if (typeof v === "boolean") return v;
+  const s = String(v).trim().toLowerCase();
+  if (s === "sim" || s === "s" || s === "true") return true;
+  if (s === "não" || s === "nao" || s === "n" || s === "false") return false;
+  return null;
+}
+
+/**
+ * Compact a long authorship string (OBS-2). The search endpoint returns `autoria`
+ * as a ~900-char comma-separated list of "Senador Nome (PARTIDO/UF)" — keep the
+ * first `keep` authors and summarize the rest, returning the total count too.
+ */
+export function compactAutoria(autoria: any, keep = 3): { autoria: string | null; totalAutores: number } {
+  if (typeof autoria !== "string" || !autoria.trim()) {
+    return { autoria: autoria || null, totalAutores: 0 };
+  }
+  // Split on the "), " boundary between authors and re-append the ")".
+  const parts = autoria
+    .split(/\)\s*,\s*/)
+    .map((p, i, arr) => (i < arr.length - 1 ? `${p})` : p))
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const total = parts.length;
+  if (total <= keep) return { autoria: autoria.trim(), totalAutores: total };
+  return {
+    autoria: `${parts.slice(0, keep).join(", ")} … e mais ${total - keep} (${total} no total)`,
+    totalAutores: total,
+  };
+}
+
+/** Parse a JSON string, returning the original value on failure. */
+function safeParseObject(d: any): any {
+  if (typeof d !== "string") return d;
+  try {
+    return JSON.parse(d);
+  } catch {
+    return d;
+  }
+}
+
 /** Parse a /processo/emenda item. */
 export function parseEmendaProcesso(e: any) {
   return {
@@ -34,8 +81,20 @@ export function parseEmendaProcesso(e: any) {
     data: e.dataApresentacao || null,
     colegiado: e.siglaColegiado || e.nomeColegiado || null,
     descricao: e.descricaoDocumentoEmenda || null,
-    decisoes: ensureArray(e.decisoes).map((d: any) =>
-      typeof d === "string" ? d : d.descricao || d.tipo || JSON.stringify(d)),
+    // decisoes[] arrives as objects; the previous fallback JSON.stringify'd them into
+    // strings (double-encode, OBS-18). Serve structured objects and trim descricaoTipo
+    // (upstream carries a trailing space, e.g. "Rejeitada ").
+    decisoes: ensureArray(e.decisoes).map((d: any) => {
+      const obj = safeParseObject(d);
+      if (!obj || typeof obj !== "object") return { descricao: String(d) };
+      return {
+        casa: obj.casa ?? null,
+        data: obj.data ?? null,
+        tipo: typeof obj.descricaoTipo === "string" ? obj.descricaoTipo.trim() : (obj.descricaoTipo ?? obj.tipo ?? null),
+        comissao: obj.siglaColegiado ?? null,
+        nomeComissao: obj.nomeColegiado ?? null,
+      };
+    }),
     url: e.urlDocumentoEmenda || null,
   };
 }
@@ -87,6 +146,7 @@ export const TABELAS_PROCESSO: Record<string, string> = {
 
 /** Parse a process item from the search endpoint (flat camelCase). */
 export function parseProcessoResumo(p: any) {
+  const { autoria, totalAutores } = compactAutoria(p.autoria);
   return {
     id: p.id || null,
     codigoMateria: p.codigoMateria || null,
@@ -94,8 +154,9 @@ export function parseProcessoResumo(p: any) {
     ementa: p.ementa || null,
     tipoDocumento: p.tipoDocumento || null,
     dataApresentacao: p.dataApresentacao || null,
-    autoria: p.autoria || null,
-    tramitando: p.tramitando || null,
+    autoria,
+    totalAutores,
+    tramitando: normalizeTramitando(p.tramitando),
     dataDeliberacao: p.dataDeliberacao || null,
     normaGerada: p.normaGerada || null,
   };
@@ -118,7 +179,20 @@ export function parseProcessoDetalhe(p: any) {
     autoria: p.documento?.resumoAutoria || null,
     indexacao: p.documento?.indexacao || null,
     urlDocumento: p.documento?.url || null,
-    tramitando: p.tramitando || null,
+    tramitando: normalizeTramitando(p.tramitando),
+    // OBS-17: expose where the process is now — high-value fields the upstream
+    // provides but the flattener used to discard.
+    situacaoAtual: p.situacaoAtual || null,
+    siglaSituacaoAtual: p.siglaSituacaoAtual || null,
+    dataSituacaoAtual: p.dataSituacaoAtual || null,
+    deliberacao: p.deliberacao && Object.keys(p.deliberacao).length > 0
+      ? {
+          data: p.deliberacao.data ?? null,
+          tipo: p.deliberacao.tipoDeliberacao ?? p.deliberacao.siglaTipo ?? null,
+          destino: p.deliberacao.destino ?? p.deliberacao.siglaDestino ?? null,
+        }
+      : null,
+    normaGerada: p.normaGerada && Object.keys(p.normaGerada).length > 0 ? p.normaGerada : null,
   };
 }
 
@@ -126,7 +200,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C1. senado_search_processos
   server.tool(
     "senado_search_processos",
-    "Busca processos legislativos no endpoint v3 `/processo` (parâmetros complementares ao `senado_buscar_materias`). Retorna `{ count, processos }`, cada item com `id`, `codigoMateria`, `identificacao`, `ementa`, `tipoDocumento`, `dataApresentacao`, `autoria`, `tramitando` e `normaGerada`. É obrigatório ao menos um filtro (sigla, número, ano, autor ou período). Use o `id` retornado em `senado_obter_processo` para detalhes.",
+    "Busca processos legislativos no endpoint v3 `/processo` (parâmetros complementares ao `senado_buscar_materias`). Retorna `{ count, total, aviso?, processos }`, cada item com `id`, `codigoMateria`, `identificacao`, `ementa`, `tipoDocumento`, `dataApresentacao`, `autoria` (compactada: primeiros autores + total), `totalAutores`, `tramitando` (boolean) e `normaGerada`. É obrigatório ao menos um filtro (sigla, número, ano, autor ou período). Limitado a `limite` (padrão 20, máx. 200), com `aviso` ao truncar. Use o `id` retornado em `senado_obter_processo` para detalhes.",
     {
       sigla: z.string().optional().describe("Sigla do tipo de processo (ex: PL, PEC)"),
       numero: z.number().int().optional().describe("Número do processo"),
@@ -136,6 +210,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
       tramitando: z.enum(["S", "N"]).optional().describe("Em tramitação (S/N)"),
       dataInicioApresentacao: z.string().optional().describe("Data início da apresentação (YYYYMMDD ou YYYY-MM-DD)"),
       dataFimApresentacao: z.string().optional().describe("Data fim da apresentação (YYYYMMDD ou YYYY-MM-DD)"),
+      limite: z.number().int().min(1).max(200).optional().default(20).describe("Máximo de resultados (padrão: 20)"),
     },
     async (params) => {
       try {
@@ -158,14 +233,21 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
           CACHE_ON_DEMAND,
           () => upstreamFetch("/processo", qp, baseUrl),
         );
-        const processos = ensureArray(response).map(parseProcessoResumo);
+        const todos = ensureArray(response).map(parseProcessoResumo);
+        const limite = params.limite ?? 20;
+        const processos = todos.slice(0, limite);
         const di = ensureISODate(params.dataInicioApresentacao);
         const df = ensureISODate(params.dataFimApresentacao);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/processo", {
           reference_period: di && df ? `${di}/${df}` : params.ano ? String(params.ano) : di || df || undefined,
           retrieved_at: fetchedAt,
         });
-        return resultWithProvenance({ count: processos.length, processos }, prov);
+        return resultWithProvenance({
+          count: processos.length,
+          total: todos.length,
+          ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} processos.` } : {}),
+          processos,
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro na busca de processos");
       }
@@ -175,7 +257,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C2. senado_obter_processo
   server.tool(
     "senado_obter_processo",
-    "Obtém detalhes completos de um processo legislativo específico pelo seu `id`. Retorna um objeto com `id`, `codigoMateria`, `identificacao`, `sigla`, `numero`, `ano`, `objetivo`, `ementa`, `tipoConteudo`, `dataApresentacao`, `autoria`, `indexacao`, `urlDocumento` e `tramitando`. Obtenha o `idProcesso` antes via `senado_search_processos` ou `senado_buscar_materias`; para emendas, relatorias ou prazos use `senado_processo_detalhe` (parâmetro `secao`).",
+    "Obtém detalhes completos de um processo legislativo específico pelo seu `id`. Retorna um objeto com `id`, `codigoMateria`, `identificacao`, `sigla`, `numero`, `ano`, `objetivo`, `ementa`, `tipoConteudo`, `dataApresentacao`, `autoria`, `indexacao`, `urlDocumento`, `tramitando` (boolean) e o estado atual do processo: `situacaoAtual` (+`siglaSituacaoAtual`/`dataSituacaoAtual`), `deliberacao` (data, tipo, destino) e `normaGerada` (quando o processo virou norma). Obtenha o `idProcesso` antes via `senado_search_processos` ou `senado_buscar_materias`; para emendas, relatorias ou prazos use `senado_processo_detalhe` (parâmetro `secao`).",
     {
       idProcesso: z.number().int().positive().describe("ID do processo legislativo"),
     },
@@ -206,7 +288,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   server.tool(
     "senado_processo_detalhe",
     "Detalha um aspecto de processos legislativos conforme o parâmetro `secao`: " +
-      "`emendas` → emendas apresentadas (`id`, `identificacao`, `numero`, `tipo`, `autoria`, `data`, `colegiado`, `descricao`, `decisoes`, `url`; aceita filtro `codigoParlamentarAutor`); " +
+      "`emendas` → emendas apresentadas (`id`, `identificacao`, `numero`, `tipo`, `autoria`, `data`, `colegiado`, `descricao`, `decisoes` (objetos com `casa`/`data`/`tipo`/`comissao`/`nomeComissao`), `url`; aceita filtro `codigoParlamentarAutor`); " +
       "`relatorias` → relatorias designadas (`idProcesso`, `processo`, `relator`, `partido`, `uf`, `tipoRelator`, `comissao`, `dataDesignacao`, `dataDestituicao`, `motivoEncerramento`; aceita `codigoParlamentar`/`codigoColegiado`/`dataReferencia`); " +
       "`prazos` → prazos regimentais/constitucionais (registros brutos da API; aceita `dataReferencia`). " +
       "Todos aceitam `idProcesso` e/ou `codigoMateria` e período `dataInicio`/`dataFim` (YYYYMMDD ou ISO) — informe pelo menos um filtro. Retorna `{ secao, count, total, aviso?, itens }`, limitado a `limite` (padrão 100, máx. 500). " +

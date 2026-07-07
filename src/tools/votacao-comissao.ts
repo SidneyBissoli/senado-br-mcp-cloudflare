@@ -68,7 +68,7 @@ export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string)
       "`por: senador` → exige `codigoSenador`; lista os votos do senador em comissões (filtro opcional `comissao`). " +
       "`por: materia` → exige `sigla`, `numero` e `ano` (ex.: PL 2630/2020); lista as votações da proposição em comissões (filtro opcional `comissao`). " +
       "Em todos os casos aceita período opcional `dataInicio`/`dataFim` (YYYYMMDD, filtrado pela data da reunião) e retorna `{ por, ...contexto, count, votacoes }`, cada votação com `codigo`, `data`, `comissao`, `reuniao`, `materia`, `descricao`, totais computados dos votos (`totalSim`/`totalNao`/`totalAbstencao`) e `votos` (senador, partido, voto). Sem paginação. " +
-      "Obtenha siglas via `senado_listar_comissoes`, `codigoSenador` via `senado_listar_senadores`; para votações no plenário use `senado_votos_materia`.",
+      "Obtenha siglas via `senado_listar_comissoes`, `codigoSenador` via `senado_listar_senadores`; para votações no plenário use `senado_votos_materia`. Atenção: o `codigo` de cada votação de comissão pertence a um espaço de numeração próprio e NÃO é válido em `senado_obter_votacao` (que é exclusivo de plenário) — podem coincidir numericamente, mas apontam para votações diferentes.",
     {
       por: z.enum(["comissao", "senador", "materia"]).optional().default("comissao").describe("Eixo da consulta: comissao, senador ou materia"),
       siglaComissao: z.string().min(2).optional().describe("Sigla da comissão (obrigatório quando por=comissao; ex: CCJ, CAE)"),

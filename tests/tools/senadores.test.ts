@@ -1,5 +1,20 @@
 import { describe, it, expect } from "vitest";
-import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador, parseLicenca, parseMandato, parseComissaoMembro, parseCargoSenador } from "../../src/tools/senadores.js";
+import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador, parseLicenca, parseMandato, parseComissaoMembro, parseCargoSenador, matchesPartido } from "../../src/tools/senadores.js";
+
+describe("matchesPartido (OBS-6)", () => {
+  it("matches exact and common short forms", () => {
+    expect(matchesPartido("PODEMOS", "PODE")).toBe(true);
+    expect(matchesPartido("PODEMOS", "PODEMOS")).toBe(true);
+    expect(matchesPartido("PT", "PT")).toBe(true);
+    expect(matchesPartido("MDB", "mdb")).toBe(true);
+  });
+  it("does not over-match short siglas", () => {
+    expect(matchesPartido("PPS", "PP")).toBe(false);
+    expect(matchesPartido("PL", "PT")).toBe(false);
+    expect(matchesPartido(null, "PT")).toBe(false);
+    expect(matchesPartido("PT", "")).toBe(false);
+  });
+});
 import { digArrayRoot } from "../../src/utils/upstream-parse.js";
 
 describe("parseSenadorResumo", () => {

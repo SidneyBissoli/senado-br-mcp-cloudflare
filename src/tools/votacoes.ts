@@ -31,6 +31,24 @@ export function lastDayOfMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
+/** Single-letter result codes returned by /votacao (OBS-4). */
+export const RESULTADO_VOTACAO: Record<string, string> = {
+  A: "Aprovada",
+  R: "Rejeitada",
+  P: "Prejudicada",
+};
+
+/**
+ * Expand the raw `resultadoVotacao` code into a human/LLM-friendly label (OBS-4),
+ * keeping the raw code in `resultadoCodigo`. Unknown codes (or already-expanded
+ * text) pass through unchanged as `resultado`.
+ */
+export function expandirResultado(code: any): { resultado: string | null; resultadoCodigo: string | null } {
+  if (code == null || code === "") return { resultado: null, resultadoCodigo: null };
+  const raw = String(code).trim();
+  return { resultado: RESULTADO_VOTACAO[raw.toUpperCase()] ?? raw, resultadoCodigo: raw };
+}
+
 /** Parse a single vote item from the /votacao endpoint (flat camelCase). */
 export function parseVotacaoItem(v: any, includeVotos = false) {
   const votosRaw = Array.isArray(v.votos) ? v.votos : [];
@@ -47,6 +65,7 @@ export function parseVotacaoItem(v: any, includeVotos = false) {
     totalAbstencao = placar.abstencao;
     placarComputado = true;
   }
+  const { resultado, resultadoCodigo } = expandirResultado(v.resultadoVotacao);
   const result: any = {
     codigoSessao: v.codigoSessao || null,
     codigoVotacao: v.codigoSessaoVotacao || null,
@@ -55,7 +74,8 @@ export function parseVotacaoItem(v: any, includeVotos = false) {
     codigoMateria: v.codigoMateria || null,
     ementa: v.ementa || null,
     descricao: v.descricaoVotacao || null,
-    resultado: v.resultadoVotacao || null,
+    resultado,
+    resultadoCodigo,
     totalSim,
     totalNao,
     totalAbstencao,
@@ -78,7 +98,7 @@ export function registerVotacoesTools(server: McpServer, baseUrl: string) {
   // D3. senado_obter_votacao
   server.tool(
     "senado_obter_votacao",
-    "Obtém detalhes de uma votação pelo `codigoVotacao` (que é o `codigoSessao` da sessão plenária), incluindo votos nominais. Retorna o objeto da votação (placar, `resultado`, `secreta`) com `votos[]` (`codigoSenador`, `nomeSenador`, `partido`, `uf`, `voto`); se a sessão tiver várias votações, retorna `{ codigoSessao, count, votacoes }`. Obtenha o `codigoSessao` via `senado_search_votacoes` antes de chamar.",
+    "Obtém detalhes de uma votação de **plenário** pelo `codigoVotacao` (que é o `codigoSessao` da sessão plenária), incluindo votos nominais. Retorna o objeto da votação (placar, `resultado` legível + `resultadoCodigo` bruto, `secreta`) com `votos[]` (`codigoSenador`, `nomeSenador`, `partido`, `uf`, `voto`); se a sessão tiver várias votações, retorna `{ codigoSessao, count, votacoes }`. Obtenha o `codigoSessao` via `senado_search_votacoes` antes de chamar. Atenção: este endpoint só aceita códigos de votação de **plenário** — códigos de `senado_votacao_comissao` pertencem a outro espaço de numeração e NÃO são válidos aqui (podem coincidir numericamente, mas apontam para outra votação).",
     {
       codigoVotacao: z.number().int().positive().describe("Código único da votação (codigoSessao da sessão plenária)"),
     },

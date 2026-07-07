@@ -1,5 +1,27 @@
 import { describe, it, expect } from "vitest";
-import { parseContrato, parseTerceirizado, matchesFiltro, matchesFiltroCampo } from "../../src/tools/contratacoes.js";
+import { parseContrato, parseTerceirizado, matchesFiltro, matchesFiltroCampo, podarLicitacao } from "../../src/tools/contratacoes.js";
+
+describe("podarLicitacao (OBS-20)", () => {
+  it("drops the circular parent licitacao from each detalhamento", () => {
+    const raw = {
+      id: 1, numero: "19/2018", objeto: "Vigilância",
+      detalhamentos: [
+        { id: 10, tipo: "ata", descricao: "x", licitacao: { id: 1, numero: "19/2018", objeto: "Vigilância", detalhamentos: [] } },
+        { id: 11, tipo: "ata", descricao: "y", licitacao: { id: 1 } },
+      ],
+    };
+    const out = podarLicitacao(raw);
+    expect(out.id).toBe(1);
+    expect(out.detalhamentos).toHaveLength(2);
+    expect(out.detalhamentos[0]).toEqual({ id: 10, tipo: "ata", descricao: "x" });
+    expect("licitacao" in out.detalhamentos[1]).toBe(false);
+  });
+
+  it("passes through records without detalhamentos", () => {
+    expect(podarLicitacao({ id: 2, numero: "5/2020" })).toEqual({ id: 2, numero: "5/2020" });
+    expect(podarLicitacao(null)).toBeNull();
+  });
+});
 
 describe("parseContrato", () => {
   it("parses a snake_case contract item", () => {

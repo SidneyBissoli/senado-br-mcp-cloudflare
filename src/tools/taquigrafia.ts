@@ -60,13 +60,14 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
   // N1. senado_notas_taquigraficas
   server.tool(
     "senado_notas_taquigraficas",
-    "Obtém as notas taquigráficas (transcrição oficial) de uma sessão plenária ou reunião de comissão. Retorna `{ id, tipo, sessao, data, totalBlocos, blocos }`: no modo `resumo` (padrão) cada bloco traz `sequencia`, `dataInicio/Fim`, `trecho` (primeiros 200 chars), `caracteres` e `linkAudio`; no modo `texto` traz o `texto` integral de no máx. 20 blocos por chamada (controle a janela com `sequenciaInicio`/`sequenciaFim`) e inclui `intervalo`. Obtenha o `id` da sessão via `senado_agenda_plenario`/`senado_resultado_plenario` ou da reunião via `senado_reuniao_comissao`; use `orador` para filtrar blocos por nome e `senado_videos_taquigrafia` para a mídia.",
+    "Obtém as notas taquigráficas (transcrição oficial) de uma sessão plenária ou reunião de comissão. Retorna `{ id, tipo, sessao, data, totalBlocos, aviso?, blocos }`: no modo `resumo` (padrão) cada bloco traz `sequencia`, `dataInicio/Fim`, `trecho` (primeiros 200 chars), `caracteres` e `linkAudio`, limitado a `limite` blocos por chamada (padrão 20; pagine com `sequenciaInicio`); no modo `texto` traz o `texto` integral de no máx. 20 blocos por chamada (controle a janela com `sequenciaInicio`/`sequenciaFim`) e inclui `intervalo`. Obtenha o `id` da sessão via `senado_agenda_plenario`/`senado_resultado_plenario` ou da reunião via `senado_reuniao_comissao`; use `orador` para filtrar blocos por nome e `senado_videos_taquigrafia` para a mídia.",
     {
       id: z.number().int().positive().describe("Código da sessão plenária ou da reunião de comissão"),
       tipo: z.enum(["sessao", "reuniao"]).optional().default("sessao").describe("sessao = plenário (padrão); reuniao = comissão"),
       modo: z.enum(["resumo", "texto"]).optional().default("resumo").describe("resumo = blocos com trecho inicial; texto = transcrição integral dos blocos selecionados"),
-      sequenciaInicio: z.number().int().min(1).optional().describe("Primeiro bloco (quarto) a retornar no modo texto (padrão: 1)"),
+      sequenciaInicio: z.number().int().min(1).optional().describe("Primeiro bloco (quarto) a retornar (modo texto e resumo; padrão: 1)"),
       sequenciaFim: z.number().int().min(1).optional().describe("Último bloco a retornar no modo texto (máx. 20 blocos por chamada)"),
+      limite: z.number().int().min(1).max(100).optional().default(20).describe("modo=resumo: máximo de blocos por chamada (padrão: 20)"),
       orador: z.string().optional().describe("Filtra blocos que mencionam este nome (busca no texto)"),
     },
     async (params) => {
@@ -99,7 +100,18 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
           retrieved_at: fetchedAt,
         });
         if ((params.modo ?? "resumo") === "resumo") {
-          return resultWithProvenance({ ...dados, blocos: quartos.map(parseQuartoResumo) }, prov);
+          // OBS-1: resumo used to dump every block (77 blocks ≈ 30k chars). Window it.
+          const inicioR = params.sequenciaInicio ?? 1;
+          const limiteR = params.limite ?? 20;
+          const janela = quartos.filter((q: any) => safeInt(q.sequencia) >= inicioR);
+          const selecionadosR = janela.slice(0, limiteR);
+          return resultWithProvenance({
+            ...dados,
+            ...(janela.length > limiteR
+              ? { aviso: `Exibindo ${selecionadosR.length} de ${quartos.length} blocos (a partir de ${inicioR}). Avance com sequenciaInicio.` }
+              : {}),
+            blocos: selecionadosR.map(parseQuartoResumo),
+          }, prov);
         }
         const inicio = params.sequenciaInicio ?? 1;
         const fim = Math.min(params.sequenciaFim ?? inicio + MAX_QUARTOS_TEXTO - 1, inicio + MAX_QUARTOS_TEXTO - 1);
@@ -121,11 +133,12 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
   // N2. senado_videos_taquigrafia
   server.tool(
     "senado_videos_taquigrafia",
-    "Lista os vídeos e áudios (unidades descritivas) de uma sessão plenária ou reunião de comissão. Retorna `{ id, tipo, count, videos }`, onde cada item traz `codigo`, `data`, `descricao`, `orador`, `duracaoSegundos`, e links `urlVideo`, `urlAudio`, `urlThumbnail`. Obtenha o `id` da sessão via `senado_agenda_plenario`/`senado_resultado_plenario` ou da reunião via `senado_reuniao_comissao`; use `orador` para filtrar pelo nome de quem fala e `senado_notas_taquigraficas` para a transcrição textual correspondente.",
+    "Lista os vídeos e áudios (unidades descritivas) de uma sessão plenária ou reunião de comissão. Retorna `{ id, tipo, count, total, aviso?, videos }`, onde cada item traz `codigo`, `data`, `descricao`, `orador`, `duracaoSegundos`, e links `urlVideo`, `urlAudio`, `urlThumbnail`. Limitado a `limite` (padrão 50), com `aviso` ao truncar. Obtenha o `id` da sessão via `senado_agenda_plenario`/`senado_resultado_plenario` ou da reunião via `senado_reuniao_comissao`; use `orador` para filtrar pelo nome de quem fala e `senado_notas_taquigraficas` para a transcrição textual correspondente.",
     {
       id: z.number().int().positive().describe("Código da sessão plenária ou da reunião de comissão"),
       tipo: z.enum(["sessao", "reuniao"]).optional().default("sessao").describe("sessao = plenário (padrão); reuniao = comissão"),
       orador: z.string().optional().describe("Filtra unidades por nome do orador"),
+      limite: z.number().int().min(1).max(200).optional().default(50).describe("Máximo de unidades (padrão: 50)"),
     },
     async (params) => {
       try {
@@ -142,10 +155,20 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
           const alvo = params.orador.toLowerCase();
           videos = videos.filter((v) => v.orador?.toLowerCase().includes(alvo));
         }
+        const limite = params.limite ?? 50;
+        const total = videos.length;
+        const selecionados = videos.slice(0, limite);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `${tipo}=${params.id}`, retrieved_at: fetchedAt,
         });
-        return resultWithProvenance({ id: params.id, tipo, count: videos.length, videos }, prov);
+        return resultWithProvenance({
+          id: params.id,
+          tipo,
+          count: selecionados.length,
+          total,
+          ...(total > limite ? { aviso: `Exibindo ${limite} de ${total} unidades.` } : {}),
+          videos: selecionados,
+        }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao obter vídeos da sessão");
       }

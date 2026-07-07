@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toISODate, formatISO, lastDayOfMonth, parseVotacaoItem } from "../../src/tools/votacoes.js";
+import { toISODate, formatISO, lastDayOfMonth, parseVotacaoItem, expandirResultado } from "../../src/tools/votacoes.js";
 
 describe("toISODate", () => {
   it("converts YYYYMMDD to YYYY-MM-DD", () => {
@@ -92,6 +92,15 @@ describe("parseVotacaoItem", () => {
     expect(result.secreta).toBe(false);
   });
 
+  it("expands the raw resultado code (OBS-4)", () => {
+    const r = parseVotacaoItem({ resultadoVotacao: "A" });
+    expect(r.resultado).toBe("Aprovada");
+    expect(r.resultadoCodigo).toBe("A");
+    const r2 = parseVotacaoItem({ resultadoVotacao: "R" });
+    expect(r2.resultado).toBe("Rejeitada");
+    expect(r2.resultadoCodigo).toBe("R");
+  });
+
   it("strips time from dataSessao", () => {
     const item = { dataSessao: "2024-06-01T10:00:00" };
     const result = parseVotacaoItem(item);
@@ -108,6 +117,13 @@ describe("parseVotacaoItem", () => {
     expect(parseVotacaoItem({ votacaoSecreta: "S" }).secreta).toBe(true);
     expect(parseVotacaoItem({ votacaoSecreta: "N" }).secreta).toBe(false);
     expect(parseVotacaoItem({}).secreta).toBe(false);
+  });
+
+  it("expandirResultado passes unknown/absent codes through (OBS-4)", () => {
+    expect(expandirResultado("P")).toEqual({ resultado: "Prejudicada", resultadoCodigo: "P" });
+    expect(expandirResultado("Aprovada")).toEqual({ resultado: "Aprovada", resultadoCodigo: "Aprovada" });
+    expect(expandirResultado(null)).toEqual({ resultado: null, resultadoCodigo: null });
+    expect(expandirResultado("")).toEqual({ resultado: null, resultadoCodigo: null });
   });
 
   it("includes nominal votes when requested", () => {

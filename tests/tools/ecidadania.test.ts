@@ -43,7 +43,17 @@ import {
   obterIdeiaInternal,
   listarEventosInternal,
   obterEventoInternal,
+  formatIntBR,
 } from "../../src/tools/ecidadania.js";
+
+describe("formatIntBR (OBS-12)", () => {
+  it("groups thousands with pt-BR dots", () => {
+    expect(formatIntBR(253804)).toBe("253.804");
+    expect(formatIntBR(1000)).toBe("1.000");
+    expect(formatIntBR(999)).toBe("999");
+    expect(formatIntBR(1234567)).toBe("1.234.567");
+  });
+});
 
 // ── Pure function tests ──────────────────────────────────────────────────
 
