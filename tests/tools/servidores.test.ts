@@ -5,6 +5,8 @@ import {
   normalizarRemuneracao,
   consolidarPorSequencial,
   estatisticasRemuneracoes,
+  parseHoraExtra,
+  estatisticasHorasExtras,
 } from "../../src/tools/servidores.js";
 import { unwrapAdmEnvelope } from "../../src/utils/upstream-parse.js";
 import { ensureArray, parseBRL } from "../../src/utils/validation.js";
@@ -210,5 +212,67 @@ describe("horas_extras aggregate (BUG-002)", () => {
     const total = Math.round(itens.reduce((s, h) => s + h.valorTotal, 0) * 100) / 100;
     expect(itens[1].valorTotal).toBe(1953.14); // individual is now a number
     expect(total).toBe(2080.64);
+  });
+});
+
+describe("parseHoraExtra", () => {
+  it("maps the adm snake_case row and parses the pt-BR valorTotal", () => {
+    const out = parseHoraExtra({
+      nome: "ALICE",
+      valorTotal: "1.638,51",
+      mes_ano_prestacao: "02/2024",
+      mes_ano_pagamento: "03/2024",
+      horas_extras: [{ dia: "26/02/2024", quantidade: "01h30" }],
+    });
+    expect(out.valorTotal).toBe(1638.51); // pt-BR string -> number
+    expect(out).toMatchObject({ nome: "ALICE", competencia: "02/2024", pagamento: "03/2024" });
+    expect(out.horasExtras).toHaveLength(1); // raw detail kept as-is, not the value
+  });
+
+  it("defaults missing fields to null / empty", () => {
+    const out = parseHoraExtra({ valorTotal: "0,00" });
+    expect(out).toMatchObject({ nome: "", competencia: null, pagamento: null, horasExtras: null });
+    expect(out.valorTotal).toBe(0);
+  });
+});
+
+describe("estatisticasHorasExtras", () => {
+  // Four paid lines; BRUNO holds two (different competências paid together) -> 700 when summed by name.
+  const itens = [
+    { valorTotal: "1.000,00", mes_ano_prestacao: "02/2024", mes_ano_pagamento: "03/2024", nome: "ALICE" },
+    { valorTotal: "300,00", mes_ano_prestacao: "02/2024", mes_ano_pagamento: "03/2024", nome: "BRUNO" },
+    { valorTotal: "400,00", mes_ano_prestacao: "01/2024", mes_ano_pagamento: "03/2024", nome: "BRUNO" },
+    { valorTotal: "200,00", mes_ano_prestacao: "02/2024", mes_ano_pagamento: "03/2024", nome: "CARLA" },
+  ].map(parseHoraExtra);
+
+  it("without agruparPor crunches the whole-set distribution over valorTotal", () => {
+    const out = estatisticasHorasExtras(itens, { topN: 10 }) as any;
+    expect(out.distribuicao.n).toBe(4);
+    expect(out.distribuicao.maximo).toBe(1000);
+    expect(out.distribuicao.minimo).toBe(200);
+    expect(out.distribuicao.media).toBe(475); // (1000+300+400+200)/4
+    expect(out.distribuicao.soma).toBe(1900);
+    expect(out.top[0]).toMatchObject({ nome: "ALICE", valor: 1000 });
+    expect(out.bottom[0]).toMatchObject({ nome: "CARLA", valor: 200 });
+  });
+
+  it("agruparPor=nome sums the lines per servant and ranks by total desc", () => {
+    const out = estatisticasHorasExtras(itens, { agruparPor: "nome", topN: 10 }) as any;
+    expect(out.agrupadoPor).toBe("nome");
+    expect(out.totalGrupos).toBe(3); // ALICE, BRUNO, CARLA
+    expect(out.grupos[0]).toMatchObject({ grupo: "ALICE" }); // 1000 = biggest
+    const bruno = out.grupos.find((g: any) => g.grupo === "BRUNO");
+    expect(bruno.soma).toBe(700); // 300 + 400 merged
+    // total across groups reconciles with the whole-set sum
+    expect(out.grupos.reduce((s: number, g: any) => s + g.soma, 0)).toBe(1900);
+  });
+
+  it("agruparPor=competencia groups by month of prestação", () => {
+    const out = estatisticasHorasExtras(itens, { agruparPor: "competencia", topN: 10 }) as any;
+    expect(out.agrupadoPor).toBe("competencia");
+    expect(out.totalGrupos).toBe(2); // 02/2024 and 01/2024
+    const grupos = Object.fromEntries(out.grupos.map((g: any) => [g.grupo, g]));
+    expect(grupos["02/2024"].soma).toBe(1500); // 1000 + 300 + 200
+    expect(grupos["01/2024"].soma).toBe(400);
   });
 });

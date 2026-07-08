@@ -243,6 +243,69 @@ export function estatisticasRemuneracoes(
   };
 }
 
+/**
+ * Parse one horas-extras row (adm snake_case). `valorTotal` is a pt-BR string → number
+ * (the canonical value column); `horasExtras` is the raw detail array (dia/quantidade/setor),
+ * kept as-is and never used as the value.
+ */
+export function parseHoraExtra(h: any) {
+  return {
+    nome: h.nome || "",
+    valorTotal: parseBRL(h.valorTotal), // pt-BR string -> number
+    competencia: h.mes_ano_prestacao || null, // mês/ano em que a hora extra foi PRESTADA
+    pagamento: h.mes_ano_pagamento || null, // mês/ano do PAGAMENTO (≈ o {ano}/{mes} pedido)
+    horasExtras: h.horas_extras ?? null, // detalhe cru (dia/quantidade/setor) — nunca o valor
+  };
+}
+
+/** Group-key extractor per `agruparPor`. Both keys vary within a single paid month (smoke-tested). */
+const CHAVE_GRUPO_HORAS: Record<string, (h: any) => string> = {
+  nome: (h) => h.nome || "(sem nome)",
+  competencia: (h) => h.competencia || "(sem competência)",
+};
+
+/**
+ * Build the `estatisticas=true` response for horas extras. The value column is the single money
+ * field `valorTotal`, so there is no `campo` param. Without `agruparPor` it crunches the distribution
+ * over individual paid lines (min/máx/média/mediana/desvio/percentis) + top/bottom ranking; with
+ * `agruparPor` it ranks the groups by total paid desc (grupos[0] = quem mais recebeu), each carrying
+ * its own mini-distribution. A servant may hold more than one line in a month (different competências
+ * paid together), so `agruparPor:"nome"` is a real sum. No `desempate`: there is no stable numeric id,
+ * and input order is deterministic.
+ */
+export function estatisticasHorasExtras(
+  filtrado: any[],
+  opts: { agruparPor?: "nome" | "competencia"; topN: number },
+) {
+  if (opts.agruparPor) {
+    const resultado = computarEstatisticas(filtrado, (h: any) => h.valorTotal, {
+      agruparPor: CHAVE_GRUPO_HORAS[opts.agruparPor],
+      topN: 0, // groups already sorted by total desc = ranking; no per-group extremes
+      maxGrupos: 50,
+    }) as EstatisticasPorGrupo;
+    return {
+      agrupadoPor: opts.agruparPor,
+      totalGrupos: resultado.totalGrupos,
+      ...(resultado.aviso ? { aviso: resultado.aviso } : {}),
+      grupos: resultado.grupos.map((g) => ({ grupo: g.grupo, ...arredondarEstatisticas(g) })),
+    };
+  }
+
+  const e = computarEstatisticas(filtrado, (h: any) => h.valorTotal, {
+    topN: opts.topN,
+    identificar: (h: any) => ({
+      nome: h.nome ?? null,
+      competencia: h.competencia ?? null,
+      pagamento: h.pagamento ?? null,
+    }),
+  }) as Estatisticas;
+  return {
+    distribuicao: arredondarEstatisticas(e),
+    top: arredondarEntradas(e.top),
+    bottom: arredondarEntradas(e.bottom),
+  };
+}
+
 export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P1. senado_servidores
   server.tool(
@@ -373,12 +436,15 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P3. senado_horas_extras
   server.tool(
     "senado_horas_extras",
-    "Horas extras pagas a servidores do Senado em `ano`/`mes` de referência (a partir de 2013). Retorna `{ ano, mes, count, total, valorTotal, horasExtras[] }`, onde `valorTotal` soma o gasto do mês e cada item traz `nome`, `valorTotal`, `horasExtras`, `competencia` e `pagamento`. Filtro opcional por `nome` (busca parcial) e `limite` (padrão 100, máx 500). Para a remuneração completa do servidor use `senado_remuneracoes_servidores`.",
+    "Horas extras pagas a servidores do Senado em `ano`/`mes` de referência (a partir de 2013). Para perguntas de **maior/menor/média/mediana/distribuição/ranking** ('quem recebeu mais horas extras', 'valor mediano de hora extra', 'distribuição dos pagamentos') use `estatisticas=true`: computa min/máx/média/mediana/desvio/percentis sobre TODAS as linhas filtradas (`valorTotal`) e devolve `top`/`bottom` (padrão 10) com identificadores. Sem `agruparPor` → `distribuicao` das linhas individuais + `top`/`bottom`; com `agruparPor` (`nome`/`competencia`) → `grupos[]` ranqueados por soma decrescente (`grupos[0]` = quem mais recebeu; por `nome` soma as linhas do mesmo servidor no mês), cada um com sua mini-distribuição. Sem `estatisticas`: retorna `{ ano, mes, count, total, valorTotal, horasExtras[] }`, onde `valorTotal` soma o gasto do mês e cada item traz `nome`, `valorTotal`, `horasExtras`, `competencia` e `pagamento`. Filtro opcional por `nome` (busca parcial) e `limite` (padrão 100, máx 500; ignorado quando estatisticas=true). Para a remuneração completa do servidor use `senado_remuneracoes_servidores`.",
     {
       ano: z.number().int().min(2013).max(2100).describe("Ano de referência"),
       mes: z.number().int().min(1).max(12).describe("Mês de referência"),
+      estatisticas: z.boolean().optional().default(false).describe("Computa estatísticas (min/máx/média/mediana/percentis) + ranking top/bottom sobre todas as linhas filtradas. Use para 'quem recebeu mais/menos', 'média', 'mediana', 'ranking'"),
+      agruparPor: z.enum(["nome", "competencia"]).optional().describe("Quando estatisticas=true, ranqueia os grupos por soma decrescente (grupos[0] = quem mais recebeu): `nome` soma as linhas do mesmo servidor no mês, `competencia` agrupa por mês de prestação. Cada grupo traz sua mini-distribuição"),
+      topN: z.number().int().min(1).max(100).optional().default(10).describe("Tamanho das listas top/bottom quando estatisticas=true sem agruparPor (padrão: 10, máx: 100)"),
       nome: z.string().optional().describe("Nome do servidor (busca parcial)"),
-      limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de resultados (padrão: 100)"),
+      limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de resultados (padrão: 100; ignorado quando estatisticas=true)"),
     },
     async (params) => {
       try {
@@ -388,13 +454,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
           CACHE_STATIC,
           () => admFetch(`/servidores/horas-extras/${params.ano}/${params.mes}`, {}, admBaseUrl),
         );
-        let itens = ensureArray(response).map((h: any) => ({
-          nome: h.nome || "",
-          valorTotal: parseBRL(h.valorTotal), // pt-BR string -> number
-          competencia: h.mes_ano_prestacao || null,
-          pagamento: h.mes_ano_pagamento || null,
-          horasExtras: h.horas_extras ?? null,
-        }));
+        let itens = ensureArray(response).map(parseHoraExtra);
         if (params.nome) itens = itens.filter((h) => matchesFiltro(h.nome, params.nome!));
         const valorTotal = Math.round(itens.reduce((s, h) => s + h.valorTotal, 0) * 100) / 100;
         const limite = params.limite ?? 100;
@@ -403,6 +463,16 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
           reference_period: `${params.ano}-${String(params.mes).padStart(2, "0")}`,
           retrieved_at: fetchedAt,
         });
+        if (params.estatisticas) {
+          return resultWithProvenance({
+            ano: params.ano,
+            mes: params.mes,
+            modo: "estatisticas",
+            total: itens.length,
+            valorTotal,
+            ...estatisticasHorasExtras(itens, { agruparPor: params.agruparPor, topN: params.topN ?? 10 }),
+          }, prov);
+        }
         return resultWithProvenance({
           ano: params.ano,
           mes: params.mes,
