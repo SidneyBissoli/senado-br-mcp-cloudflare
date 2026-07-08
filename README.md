@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/sidneybissoli-senado-br-mcp-cloudflare-badge.png)](https://mseep.ai/app/sidneybissoli-senado-br-mcp-cloudflare)
+
 # Senado Brasil MCP Server
 
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)
