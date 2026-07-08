@@ -139,13 +139,13 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q2. senado_contratacao_detalhe
   server.tool(
     "senado_contratacao_detalhe",
-    "Detalha uma seção específica de uma contratação. O `tipo` indica a natureza do registro: `contratos` (contrato firmado), `atas_registro_preco` (ata de registro de preço — compromisso de preços para compras futuras) ou `notas_empenho` (nota de empenho — reserva orçamentária do gasto). A `secao` escolhe o aspecto: `itens`, `pagamentos`, `garantias`, `aditivos` (só `contratos`) ou `acionamentos` (só `atas_registro_preco`). Retorna `{ id, tipo, secao, count, total, itens }` com os registros brutos da seção (campos conforme a API administrativa), limitados a `limite` (padrão 100, máx 500); seção sem registros retorna `count` 0 e `itens` vazio. Obtenha o `id` antes via `senado_contratos` ou `senado_contratacoes_lista`; combinações de seção/tipo inválidas retornam erro.",
-    {
-      id: z.number().int().positive().describe("ID da contratação (campo 'id' das listas de contratos/atas/empenhos)"),
-      tipo: z.enum(["contratos", "atas_registro_preco", "notas_empenho"]).optional().default("contratos").describe("Tipo da contratação"),
-      secao: z.enum(["itens", "pagamentos", "garantias", "aditivos", "acionamentos"]).describe("aditivos: apenas contratos; acionamentos: apenas atas"),
-      limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de itens (padrão: 100)"),
-    },
+    "Detalha uma seção específica de uma contratação já identificada pelo `id`. `tipo` indica a natureza do registro: `contratos` (contrato firmado; padrão), `atas_registro_preco` (compromisso de preços para compras futuras) ou `notas_empenho` (reserva orçamentária do gasto). `secao` escolhe o aspecto: `itens`, `pagamentos`, `garantias` (qualquer `tipo`), `aditivos` (só `contratos`) ou `acionamentos` (só `atas_registro_preco`). Retorna `{ id, tipo, secao, count, total, itens }` com os registros brutos da seção (campos conforme a API administrativa), limitados a `limite` (padrão 100, máx 500) — `count < total` indica truncagem; seção sem registros retorna `count` 0 e `itens` vazio; combinações `secao`×`tipo` inválidas (ex.: `aditivos` fora de contratos) retornam erro. Obtenha o `id` via `senado_contratos` ou `senado_contratacoes_lista` — para localizar a contratação (não detalhá-la) use aquelas ferramentas.",
+      {
+        id: z.number().int().positive().describe("ID da contratação (campo 'id' das listas de contratos/atas/empenhos)"),
+        tipo: z.enum(["contratos", "atas_registro_preco", "notas_empenho"]).optional().default("contratos").describe("contratos = contrato firmado (padrão); atas_registro_preco = compromisso de preços p/ compras futuras; notas_empenho = reserva orçamentária do gasto"),
+        secao: z.enum(["itens", "pagamentos", "garantias", "aditivos", "acionamentos"]).describe("Aspecto a detalhar: itens/pagamentos/garantias (qualquer tipo); aditivos (só contratos); acionamentos (só atas_registro_preco)"),
+        limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de itens (padrão 100, máx 500); count < total sinaliza corte"),
+      },
     async (params) => {
       try {
         const tipo = params.tipo ?? "contratos";

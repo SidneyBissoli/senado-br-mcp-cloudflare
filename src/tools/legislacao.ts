@@ -59,12 +59,12 @@ export function registerLegislacaoTools(server: McpServer, baseUrl: string) {
   // L1. senado_buscar_legislacao
   server.tool(
     "senado_buscar_legislacao",
-    "Busca normas jurídicas federais (leis, decretos, etc.) por `tipo`, `numero`, `ano` ou `data`. Retorna `{ count, normas }`, cada norma com `codigo`, `tipo`, `descricaoTipo`, `numero`, `ano`, `data` (ISO), `norma`, `ementa` e `apelido`. É obrigatório informar ao menos um parâmetro, senão retorna erro. Use o `codigo` retornado em `senado_obter_legislacao` para o detalhe (com indexação e URL do texto); consulte os tipos válidos em `senado_tabelas_referencia` (`tabela: \"tipos-norma\"`).",
+    "Busca normas jurídicas federais **já promulgadas** (leis, decretos, emendas etc.) por `tipo`, `numero`, `ano` e/ou `data`, combinados como filtros AND — informe ao menos um, senão retorna erro. Retorna `{ count, normas }` sem paginação (`count` cobre todas as normas que casam; 0 quando nada casa), cada norma com `codigo`, `tipo`, `descricaoTipo`, `numero`, `ano`, `data` (ISO), `norma`, `ementa` e `apelido`. Use o `codigo` em `senado_obter_legislacao` para indexação e URL do texto integral. Para **proposições em tramitação** (PEC, PL, MPV) use `senado_buscar_materias` — esta cobre apenas normas já sancionadas.",
     {
-      tipo: z.string().optional().describe("Tipo da norma (ex: LEI, DEC, LCP, EMC)"),
-      numero: z.number().int().optional().describe("Número da norma"),
-      ano: z.number().int().min(1900).max(2100).optional().describe("Ano da norma"),
-      data: z.string().optional().describe("Data da norma (YYYYMMDD)"),
+      tipo: z.string().optional().describe("Sigla oficial da espécie: LEI, DEC (decreto), LCP (lei complementar), EMC (emenda constitucional) etc.; lista completa em senado_tabelas_referencia (tabela=tipos-norma)"),
+      numero: z.number().int().optional().describe("Número da norma; combina com tipo e ano como filtro AND"),
+      ano: z.number().int().min(1900).max(2100).optional().describe("Ano de assinatura/promulgação da norma"),
+      data: z.string().optional().describe("Data exata de assinatura, formato YYYYMMDD"),
     },
     async (params) => {
       try {
@@ -100,9 +100,9 @@ export function registerLegislacaoTools(server: McpServer, baseUrl: string) {
   // L2. senado_obter_legislacao
   server.tool(
     "senado_obter_legislacao",
-    "Obtém os detalhes de uma norma jurídica federal específica pelo seu `codigo`. Retorna um objeto com `codigo`, `tipo`, `descricaoTipo`, `numero`, `ano`, `data` (ISO), `norma`, `apelido`, `ementa`, `indexacao` e `url` do texto integral. Obtenha o `codigo` primeiro via `senado_buscar_legislacao`.",
+    "Obtém o detalhe de uma norma federal já promulgada pelo seu `codigo` interno. Retorna um objeto com `codigo`, `tipo`, `descricaoTipo`, `numero`, `ano`, `data` (ISO), `norma`, `apelido`, `ementa`, `indexacao` (termos temáticos) e `url` do texto integral — campos ausentes na norma vêm `null`, e `codigo` inexistente retorna erro \"Norma não encontrada\". Obtenha o `codigo` antes via `senado_buscar_legislacao` (é o identificador interno da norma, não o número da lei). Para localizar normas por tipo/número/ano use `senado_buscar_legislacao`; esta serve só para o detalhe de uma norma já identificada.",
     {
-      codigo: z.number().int().positive().describe("Código único da norma"),
+      codigo: z.number().int().positive().describe("Identificador interno da norma (campo `codigo` retornado por senado_buscar_legislacao; ≠ número da lei)"),
     },
     async (params) => {
       try {

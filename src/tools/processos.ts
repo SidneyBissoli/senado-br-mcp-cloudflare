@@ -433,15 +433,15 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C7. senado_tabelas_processo (consolidated reference tables)
   server.tool(
     "senado_tabelas_processo",
-    "Consulta tabelas de referência do processo legislativo (parâmetro `tabela`): siglas, assuntos, classes, destinos, entes, tipos-situacao/decisao/autor/atualizacao/documento/conteudo-documento/prazo. Retorna `{ tabela, count, total, linhas }` com as linhas brutas da tabela escolhida — cada linha traz tipicamente um código/sigla e a descrição do domínio (campos conforme a API). `filtro` textual opcional (sobre sigla/descrição) e `limite` padrão 200 (máx. 1000); `count` 0 quando o filtro não casa. Use para resolver códigos/siglas antes de filtrar em `senado_search_processos` e ferramentas afins.",
+    "Consulta tabelas de referência do processo legislativo para resolver códigos/siglas, conforme `tabela`. Domínios de entidade: `siglas` (siglas de proposição), `assuntos`, `classes`, `destinos`, `entes`. Domínios de tipo (código→descrição): `tipos-situacao`, `tipos-decisao`, `tipos-autor`, `tipos-atualizacao`, `tipos-documento`, `tipos-conteudo-documento`, `tipos-prazo`. Retorna `{ tabela, count, total, linhas }` — `count` é o nº após o corte por `limite` e `total` o disponível; `count < total` indica truncagem (aumente `limite`); `count` 0 quando o `filtro` não casa. Cada linha traz código/sigla e descrição (campos conforme a API). Use antes de filtrar em `senado_search_processos`/`senado_processo_detalhe`. Para as tabelas do plenário (tipos de sessão, legislaturas) use `senado_tabelas_plenario`.",
     {
       tabela: z.enum([
         "siglas", "assuntos", "classes", "destinos", "entes",
         "tipos-situacao", "tipos-decisao", "tipos-autor", "tipos-atualizacao",
         "tipos-documento", "tipos-conteudo-documento", "tipos-prazo",
-      ]).describe("Tabela de referência a consultar"),
-      filtro: z.string().optional().describe("Filtro textual aplicado sobre sigla/descrição"),
-      limite: z.number().int().min(1).max(1000).optional().default(200).describe("Máximo de linhas (padrão: 200)"),
+      ]).describe("Tabela a consultar — entidades (siglas, assuntos, classes, destinos, entes) ou tipos (tipos-situacao, tipos-decisao, tipos-autor, tipos-atualizacao, tipos-documento, tipos-conteudo-documento, tipos-prazo)"),
+      filtro: z.string().optional().describe("Busca textual sobre sigla/descrição; count 0 se nada casar"),
+      limite: z.number().int().min(1).max(1000).optional().default(200).describe("Máximo de linhas (padrão 200, máx 1000); count < total sinaliza corte"),
     },
     async (params) => {
       try {

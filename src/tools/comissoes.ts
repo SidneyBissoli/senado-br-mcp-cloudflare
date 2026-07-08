@@ -468,11 +468,11 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E8. senado_distribuicao_materias
   server.tool(
     "senado_distribuicao_materias",
-    "Estatísticas de distribuição de matérias numa comissão (pela `siglaComissao`), por `tipo`: autoria (matérias por autor; padrão) ou relatoria (matérias relatadas); `codigoParlamentar` filtra apenas em autoria. Retorna `{ siglaComissao, tipo, count, parlamentares }` ordenado por `quantidade` desc, cada item com `codigo`, `nome`, `partido`, `uf` e `quantidade`. Útil para medir carga de trabalho legislativo; obtenha a sigla via `senado_listar_comissoes`.",
+    "Ranqueia parlamentares pela quantidade de matérias numa comissão (`siglaComissao`), medindo carga de trabalho legislativo. `tipo` escolhe o eixo: `autoria` (matérias de autoria; padrão) ou `relatoria` (matérias relatadas). Retorna `{ siglaComissao, tipo, count, parlamentares }` ordenado por `quantidade` desc, sem paginação (`count` 0 quando a comissão não tem registros), cada item com `codigo`, `nome`, `partido`, `uf` e `quantidade`. `codigoParlamentar` restringe a um parlamentar e **só tem efeito em `tipo=autoria`** (ignorado em relatoria). Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` do parlamentar em `senado_obter_senador`. Para a lista das matérias em si (não a contagem) use `senado_buscar_materias`.",
     {
       siglaComissao: z.string().min(2).describe("Sigla da comissão (ex: CCJ, CAE)"),
       tipo: z.enum(["autoria", "relatoria"]).optional().default("autoria").describe("autoria = matérias de autoria por parlamentar (padrão); relatoria = matérias relatadas"),
-      codigoParlamentar: z.number().int().optional().describe("Filtrar por parlamentar (apenas tipo=autoria)"),
+      codigoParlamentar: z.number().int().optional().describe("Restringe a um parlamentar — efetivo apenas em tipo=autoria (ignorado em relatoria)"),
     },
     async (params) => {
       try {

@@ -60,15 +60,15 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
   // N1. senado_notas_taquigraficas
   server.tool(
     "senado_notas_taquigraficas",
-    "Obtém as notas taquigráficas (transcrição oficial) de uma sessão plenária ou reunião de comissão. Retorna `{ id, tipo, sessao, data, totalBlocos, aviso?, blocos }`: no modo `resumo` (padrão) cada bloco traz `sequencia`, `dataInicio/Fim`, `trecho` (primeiros 200 chars), `caracteres` e `linkAudio`, limitado a `limite` blocos por chamada (padrão 20; pagine com `sequenciaInicio`); no modo `texto` traz o `texto` integral de no máx. 20 blocos por chamada (controle a janela com `sequenciaInicio`/`sequenciaFim`) e inclui `intervalo`. Obtenha o `id` da sessão via `senado_agenda_plenario`/`senado_resultado_plenario` ou da reunião via `senado_reuniao_comissao`; use `orador` para filtrar blocos por nome e `senado_videos_taquigrafia` para a mídia.",
+    "Transcrição oficial (notas taquigráficas) de uma sessão plenária ou reunião de comissão, em blocos sequenciais. Retorna `{ id, tipo, sessao, data, totalBlocos, aviso?, blocos }`; `id` inexistente ou sessão sem transcrição retorna `totalBlocos` 0 e `blocos` vazio. `modo` governa o payload: `resumo` (padrão) traz por bloco `sequencia`, `dataInicio/Fim`, `trecho` (200 chars), `caracteres` e `linkAudio`, limitado a `limite` (padrão 20; pagine com `sequenciaInicio`, `aviso` sinaliza corte); `texto` traz o conteúdo integral de até 20 blocos por chamada (janela `sequenciaInicio`→`sequenciaFim`) e inclui `intervalo`. `sequenciaFim` só atua em `modo=texto`. Obtenha o `id` via `senado_agenda_plenario`/`senado_resultado_plenario` (sessão) ou `senado_reuniao_comissao` (reunião); `orador` filtra blocos pelo nome citado. Para a mídia (vídeo/áudio) use `senado_videos_taquigrafia`, não esta.",
     {
       id: z.number().int().positive().describe("Código da sessão plenária ou da reunião de comissão"),
       tipo: z.enum(["sessao", "reuniao"]).optional().default("sessao").describe("sessao = plenário (padrão); reuniao = comissão"),
       modo: z.enum(["resumo", "texto"]).optional().default("resumo").describe("resumo = blocos com trecho inicial; texto = transcrição integral dos blocos selecionados"),
-      sequenciaInicio: z.number().int().min(1).optional().describe("Primeiro bloco (quarto) a retornar (modo texto e resumo; padrão: 1)"),
-      sequenciaFim: z.number().int().min(1).optional().describe("Último bloco a retornar no modo texto (máx. 20 blocos por chamada)"),
-      limite: z.number().int().min(1).max(100).optional().default(20).describe("modo=resumo: máximo de blocos por chamada (padrão: 20)"),
-      orador: z.string().optional().describe("Filtra blocos que mencionam este nome (busca no texto)"),
+      sequenciaInicio: z.number().int().min(1).optional().describe("Primeiro bloco a retornar (base 1); pagina o modo resumo e abre a janela do modo texto (padrão: 1)"),
+      sequenciaFim: z.number().int().min(1).optional().describe("Último bloco no modo texto (ignorado no modo resumo); a janela é capada em 20 blocos por chamada"),
+      limite: z.number().int().min(1).max(100).optional().default(20).describe("modo=resumo: máximo de blocos por chamada (padrão 20); o excedente é sinalizado em aviso"),
+      orador: z.string().optional().describe("Retorna só blocos cujo texto menciona este nome (busca parcial no conteúdo)"),
     },
     async (params) => {
       try {
@@ -133,12 +133,12 @@ export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
   // N2. senado_videos_taquigrafia
   server.tool(
     "senado_videos_taquigrafia",
-    "Lista os vídeos e áudios (unidades descritivas) de uma sessão plenária ou reunião de comissão. Retorna `{ id, tipo, count, total, aviso?, videos }`, onde cada item traz `codigo`, `data`, `descricao`, `orador`, `duracaoSegundos`, e links `urlVideo`, `urlAudio`, `urlThumbnail`. Limitado a `limite` (padrão 50), com `aviso` ao truncar. Obtenha o `id` da sessão via `senado_agenda_plenario`/`senado_resultado_plenario` ou da reunião via `senado_reuniao_comissao`; use `orador` para filtrar pelo nome de quem fala e `senado_notas_taquigraficas` para a transcrição textual correspondente.",
+    "Lista os vídeos e áudios (unidades descritivas) de uma sessão plenária ou reunião de comissão. Retorna `{ id, tipo, count, total, aviso?, videos }` (sessão sem mídia → `count`/`total` 0 e lista vazia; ao passar de `limite` inclui `aviso`), cada item com `codigo`, `data`, `descricao`, `orador`, `duracaoSegundos` e os links `urlVideo`, `urlAudio`, `urlThumbnail`. Obtenha o `id` via `senado_agenda_plenario`/`senado_resultado_plenario` (sessão) ou `senado_reuniao_comissao` (reunião). Para a transcrição textual correspondente use `senado_notas_taquigraficas`, não esta.",
     {
-      id: z.number().int().positive().describe("Código da sessão plenária ou da reunião de comissão"),
+      id: z.number().int().positive().describe("Código da sessão plenária ou da reunião de comissão, conforme `tipo`"),
       tipo: z.enum(["sessao", "reuniao"]).optional().default("sessao").describe("sessao = plenário (padrão); reuniao = comissão"),
-      orador: z.string().optional().describe("Filtra unidades por nome do orador"),
-      limite: z.number().int().min(1).max(200).optional().default(50).describe("Máximo de unidades (padrão: 50)"),
+      orador: z.string().optional().describe("Retorna só unidades cujo orador contém este nome (busca parcial)"),
+      limite: z.number().int().min(1).max(200).optional().default(50).describe("Máximo de unidades (padrão 50, máx 200); o excedente é sinalizado em aviso"),
     },
     async (params) => {
       try {

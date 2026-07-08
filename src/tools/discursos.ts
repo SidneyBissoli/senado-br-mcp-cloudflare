@@ -56,13 +56,13 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
   // I1. senado_discursos_senador (tipo: discursos | apartes)
   server.tool(
     "senado_discursos_senador",
-    "Lista pronunciamentos de um senador, filtráveis por período e casa legislativa. O parâmetro `tipo` (padrão `discursos`) escolhe entre `discursos` (pronunciamentos próprios) e `apartes` (intervenções em discursos de outros parlamentares). Retorna `{ codigoSenador, tipo, count, discursos }`, cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `indexacao`, `url` e `nomeParlamentar` (sem texto integral; para `tipo: apartes` os itens são apartes, com a mesma estrutura). Obtenha o `codigoSenador` via `senado_listar_senadores`; use o `codigo` do pronunciamento em `senado_discurso_texto` para o texto completo.",
+    "Lista pronunciamentos de um senador, filtráveis por período e casa. `tipo` (padrão `discursos`) alterna entre `discursos` (falas próprias) e `apartes` (intervenções em falas de outros) — muda a fonte upstream e o conteúdo, mantendo a mesma estrutura. Retorna `{ codigoSenador, tipo, count, discursos }` sem paginação (`count` 0 e lista vazia quando não há pronunciamentos no período), cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `indexacao`, `url` e `nomeParlamentar` — sem o texto integral. Sem `dataInicio`/`dataFim` traz todo o histórico do senador. Obtenha o `codigoSenador` via `senado_listar_senadores` e o texto completo em `senado_discurso_texto` (campo `codigo`). Para discursos de todos os senadores num período use `senado_discursos_plenario`, não esta.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
-      tipo: z.enum(["discursos", "apartes"]).optional().default("discursos").describe("discursos (próprios) ou apartes (intervenções em discursos de outros)"),
-      casa: z.string().optional().describe("Casa legislativa (SF=Senado, CN=Congresso)"),
-      dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
-      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
+      tipo: z.enum(["discursos", "apartes"]).optional().default("discursos").describe("discursos = pronunciamentos próprios (padrão); apartes = intervenções em discursos de outros — altera a fonte e o conteúdo retornado"),
+      casa: z.string().optional().describe("Restringe à casa: SF (Senado Federal) ou CN (Congresso Nacional); vazio traz ambas"),
+      dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Início do período (YYYYMMDD); use junto com dataFim"),
+      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Fim do período (YYYYMMDD); omitir dataInicio/dataFim traz todo o histórico"),
     },
     async (params) => {
       try {
@@ -154,9 +154,9 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
   // This endpoint returns plain text, not JSON. Use direct fetch with cachedFetch.
   server.tool(
     "senado_discurso_texto",
-    "Obtém o texto integral de um pronunciamento/discurso específico. Retorna `{ codigoPronunciamento, texto }`, onde `texto` é o conteúdo completo do discurso (string). Obtenha o `codigoPronunciamento` primeiro via `senado_discursos_senador` ou `senado_discursos_plenario` (campo `codigo`).",
+    "Obtém o texto integral de um único pronunciamento pelo `codigoPronunciamento`. Retorna `{ codigoPronunciamento, texto }`, onde `texto` é a transcrição completa (string, podendo ter dezenas de KB — não é truncada nem paginada); `codigo` inexistente ou discurso sem texto retorna erro. Obtenha o `codigoPronunciamento` antes via `senado_discursos_senador` ou `senado_discursos_plenario` (campo `codigo`). Para apenas listar/filtrar discursos (resumo, data, autor) use aquelas ferramentas; esta traz o texto de um discurso já identificado.",
     {
-      codigoPronunciamento: z.number().int().positive().describe("Código do pronunciamento"),
+      codigoPronunciamento: z.number().int().positive().describe("Código do pronunciamento (campo `codigo` de senado_discursos_senador ou senado_discursos_plenario); um por discurso"),
     },
     async (params) => {
       try {

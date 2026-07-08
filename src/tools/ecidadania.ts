@@ -333,8 +333,8 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G9. senado_ecidadania_obter_evento
   server.tool(
     "senado_ecidadania_obter_evento",
-    "Obtém o detalhe de um evento interativo do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao`, `data`, `hora`, `comissao` e `comissaoNomeCompleto`, `local`, `status`, `comentarios`, `url`, além de `pauta` (até 15 itens), `convidados` e `videoUrl` (embed do YouTube, quando houver). Obtenha o `id` antes via `senado_ecidadania_listar_eventos`.",
-    { id: z.number().int().positive().describe("ID do evento") },
+    "Obtém o detalhe completo de um evento interativo do e-Cidadania (audiência, sabatina, live). Retorna um objeto com `id`, `titulo`, `descricao`, `data`, `hora`, `comissao` e `comissaoNomeCompleto`, `local`, `status` (`agendado`/`encerrado`/`cancelado`), `comentarios`, `url`, mais `pauta` (até 15 itens), `convidados` e `videoUrl` (embed do YouTube quando houver, senão `null`) — campos não preenchidos vêm `null` e `id` inexistente retorna erro. Obtenha o `id` antes via `senado_ecidadania_listar_eventos`. Para apenas listar/rankear eventos (sem descrição/pauta/convidados) use `senado_ecidadania_listar_eventos`, não esta.",
+    { id: z.number().int().positive().describe("Identificador do evento (campo `id` de senado_ecidadania_listar_eventos)") },
     async (params) => {
       try {
         const { value: r, fetchedAt } = await cachedFetchWithMeta("ecidadania_evento", { id: params.id }, CACHE_ON_DEMAND, () =>

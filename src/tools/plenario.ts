@@ -317,10 +317,10 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F5. senado_resultado_veto
   server.tool(
     "senado_resultado_veto",
-    "Resultado da apreciação de um veto presidencial. Retorna `{ codigo, tipo, resultado }`, onde `resultado` é o objeto bruto da API (já sem wrappers), com campos variáveis conforme o veto — tipicamente identificação do veto, situação por dispositivo (ex.: \"Rejeitado\"/\"Mantido\") e link do PDF do resultado nominal (`PdfsResultadoVotacao`). Observação: a API NÃO fornece um placar numérico (sim/não) neste endpoint — o detalhamento nominal está no PDF. Pode vir objeto vazio quando o veto ainda não foi votado, e a chamada retorna erro se o `codigo` não existir. Informe `codigo` e `tipo`: veto (código do veto, padrão), materia (código do projeto vetado) ou dispositivo (dispositivo de veto parcial). Obtenha o código do veto via `senado_vetos`.",
+    "Obtém o resultado da apreciação de um veto presidencial. Retorna `{ codigo, tipo, resultado }`, onde `resultado` é o objeto bruto da API (sem wrappers), com campos variáveis — tipicamente identificação do veto, situação por dispositivo (ex.: \"Rejeitado\"/\"Mantido\") e link do PDF do resultado nominal (`PdfsResultadoVotacao`). A API **não** fornece placar numérico (sim/não) aqui — o detalhamento nominal está no PDF; vem **objeto vazio** quando o veto ainda não foi votado e **retorna erro** se o `codigo` não existir. `tipo` define o que `codigo` representa: `veto` (código do veto, padrão), `materia` (código do projeto vetado) ou `dispositivo` (dispositivo de veto parcial) — as três chaves apontam para o mesmo veto. Obtenha o código via `senado_vetos`. Para **listar** vetos (não o resultado de um) use `senado_vetos`.",
     {
-      codigo: z.number().int().positive().describe("Código do veto, da matéria ou do dispositivo, conforme o tipo"),
-      tipo: z.enum(["veto", "materia", "dispositivo"]).optional().default("veto").describe("veto = código do veto (padrão); materia = código do projeto vetado; dispositivo = dispositivo de veto parcial"),
+      codigo: z.number().int().positive().describe("Código do veto, da matéria vetada ou do dispositivo — qual deles depende de `tipo`"),
+      tipo: z.enum(["veto", "materia", "dispositivo"]).optional().default("veto").describe("Define a chave em codigo: veto = código do veto (padrão); materia = código do projeto vetado; dispositivo = dispositivo de veto parcial"),
     },
     async (params) => {
       try {
@@ -389,11 +389,11 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
   // F7. senado_tabelas_plenario
   server.tool(
     "senado_tabelas_plenario",
-    "Tabelas de referência do plenário para resolver códigos e domínios. Retorna `{ tabela, count, total, linhas }` com as linhas da tabela escolhida em `tabela`: tipos-sessao, tipos-comparecimento ou legislaturas. `filtro` faz busca textual e `limite` corta o resultado (padrão 100). Use para interpretar campos como `tipo` retornados por `senado_agenda_plenario` e `senado_resultado_plenario`.",
+    "Consulta tabelas de referência do plenário para resolver códigos/domínios, conforme `tabela`: `tipos-sessao` (espécies de sessão plenária), `tipos-comparecimento` (situações de presença) ou `legislaturas` (períodos legislativos com datas). Retorna `{ tabela, count, total, linhas }` — `count` é o nº após o corte por `limite` e `total` o disponível; `count < total` indica truncagem (aumente `limite`); `count` 0 quando o `filtro` não casa. Cada linha traz o código/sigla e a descrição do domínio (campos conforme a API). Use para interpretar campos como `tipo` de `senado_agenda_plenario`/`senado_resultado_plenario`. Para tabelas do processo legislativo (assuntos, classes, situações) use `senado_tabelas_processo`.",
     {
-      tabela: z.enum(["tipos-sessao", "tipos-comparecimento", "legislaturas"]).describe("Tabela de referência a consultar"),
-      filtro: z.string().optional().describe("Filtro textual"),
-      limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de linhas (padrão: 100)"),
+      tabela: z.enum(["tipos-sessao", "tipos-comparecimento", "legislaturas"]).describe("Domínio a consultar: tipos-sessao (espécies de sessão); tipos-comparecimento (situações de presença); legislaturas (períodos com datas)"),
+      filtro: z.string().optional().describe("Busca textual sobre qualquer campo da linha; count 0 se nada casar"),
+      limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de linhas (padrão 100, máx 500); count < total sinaliza corte"),
     },
     async (params) => {
       try {
