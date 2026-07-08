@@ -16,6 +16,7 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray, safeInt, parseBRL } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { computarEstatisticas, type Estatisticas, type EstatisticasPorGrupo } from "../utils/estatisticas.js";
 import { CACHE_STATIC } from "../types.js";
 
 const FINANCEIRO_BASE = "https://www.senado.gov.br";
@@ -83,15 +84,136 @@ export function agregarDespesas(itens: ReturnType<typeof parseDespesa>[], chave:
     .sort((a, b) => b.dotacaoAtualizada - a.dotacaoAtualizada);
 }
 
+// ── Modo estatísticas ──────────────────────────────────────────────────────
+// Unlike CEAPS/payroll this tool carries TWO datasets (despesas vs receitas) and
+// several value columns per dataset (no single canonical amount), so `campo` is a
+// real parameter here. Everything else follows the CEAPS template.
+
+const r2 = round2;
+
+/** Value-column accessors per tipo. The default column (paid / collected) rules the no-arg call. */
+const ACESSOR_DESPESA: Record<string, (d: any) => number> = {
+  pago: (d) => d.pago,
+  liquidado: (d) => d.liquidado,
+  empenhado: (d) => d.empenhado,
+  dotacaoInicial: (d) => d.dotacaoInicial,
+  dotacaoAtualizada: (d) => d.dotacaoAtualizada,
+};
+const ACESSOR_RECEITA: Record<string, (r: any) => number> = {
+  arrecadada: (r) => r.arrecadada,
+  prevista: (r) => r.prevista,
+};
+
+/** Group-key extractors per `agruparPor`, keyed by tipo (label == key). */
+const CHAVE_DESPESA: Record<string, (d: any) => string> = {
+  ano: (d) => String(d.exercicio ?? "?"),
+  acao: (d) => d.acao || "(sem ação)",
+  grupo: (d) => d.grupoDespesa || "(sem grupo)",
+  fonte: (d) => d.fonte || "(sem fonte)",
+  modalidade: (d) => d.modalidade || "(sem modalidade)",
+  resultadoLei: (d) => d.resultadoLei || "(sem resultado)",
+  plano: (d) => d.planoOrcamentario || "(sem plano)",
+};
+const CHAVE_RECEITA: Record<string, (r: any) => string> = {
+  origem: (r) => r.origem || "(sem origem)",
+  ano: (r) => String(r.ano ?? "?"),
+  categoria: (r) => r.categoria || "(sem categoria)",
+  especie: (r) => r.especie || "(sem espécie)",
+  natureza: (r) => r.natureza || "(sem natureza)",
+};
+
+/** Round the statistics block to 2 decimals (money) for display; helper returns raw. */
+function arredondarEstatisticas(e: Estatisticas) {
+  return {
+    n: e.n,
+    soma: r2(e.soma),
+    minimo: r2(e.minimo),
+    maximo: r2(e.maximo),
+    media: r2(e.media),
+    mediana: r2(e.mediana),
+    desvioPadrao: r2(e.desvioPadrao),
+    percentis: {
+      p25: r2(e.percentis.p25),
+      p50: r2(e.percentis.p50),
+      p75: r2(e.percentis.p75),
+      p90: r2(e.percentis.p90),
+      p95: r2(e.percentis.p95),
+      p99: r2(e.percentis.p99),
+    },
+  };
+}
+
+const arredondarEntradas = (entradas: Estatisticas["top"]) =>
+  entradas.map((x) => ({ ...x, valor: r2(x.valor) }));
+
+/**
+ * Build the `estatisticas=true` response for budget execution. `itens` are already
+ * normalized (parseDespesa|parseReceita) and filtered by `ano`. Without `agruparPor`
+ * it crunches the distribution over individual budget cells + top/bottom ranking; with
+ * `agruparPor` it ranks the groups by summed `campo` desc (grupos[0] = biggest).
+ * `campo`/`agruparPor` that don't apply to the `tipo` fall back to the default with an aviso.
+ */
+export function estatisticasExecucao(
+  itens: any[],
+  opts: { tipo: "despesas" | "receitas"; campo?: string; agruparPor?: string; topN: number },
+) {
+  const acessores = opts.tipo === "despesas" ? ACESSOR_DESPESA : ACESSOR_RECEITA;
+  const campoDefault = opts.tipo === "despesas" ? "pago" : "arrecadada";
+  const campoInvalido = opts.campo != null && !acessores[opts.campo];
+  const campo = opts.campo && acessores[opts.campo] ? opts.campo : campoDefault;
+
+  const chaves = opts.tipo === "despesas" ? CHAVE_DESPESA : CHAVE_RECEITA;
+  const agrupar = opts.agruparPor && chaves[opts.agruparPor] ? chaves[opts.agruparPor] : undefined;
+  const agruparInvalido = opts.agruparPor != null && !agrupar;
+
+  const avisos: string[] = [];
+  if (campoInvalido) avisos.push(`campo '${opts.campo}' não se aplica a tipo=${opts.tipo}; usando '${campo}'.`);
+  if (agruparInvalido) avisos.push(`agruparPor '${opts.agruparPor}' não se aplica a tipo=${opts.tipo}; ignorado.`);
+
+  if (agrupar) {
+    const resultado = computarEstatisticas(itens, acessores[campo], {
+      agruparPor: agrupar,
+      topN: 0, // groups already sorted by total desc = ranking; no per-group extremes
+      maxGrupos: 50,
+    }) as EstatisticasPorGrupo;
+    const aviso = [resultado.aviso, ...avisos].filter(Boolean).join(" ");
+    return {
+      campo,
+      agrupadoPor: opts.agruparPor,
+      totalGrupos: resultado.totalGrupos,
+      ...(aviso ? { aviso } : {}),
+      grupos: resultado.grupos.map((g) => ({ grupo: g.grupo, ...arredondarEstatisticas(g) })),
+    };
+  }
+
+  const e = computarEstatisticas(itens, acessores[campo], {
+    topN: opts.topN,
+    identificar: opts.tipo === "despesas"
+      ? (d: any) => ({ exercicio: d.exercicio ?? null, acao: d.acao ?? null, grupoDespesa: d.grupoDespesa ?? null, fonte: d.fonte ?? null })
+      : (r: any) => ({ ano: r.ano ?? null, origem: r.origem ?? null, especie: r.especie ?? null, mes: r.mes ?? null }),
+  }) as Estatisticas;
+  return {
+    campo,
+    ...(avisos.length ? { aviso: avisos.join(" ") } : {}),
+    distribuicao: arredondarEstatisticas(e),
+    top: arredondarEntradas(e.top),
+    bottom: arredondarEntradas(e.bottom),
+  };
+}
+
 export function registerOrcamentoSenadoTools(server: McpServer) {
   // S1. senado_execucao_orcamentaria
   server.tool(
     "senado_execucao_orcamentaria",
-    "Execução orçamentária do Senado: despesas (dotação, empenhado, liquidado, pago; desde 2013) ou receitas próprias (previstas e arrecadadas; desde 2012). Retorna `{ tipo, modo, ano, totalLinhas, ... }`: nos modos agregados, `agregado[]` com `{ chave, ...valores }` ordenado por valor; em `detalhe`, `despesas[]`/`receitas[]` limitado por `limite` (padrão 100, com `aviso` ao truncar). Use `tipo=despesas` com `modo` por-ano/por-acao/por-grupo/por-fonte e `tipo=receitas` com por-origem; filtre por `ano` para reduzir o volume antes de pedir `detalhe`. Única ferramenta de orçamento interno do Senado; não confundir com `senado_orcamento_parlamentar` (emendas/ofícios parlamentares ao orçamento da União).",
+    "Execução orçamentária do Senado: despesas (dotação, empenhado, liquidado, pago; desde 2013) ou receitas próprias (previstas e arrecadadas; desde 2012). Para maior/menor/média/mediana/distribuição/ranking ('quanto o Senado pagou/arrecadou com X', 'maior grupo de despesa') use `estatisticas=true`: SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma do `campo` (grupos[0]=maior). `campo` escolhe a coluna (despesas padrão `pago`; receitas padrão `arrecadada`); `campo`/`agruparPor` inválidos para o `tipo` caem no default com `aviso`. Retorna `{ tipo, modo, ano, totalLinhas, ... }`: nos modos agregados, `agregado[]` com `{ chave, ...valores }` ordenado por valor; em `detalhe`, `despesas[]`/`receitas[]` limitado por `limite` (padrão 100, com `aviso` ao truncar). Use `tipo=despesas` com `modo` por-ano/por-acao/por-grupo/por-fonte e `tipo=receitas` com por-origem; filtre por `ano` para reduzir o volume antes de pedir `detalhe`. Única ferramenta de orçamento interno do Senado; não confundir com `senado_orcamento_parlamentar` (emendas/ofícios parlamentares ao orçamento da União).",
     {
       tipo: z.enum(["despesas", "receitas"]).optional().default("despesas").describe("despesas = dotação e execução; receitas = receitas próprias"),
       ano: z.number().int().min(2012).max(2100).optional().describe("Filtrar por exercício financeiro"),
-      modo: z.enum(["por-ano", "por-acao", "por-grupo", "por-fonte", "por-origem", "detalhe"]).optional().default("por-ano").describe("Agregação (por-acao/por-grupo/por-fonte: despesas; por-origem: receitas) ou detalhe"),
+      modo: z.enum(["por-ano", "por-acao", "por-grupo", "por-fonte", "por-origem", "detalhe"]).optional().default("por-ano").describe("Agregação (por-acao/por-grupo/por-fonte: despesas; por-origem: receitas) ou detalhe. Ignorado quando estatisticas=true"),
+      estatisticas: z.boolean().optional().default(false).describe("Distribuição/ranking sobre as linhas: min/máx/média/mediana/percentis + top/bottom, ou grupos ranqueados por soma via agruparPor"),
+      campo: z.enum(["pago", "liquidado", "empenhado", "dotacaoInicial", "dotacaoAtualizada", "arrecadada", "prevista"]).optional().describe("Coluna de valor para estatísticas (despesas padrão `pago`; receitas padrão `arrecadada`)"),
+      agruparPor: z.enum(["ano", "acao", "grupo", "fonte", "modalidade", "resultadoLei", "plano", "origem", "categoria", "especie", "natureza"]).optional().describe("Ranquear grupos por soma do campo (despesas: ano/acao/grupo/fonte/modalidade/resultadoLei/plano; receitas: origem/ano/categoria/especie/natureza)"),
+      topN: z.number().int().min(1).max(100).optional().default(10).describe("Tamanho do top/bottom nas estatísticas (padrão: 10)"),
       limite: z.number().int().min(1).max(1000).optional().default(100).describe("Máximo de linhas (padrão: 100)"),
     },
     async (params) => {
@@ -111,6 +233,19 @@ export function registerOrcamentoSenadoTools(server: McpServer) {
           reference_period: params.ano ? String(params.ano) : undefined,
           retrieved_at: fetchedAt,
         });
+
+        if (params.estatisticas) {
+          const itens = tipo === "despesas"
+            ? ensureArray((bruto as any)?.despesas).map(parseDespesa).filter((d) => !params.ano || d.exercicio === params.ano)
+            : ensureArray((bruto as any)?.receitas).map(parseReceita).filter((r) => !params.ano || r.ano === params.ano);
+          return resultWithProvenance({
+            tipo,
+            modo: "estatisticas",
+            ano: params.ano ?? null,
+            totalLinhas: itens.length,
+            ...estatisticasExecucao(itens, { tipo, campo: params.campo, agruparPor: params.agruparPor, topN: params.topN ?? 10 }),
+          }, prov);
+        }
 
         if (tipo === "despesas") {
           let itens = ensureArray((bruto as any)?.despesas).map(parseDespesa);
