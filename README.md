@@ -692,7 +692,7 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 
 | Tool | Description |
 |------|-------------|
-| `senado_ceaps` | CEAPS parliamentary quota expenses by year — aggregated by senator, expense type, month or supplier, or itemized detail; filters by senator/month/type/supplier |
+| `senado_ceaps` | CEAPS parliamentary quota expenses by year — aggregated by senator, expense type, month or supplier, or itemized detail; `estatisticas=true` returns whole-set distribution stats (min/max/mean/median/percentiles) + top/bottom ranking, or a group ranking by total spend via `agruparPor` (senator/type/month/supplier) with `topN`; filters by senator/month/type/supplier |
 | `senado_senadores_admin` | Dados administrativos dos senadores via `tipo` enum: auxilio-moradia, escritorios-apoio ou aposentados |
 
 ### Group P — Servidores / Gestão de Pessoas (4 tools)

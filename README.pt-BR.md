@@ -634,7 +634,7 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 
 | Ferramenta | Descrição |
 |------|-------------|
-| `senado_ceaps` | Despesas da cota parlamentar (CEAPS) por ano — agregadas por senador, tipo de despesa, mês ou fornecedor, ou detalhe item a item; filtros por senador/mês/tipo/fornecedor |
+| `senado_ceaps` | Despesas da cota parlamentar (CEAPS) por ano — agregadas por senador, tipo de despesa, mês ou fornecedor, ou detalhe item a item; `estatisticas=true` devolve a distribuição do conjunto (mín/máx/média/mediana/percentis) + ranking top/bottom, ou um ranking de grupos por gasto total via `agruparPor` (senador/tipo/mês/fornecedor) com `topN`; filtros por senador/mês/tipo/fornecedor |
 | `senado_senadores_admin` | Dados administrativos dos senadores via `tipo` enum: auxilio-moradia, escritorios-apoio ou aposentados |
 
 ### Grupo P — Servidores / Gestão de Pessoas (4 ferramentas)
