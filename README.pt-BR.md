@@ -667,7 +667,7 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 
 | Ferramenta | Descrição |
 |------|-------------|
-| `senado_execucao_orcamentaria` | Execução orçamentária desde 2013 (dotação, empenhado/liquidado/pago) e receitas próprias desde 2012 (previsto vs. arrecadado) — agregadas por ano, ação, grupo de despesa, fonte ou origem de receita |
+| `senado_execucao_orcamentaria` | Execução orçamentária desde 2013 (dotação, empenhado/liquidado/pago) e receitas próprias desde 2012 (previsto vs. arrecadado) — agregadas por ano, ação, grupo de despesa, fonte ou origem de receita; `estatisticas=true` devolve a distribuição do conjunto (min/máx/média/mediana/percentis) + ranking top/bottom, ou um ranking de grupos por soma do `campo` via `agruparPor`, com `campo` (padrão pago / arrecadada) e `topN` |
 
 **Total: 66 ferramentas**
 

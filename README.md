@@ -725,7 +725,7 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 
 | Tool | Description |
 |------|-------------|
-| `senado_execucao_orcamentaria` | Budget execution since 2013 (allocation, committed/settled/paid) and own revenues since 2012 (forecast vs collected) — aggregated by year, action, expense group, source or revenue origin |
+| `senado_execucao_orcamentaria` | Budget execution since 2013 (allocation, committed/settled/paid) and own revenues since 2012 (forecast vs collected) — aggregated by year, action, expense group, source or revenue origin; `estatisticas=true` returns whole-set distribution stats (min/max/mean/median/percentiles) + top/bottom ranking, or a group ranking by summed `campo` via `agruparPor`, with `campo` (default paid / collected) and `topN` |
 
 **Total: 66 tools**
 
