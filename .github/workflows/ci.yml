@@ -21,9 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # vitest 4 requires Node >=20 (uses node:util styleText, added in 20.12),
-        # so the test toolchain floor is 20 even though the published package
-        # runtime (engines.node) still supports 18.
+        # Node 20 is the project floor (engines.node >=20; vitest 4 also requires it).
         node-version: ["20", "22"]
 
     steps:
