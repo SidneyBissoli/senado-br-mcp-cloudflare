@@ -661,7 +661,7 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 
 | Ferramenta | Descrição |
 |------|-------------|
-| `senado_suprimento_fundos` | Adiantamentos de suprimento de fundos por ano: beneficiários, atos de concessão, empenhos, movimentações, transações de cartão |
+| `senado_suprimento_fundos` | Adiantamentos de suprimento de fundos por ano: beneficiários, atos de concessão, empenhos, movimentações, transações de cartão; `estatisticas=true` (tipo transacoes/empenhos/atos-concessao) devolve a distribuição do conjunto (mín/máx/média/mediana/percentis) + ranking top/bottom, ou um ranking por soma do valor via `agruparPor` (ex.: fornecedor), com `campo` contextual e `topN` |
 
 ### Grupo S — Orçamento do Senado (1 ferramenta)
 

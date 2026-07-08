@@ -719,7 +719,7 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 
 | Tool | Description |
 |------|-------------|
-| `senado_suprimento_fundos` | Petty-cash advances by year: recipients, concession acts, commitments, movements, card transactions |
+| `senado_suprimento_fundos` | Petty-cash advances by year: recipients, concession acts, commitments, movements, card transactions; `estatisticas=true` (tipo transacoes/empenhos/atos-concessao) returns whole-set distribution stats (min/max/mean/median/percentiles) + top/bottom ranking, or a ranking by summed value via `agruparPor` (e.g. supplier), with contextual `campo` and `topN` |
 
 ### Group S — Orçamento do Senado (1 tool)
 
