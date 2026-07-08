@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { filtrarCeaps, agregarCeaps, parseCeapsItem } from "../../src/tools/senadores-admin.js";
+import { filtrarCeaps, agregarCeaps, parseCeapsItem, valorCeaps, estatisticasCeaps } from "../../src/tools/senadores-admin.js";
 import { unwrapAdmEnvelope } from "../../src/utils/upstream-parse.js";
 
 describe("senadores_admin envelope (BUG-036)", () => {
@@ -116,5 +116,56 @@ describe("parseCeapsItem", () => {
       detalhamento: "Transporte",
       valor: 50.02,
     });
+  });
+});
+
+describe("valorCeaps", () => {
+  it("returns a numeric value as-is", () => {
+    expect(valorCeaps({ valorReembolsado: 50.02 })).toBe(50.02);
+  });
+
+  it("parses a pt-BR string vintage", () => {
+    expect(valorCeaps({ valorReembolsado: "1.050,02" })).toBe(1050.02);
+  });
+
+  it("yields 0 for garbage/missing", () => {
+    expect(valorCeaps({ valorReembolsado: "x" })).toBe(0);
+    expect(valorCeaps({})).toBe(0);
+  });
+});
+
+describe("estatisticasCeaps", () => {
+  it("crunches the distribution over individual expenses without agruparPor", () => {
+    const r = estatisticasCeaps(DESPESAS, { topN: 10 }) as any;
+    // valores: [50.02, 1000, 75.5] → soma 1125.52, min 50.02, max 1000, mediana 75.5
+    expect(r.distribuicao.n).toBe(3);
+    expect(r.distribuicao.soma).toBe(1125.52);
+    expect(r.distribuicao.minimo).toBe(50.02);
+    expect(r.distribuicao.maximo).toBe(1000);
+    expect(r.distribuicao.media).toBe(375.17);
+    expect(r.distribuicao.mediana).toBe(75.5);
+    // top[0] = the single biggest expense (id 2, 1000), carrying identifiers
+    expect(r.top[0]).toMatchObject({ valor: 1000, senador: "FABIANO CONTARATO", tipoDespesa: "Divulgação da atividade parlamentar" });
+    expect(r.bottom[0]).toMatchObject({ valor: 50.02, senador: "FABIANO CONTARATO" });
+  });
+
+  it("ranks groups by total spend desc with agruparPor=senador", () => {
+    const r = estatisticasCeaps(DESPESAS, { agruparPor: "senador", topN: 10 }) as any;
+    expect(r.agrupadoPor).toBe("senador");
+    expect(r.totalGrupos).toBe(2);
+    // grupos[0] = biggest spender (FABIANO: 50.02 + 1000 = 1050.02, n=2)
+    expect(r.grupos[0]).toMatchObject({ grupo: "FABIANO CONTARATO", n: 2, soma: 1050.02 });
+    expect(r.grupos[1]).toMatchObject({ grupo: "OUTRO SENADOR", n: 1, soma: 75.5 });
+    // sum reconciles with the ungrouped total
+    expect(r.grupos[0].soma + r.grupos[1].soma).toBe(1125.52);
+    // no per-group top/bottom (kept lean via topN:0)
+    expect(r.grupos[0]).not.toHaveProperty("top");
+  });
+
+  it("groups by month", () => {
+    const r = estatisticasCeaps(DESPESAS, { agruparPor: "mes", topN: 10 }) as any;
+    // mes 7 = 50.02 + 1000 = 1050.02 (biggest), mes 8 = 75.5
+    expect(r.grupos[0]).toMatchObject({ grupo: "7", n: 2, soma: 1050.02 });
+    expect(r.grupos[1]).toMatchObject({ grupo: "8", n: 1, soma: 75.5 });
   });
 });
