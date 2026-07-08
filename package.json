@@ -19,6 +19,7 @@
     "deploy": "wrangler deploy",
     "build": "tsc -p tsconfig.build.json",
     "prepublishOnly": "npm run build && npm test",
+    "version": "node scripts/sync-version.mjs && git add server.json src/version.ts",
     "typecheck": "tsc --noEmit && tsc -p scripts/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
