@@ -643,7 +643,7 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 |------|-------------|
 | `senado_servidores` | Servidores por situação (ativos/efetivos/comissionados/inativos), filtráveis por nome, unidade, cargo |
 | `senado_remuneracoes_servidores` | Folha mensal — resumo por tipo de folha ou composição por pessoa com bruto calculado; `estatisticas=true` devolve estatísticas da folha inteira (mín/máx/média/mediana/percentis) + ranking top/bottom, com `campo`, `consolidarPorServidor`, `agruparPor` e `topN` |
-| `senado_horas_extras` | Pagamentos de horas extras por mês, com totais |
+| `senado_horas_extras` | Pagamentos de horas extras por mês, com totais; `estatisticas=true` devolve a distribuição do conjunto (mín/máx/média/mediana/percentis) + ranking top/bottom, ou um ranking por servidor via `agruparPor` (nome/competência), com `topN` |
 | `senado_pessoal_tabelas` | Tabelas de pessoal via `tabela` enum: quantitativos (pessoal, cargos-funcoes, previsao-aposentadoria, senadores) e listas (estagiarios, pensionistas, lotacoes, cargos) |
 
 ### Grupo Q — Contratações (6 ferramentas)
