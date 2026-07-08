@@ -4,6 +4,19 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [3.4.0]
+
+### Added
+- **`estatisticas: true` mode** on five administrative tools (`senado_remuneracoes_servidores`, `senado_ceaps`, `senado_execucao_orcamentaria`, `senado_horas_extras`, `senado_suprimento_fundos`) — returns a quantitative envelope (min/max/mean/median/percentiles plus top/bottom ranking, with optional `campo`/`agruparPor`/`topN`) so max/min/median/ranking questions no longer require paginating the detail mode.
+
+### Changed
+- Enriched tool descriptions (Parameters/Behavior/Usage) on 12 tools: `senado_buscar_legislacao`, `senado_obter_legislacao`, `senado_discursos_senador`, `senado_discurso_texto`, `senado_notas_taquigraficas`, `senado_videos_taquigrafia`, `senado_distribuicao_materias`, `senado_resultado_veto`, `senado_tabelas_plenario`, `senado_tabelas_processo`, `senado_contratacao_detalhe`, `senado_ecidadania_obter_evento` — they now disclose pagination/empty/error behavior, parameter semantics (AND filters, internal id vs. law number, enum-by-value), and when-not-to-use guidance. Descriptions only; no logic change.
+- Node 20 is now the project baseline (vitest 4 requires ≥20); CI runs a Node 20/22 test matrix on push/PR, with a typecheck+test workflow and README badge.
+- Release versioning is now single-source: `package.json` is authoritative and `npm version <bump>` mirrors it into `server.json` and `src/version.ts` via a `version` lifecycle hook.
+
+### Fixed
+- Bug-sweep (38 fixes) across pt-BR money parsing, upstream root realignment for the migrated `/processo`/`/votacao` endpoints, senator/plenary/veto field mapping, e-Cidadania anti-injection wrapping and comment-source correction, and orçamento ofícios projection/pagination.
+
 ## [3.3.1]
 
 ### Changed
