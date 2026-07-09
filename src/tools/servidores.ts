@@ -214,10 +214,8 @@ export function estatisticasRemuneracoes(
   if (opts.agruparPor) {
     const porGrupo = resultado as EstatisticasPorGrupo;
     return {
-      campo: opts.campo,
       campoAnalisado: CAMPO_ROTULO[opts.campo] ?? opts.campo,
       consolidadoPorServidor: false,
-      agrupadoPor: opts.agruparPor,
       agrupadoPorRotulo: "tipo de folha",
       totalGrupos: porGrupo.totalGrupos,
       ...(porGrupo.aviso ? { aviso: porGrupo.aviso } : {}),
@@ -232,7 +230,6 @@ export function estatisticasRemuneracoes(
 
   const e = resultado as Estatisticas;
   return {
-    campo: opts.campo,
     campoAnalisado: CAMPO_ROTULO[opts.campo] ?? opts.campo,
     consolidadoPorServidor: consolidar,
     [consolidar ? "totalServidores" : "totalRegistros"]: e.n,
@@ -283,7 +280,6 @@ export function estatisticasHorasExtras(
       maxGrupos: 50,
     }) as EstatisticasPorGrupo;
     return {
-      agrupadoPor: opts.agruparPor,
       agrupadoPorRotulo: opts.agruparPor === "nome" ? "servidor" : "mês de competência",
       totalGrupos: resultado.totalGrupos,
       ...(resultado.aviso ? { aviso: resultado.aviso } : {}),
@@ -352,13 +348,13 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P2. senado_remuneracoes_servidores
   server.tool(
     "senado_remuneracoes_servidores",
-    "Remunerações dos servidores do Senado em `ano`/`mes` de referência (a partir de 2013). Para perguntas de **maior/menor/média/mediana/ranking** ('quem ganhou mais em junho/2026', 'remuneração média') use `estatisticas=true`: computa min/máx/média/mediana/desvio/percentis sobre a folha INTEIRA e devolve `top`/`bottom` (padrão 10) identificados por `nome` (com `idInternoFolha` só para desambiguar homônimos, não para citar) — o modo `resumo`/`detalhe` só vê uma fatia e não acha o extremo real. Cada percentil vem com um `rotulo` legível. `campo` escolhe a coluna (padrão `bruto`; ex.: `liquida`, `horasExtras`); `consolidarPorServidor` (padrão true) soma as linhas Normal+Suplementar da mesma pessoa antes das estatísticas; `agruparPor='tipoFolha'` devolve estatísticas por grupo (implica não-consolidado). Sem `estatisticas`: `modo=resumo` (padrão) retorna `{ ano, mes, totalRegistros, resumo[] }` agregado por `tipoFolha`; `modo=detalhe` retorna `{ count, total, remuneracoes[] }` com a composição individual, limitada por `limite` (padrão 50, máx 500). Filtros `nome`/`tipoFolha` aplicam antes de tudo. Para o cadastro de servidores use `senado_servidores`.",
+    "Remunerações dos servidores do Senado em `ano`/`mes` de referência (a partir de 2013). Para perguntas de **maior/menor/média/mediana/ranking** ('quem ganhou mais em junho/2026', 'remuneração média') use `estatisticas=true`: computa min/máx/média/mediana/desvio/percentis sobre a folha INTEIRA e devolve `top`/`bottom` (padrão 10) identificados por `nome` (com `idInternoFolha` só para desambiguar homônimos, não para citar) — o modo `resumo`/`detalhe` só vê uma fatia e não acha o extremo real. Cada percentil vem com um `rotulo` legível e a coluna analisada tem rótulo legível em `campoAnalisado`. `campo` escolhe a verba analisada (padrão: remuneração bruta); `consolidarPorServidor` (padrão true) soma as linhas Normal+Suplementar da mesma pessoa antes das estatísticas; `agruparPor='tipoFolha'` devolve estatísticas por grupo (implica não-consolidado). Sem `estatisticas`: `modo=resumo` (padrão) retorna `{ ano, mes, totalRegistros, resumo[] }` agregado por `tipoFolha`; `modo=detalhe` retorna `{ count, total, remuneracoes[] }` com a composição individual, limitada por `limite` (padrão 50, máx 500). Filtros `nome`/`tipoFolha` aplicam antes de tudo. Para o cadastro de servidores use `senado_servidores`.",
     {
       ano: z.number().int().min(2013).max(2100).describe("Ano de referência"),
       mes: z.number().int().min(1).max(12).describe("Mês de referência"),
       modo: z.enum(["resumo", "detalhe"]).optional().default("resumo").describe("resumo = totais por tipo de folha (padrão); detalhe = composição individual. Ignorado quando estatisticas=true"),
       estatisticas: z.boolean().optional().default(false).describe("Computa estatísticas (min/máx/média/mediana/percentis) + ranking top/bottom sobre a folha inteira. Use para 'quem ganhou mais/menos', 'média', 'ranking'"),
-      campo: z.enum(CAMPOS_ESTATISTICA).optional().default("bruto").describe("Coluna sob análise quando estatisticas=true (padrão: bruto). Opções: bruto, liquida, remuneracaoBasica, vantagensPessoais, funcaoComissionada, gratificacaoNatalina, horasExtras, outrasEventuais, abonoPermanencia"),
+      campo: z.enum(CAMPOS_ESTATISTICA).optional().default("bruto").describe("Verba analisada quando estatisticas=true (padrão: remuneração bruta). O resultado traz o rótulo legível em campoAnalisado."),
       consolidarPorServidor: z.boolean().optional().default(true).describe("Soma as linhas (Normal+Suplementar) do mesmo servidor antes das estatísticas (padrão: true). Ignorado — forçado a false — quando agruparPor está definido"),
       agruparPor: z.enum(["tipoFolha"]).optional().describe("Quando estatisticas=true, devolve estatísticas por grupo (só `tipoFolha`); implica dados por linha (não consolidados)"),
       topN: z.number().int().min(1).max(100).optional().default(10).describe("Tamanho das listas top/bottom quando estatisticas=true (padrão: 10, máx: 100)"),

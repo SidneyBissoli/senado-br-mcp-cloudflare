@@ -120,7 +120,6 @@ export function estatisticasCeaps(
       maxGrupos: 50,
     }) as EstatisticasPorGrupo;
     return {
-      agrupadoPor: opts.agruparPor,
       agrupadoPorRotulo: AGRUPAR_ROTULO[opts.agruparPor] ?? opts.agruparPor,
       totalGrupos: resultado.totalGrupos,
       ...(resultado.aviso ? { aviso: resultado.aviso } : {}),

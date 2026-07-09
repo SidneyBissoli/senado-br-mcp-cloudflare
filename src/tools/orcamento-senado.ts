@@ -186,9 +186,7 @@ export function estatisticasExecucao(
     }) as EstatisticasPorGrupo;
     const aviso = [resultado.aviso, ...avisos].filter(Boolean).join(" ");
     return {
-      campo,
       campoAnalisado: CAMPO_ROTULO[campo] ?? campo,
-      agrupadoPor: opts.agruparPor,
       agrupadoPorRotulo: opts.agruparPor ? (AGRUPAR_ROTULO[opts.agruparPor] ?? opts.agruparPor) : undefined,
       totalGrupos: resultado.totalGrupos,
       ...(aviso ? { aviso } : {}),
@@ -203,7 +201,6 @@ export function estatisticasExecucao(
       : (r: any) => ({ ano: r.ano ?? null, origem: r.origem ?? null, especie: r.especie ?? null, mes: r.mes ?? null }),
   }) as Estatisticas;
   return {
-    campo,
     campoAnalisado: CAMPO_ROTULO[campo] ?? campo,
     ...(avisos.length ? { aviso: avisos.join(" ") } : {}),
     distribuicao: arredondarEstatisticas(e),
@@ -216,14 +213,14 @@ export function registerOrcamentoSenadoTools(server: McpServer) {
   // S1. senado_execucao_orcamentaria
   server.tool(
     "senado_execucao_orcamentaria",
-    "Execução orçamentária do Senado: despesas (dotação, empenhado, liquidado, pago; desde 2013) ou receitas próprias (previstas e arrecadadas; desde 2012). Para maior/menor/média/mediana/distribuição/ranking ('quanto o Senado pagou/arrecadou com X', 'maior grupo de despesa') use `estatisticas=true`: SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma do `campo` (grupos[0]=maior). `campo` escolhe a coluna (despesas padrão `pago`; receitas padrão `arrecadada`); `campo`/`agruparPor` inválidos para o `tipo` caem no default com `aviso`. Retorna `{ tipo, modo, ano, totalLinhas, ... }`: nos modos agregados, `agregado[]` com `{ chave, ...valores }` ordenado por valor; em `detalhe`, `despesas[]`/`receitas[]` limitado por `limite` (padrão 100, com `aviso` ao truncar). Use `tipo=despesas` com `modo` por-ano/por-acao/por-grupo/por-fonte e `tipo=receitas` com por-origem; filtre por `ano` para reduzir o volume antes de pedir `detalhe`. Única ferramenta de orçamento interno do Senado; não confundir com `senado_orcamento_parlamentar` (emendas/ofícios parlamentares ao orçamento da União).",
+    "Execução orçamentária do Senado: despesas (dotação, empenhado, liquidado, pago; desde 2013) ou receitas próprias (previstas e arrecadadas; desde 2012). Para maior/menor/média/mediana/distribuição/ranking ('quanto o Senado pagou/arrecadou com X', 'maior grupo de despesa') use `estatisticas=true`: SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma decrescente (grupos[0]=maior). A coluna de valor analisada é escolhida automaticamente conforme o `tipo`; o resultado já traz o rótulo legível dela em `campoAnalisado`. Retorna `{ tipo, modo, ano, totalLinhas, ... }`: nos modos agregados, `agregado[]` com `{ chave, ...valores }` ordenado por valor; em `detalhe`, `despesas[]`/`receitas[]` limitado por `limite` (padrão 100, com `aviso` ao truncar). Use `tipo=despesas` com `modo` por-ano/por-acao/por-grupo/por-fonte e `tipo=receitas` com por-origem; filtre por `ano` para reduzir o volume antes de pedir `detalhe`. Única ferramenta de orçamento interno do Senado; não confundir com `senado_orcamento_parlamentar` (emendas/ofícios parlamentares ao orçamento da União).",
     {
       tipo: z.enum(["despesas", "receitas"]).optional().default("despesas").describe("despesas = dotação e execução; receitas = receitas próprias"),
       ano: z.number().int().min(2012).max(2100).optional().describe("Filtrar por exercício financeiro"),
       modo: z.enum(["por-ano", "por-acao", "por-grupo", "por-fonte", "por-origem", "detalhe"]).optional().default("por-ano").describe("Agregação (por-acao/por-grupo/por-fonte: despesas; por-origem: receitas) ou detalhe. Ignorado quando estatisticas=true"),
       estatisticas: z.boolean().optional().default(false).describe("Distribuição/ranking sobre as linhas: min/máx/média/mediana/percentis + top/bottom, ou grupos ranqueados por soma via agruparPor"),
-      campo: z.enum(["pago", "liquidado", "empenhado", "dotacaoInicial", "dotacaoAtualizada", "arrecadada", "prevista"]).optional().describe("Coluna de valor para estatísticas (despesas padrão `pago`; receitas padrão `arrecadada`)"),
-      agruparPor: z.enum(["ano", "acao", "grupo", "fonte", "modalidade", "resultadoLei", "plano", "origem", "categoria", "especie", "natureza"]).optional().describe("Ranquear grupos por soma do campo (despesas: ano/acao/grupo/fonte/modalidade/resultadoLei/plano; receitas: origem/ano/categoria/especie/natureza)"),
+      campo: z.enum(["pago", "liquidado", "empenhado", "dotacaoInicial", "dotacaoAtualizada", "arrecadada", "prevista"]).optional().describe("Opcional: força a coluna de valor analisada; por padrão ela é escolhida conforme o tipo. Se a opção não se aplicar ao tipo, o padrão é usado automaticamente."),
+      agruparPor: z.enum(["ano", "acao", "grupo", "fonte", "modalidade", "resultadoLei", "plano", "origem", "categoria", "especie", "natureza"]).optional().describe("Opcional: agrupa e ranqueia os resultados por esta dimensão (as opções válidas dependem do tipo)."),
       topN: z.number().int().min(1).max(100).optional().default(10).describe("Tamanho do top/bottom nas estatísticas (padrão: 10)"),
       limite: z.number().int().min(1).max(1000).optional().default(100).describe("Máximo de linhas (padrão: 100)"),
     },

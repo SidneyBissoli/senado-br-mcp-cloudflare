@@ -164,9 +164,7 @@ export function estatisticasSuprimento(
     }) as EstatisticasPorGrupo;
     const aviso = [resultado.aviso, ...avisos].filter(Boolean).join(" ");
     return {
-      campo,
       campoAnalisado: CAMPO_ROTULO[campo] ?? campo,
-      agrupadoPor: opts.agruparPor,
       agrupadoPorRotulo: opts.agruparPor ? (AGRUPAR_ROTULO[opts.agruparPor] ?? opts.agruparPor) : undefined,
       totalGrupos: resultado.totalGrupos,
       ...(aviso ? { aviso } : {}),
@@ -179,7 +177,6 @@ export function estatisticasSuprimento(
     identificar: IDENTIFICAR_POR_TIPO[opts.tipo],
   }) as Estatisticas;
   return {
-    campo,
     campoAnalisado: CAMPO_ROTULO[campo] ?? campo,
     ...(avisos.length ? { aviso: avisos.join(" ") } : {}),
     distribuicao: arredondarEstatisticas(e),
@@ -192,14 +189,14 @@ export function registerSupridosTools(server: McpServer, admBaseUrl: string) {
   // R1. senado_suprimento_fundos
   server.tool(
     "senado_suprimento_fundos",
-    "Suprimento de fundos do Senado (adiantamentos a supridos): relação anual de supridos, atos de concessão, empenhos, movimentações ou transações de cartão corporativo, conforme `tipo`. Retorna `{ ano, tipo, count, total, registros }` (snake_case da API administrativa), filtrável por `filtro` textual e limitado por `limite` (padrão 100, máx 500); ao truncar, inclui `aviso`. Para maior/menor/média/mediana/distribuição/ranking ('quem mais recebeu', 'fornecedor com maior gasto', 'valor mediano') use `estatisticas=true` (só nos tipos `transacoes`, `empenhos`, `atos-concessao` — os demais não têm coluna de valor): SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma do `campo` (grupos[0]=maior). `campo` escolhe a coluna (transacoes: `valor`; empenhos padrão `valorExecutado`; atos-concessao padrão `valorTotalTransacoes`); `campo`/`agruparPor` inválidos para o `tipo` caem no default com `aviso`, e registros sem valor numérico são excluídos das estatísticas. Informe o `ano` (>=2010); use os mesmos códigos administrativos vistos em `senado_contratacoes_lista` ou `senado_execucao_orcamentaria` para cruzar gastos.",
+    "Suprimento de fundos do Senado (adiantamentos a supridos): relação anual de supridos, atos de concessão, empenhos, movimentações ou transações de cartão corporativo, conforme `tipo`. Retorna `{ ano, tipo, count, total, registros }` (snake_case da API administrativa), filtrável por `filtro` textual e limitado por `limite` (padrão 100, máx 500); ao truncar, inclui `aviso`. Para maior/menor/média/mediana/distribuição/ranking ('quem mais recebeu', 'fornecedor com maior gasto', 'valor mediano') use `estatisticas=true` (só nos tipos `transacoes`, `empenhos`, `atos-concessao` — os demais não têm coluna de valor): SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma decrescente (grupos[0]=maior). A coluna de valor analisada é escolhida automaticamente conforme o `tipo`; o resultado já traz o rótulo legível dela em `campoAnalisado`. Registros sem valor são excluídos das estatísticas. Informe o `ano` (>=2010); use os mesmos códigos administrativos vistos em `senado_contratacoes_lista` ou `senado_execucao_orcamentaria` para cruzar gastos.",
     {
       ano: z.number().int().min(2010).max(2100).describe("Ano de referência"),
       tipo: z.enum(["supridos", "atos-concessao", "empenhos", "movimentacoes", "transacoes"]).optional().default("supridos").describe("Qual relação consultar (padrão: supridos)"),
       filtro: z.string().optional().describe("Filtro textual (nome, unidade...)"),
       estatisticas: z.boolean().optional().default(false).describe("Distribuição/ranking sobre as linhas: min/máx/média/mediana/percentis + top/bottom, ou grupos ranqueados por soma via agruparPor. Só para tipo transacoes/empenhos/atos-concessao"),
-      campo: z.enum(["valor", "valorExecutado", "valorConcedido", "valorTotalTransacoes", "valorTotalEmpenhos", "valorTotalElementosDespesa", "valorTotalMovimentacoes"]).optional().describe("Coluna de valor para estatísticas (transacoes: valor; empenhos padrão valorExecutado; atos-concessao padrão valorTotalTransacoes)"),
-      agruparPor: z.enum(["fornecedor", "tipo", "tipoInscricao", "rubricas", "rubrica", "descricao", "elementoDespesa", "regimeEspecial"]).optional().describe("Ranquear grupos por soma do campo (transacoes: fornecedor/tipo/tipoInscricao/rubricas; empenhos: rubrica/descricao; atos-concessao: elementoDespesa/regimeEspecial)"),
+      campo: z.enum(["valor", "valorExecutado", "valorConcedido", "valorTotalTransacoes", "valorTotalEmpenhos", "valorTotalElementosDespesa", "valorTotalMovimentacoes"]).optional().describe("Opcional: força a coluna de valor analisada; por padrão ela é escolhida conforme o tipo. Se a opção não se aplicar ao tipo, o padrão é usado automaticamente."),
+      agruparPor: z.enum(["fornecedor", "tipo", "tipoInscricao", "rubricas", "rubrica", "descricao", "elementoDespesa", "regimeEspecial"]).optional().describe("Opcional: agrupa e ranqueia os resultados por esta dimensão (as opções válidas dependem do tipo)."),
       topN: z.number().int().min(1).max(100).optional().default(10).describe("Tamanho do top/bottom nas estatísticas (padrão: 10)"),
       limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de resultados (padrão: 100)"),
     },

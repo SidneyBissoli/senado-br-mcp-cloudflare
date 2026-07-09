@@ -83,7 +83,9 @@ describe("estatisticasExecucao", () => {
 
   it("despesas without agruparPor: distribution over `pago` by default + top", () => {
     const out = estatisticasExecucao(despesas, { tipo: "despesas", topN: 10 }) as any;
-    expect(out.campo).toBe("pago");
+    // Raw `campo` is no longer exposed to the model; only the human label is.
+    expect(out.campo).toBeUndefined();
+    expect(out.campoAnalisado).toBe("valor pago");
     expect(out.distribuicao).toMatchObject({ n: 3, soma: 450, minimo: 50, maximo: 300, media: 150, mediana: 100 });
     expect(out.top[0].valor).toBe(300);
     expect(out.top[0].acao).toBe("B - AÇÃO B");
@@ -93,8 +95,9 @@ describe("estatisticasExecucao", () => {
 
   it("despesas with agruparPor=grupo: groups ranked by summed pago desc, sum reconciles", () => {
     const out = estatisticasExecucao(despesas, { tipo: "despesas", agruparPor: "grupo", topN: 10 }) as any;
-    expect(out.campo).toBe("pago");
-    expect(out.agrupadoPor).toBe("grupo");
+    expect(out.campoAnalisado).toBe("valor pago");
+    expect(out.agrupadoPor).toBeUndefined();
+    expect(out.agrupadoPorRotulo).toBe("grupo de despesa");
     expect(out.grupos[0].grupo).toBe("PESSOAL");
     expect(out.grupos[0].soma).toBe(400);
     expect(out.grupos[1].grupo).toBe("INVESTIMENTOS");
@@ -103,14 +106,15 @@ describe("estatisticasExecucao", () => {
 
   it("campo=empenhado switches the accessor", () => {
     const out = estatisticasExecucao(despesas, { tipo: "despesas", campo: "empenhado", topN: 10 }) as any;
-    expect(out.campo).toBe("empenhado");
+    expect(out.campoAnalisado).toBe("valor empenhado");
     expect(out.distribuicao.soma).toBe(490);
     expect(out.top[0].valor).toBe(310);
   });
 
   it("receitas with agruparPor=origem over arrecadada", () => {
     const out = estatisticasExecucao(receitas, { tipo: "receitas", agruparPor: "origem", topN: 10 }) as any;
-    expect(out.campo).toBe("arrecadada");
+    expect(out.campoAnalisado).toBe("valor arrecadado");
+    expect(out.agrupadoPorRotulo).toBe("origem da receita");
     expect(out.grupos[0].grupo).toBe("13 - PATRIMONIAL");
     expect(out.grupos[0].soma).toBe(1000);
     expect(out.grupos[1].grupo).toBe("16 - SERVIÇOS");
@@ -119,7 +123,7 @@ describe("estatisticasExecucao", () => {
 
   it("invalid campo for tipo falls back to default with a plain-language aviso (no raw field names)", () => {
     const out = estatisticasExecucao(receitas, { tipo: "receitas", campo: "pago", topN: 10 }) as any;
-    expect(out.campo).toBe("arrecadada");
+    expect(out.campo).toBeUndefined();
     expect(out.campoAnalisado).toBe("valor arrecadado");
     expect(out.aviso).toMatch(/não está disponível para receitas; a estatística usa: valor arrecadado/);
     expect(out.aviso).not.toMatch(/campo 'pago'|arrecadada'|tipo=/);

@@ -43,7 +43,8 @@ describe("estatisticasSuprimento", () => {
 
   it("transacoes without agruparPor: distribution over `valor`, nulls excluded, + top/bottom", () => {
     const out = estatisticasSuprimento(transacoes, { tipo: "transacoes", topN: 10 }) as any;
-    expect(out.campo).toBe("valor");
+    // Raw `campo` is no longer exposed to the model; only the human label is.
+    expect(out.campo).toBeUndefined();
     expect(out.distribuicao).toMatchObject({ n: 3, soma: 450, minimo: 50, maximo: 300, media: 150, mediana: 100 });
     expect(out.top[0].valor).toBe(300);
     expect(out.top[0].fornecedor).toBe("POSTO A");
@@ -57,8 +58,8 @@ describe("estatisticasSuprimento", () => {
 
   it("transacoes with agruparPor=fornecedor: groups ranked by summed valor desc, sum reconciles", () => {
     const out = estatisticasSuprimento(transacoes, { tipo: "transacoes", agruparPor: "fornecedor", topN: 10 }) as any;
-    expect(out.campo).toBe("valor");
-    expect(out.agrupadoPor).toBe("fornecedor");
+    expect(out.campoAnalisado).toBe("valor da transação");
+    expect(out.agrupadoPor).toBeUndefined();
     expect(out.agrupadoPorRotulo).toBe("fornecedor");
     expect(out.grupos[0].grupo).toBe("POSTO A");
     expect(out.grupos[0].soma).toBe(400);
@@ -74,14 +75,14 @@ describe("estatisticasSuprimento", () => {
 
   it("empenhos default campo is valorExecutado", () => {
     const out = estatisticasSuprimento(empenhos, { tipo: "empenhos", topN: 10 }) as any;
-    expect(out.campo).toBe("valorExecutado");
+    expect(out.campoAnalisado).toBe("valor executado (gasto)");
     expect(out.distribuicao.soma).toBe(450);
     expect(out.top[0].valor).toBe(300);
   });
 
   it("empenhos campo=valorConcedido switches the accessor", () => {
     const out = estatisticasSuprimento(empenhos, { tipo: "empenhos", campo: "valorConcedido", topN: 10 }) as any;
-    expect(out.campo).toBe("valorConcedido");
+    expect(out.campoAnalisado).toBe("valor concedido (autorizado)");
     expect(out.distribuicao.soma).toBe(490);
     expect(out.top[0].valor).toBe(310);
   });
@@ -106,8 +107,8 @@ describe("estatisticasSuprimento", () => {
 
   it("atos-concessao default campo is valorTotalTransacoes; agruparPor=elementoDespesa", () => {
     const out = estatisticasSuprimento(atos, { tipo: "atos-concessao", agruparPor: "elementoDespesa", topN: 10 }) as any;
-    expect(out.campo).toBe("valorTotalTransacoes");
-    expect(out.agrupadoPor).toBe("elementoDespesa");
+    expect(out.campoAnalisado).toBe("total gasto no cartão");
+    expect(out.agrupadoPor).toBeUndefined();
     expect(out.agrupadoPorRotulo).toBe("elemento de despesa");
     expect(out.grupos[0].grupo).toBe("E1");
     expect(out.grupos[0].soma).toBe(400);
@@ -117,7 +118,7 @@ describe("estatisticasSuprimento", () => {
 
   it("invalid campo for tipo falls back to default with a plain-language aviso (no raw field names)", () => {
     const out = estatisticasSuprimento(empenhos, { tipo: "empenhos", campo: "valorTotalTransacoes", topN: 10 }) as any;
-    expect(out.campo).toBe("valorExecutado");
+    expect(out.campo).toBeUndefined();
     expect(out.campoAnalisado).toBe("valor executado (gasto)");
     expect(out.aviso).toMatch(/a estatística usa: valor executado \(gasto\)/);
     // The aviso must not transcribe raw field/param names to the user.

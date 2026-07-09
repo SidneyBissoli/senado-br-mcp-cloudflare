@@ -213,7 +213,8 @@ describe("estatisticasRemuneracoes", () => {
   it("agruparPor=tipoFolha forces per-line and returns groups", () => {
     const out = estatisticasRemuneracoes(folha, { campo: "bruto", consolidar: true, agruparPor: "tipoFolha", topN: 5 }) as any;
     expect(out.consolidadoPorServidor).toBe(false); // agruparPor overrides consolidation
-    expect(out.agrupadoPor).toBe("tipoFolha");
+    expect(out.agrupadoPor).toBeUndefined();
+    expect(out.agrupadoPorRotulo).toBe("tipo de folha");
     expect(out.totalGrupos).toBe(2);
     const grupos = Object.fromEntries(out.grupos.map((g: any) => [g.grupo, g]));
     expect(grupos["Normal"].estatisticas.soma).toBe(45000); // 35000 + 10000
@@ -275,7 +276,8 @@ describe("estatisticasHorasExtras", () => {
 
   it("agruparPor=nome sums the lines per servant and ranks by total desc", () => {
     const out = estatisticasHorasExtras(itens, { agruparPor: "nome", topN: 10 }) as any;
-    expect(out.agrupadoPor).toBe("nome");
+    expect(out.agrupadoPor).toBeUndefined();
+    expect(out.agrupadoPorRotulo).toBe("servidor");
     expect(out.totalGrupos).toBe(3); // ALICE, BRUNO, CARLA
     expect(out.grupos[0]).toMatchObject({ grupo: "ALICE" }); // 1000 = biggest
     const bruno = out.grupos.find((g: any) => g.grupo === "BRUNO");
@@ -286,7 +288,8 @@ describe("estatisticasHorasExtras", () => {
 
   it("agruparPor=competencia groups by month of prestação", () => {
     const out = estatisticasHorasExtras(itens, { agruparPor: "competencia", topN: 10 }) as any;
-    expect(out.agrupadoPor).toBe("competencia");
+    expect(out.agrupadoPor).toBeUndefined();
+    expect(out.agrupadoPorRotulo).toBe("mês de competência");
     expect(out.totalGrupos).toBe(2); // 02/2024 and 01/2024
     const grupos = Object.fromEntries(out.grupos.map((g: any) => [g.grupo, g]));
     expect(grupos["02/2024"].soma).toBe(1500); // 1000 + 300 + 200

@@ -151,7 +151,8 @@ describe("estatisticasCeaps", () => {
 
   it("ranks groups by total spend desc with agruparPor=senador", () => {
     const r = estatisticasCeaps(DESPESAS, { agruparPor: "senador", topN: 10 }) as any;
-    expect(r.agrupadoPor).toBe("senador");
+    expect(r.agrupadoPor).toBeUndefined();
+    expect(r.agrupadoPorRotulo).toBe("senador");
     expect(r.totalGrupos).toBe(2);
     // grupos[0] = biggest spender (FABIANO: 50.02 + 1000 = 1050.02, n=2)
     expect(r.grupos[0]).toMatchObject({ grupo: "FABIANO CONTARATO", n: 2, soma: 1050.02 });
