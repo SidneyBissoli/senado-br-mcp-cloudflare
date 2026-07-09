@@ -1,0 +1,102 @@
+name: Ingest — Estrutura Organizacional
+
+# Regenera o snapshot da árvore organizacional (src/data/estrutura-organizacional.ts) a partir do
+# portal institucional e, SE a estrutura mudou, commita o snapshot de volta e (opcionalmente) deploya
+# o Worker para o novo organograma entrar no ar.
+#
+# ── POR QUE RODA NO RUNNER SELF-HOSTED `ecidadania` (Hetzner/Alemanha) ────────────────────────────
+# O crawler bate em www12.senado.leg.br (/institucional/estrutura/orgaosenado) — o MESMO host que
+# derruba silenciosamente as conexões dos IPs de nuvem (Azure) do GitHub-hosted runner, exatamente
+# como nas ingestões e-Cidadania (ver ingest-ecidadania-entity.yml). Por isso reusa o box dedicado
+# já registrado com o label `ecidadania`; um runner GitHub-hosted daria timeout.
+#
+# ── SEGURANÇA (repo público) ──────────────────────────────────────────────────────────────────────
+# Dispara SÓ em schedule/workflow_dispatch — NUNCA adicione pull_request/pull_request_target, que
+# deixaria um PR forkado rodar código no box.
+#
+# ── CADÊNCIA ──────────────────────────────────────────────────────────────────────────────────────
+# A estrutura administrativa muda raramente (reforma anunciada), então mensal basta. O snapshot é
+# byte-estável: quando a árvore não mudou o arquivo sai idêntico (o carimbo `extraidoEm` só bump em
+# mudança real), o passo de diff não acha nada e o job termina sem commit/deploy.
+
+on:
+  schedule:
+    - cron: "0 6 1 * *" # dia 1 de cada mês, 06:00 UTC (03:00 America/Sao_Paulo)
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Deployar o Worker se o snapshot mudar"
+        type: boolean
+        default: true
+      force:
+        description: "Ignorar a guarda anti-catástrofe (reescreve mesmo com encolhimento grande)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: estrutura-ingest
+  cancel-in-progress: false
+
+permissions:
+  contents: write # para commitar o snapshot de volta em master
+
+jobs:
+  ingest:
+    runs-on: [self-hosted, ecidadania]
+    timeout-minutes: 30
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      INGEST_FORCE: ${{ inputs.force && '1' || '0' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerar snapshot da estrutura
+        run: npm run ingest:estrutura
+
+      - name: Detectar mudança na estrutura
+        id: diff
+        run: |
+          if git diff --quiet -- src/data/estrutura-organizacional.ts; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Estrutura inalterada — nada a commitar."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Estrutura mudou:"
+            git --no-pager diff --stat -- src/data/estrutura-organizacional.ts
+          fi
+
+      # Portão: só commita/deploya um snapshot que passa typecheck + toda a suíte (os testes de
+      # snapshot em tests/tools/estrutura.test.ts pegam um crawl quebrado — ex.: subárvore da DGER
+      # abaixo do piso — antes de irem para master).
+      - name: Verificar (typecheck + testes)
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          npm run typecheck
+          npm test
+
+      - name: Commit + push do snapshot
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/estrutura-organizacional.ts
+          git commit -m "chore(estrutura): atualiza snapshot da árvore organizacional"
+          git push
+
+      # Deploy do Worker para o novo snapshot entrar no ar. Requer que o secret CLOUDFLARE_API_TOKEN
+      # tenha permissão "Workers Scripts:Edit" (o token D1-only das ingestões e-Cidadania NÃO deploya).
+      # Pule com deploy=false no dispatch manual (ou faça `npm run deploy` à mão depois do commit).
+      - name: Deploy do Worker
+        if: steps.diff.outputs.changed == 'true' && (github.event_name == 'schedule' || inputs.deploy)
+        run: npx wrangler deploy

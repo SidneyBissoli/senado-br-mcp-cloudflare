@@ -14,7 +14,7 @@
  * quando a estrutura mudar:  `npx tsx scripts/ingest-estrutura/index.ts`.
  */
 
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile, readFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { normalizarNome } from "../../src/estrutura/normalizar.js";
@@ -182,21 +182,57 @@ async function backfillSiglas(nodes: Map<number, OrgaoNode>): Promise<number> {
   return preenchidas;
 }
 
+/** Piso abaixo do qual um crawl é considerado quebrado (soluço de rede), não uma reforma real. */
+const PISO_ORGAOS = 400;
+
+/** Lê o snapshot anterior (se existir) para estabilidade byte-a-byte + guarda anti-catástrofe. */
+async function lerSnapshotAnterior(out: string): Promise<{ extraidoEm: string; orgaos: OrgaoNode[] } | null> {
+  try {
+    const txt = await readFile(out, "utf8");
+    const m = txt.match(/ESTRUTURA_ORGANIZACIONAL:\s*EstruturaSnapshot\s*=\s*(\{[\s\S]*\});\s*$/);
+    if (!m) return null;
+    const parsed = JSON.parse(m[1]) as { extraidoEm: string; orgaos: OrgaoNode[] };
+    return { extraidoEm: parsed.extraidoEm, orgaos: parsed.orgaos };
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   const t0 = Date.now();
+  const here = dirname(fileURLToPath(import.meta.url));
+  const out = resolve(here, "../../src/data/estrutura-organizacional.ts");
+  const anterior = await lerSnapshotAnterior(out);
+  const force = process.env.INGEST_FORCE === "1";
+
   const { nodes, falhas } = await crawl();
   const preenchidas = await backfillSiglas(nodes);
   const orgaos = [...nodes.values()].sort((a, b) => a.cod - b.cod);
   const comSigla = orgaos.filter((o) => o.sigla).length;
 
-  const extraidoEm = new Date().toISOString();
-  const here = dirname(fileURLToPath(import.meta.url));
-  const out = resolve(here, "../../src/data/estrutura-organizacional.ts");
+  // Guarda anti-catástrofe: um crawl que encolhe drasticamente (ou fica sob o piso) é quase sempre um
+  // soluço de rede no portal, não uma reforma administrativa. Aborta sem sobrescrever (a menos de INGEST_FORCE).
+  if (!force && anterior) {
+    const encolheuDemais = orgaos.length < Math.floor(anterior.orgaos.length * 0.7);
+    if (orgaos.length < PISO_ORGAOS || encolheuDemais) {
+      console.error(
+        `ABORTADO: crawl retornou ${orgaos.length} órgãos (anterior: ${anterior.orgaos.length}, piso: ${PISO_ORGAOS}). ` +
+          `Provável soluço de rede — snapshot NÃO reescrito. Use INGEST_FORCE=1 para forçar.`,
+      );
+      process.exit(1);
+    }
+  }
+
+  // Estabilidade byte-a-byte: só bump o carimbo `extraidoEm` quando a árvore de fato muda. Assim,
+  // re-rodar sem mudança produz arquivo idêntico (git diff limpo) e a Action não commita/deploya à toa.
+  const canonicalNovo = JSON.stringify(orgaos);
+  const inalterado = anterior != null && JSON.stringify(anterior.orgaos) === canonicalNovo;
+  const extraidoEm = inalterado ? anterior!.extraidoEm : new Date().toISOString();
 
   const banner =
     "// GERADO por scripts/ingest-estrutura/index.ts — NÃO edite à mão.\n" +
     "// Snapshot da árvore organizacional do Senado (portal institucional), até o nível de serviço.\n" +
-    `// Extraído em ${extraidoEm}. Rode \`npx tsx scripts/ingest-estrutura/index.ts\` para atualizar.\n`;
+    `// Extraído em ${extraidoEm}. Rode \`npm run ingest:estrutura\` para atualizar.\n`;
   const body =
     banner +
     'import type { EstruturaSnapshot } from "../estrutura/tipos.js";\n\n' +
@@ -213,6 +249,7 @@ async function main() {
   console.log("─".repeat(60));
   console.log(`órgãos: ${orgaos.length} (com sigla: ${comSigla}, retropreenchidas: ${preenchidas})`);
   console.log(`falhas de fetch: ${falhas}`);
+  console.log(inalterado ? "estrutura INALTERADA (arquivo idêntico — sem commit)" : "estrutura MUDOU (carimbo atualizado)");
   console.log(`escrito em ${out}`);
   console.log(`tempo: ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }

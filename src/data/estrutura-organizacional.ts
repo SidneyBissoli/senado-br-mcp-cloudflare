@@ -1,6 +1,6 @@
 // GERADO por scripts/ingest-estrutura/index.ts — NÃO edite à mão.
 // Snapshot da árvore organizacional do Senado (portal institucional), até o nível de serviço.
-// Extraído em 2026-07-09T22:10:09.577Z. Rode `npx tsx scripts/ingest-estrutura/index.ts` para atualizar.
+// Extraído em 2026-07-09T22:10:09.577Z. Rode `npm run ingest:estrutura` para atualizar.
 import type { EstruturaSnapshot } from "../estrutura/tipos.js";
 
 export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
