@@ -4,11 +4,27 @@ name: Ingest — Estrutura Organizacional
 # portal institucional e, SE a estrutura mudou, commita o snapshot de volta e (opcionalmente) deploya
 # o Worker para o novo organograma entrar no ar.
 #
-# ── POR QUE RODA NO RUNNER SELF-HOSTED `ecidadania` (Hetzner/Alemanha) ────────────────────────────
+# ── POR QUE RODA NO RUNNER SELF-HOSTED `senado-estrutura` (Hetzner/Alemanha) ──────────────────────
 # O crawler bate em www12.senado.leg.br (/institucional/estrutura/orgaosenado) — o MESMO host que
 # derruba silenciosamente as conexões dos IPs de nuvem (Azure) do GitHub-hosted runner, exatamente
-# como nas ingestões e-Cidadania (ver ingest-ecidadania-entity.yml). Por isso reusa o box dedicado
-# já registrado com o label `ecidadania`; um runner GitHub-hosted daria timeout.
+# como nas ingestões e-Cidadania (ver ingest-ecidadania-entity.yml). Por isso precisa do box alemão.
+#
+# Mas esta automação NÃO é do corpus e-Cidadania: aquele é um dataset citável/versionado (D1 + Zenodo)
+# e esta é a estrutura administrativa do Senado (snapshot bundlado em código). Para não acoplá-las, o
+# job roda numa INSTÂNCIA DE RUNNER DEDICADA no mesmo box (label `senado-estrutura`, `_work` e serviço
+# próprios) — isolando o workspace do pipeline citável (defesa em profundidade contra footgun futuro de
+# arquivo compartilhado) e permitindo que os dois nunca esperem na fila um do outro.
+#
+# ── REGISTRO DO RUNNER (uma vez, no box Hetzner; instância SEPARADA da do e-Cidadania) ─────────────
+#   Settings ▸ Actions ▸ Runners ▸ New self-hosted runner (Linux/X64) para pegar o token de registro.
+#   Baixe o runner num DIRETÓRIO PRÓPRIO (não o do e-Cidadania) e configure como usuário NÃO-root:
+#     mkdir ~/actions-runner-estrutura && cd ~/actions-runner-estrutura
+#     # (baixe/extraia o pacote actions-runner-linux-x64-*.tar.gz da mesma tela)
+#     ./config.sh --url https://github.com/SidneyBissoli/senado-br-mcp-cloudflare \
+#       --token <TOKEN> --name senado-estrutura --labels senado-estrutura --work _work
+#     sudo ./svc.sh install $USER && sudo ./svc.sh start   # serviço distinto do runner ecidadania
+#   Node/npm são baixados pelo actions/setup-node por job (tool cache próprio da instância); só git e
+#   acesso de rede ao portal são pré-requisitos — já presentes no box.
 #
 # ── SEGURANÇA (repo público) ──────────────────────────────────────────────────────────────────────
 # Dispara SÓ em schedule/workflow_dispatch — NUNCA adicione pull_request/pull_request_target, que
@@ -42,7 +58,7 @@ permissions:
 
 jobs:
   ingest:
-    runs-on: [self-hosted, ecidadania]
+    runs-on: [self-hosted, senado-estrutura]
     timeout-minutes: 30
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
