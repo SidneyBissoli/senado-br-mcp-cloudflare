@@ -1,0 +1,20 @@
+# Mantém o contexto de build enxuto e reprodutível. dist/ e node_modules são
+# regenerados dentro da imagem (npm ci + npm run build); nunca copie os do host.
+node_modules
+dist
+.git
+.wrangler
+.wrangler-tmp
+.wrangler-dev*.log
+.smoke-openai-app.log
+.tmp-build
+.api-spec
+.secrets
+.agents
+.claude
+reports
+marketing
+docs
+evals
+tests
+.Rhistory
