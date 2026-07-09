@@ -10,6 +10,8 @@ import {
   provenanceFooter,
   withFieldSources,
   resultWithProvenance,
+  PROVENANCE_META_KEY,
+  ATTRIBUTION_META_KEY,
 } from "../../src/utils/provenance.js";
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
@@ -230,5 +232,21 @@ describe("resultWithProvenance", () => {
     const prov = provenanceFor("ECIDADANIA", "https://www12.senado.leg.br/ecidadania", "/consultas");
     const res = resultWithProvenance({ ok: true }, prov);
     expect(res.structuredContent).toMatchObject({ ok: true, provenance: { source: prov.source } });
+  });
+
+  it("mirrors provenance + attribution into result-level `_meta` under namespaced keys", () => {
+    const prov = provenanceFor("SENADO_LEGIS", "https://x", "/processo/1", {
+      field_sources: [{ fields: ["ementa"], source_url: "https://x/processo" }],
+    });
+    const res = resultWithProvenance({ ok: true }, prov);
+
+    // The out-of-band mirror carries the SAME envelope, not a reshaped copy.
+    expect(res._meta[PROVENANCE_META_KEY]).toEqual(prov);
+    expect(res._meta[ATTRIBUTION_META_KEY]).toEqual(res.structuredContent.attribution);
+    expect(res._meta[ATTRIBUTION_META_KEY]).toEqual(["https://x/processo/1", "https://x/processo"]);
+
+    // Keys are namespaced away from the reserved MCP / openai namespaces.
+    expect(PROVENANCE_META_KEY).not.toMatch(/^(mcp|modelcontextprotocol\.io|openai)\b/);
+    expect(ATTRIBUTION_META_KEY).not.toMatch(/^(mcp|modelcontextprotocol\.io|openai)\b/);
   });
 });

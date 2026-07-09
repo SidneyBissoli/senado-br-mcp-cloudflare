@@ -20,9 +20,20 @@
  * `attribution` de topo já encontram a fonte; o envelope `provenance` rico segue como
  * extensão deste servidor.
  *
- * Estratégia (guia §1.5): `structuredContent.provenance` validado pelo outputSchema
- * (espinha estruturada/auditável) + uma linha de fonte compacta anexada ao `content`
- * textual para clientes que só renderizam texto.
+ * Estratégia (guia §1.5): três canais para o mesmo envelope.
+ *  1. `structuredContent.provenance` + `structuredContent.attribution` — canal PARSEÁVEL e
+ *     visível ao modelo (para que ele cite fonte/período/retrieved_at, conforme as
+ *     SERVER_INSTRUCTIONS pedem). NÃO é validado no cliente pelo outputSchema: o schema
+ *     anunciado por tool é permissivo (`z.object({}).passthrough()` em server.ts), então o
+ *     cliente não recebe garantia de forma sobre a proveniência. A validação é SERVER-SIDE,
+ *     no build, via `ProvenanceSchema.parse` em `buildProvenance` — quem constrói um envelope
+ *     inválido estoura aqui, antes de responder.
+ *  2. `_meta` (nível de resultado) — MESMO envelope espelhado como metadado OUT-OF-BAND, sob
+ *     chaves namespaced (ver `PROVENANCE_META_KEY`/`ATTRIBUTION_META_KEY`). É o canal
+ *     recomendado pela convenção emergente do MCP para metadado *sobre* o resultado que não
+ *     deve dirigir o modelo (auditoria, UI-chrome) e é forward-compat com a Extensions Track
+ *     de trust/attribution annotations (RFC #711 → PR #1913, incubando fora do core).
+ *  3. Linha de fonte compacta anexada ao `content` textual, para clientes que só renderizam texto.
  *
  * NÍVEL 1 = source + dataset_id + reference_period (vintage) + retrieved_at + citation
  * (+ license). O campo que separa nível 1 de nível 2 é `retrieved_at`: o instante da
@@ -236,10 +247,23 @@ function attributionList(p: Provenance): string[] {
 }
 
 /**
- * Variante de `toolResult` que injeta o envelope de proveniência, separando os dois canais
+ * Chaves namespaced do espelho em `_meta` (nível de resultado). O prefixo reverse-DNS
+ * (`com.sidneybissoli.senado/…`) evita colisão com o namespace reservado do MCP
+ * (`modelcontextprotocol.io/`, `mcp.*`) e com o namespace `openai/…` das anotações do
+ * ChatGPT App. Mantê-las estáveis — consumidores de auditoria/UI leem por estas chaves.
+ */
+export const PROVENANCE_META_KEY = "com.sidneybissoli.senado/provenance";
+export const ATTRIBUTION_META_KEY = "com.sidneybissoli.senado/attribution";
+
+/**
+ * Variante de `toolResult` que injeta o envelope de proveniência, separando os canais
  * (guia §1.5) para não duplicar a proveniência no que o modelo lê:
- *  - `structuredContent` = `{ ...data, provenance, attribution }` — canal parseável/validável
- *    (Opção 2). `attribution` é a lista canônica da RFC #711 (todas as `source_url` distintas);
+ *  - `structuredContent` = `{ ...data, provenance, attribution }` — canal parseável e visível
+ *    ao modelo. `attribution` é a lista canônica da RFC #711 (todas as `source_url` distintas);
+ *  - `_meta` = MESMO `provenance`/`attribution` espelhado como metadado out-of-band, sob chaves
+ *    namespaced (`PROVENANCE_META_KEY`/`ATTRIBUTION_META_KEY`). Sobrevive ao minimizador do
+ *    perfil openai-app (que só remove `structuredContent.meta`) e não custa tokens do modelo,
+ *    servindo auditoria/UI e a forward-compat com a Extensions Track de trust annotations;
  *  - bloco de texto = `JSON(data)` (SEM provenance) + a linha de fonte compacta (Opção 1).
  *
  * A medição de Δ tokens (scripts/measure-provenance-tokens.ts, gate §1.7) mostrou que embutir
@@ -248,11 +272,16 @@ function attributionList(p: Provenance): string[] {
  * `data` deve ser um objeto (structuredContent precisa ser objeto).
  */
 export function resultWithProvenance(data: Record<string, unknown>, provenance: Provenance) {
+  const attribution = attributionList(provenance);
   return {
     content: [
       { type: "text" as const, text: JSON.stringify(data, null, 2) },
       { type: "text" as const, text: provenanceFooter(provenance) },
     ],
-    structuredContent: { ...data, provenance, attribution: attributionList(provenance) },
+    structuredContent: { ...data, provenance, attribution },
+    _meta: {
+      [PROVENANCE_META_KEY]: provenance,
+      [ATTRIBUTION_META_KEY]: attribution,
+    },
   };
 }
