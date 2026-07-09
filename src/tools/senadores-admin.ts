@@ -15,7 +15,13 @@ import { admFetch, admFetchLarge } from "../throttle/adm.js";
 import { errorFrom, ensureArray, normalizeText, parseBRL } from "../utils/validation.js";
 import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
-import { computarEstatisticas, type Estatisticas, type EstatisticasPorGrupo } from "../utils/estatisticas.js";
+import {
+  computarEstatisticas,
+  arredondarEstatisticas,
+  arredondarEntradas,
+  type Estatisticas,
+  type EstatisticasPorGrupo,
+} from "../utils/estatisticas.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
 
 export interface CeapsFiltros {
@@ -79,31 +85,6 @@ export function parseCeapsItem(d: any) {
   };
 }
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
-
-/** Round the statistics block to 2 decimals (money) for display; helper returns raw. */
-function arredondarEstatisticas(e: Estatisticas) {
-  return {
-    n: e.n,
-    soma: r2(e.soma),
-    minimo: r2(e.minimo),
-    maximo: r2(e.maximo),
-    media: r2(e.media),
-    mediana: r2(e.mediana),
-    desvioPadrao: r2(e.desvioPadrao),
-    percentis: {
-      p25: r2(e.percentis.p25),
-      p50: r2(e.percentis.p50),
-      p75: r2(e.percentis.p75),
-      p90: r2(e.percentis.p90),
-      p95: r2(e.percentis.p95),
-      p99: r2(e.percentis.p99),
-    },
-  };
-}
-
-const arredondarEntradas = (entradas: Estatisticas["top"]) =>
-  entradas.map((x) => ({ ...x, valor: r2(x.valor) }));
 
 /** Group-key extractor per `agruparPor` (label == key; homonyms/cnpj merges are noted in the aviso). */
 const CHAVE_GRUPO_CEAPS: Record<string, (d: any) => string> = {

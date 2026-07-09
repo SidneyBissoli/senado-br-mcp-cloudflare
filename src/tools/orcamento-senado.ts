@@ -16,7 +16,13 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray, safeInt, parseBRL } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
-import { computarEstatisticas, type Estatisticas, type EstatisticasPorGrupo } from "../utils/estatisticas.js";
+import {
+  computarEstatisticas,
+  arredondarEstatisticas,
+  arredondarEntradas,
+  type Estatisticas,
+  type EstatisticasPorGrupo,
+} from "../utils/estatisticas.js";
 import { CACHE_STATIC } from "../types.js";
 
 const FINANCEIRO_BASE = "https://www.senado.gov.br";
@@ -89,7 +95,6 @@ export function agregarDespesas(itens: ReturnType<typeof parseDespesa>[], chave:
 // several value columns per dataset (no single canonical amount), so `campo` is a
 // real parameter here. Everything else follows the CEAPS template.
 
-const r2 = round2;
 
 /** Value-column accessors per tipo. The default column (paid / collected) rules the no-arg call. */
 const ACESSOR_DESPESA: Record<string, (d: any) => number> = {
@@ -121,30 +126,6 @@ const CHAVE_RECEITA: Record<string, (r: any) => string> = {
   especie: (r) => r.especie || "(sem espécie)",
   natureza: (r) => r.natureza || "(sem natureza)",
 };
-
-/** Round the statistics block to 2 decimals (money) for display; helper returns raw. */
-function arredondarEstatisticas(e: Estatisticas) {
-  return {
-    n: e.n,
-    soma: r2(e.soma),
-    minimo: r2(e.minimo),
-    maximo: r2(e.maximo),
-    media: r2(e.media),
-    mediana: r2(e.mediana),
-    desvioPadrao: r2(e.desvioPadrao),
-    percentis: {
-      p25: r2(e.percentis.p25),
-      p50: r2(e.percentis.p50),
-      p75: r2(e.percentis.p75),
-      p90: r2(e.percentis.p90),
-      p95: r2(e.percentis.p95),
-      p99: r2(e.percentis.p99),
-    },
-  };
-}
-
-const arredondarEntradas = (entradas: Estatisticas["top"]) =>
-  entradas.map((x) => ({ ...x, valor: r2(x.valor) }));
 
 /**
  * Build the `estatisticas=true` response for budget execution. `itens` are already

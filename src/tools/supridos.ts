@@ -12,7 +12,13 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch } from "../throttle/adm.js";
 import { errorFrom, ensureArray } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
-import { computarEstatisticas, type Estatisticas, type EstatisticasPorGrupo } from "../utils/estatisticas.js";
+import {
+  computarEstatisticas,
+  arredondarEstatisticas,
+  arredondarEntradas,
+  type Estatisticas,
+  type EstatisticasPorGrupo,
+} from "../utils/estatisticas.js";
 import { CACHE_STATIC } from "../types.js";
 import { matchesFiltro } from "./contratacoes.js";
 
@@ -67,10 +73,18 @@ const CHAVES_POR_TIPO: Record<string, Record<string, (r: any) => string>> = {
 const IDENTIFICAR_POR_TIPO: Record<string, (r: any) => Record<string, unknown>> = {
   transacoes: (r) => ({ fornecedor: r.fornecedor ?? null, data: r.data ?? null, rubricas: r.rubricas ?? null, tipo: r.tipo ?? null }),
   empenhos: (r) => ({ descricao: r.descricao ?? null, rubrica: r.rubrica ?? null, numero: r.numero ?? null, data: r.data ?? null }),
-  "atos-concessao": (r) => ({ codigo_suprido: r.codigo_suprido ?? null, elementoDespesa: r.elementoDespesa ?? null, regimeEspecial: r.regimeEspecial ?? null }),
+  // `codigoAtoConcessao` (+ `data`) is the citable public reference of the act — use it to identify
+  // the entry to the user. `codigoInternoSuprido` (ex-`codigo_suprido`) is the beneficiary's internal
+  // code, kept only for disambiguation and never to be cited as a public id (see SERVER_INSTRUCTIONS).
+  // `elementoDespesa` is dropped here: in the live feed it is an array, useless as an identifier field.
+  "atos-concessao": (r) => ({
+    codigoAtoConcessao: r.codigoAtoConcessao ?? null,
+    data: r.data ?? null,
+    regimeEspecial: r.regimeEspecial ?? null,
+    codigoInternoSuprido: r.codigo_suprido ?? null,
+  }),
 };
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Read the numeric value of a suprimento record for `campo`. Null/non-numeric → NaN (excluded). */
 export function suprimentoValor(r: any, campo: string): number {
@@ -79,30 +93,6 @@ export function suprimentoValor(r: any, campo: string): number {
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : NaN;
 }
-
-/** Round the statistics block to 2 decimals (money) for display; helper returns raw. */
-function arredondarEstatisticas(e: Estatisticas) {
-  return {
-    n: e.n,
-    soma: r2(e.soma),
-    minimo: r2(e.minimo),
-    maximo: r2(e.maximo),
-    media: r2(e.media),
-    mediana: r2(e.mediana),
-    desvioPadrao: r2(e.desvioPadrao),
-    percentis: {
-      p25: r2(e.percentis.p25),
-      p50: r2(e.percentis.p50),
-      p75: r2(e.percentis.p75),
-      p90: r2(e.percentis.p90),
-      p95: r2(e.percentis.p95),
-      p99: r2(e.percentis.p99),
-    },
-  };
-}
-
-const arredondarEntradas = (entradas: Estatisticas["top"]) =>
-  entradas.map((x) => ({ ...x, valor: r2(x.valor) }));
 
 /**
  * Build the `estatisticas=true` response for suprimento de fundos. `lista` are the raw

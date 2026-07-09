@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   computarEstatisticas,
   percentil,
+  formatarBRL,
+  rotularPercentis,
+  arredondarEstatisticas,
   type Estatisticas,
   type EstatisticasPorGrupo,
 } from "../../src/utils/estatisticas.js";
@@ -135,5 +138,56 @@ describe("computarEstatisticas — empty input", () => {
     expect(r.argMin).toBeNull();
     expect(r.top).toEqual([]);
     expect(r.percentis).toEqual({ p25: 0, p50: 0, p75: 0, p90: 0, p95: 0, p99: 0 });
+  });
+});
+
+describe("formatarBRL", () => {
+  it("formats with pt-BR grouping and 2 decimals", () => {
+    expect(formatarBRL(90026.29)).toBe("R$ 90.026,29");
+    expect(formatarBRL(1234567.5)).toBe("R$ 1.234.567,50");
+    expect(formatarBRL(0)).toBe("R$ 0,00");
+    expect(formatarBRL(9.9)).toBe("R$ 9,90");
+  });
+
+  it("handles negatives (estornos)", () => {
+    expect(formatarBRL(-4000)).toBe("-R$ 4.000,00");
+  });
+});
+
+describe("rotularPercentis", () => {
+  const raw = { p25: 45210, p50: 55659.56, p75: 70000, p90: 85000, p95: 88000, p99: 90026.29 };
+
+  it("returns an ordered labeled list, not a p25..p99 object", () => {
+    const lista = rotularPercentis(raw);
+    expect(lista.map((p) => p.percentil)).toEqual([25, 50, 75, 90, 95, 99]);
+    expect((lista as any).p99).toBeUndefined();
+  });
+
+  it("spells out each percentile in plain Portuguese with the BRL value", () => {
+    const lista = rotularPercentis(raw);
+    const p99 = lista.find((p) => p.percentil === 99)!;
+    expect(p99.valor).toBe(90026.29);
+    expect(p99.rotulo).toBe("99% dos valores são iguais ou inferiores a R$ 90.026,29");
+  });
+
+  it("flags p50 as the median", () => {
+    const p50 = rotularPercentis(raw).find((p) => p.percentil === 50)!;
+    expect(p50.rotulo).toBe("mediana — metade dos valores é igual ou inferior a R$ 55.659,56");
+  });
+
+  it("accepts an injectable value formatter for non-BRL units", () => {
+    const lista = rotularPercentis(raw, (n) => `${n} pts`);
+    expect(lista[0].rotulo).toContain("pts");
+    expect(lista[0].rotulo).not.toContain("R$");
+  });
+});
+
+describe("arredondarEstatisticas", () => {
+  it("rounds scalars to 2 decimals and emits percentis as the labeled list", () => {
+    const e = computarEstatisticas(DEZ, valorDe, { topN: 0 }) as Estatisticas;
+    const out = arredondarEstatisticas(e);
+    expect(Array.isArray(out.percentis)).toBe(true);
+    expect(out.percentis.every((p) => typeof p.rotulo === "string" && p.rotulo.length > 0)).toBe(true);
+    expect(out.media).toBe(55);
   });
 });

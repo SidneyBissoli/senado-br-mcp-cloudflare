@@ -34,6 +34,19 @@ export interface Percentis {
   p99: number;
 }
 
+/**
+ * One percentile, self-documenting for the reader: the numeric `valor` PLUS a
+ * plain-language `rotulo`. Percentile output used to be a bare `{p25..p99}` block,
+ * and the model would parrot the shorthand key ("p99") straight into its prose —
+ * meaningless to anyone who didn't help build the server. The `rotulo` spells the
+ * meaning out so the reader never sees "p99". See `rotularPercentis`.
+ */
+export interface PercentilRotulado {
+  percentil: number;
+  valor: number;
+  rotulo: string;
+}
+
 /** An identified extreme/ranked record: the chosen identifier fields + its `valor`. */
 export type Entrada = Record<string, unknown> & { valor: number };
 
@@ -205,3 +218,74 @@ export function computarEstatisticas(
     grupos,
   };
 }
+
+// ─── Display layer ───────────────────────────────────────────────────────────
+// The generic helper above returns raw numbers (its job). These shared helpers
+// shape the block for the tool RESPONSE: 2-decimal money rounding + a percentile
+// list whose `rotulo` reads as plain Portuguese, so the model never surfaces
+// internal shorthand ("p99") to the user. All five statistics tools go through
+// them, so the wording stays identical across the whole surface.
+
+/** 2-decimal money rounding (all statistics fields are monetary — BRL). */
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Format a number as pt-BR currency deterministically ("R$ 1.234,56") — no
+ * `Intl` dependency, so tests are stable and it never depends on the runtime's
+ * ICU locale data.
+ */
+export function formatarBRL(n: number): string {
+  const negativo = n < 0;
+  const [inteiro, decimais] = Math.abs(n).toFixed(2).split(".");
+  const agrupado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${negativo ? "-" : ""}R$ ${agrupado},${decimais}`;
+}
+
+const ORDEM_PERCENTIS: ReadonlyArray<keyof Percentis> = ["p25", "p50", "p75", "p90", "p95", "p99"];
+
+/**
+ * Turn the raw `{p25..p99}` block into a self-documenting labeled list. The
+ * `rotulo` states the meaning in plain language (percentile = the value at or
+ * below which that share of the distribution falls, type-7). p50 is flagged as
+ * the median. `formatarValor` defaults to BRL but is injectable for other units.
+ */
+export function rotularPercentis(
+  p: Percentis,
+  formatarValor: (n: number) => string = formatarBRL,
+): PercentilRotulado[] {
+  return ORDEM_PERCENTIS.map((chave) => {
+    const percentil = Number(chave.slice(1));
+    const valor = r2(p[chave]);
+    const alvo = formatarValor(valor);
+    const rotulo =
+      percentil === 50
+        ? `mediana — metade dos valores é igual ou inferior a ${alvo}`
+        : `${percentil}% dos valores são iguais ou inferiores a ${alvo}`;
+    return { percentil, valor, rotulo };
+  });
+}
+
+/**
+ * Round a statistics block to 2 decimals for display and emit `percentis` as the
+ * self-documenting labeled list (not bare p25..p99 keys). Shared by all five
+ * statistics tools — previously each duplicated this function byte-for-byte.
+ */
+export function arredondarEstatisticas(
+  e: Estatisticas,
+  formatarValor: (n: number) => string = formatarBRL,
+) {
+  return {
+    n: e.n,
+    soma: r2(e.soma),
+    minimo: r2(e.minimo),
+    maximo: r2(e.maximo),
+    media: r2(e.media),
+    mediana: r2(e.mediana),
+    desvioPadrao: r2(e.desvioPadrao),
+    percentis: rotularPercentis(e.percentis, formatarValor),
+  };
+}
+
+/** Round the `valor` of each ranked/extreme entry for display. */
+export const arredondarEntradas = (entradas: Entrada[]): Entrada[] =>
+  entradas.map((x) => ({ ...x, valor: r2(x.valor) }));

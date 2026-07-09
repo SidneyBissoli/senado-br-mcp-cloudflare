@@ -4,6 +4,11 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **Reader-facing verbalization of statistics.** The `estatisticas: true` envelope no longer surfaces builder shorthand to the user. `percentis` changed from a `{ p25…p99 }` object to a self-documenting list of `{ percentil, valor, rotulo }`, where `rotulo` reads in plain Portuguese (e.g. `"99% dos valores são iguais ou inferiores a R$ 90.026,29"`, median flagged as such) — so the model verbalizes the meaning instead of parroting "p99". In `senado_remuneracoes_servidores`, the internal payroll row id previously exposed as `sequencial` in ranking/extreme entries is now `idInternoFolha` and flagged (in the server instructions) as disambiguation-only, never to be cited as a public identifier. Likewise in `senado_suprimento_fundos` (tipo `atos-concessao`), the raw `codigo_suprido` is renamed `codigoInternoSuprido` and the citable `codigoAtoConcessao`/`data` are now carried so ranking entries have a public reference (the array-valued `elementoDespesa`, useless as an identifier, was dropped from those entries — the `agruparPor` path is unchanged). Two new server-instruction lines codify this for all clients. Affects the five `estatisticas` tools. Internally, the four byte-identical `arredondarEstatisticas`/`arredondarEntradas` copies were consolidated into shared helpers in `src/utils/estatisticas.ts` (`formatarBRL`, `rotularPercentis`, `arredondarEstatisticas`, `arredondarEntradas`).
+
 ## [3.4.0]
 
 ### Added

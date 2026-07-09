@@ -82,10 +82,18 @@ describe("estatisticasSuprimento", () => {
   });
 
   const atos = [
-    { codigo_suprido: "S1", elementoDespesa: "E1", regimeEspecial: "N", valorTotalTransacoes: 100, valorTotalEmpenhos: 120 },
-    { codigo_suprido: "S2", elementoDespesa: "E1", regimeEspecial: "N", valorTotalTransacoes: 300, valorTotalEmpenhos: 310 },
-    { codigo_suprido: "S3", elementoDespesa: "E2", regimeEspecial: "S", valorTotalTransacoes: 50, valorTotalEmpenhos: 60 },
+    { codigo_suprido: "S1", codigoAtoConcessao: "00012024", data: "2024-01-10", elementoDespesa: "E1", regimeEspecial: "N", valorTotalTransacoes: 100, valorTotalEmpenhos: 120 },
+    { codigo_suprido: "S2", codigoAtoConcessao: "00022024", data: "2024-02-10", elementoDespesa: "E1", regimeEspecial: "N", valorTotalTransacoes: 300, valorTotalEmpenhos: 310 },
+    { codigo_suprido: "S3", codigoAtoConcessao: "00032024", data: "2024-03-10", elementoDespesa: "E2", regimeEspecial: "S", valorTotalTransacoes: 50, valorTotalEmpenhos: 60 },
   ];
+
+  it("identifies ranking entries by the citable act code, marking the beneficiary code as internal", () => {
+    const out = estatisticasSuprimento(atos, { tipo: "atos-concessao", topN: 10 }) as any;
+    // Top by valorTotalTransacoes = S2 (300).
+    expect(out.top[0]).toMatchObject({ codigoAtoConcessao: "00022024", codigoInternoSuprido: "S2", valor: 300 });
+    // Renamed away from the raw internal snake_case field.
+    expect(out.top[0].codigo_suprido).toBeUndefined();
+  });
 
   it("atos-concessao default campo is valorTotalTransacoes; agruparPor=elementoDespesa", () => {
     const out = estatisticasSuprimento(atos, { tipo: "atos-concessao", agruparPor: "elementoDespesa", topN: 10 }) as any;

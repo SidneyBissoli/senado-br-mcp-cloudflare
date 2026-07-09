@@ -182,8 +182,25 @@ describe("estatisticasRemuneracoes", () => {
     expect(out.estatisticas.maximo).toBe(30000);
     expect(out.estatisticas.minimo).toBe(12000);
     expect(out.estatisticas.media).toBe(21000);
-    expect(out.top[0]).toMatchObject({ sequencial: 1, nome: "ALICE", valor: 30000 });
-    expect(out.bottom[0]).toMatchObject({ sequencial: 2, valor: 12000 });
+    // The payroll's internal row id is surfaced as `idInternoFolha`, not the raw
+    // internal `sequencial` — it disambiguates homonyms but is not a public id.
+    expect(out.top[0]).toMatchObject({ idInternoFolha: 1, nome: "ALICE", valor: 30000 });
+    expect(out.top[0].sequencial).toBeUndefined();
+    expect(out.bottom[0]).toMatchObject({ idInternoFolha: 2, valor: 12000 });
+  });
+
+  it("emits percentis as a self-documenting labeled list, never bare p99 keys", () => {
+    const out = estatisticasRemuneracoes(folha, { campo: "bruto", consolidar: true, topN: 10 }) as any;
+    const pcts = out.estatisticas.percentis;
+    expect(Array.isArray(pcts)).toBe(true);
+    expect(pcts.map((p: any) => p.percentil)).toEqual([25, 50, 75, 90, 95, 99]);
+    const p99 = pcts.find((p: any) => p.percentil === 99);
+    expect(p99.rotulo).toMatch(/99% dos valores/);
+    expect(p99.rotulo).toContain("R$");
+    // The old shorthand object shape must be gone.
+    expect(pcts.p99).toBeUndefined();
+    const mediana = pcts.find((p: any) => p.percentil === 50);
+    expect(mediana.rotulo).toMatch(/mediana/);
   });
 
   it("per-line (não consolidado) sees the 4 raw rows and their max", () => {

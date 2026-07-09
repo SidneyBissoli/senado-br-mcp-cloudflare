@@ -15,7 +15,13 @@ import { admFetch, admFetchLarge } from "../throttle/adm.js";
 import { errorFrom, ensureArray, parseBRL } from "../utils/validation.js";
 import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
-import { computarEstatisticas, type Estatisticas, type EstatisticasPorGrupo } from "../utils/estatisticas.js";
+import {
+  computarEstatisticas,
+  arredondarEstatisticas,
+  arredondarEntradas,
+  type Estatisticas,
+  type EstatisticasPorGrupo,
+} from "../utils/estatisticas.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
 import { matchesFiltro, matchesFiltroCampo } from "./contratacoes.js";
 
@@ -167,32 +173,6 @@ const ACESSOR_CAMPO: Record<string, (r: RemuneracaoNormalizada) => number> = {
 
 export const CAMPOS_ESTATISTICA = Object.keys(ACESSOR_CAMPO) as [string, ...string[]];
 
-const r2 = (n: number) => Math.round(n * 100) / 100;
-
-/** Round the statistics block to 2 decimals (money) for display; helper returns raw. */
-function arredondarEstatisticas(e: Estatisticas) {
-  return {
-    n: e.n,
-    soma: r2(e.soma),
-    minimo: r2(e.minimo),
-    maximo: r2(e.maximo),
-    media: r2(e.media),
-    mediana: r2(e.mediana),
-    desvioPadrao: r2(e.desvioPadrao),
-    percentis: {
-      p25: r2(e.percentis.p25),
-      p50: r2(e.percentis.p50),
-      p75: r2(e.percentis.p75),
-      p90: r2(e.percentis.p90),
-      p95: r2(e.percentis.p95),
-      p99: r2(e.percentis.p99),
-    },
-  };
-}
-
-const arredondarEntradas = (entradas: Estatisticas["top"]) =>
-  entradas.map((x) => ({ ...x, valor: r2(x.valor) }));
-
 /**
  * Build the `estatisticas=true` response for the payroll tool: normalize rows, optionally
  * consolidate per servant, then crunch the whole set through `computarEstatisticas` and
@@ -211,7 +191,10 @@ export function estatisticasRemuneracoes(
   const resultado = computarEstatisticas(registros as any, acessor as any, {
     topN: opts.topN,
     ...(opts.agruparPor ? { agruparPor: (r: any) => r.tipoFolha || "(sem tipo)" } : {}),
-    identificar: (r: any) => ({ sequencial: r.sequencial ?? null, nome: r.nome }),
+    // `idInternoFolha` is the payroll's internal row id (ex-`sequencial`): it only
+    // disambiguates homonyms — it is NOT a public identifier and must never be cited
+    // to the user as if it were one (see SERVER_INSTRUCTIONS).
+    identificar: (r: any) => ({ idInternoFolha: r.sequencial ?? null, nome: r.nome }),
     desempate: (r: any) => (r.sequencial ?? Number.MAX_SAFE_INTEGER),
   });
 
