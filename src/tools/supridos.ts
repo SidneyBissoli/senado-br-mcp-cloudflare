@@ -90,6 +90,7 @@ const AGRUPAR_ROTULO: Record<string, string> = {
   descricao: "descrição",
   elementoDespesa: "elemento de despesa",
   regimeEspecial: "regime",
+  suprido: "suprido",
 };
 
 /** Map the raw regime flag (boolean or S/N) to plain words, so `regimeEspecial = true` never reaches the user. */
@@ -103,16 +104,9 @@ function rotuloRegime(v: unknown): string {
 const IDENTIFICAR_POR_TIPO: Record<string, (r: any) => Record<string, unknown>> = {
   transacoes: (r) => ({ fornecedor: r.fornecedor ?? null, data: r.data ?? null, rubricas: r.rubricas ?? null, tipo: r.tipo ?? null }),
   empenhos: (r) => ({ descricao: r.descricao ?? null, rubrica: r.rubrica ?? null, numero: r.numero ?? null, data: r.data ?? null }),
-  // `codigoAtoConcessao` (+ `data`) is the citable public reference of the act — use it to identify
-  // the entry to the user. `codigoInternoSuprido` (ex-`codigo_suprido`) is the beneficiary's internal
-  // code, kept only for disambiguation and never to be cited as a public id (see SERVER_INSTRUCTIONS).
-  // `elementoDespesa` is dropped here: in the live feed it is an array, useless as an identifier field.
-  "atos-concessao": (r) => ({
-    codigoAtoConcessao: r.codigoAtoConcessao ?? null,
-    data: r.data ?? null,
-    regime: rotuloRegime(r.regimeEspecial),
-    codigoInternoSuprido: r.codigo_suprido ?? null,
-  }),
+  // `atos-concessao` is handled inline in estatisticasSuprimento: its identifier is enriched with the
+  // suprido's NAME (joined from the supridos registry), so the response identifies the beneficiary by
+  // name, not by the internal code.
 };
 
 
@@ -134,13 +128,31 @@ export function suprimentoValor(r: any, campo: string): number {
  */
 export function estatisticasSuprimento(
   lista: any[],
-  opts: { tipo: string; campo?: string; agruparPor?: string; topN: number },
+  opts: { tipo: string; campo?: string; agruparPor?: string; topN: number; nomePorCodigo?: Map<string, string> },
 ) {
   const cfg = CAMPOS_POR_TIPO[opts.tipo];
   const campoInvalido = opts.campo != null && !cfg.campos.includes(opts.campo);
   const campo = opts.campo && cfg.campos.includes(opts.campo) ? opts.campo : cfg.default;
 
-  const chaves = CHAVES_POR_TIPO[opts.tipo];
+  // atos-concessao: the beneficiary's name (joined from the supridos registry) is the public
+  // identifier; the internal code is kept only for disambiguation. Enables agruparPor=suprido too.
+  const nomeSuprido = (r: any): string | null =>
+    opts.nomePorCodigo?.get(String(r.codigo_suprido)) ?? null;
+  const identificar =
+    opts.tipo === "atos-concessao"
+      ? (r: any) => ({
+          codigoAtoConcessao: r.codigoAtoConcessao ?? null,
+          data: r.data ?? null,
+          regime: rotuloRegime(r.regimeEspecial),
+          suprido: nomeSuprido(r),
+          codigoInternoSuprido: r.codigo_suprido ?? null,
+        })
+      : IDENTIFICAR_POR_TIPO[opts.tipo];
+
+  const chaves =
+    opts.tipo === "atos-concessao"
+      ? { ...CHAVES_POR_TIPO[opts.tipo], suprido: (r: any) => nomeSuprido(r) ?? "(suprido não identificado)" }
+      : CHAVES_POR_TIPO[opts.tipo];
   const agrupar = opts.agruparPor && chaves[opts.agruparPor] ? chaves[opts.agruparPor] : undefined;
   const agruparInvalido = opts.agruparPor != null && !agrupar;
 
@@ -174,7 +186,7 @@ export function estatisticasSuprimento(
 
   const e = computarEstatisticas(validos, acessor, {
     topN: opts.topN,
-    identificar: IDENTIFICAR_POR_TIPO[opts.tipo],
+    identificar,
   }) as Estatisticas;
   return {
     campoAnalisado: CAMPO_ROTULO[campo] ?? campo,
@@ -185,18 +197,42 @@ export function estatisticasSuprimento(
   };
 }
 
+/**
+ * Build a `codigo -> nome` map of supridos for a year, from the registry (tipo=supridos, ~1 MB),
+ * so `atos-concessao` statistics can identify the beneficiary by NAME instead of the internal code.
+ * Cached by year; a fetch failure degrades to an empty map (entries fall back to name = null).
+ */
+export async function nomesSupridos(ano: number, admBaseUrl: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  try {
+    const { value } = await cachedFetchWithMeta(
+      "senado_suprimento_fundos_nomes",
+      { ano },
+      CACHE_STATIC,
+      () => admFetch(PATHS["supridos"](ano), {}, admBaseUrl),
+    );
+    for (const s of ensureArray(value) as any[]) {
+      const cod = s?.codigo != null ? String(s.codigo) : null;
+      if (cod && s?.nome) map.set(cod, String(s.nome));
+    }
+  } catch {
+    // best-effort enrichment; the ranking still works without names
+  }
+  return map;
+}
+
 export function registerSupridosTools(server: McpServer, admBaseUrl: string) {
   // R1. senado_suprimento_fundos
   server.tool(
     "senado_suprimento_fundos",
-    "Suprimento de fundos do Senado (adiantamentos a supridos): relação anual de supridos, atos de concessão, empenhos, movimentações ou transações de cartão corporativo, conforme `tipo`. Retorna `{ ano, tipo, count, total, registros }` (snake_case da API administrativa), filtrável por `filtro` textual e limitado por `limite` (padrão 100, máx 500); ao truncar, inclui `aviso`. Para maior/menor/média/mediana/distribuição/ranking ('quem mais recebeu', 'fornecedor com maior gasto', 'valor mediano') use `estatisticas=true` (só nos tipos `transacoes`, `empenhos`, `atos-concessao` — os demais não têm coluna de valor): SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma decrescente (grupos[0]=maior). A coluna de valor analisada é escolhida automaticamente conforme o `tipo`; o resultado já traz o rótulo legível dela em `campoAnalisado`. Registros sem valor são excluídos das estatísticas. Informe o `ano` (>=2010); use os mesmos códigos administrativos vistos em `senado_contratacoes_lista` ou `senado_execucao_orcamentaria` para cruzar gastos.",
+    "Suprimento de fundos do Senado (adiantamentos a supridos): relação anual de supridos, atos de concessão, empenhos, movimentações ou transações de cartão corporativo, conforme `tipo`. Retorna `{ ano, tipo, count, total, registros }` (snake_case da API administrativa), filtrável por `filtro` textual e limitado por `limite` (padrão 100, máx 500); ao truncar, inclui `aviso`. Para maior/menor/média/mediana/distribuição/ranking ('quem mais recebeu', 'fornecedor com maior gasto', 'valor mediano') use `estatisticas=true` (só nos tipos `transacoes`, `empenhos`, `atos-concessao` — os demais não têm coluna de valor): SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma decrescente (grupos[0]=maior). A coluna de valor analisada é escolhida automaticamente conforme o `tipo`; o resultado já traz o rótulo legível dela em `campoAnalisado`. Registros sem valor são excluídos das estatísticas. Em atos de concessão, cada beneficiário é identificado pelo NOME (cruzado com o cadastro de supridos) e pode-se usar `agruparPor='suprido'` para ranquear por beneficiário. Informe o `ano` (>=2010); use os mesmos códigos administrativos vistos em `senado_contratacoes_lista` ou `senado_execucao_orcamentaria` para cruzar gastos.",
     {
       ano: z.number().int().min(2010).max(2100).describe("Ano de referência"),
       tipo: z.enum(["supridos", "atos-concessao", "empenhos", "movimentacoes", "transacoes"]).optional().default("supridos").describe("Qual relação consultar (padrão: supridos)"),
       filtro: z.string().optional().describe("Filtro textual (nome, unidade...)"),
       estatisticas: z.boolean().optional().default(false).describe("Distribuição/ranking sobre as linhas: min/máx/média/mediana/percentis + top/bottom, ou grupos ranqueados por soma via agruparPor. Só para tipo transacoes/empenhos/atos-concessao"),
       campo: z.enum(["valor", "valorExecutado", "valorConcedido", "valorTotalTransacoes", "valorTotalEmpenhos", "valorTotalElementosDespesa", "valorTotalMovimentacoes"]).optional().describe("Opcional: força a coluna de valor analisada; por padrão ela é escolhida conforme o tipo. Se a opção não se aplicar ao tipo, o padrão é usado automaticamente."),
-      agruparPor: z.enum(["fornecedor", "tipo", "tipoInscricao", "rubricas", "rubrica", "descricao", "elementoDespesa", "regimeEspecial"]).optional().describe("Opcional: agrupa e ranqueia os resultados por esta dimensão (as opções válidas dependem do tipo)."),
+      agruparPor: z.enum(["fornecedor", "tipo", "tipoInscricao", "rubricas", "rubrica", "descricao", "elementoDespesa", "regimeEspecial", "suprido"]).optional().describe("Opcional: agrupa e ranqueia os resultados por esta dimensão (as opções válidas dependem do tipo; em atos de concessão, `suprido` agrupa por beneficiário, com o nome)."),
       topN: z.number().int().min(1).max(100).optional().default(10).describe("Tamanho do top/bottom nas estatísticas (padrão: 10)"),
       limite: z.number().int().min(1).max(500).optional().default(100).describe("Máximo de resultados (padrão: 100)"),
     },
@@ -234,12 +270,14 @@ export function registerSupridosTools(server: McpServer, admBaseUrl: string) {
               registros: lista.slice(0, limite),
             }, prov);
           }
+          // atos-concessao: join the supridos registry so entries carry the beneficiary's NAME.
+          const nomePorCodigo = tipo === "atos-concessao" ? await nomesSupridos(params.ano, admBaseUrl) : undefined;
           return resultWithProvenance({
             ano: params.ano,
             tipo,
             modo: "estatisticas",
             total: lista.length,
-            ...estatisticasSuprimento(lista, { tipo, campo: params.campo, agruparPor: params.agruparPor, topN: params.topN ?? 10 }),
+            ...estatisticasSuprimento(lista, { tipo, campo: params.campo, agruparPor: params.agruparPor, topN: params.topN ?? 10, nomePorCodigo }),
           }, prov);
         }
 

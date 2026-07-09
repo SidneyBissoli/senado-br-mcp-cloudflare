@@ -103,6 +103,27 @@ describe("estatisticasSuprimento", () => {
     expect(out.top[0].regime).toBe("regime comum");
     expect(out.top[0].regimeEspecial).toBeUndefined();
     expect(out.campoAnalisado).toBe("total gasto no cartão");
+    // Without a name map, `suprido` is present but null (graceful).
+    expect(out.top[0].suprido).toBeNull();
+  });
+
+  it("enriches atos-concessao entries with the beneficiary NAME from the registry map", () => {
+    const nomePorCodigo = new Map([["S1", "ANA MEIRELLES"], ["S2", "BRUNO COSTA"]]);
+    const out = estatisticasSuprimento(atos, { tipo: "atos-concessao", topN: 10, nomePorCodigo }) as any;
+    // Top is S2 (300) → now identifiable by name, not just the internal code.
+    expect(out.top[0].suprido).toBe("BRUNO COSTA");
+    expect(out.top[0].codigoInternoSuprido).toBe("S2");
+  });
+
+  it("agruparPor=suprido ranks beneficiaries by name (atos-concessao only)", () => {
+    const nomePorCodigo = new Map([["S1", "ANA MEIRELLES"], ["S2", "BRUNO COSTA"], ["S3", "ANA MEIRELLES"]]);
+    // S1 (100) + S3 (50) are the same person "ANA MEIRELLES" (150); S2 "BRUNO COSTA" (300).
+    const out = estatisticasSuprimento(atos, { tipo: "atos-concessao", agruparPor: "suprido", topN: 10, nomePorCodigo }) as any;
+    expect(out.agrupadoPorRotulo).toBe("suprido");
+    expect(out.grupos[0].grupo).toBe("BRUNO COSTA"); // 300 = biggest
+    expect(out.grupos[0].soma).toBe(300);
+    const ana = out.grupos.find((g: any) => g.grupo === "ANA MEIRELLES");
+    expect(ana.soma).toBe(150); // 100 + 50 merged by name
   });
 
   it("atos-concessao default campo is valorTotalTransacoes; agruparPor=elementoDespesa", () => {
