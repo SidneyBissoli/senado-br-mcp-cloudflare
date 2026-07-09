@@ -36,6 +36,7 @@ import {
   type CreateServerOptions,
 } from "./app-surface.js";
 import { registerOpenAiAppWidget } from "./openai-app-widget.js";
+import { titleForTool } from "./tool-titles.js";
 import type { Env } from "./types.js";
 
 type ToolCallback = (...args: unknown[]) => Promise<unknown> | unknown;
@@ -84,10 +85,17 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
     return registerTool(
       name,
       {
+        title: titleForTool(name),
         description,
         inputSchema: shape as never,
         outputSchema: outputSchema as never,
-        annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+        annotations: {
+          title: titleForTool(name),
+          readOnlyHint: true,
+          destructiveHint: false,
+          idempotentHint: true,
+          openWorldHint: true,
+        },
         _meta: toolMetaForProfile(toolProfile),
       },
       instrumentTool(name, profiledCallback as never, analytics) as never,
