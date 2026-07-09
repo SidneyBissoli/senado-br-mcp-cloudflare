@@ -173,6 +173,19 @@ const ACESSOR_CAMPO: Record<string, (r: RemuneracaoNormalizada) => number> = {
 
 export const CAMPOS_ESTATISTICA = Object.keys(ACESSOR_CAMPO) as [string, ...string[]];
 
+/** Human label for the analyzed column — responses use plain words, never the raw field name. */
+const CAMPO_ROTULO: Record<string, string> = {
+  bruto: "remuneração bruta",
+  liquida: "remuneração líquida",
+  remuneracaoBasica: "remuneração básica",
+  vantagensPessoais: "vantagens pessoais",
+  funcaoComissionada: "função comissionada",
+  gratificacaoNatalina: "gratificação natalina",
+  horasExtras: "horas extras",
+  outrasEventuais: "outras verbas eventuais",
+  abonoPermanencia: "abono de permanência",
+};
+
 /**
  * Build the `estatisticas=true` response for the payroll tool: normalize rows, optionally
  * consolidate per servant, then crunch the whole set through `computarEstatisticas` and
@@ -202,8 +215,10 @@ export function estatisticasRemuneracoes(
     const porGrupo = resultado as EstatisticasPorGrupo;
     return {
       campo: opts.campo,
+      campoAnalisado: CAMPO_ROTULO[opts.campo] ?? opts.campo,
       consolidadoPorServidor: false,
       agrupadoPor: opts.agruparPor,
+      agrupadoPorRotulo: "tipo de folha",
       totalGrupos: porGrupo.totalGrupos,
       ...(porGrupo.aviso ? { aviso: porGrupo.aviso } : {}),
       grupos: porGrupo.grupos.map((g) => ({
@@ -218,6 +233,7 @@ export function estatisticasRemuneracoes(
   const e = resultado as Estatisticas;
   return {
     campo: opts.campo,
+    campoAnalisado: CAMPO_ROTULO[opts.campo] ?? opts.campo,
     consolidadoPorServidor: consolidar,
     [consolidar ? "totalServidores" : "totalRegistros"]: e.n,
     estatisticas: arredondarEstatisticas(e),
@@ -268,6 +284,7 @@ export function estatisticasHorasExtras(
     }) as EstatisticasPorGrupo;
     return {
       agrupadoPor: opts.agruparPor,
+      agrupadoPorRotulo: opts.agruparPor === "nome" ? "servidor" : "mês de competência",
       totalGrupos: resultado.totalGrupos,
       ...(resultado.aviso ? { aviso: resultado.aviso } : {}),
       grupos: resultado.grupos.map((g) => ({ grupo: g.grupo, ...arredondarEstatisticas(g) })),

@@ -48,13 +48,18 @@ describe("estatisticasSuprimento", () => {
     expect(out.top[0].valor).toBe(300);
     expect(out.top[0].fornecedor).toBe("POSTO A");
     expect(out.bottom[0].valor).toBe(50);
-    expect(out.aviso).toMatch(/1 de 4 registros sem valor numérico em 'valor' foram excluídos/);
+    expect(out.aviso).toMatch(/1 de 4 registros sem valor informado foram excluídos/);
+    // Aviso must not leak raw field names.
+    expect(out.aviso).not.toMatch(/'valor'|numérico/);
+    // Human label for the analyzed column, so the response never surfaces the raw field name.
+    expect(out.campoAnalisado).toBe("valor da transação");
   });
 
   it("transacoes with agruparPor=fornecedor: groups ranked by summed valor desc, sum reconciles", () => {
     const out = estatisticasSuprimento(transacoes, { tipo: "transacoes", agruparPor: "fornecedor", topN: 10 }) as any;
     expect(out.campo).toBe("valor");
     expect(out.agrupadoPor).toBe("fornecedor");
+    expect(out.agrupadoPorRotulo).toBe("fornecedor");
     expect(out.grupos[0].grupo).toBe("POSTO A");
     expect(out.grupos[0].soma).toBe(400);
     expect(out.grupos[1].grupo).toBe("MERCADO B");
@@ -87,35 +92,44 @@ describe("estatisticasSuprimento", () => {
     { codigo_suprido: "S3", codigoAtoConcessao: "00032024", data: "2024-03-10", elementoDespesa: "E2", regimeEspecial: "S", valorTotalTransacoes: 50, valorTotalEmpenhos: 60 },
   ];
 
-  it("identifies ranking entries by the citable act code, marking the beneficiary code as internal", () => {
+  it("identifies ranking entries by the citable act code; regime is plain text, not a raw flag", () => {
     const out = estatisticasSuprimento(atos, { tipo: "atos-concessao", topN: 10 }) as any;
     // Top by valorTotalTransacoes = S2 (300).
     expect(out.top[0]).toMatchObject({ codigoAtoConcessao: "00022024", codigoInternoSuprido: "S2", valor: 300 });
     // Renamed away from the raw internal snake_case field.
     expect(out.top[0].codigo_suprido).toBeUndefined();
+    // `regimeEspecial: "N"` becomes plain words; the raw flag key is gone.
+    expect(out.top[0].regime).toBe("regime comum");
+    expect(out.top[0].regimeEspecial).toBeUndefined();
+    expect(out.campoAnalisado).toBe("total gasto no cartão");
   });
 
   it("atos-concessao default campo is valorTotalTransacoes; agruparPor=elementoDespesa", () => {
     const out = estatisticasSuprimento(atos, { tipo: "atos-concessao", agruparPor: "elementoDespesa", topN: 10 }) as any;
     expect(out.campo).toBe("valorTotalTransacoes");
     expect(out.agrupadoPor).toBe("elementoDespesa");
+    expect(out.agrupadoPorRotulo).toBe("elemento de despesa");
     expect(out.grupos[0].grupo).toBe("E1");
     expect(out.grupos[0].soma).toBe(400);
     expect(out.grupos[1].grupo).toBe("E2");
     expect(out.grupos[1].soma).toBe(50);
   });
 
-  it("invalid campo for tipo falls back to default with aviso", () => {
+  it("invalid campo for tipo falls back to default with a plain-language aviso (no raw field names)", () => {
     const out = estatisticasSuprimento(empenhos, { tipo: "empenhos", campo: "valorTotalTransacoes", topN: 10 }) as any;
     expect(out.campo).toBe("valorExecutado");
-    expect(out.aviso).toMatch(/campo 'valorTotalTransacoes' não se aplica a tipo=empenhos/);
+    expect(out.campoAnalisado).toBe("valor executado (gasto)");
+    expect(out.aviso).toMatch(/a estatística usa: valor executado \(gasto\)/);
+    // The aviso must not transcribe raw field/param names to the user.
+    expect(out.aviso).not.toMatch(/valorTotalTransacoes|valorExecutado|tipo=|campo '/);
     expect(out.distribuicao.soma).toBe(450);
   });
 
-  it("invalid agruparPor for tipo is ignored with aviso (falls to no-group shape)", () => {
+  it("invalid agruparPor for tipo is ignored with a plain-language aviso (no raw param names)", () => {
     const out = estatisticasSuprimento(transacoes, { tipo: "transacoes", agruparPor: "descricao", topN: 10 }) as any;
     expect(out.grupos).toBeUndefined();
     expect(out.distribuicao).toBeDefined();
-    expect(out.aviso).toMatch(/agruparPor 'descricao' não se aplica a tipo=transacoes/);
+    expect(out.aviso).toMatch(/O agrupamento solicitado não se aplica/);
+    expect(out.aviso).not.toMatch(/agruparPor|'descricao'|tipo=/);
   });
 });

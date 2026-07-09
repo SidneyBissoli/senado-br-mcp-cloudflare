@@ -127,6 +127,32 @@ const CHAVE_RECEITA: Record<string, (r: any) => string> = {
   natureza: (r) => r.natureza || "(sem natureza)",
 };
 
+/** Human label for the analyzed value column — responses use plain words, never the raw field name. */
+const CAMPO_ROTULO: Record<string, string> = {
+  pago: "valor pago",
+  liquidado: "valor liquidado",
+  empenhado: "valor empenhado",
+  dotacaoInicial: "dotação inicial",
+  dotacaoAtualizada: "dotação atualizada",
+  arrecadada: "valor arrecadado",
+  prevista: "valor previsto",
+};
+
+/** Human label for the grouping dimension (`agruparPor`). */
+const AGRUPAR_ROTULO: Record<string, string> = {
+  ano: "ano",
+  acao: "ação",
+  grupo: "grupo de despesa",
+  fonte: "fonte",
+  modalidade: "modalidade",
+  resultadoLei: "resultado primário",
+  plano: "plano orçamentário",
+  origem: "origem da receita",
+  categoria: "categoria",
+  especie: "espécie",
+  natureza: "natureza",
+};
+
 /**
  * Build the `estatisticas=true` response for budget execution. `itens` are already
  * normalized (parseDespesa|parseReceita) and filtered by `ano`. Without `agruparPor`
@@ -147,9 +173,10 @@ export function estatisticasExecucao(
   const agrupar = opts.agruparPor && chaves[opts.agruparPor] ? chaves[opts.agruparPor] : undefined;
   const agruparInvalido = opts.agruparPor != null && !agrupar;
 
+  // Avisos are user-facing: describe adjustments in plain words, never with raw field/param names.
   const avisos: string[] = [];
-  if (campoInvalido) avisos.push(`campo '${opts.campo}' não se aplica a tipo=${opts.tipo}; usando '${campo}'.`);
-  if (agruparInvalido) avisos.push(`agruparPor '${opts.agruparPor}' não se aplica a tipo=${opts.tipo}; ignorado.`);
+  if (campoInvalido) avisos.push(`A medida solicitada não está disponível para ${opts.tipo}; a estatística usa: ${CAMPO_ROTULO[campo] ?? campo}.`);
+  if (agruparInvalido) avisos.push(`O agrupamento solicitado não se aplica a ${opts.tipo}; os resultados não foram agrupados.`);
 
   if (agrupar) {
     const resultado = computarEstatisticas(itens, acessores[campo], {
@@ -160,7 +187,9 @@ export function estatisticasExecucao(
     const aviso = [resultado.aviso, ...avisos].filter(Boolean).join(" ");
     return {
       campo,
+      campoAnalisado: CAMPO_ROTULO[campo] ?? campo,
       agrupadoPor: opts.agruparPor,
+      agrupadoPorRotulo: opts.agruparPor ? (AGRUPAR_ROTULO[opts.agruparPor] ?? opts.agruparPor) : undefined,
       totalGrupos: resultado.totalGrupos,
       ...(aviso ? { aviso } : {}),
       grupos: resultado.grupos.map((g) => ({ grupo: g.grupo, ...arredondarEstatisticas(g) })),
@@ -175,6 +204,7 @@ export function estatisticasExecucao(
   }) as Estatisticas;
   return {
     campo,
+    campoAnalisado: CAMPO_ROTULO[campo] ?? campo,
     ...(avisos.length ? { aviso: avisos.join(" ") } : {}),
     distribuicao: arredondarEstatisticas(e),
     top: arredondarEntradas(e.top),

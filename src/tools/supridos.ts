@@ -65,9 +65,39 @@ const CHAVES_POR_TIPO: Record<string, Record<string, (r: any) => string>> = {
   },
   "atos-concessao": {
     elementoDespesa: (r) => String(r.elementoDespesa ?? "(sem elemento)"),
-    regimeEspecial: (r) => String(r.regimeEspecial ?? "(sem regime)"),
+    regimeEspecial: (r) => rotuloRegime(r.regimeEspecial),
   },
 };
+
+/** Human label for the analyzed value column — so responses use plain words, never the raw field name. */
+const CAMPO_ROTULO: Record<string, string> = {
+  valor: "valor da transação",
+  valorExecutado: "valor executado (gasto)",
+  valorConcedido: "valor concedido (autorizado)",
+  valorTotalTransacoes: "total gasto no cartão",
+  valorTotalEmpenhos: "total empenhado (autorizado)",
+  valorTotalElementosDespesa: "total dos elementos de despesa",
+  valorTotalMovimentacoes: "total movimentado",
+};
+
+/** Human label for the grouping dimension (`agruparPor`). */
+const AGRUPAR_ROTULO: Record<string, string> = {
+  fornecedor: "fornecedor",
+  tipo: "tipo de transação",
+  tipoInscricao: "tipo de inscrição",
+  rubricas: "rubrica",
+  rubrica: "rubrica",
+  descricao: "descrição",
+  elementoDespesa: "elemento de despesa",
+  regimeEspecial: "regime",
+};
+
+/** Map the raw regime flag (boolean or S/N) to plain words, so `regimeEspecial = true` never reaches the user. */
+function rotuloRegime(v: unknown): string {
+  if (v === true || v === "S" || v === "SIM" || v === "s") return "regime especial";
+  if (v === false || v === "N" || v === "NAO" || v === "NÃO" || v === "n") return "regime comum";
+  return "regime não informado";
+}
 
 /** Identifier fields carried into argMax/top per tipo. */
 const IDENTIFICAR_POR_TIPO: Record<string, (r: any) => Record<string, unknown>> = {
@@ -80,7 +110,7 @@ const IDENTIFICAR_POR_TIPO: Record<string, (r: any) => Record<string, unknown>> 
   "atos-concessao": (r) => ({
     codigoAtoConcessao: r.codigoAtoConcessao ?? null,
     data: r.data ?? null,
-    regimeEspecial: r.regimeEspecial ?? null,
+    regime: rotuloRegime(r.regimeEspecial),
     codigoInternoSuprido: r.codigo_suprido ?? null,
   }),
 };
@@ -118,10 +148,11 @@ export function estatisticasSuprimento(
   const validos = lista.filter((r) => Number.isFinite(suprimentoValor(r, campo)));
   const excluidos = lista.length - validos.length;
 
+  // Avisos are user-facing: describe adjustments in plain words, never with raw field/param names.
   const avisos: string[] = [];
-  if (campoInvalido) avisos.push(`campo '${opts.campo}' não se aplica a tipo=${opts.tipo}; usando '${campo}'.`);
-  if (agruparInvalido) avisos.push(`agruparPor '${opts.agruparPor}' não se aplica a tipo=${opts.tipo}; ignorado.`);
-  if (excluidos > 0) avisos.push(`${excluidos} de ${lista.length} registros sem valor numérico em '${campo}' foram excluídos das estatísticas.`);
+  if (campoInvalido) avisos.push(`A medida solicitada não está disponível para esta relação; a estatística usa: ${CAMPO_ROTULO[campo] ?? campo}.`);
+  if (agruparInvalido) avisos.push(`O agrupamento solicitado não se aplica a esta relação; os resultados não foram agrupados.`);
+  if (excluidos > 0) avisos.push(`${excluidos} de ${lista.length} registros sem valor informado foram excluídos das estatísticas.`);
 
   const acessor = (r: any) => suprimentoValor(r, campo);
 
@@ -134,7 +165,9 @@ export function estatisticasSuprimento(
     const aviso = [resultado.aviso, ...avisos].filter(Boolean).join(" ");
     return {
       campo,
+      campoAnalisado: CAMPO_ROTULO[campo] ?? campo,
       agrupadoPor: opts.agruparPor,
+      agrupadoPorRotulo: opts.agruparPor ? (AGRUPAR_ROTULO[opts.agruparPor] ?? opts.agruparPor) : undefined,
       totalGrupos: resultado.totalGrupos,
       ...(aviso ? { aviso } : {}),
       grupos: resultado.grupos.map((g) => ({ grupo: g.grupo, ...arredondarEstatisticas(g) })),
@@ -147,6 +180,7 @@ export function estatisticasSuprimento(
   }) as Estatisticas;
   return {
     campo,
+    campoAnalisado: CAMPO_ROTULO[campo] ?? campo,
     ...(avisos.length ? { aviso: avisos.join(" ") } : {}),
     distribuicao: arredondarEstatisticas(e),
     top: arredondarEntradas(e.top),
@@ -199,7 +233,7 @@ export function registerSupridosTools(server: McpServer, admBaseUrl: string) {
               tipo,
               count: Math.min(lista.length, limite),
               total: lista.length,
-              aviso: `tipo '${tipo}' não tem coluna de valor; estatísticas indisponível. Use tipo transacoes, empenhos ou atos-concessao.`,
+              aviso: `Esta relação não possui valores monetários; estatísticas indisponíveis. Peça as transações de cartão, os empenhos ou os atos de concessão.`,
               registros: lista.slice(0, limite),
             }, prov);
           }

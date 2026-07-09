@@ -117,17 +117,20 @@ describe("estatisticasExecucao", () => {
     expect(out.grupos[1].soma).toBe(400);
   });
 
-  it("invalid campo for tipo falls back to default with aviso", () => {
+  it("invalid campo for tipo falls back to default with a plain-language aviso (no raw field names)", () => {
     const out = estatisticasExecucao(receitas, { tipo: "receitas", campo: "pago", topN: 10 }) as any;
     expect(out.campo).toBe("arrecadada");
-    expect(out.aviso).toMatch(/campo 'pago' não se aplica a tipo=receitas/);
+    expect(out.campoAnalisado).toBe("valor arrecadado");
+    expect(out.aviso).toMatch(/não está disponível para receitas; a estatística usa: valor arrecadado/);
+    expect(out.aviso).not.toMatch(/campo 'pago'|arrecadada'|tipo=/);
     expect(out.distribuicao.soma).toBe(1400);
   });
 
-  it("invalid agruparPor for tipo is ignored with aviso (falls to no-group shape)", () => {
+  it("invalid agruparPor for tipo is ignored with a plain-language aviso (no raw param names)", () => {
     const out = estatisticasExecucao(despesas, { tipo: "despesas", agruparPor: "origem", topN: 10 }) as any;
     expect(out.grupos).toBeUndefined();
     expect(out.distribuicao).toBeDefined();
-    expect(out.aviso).toMatch(/agruparPor 'origem' não se aplica a tipo=despesas/);
+    expect(out.aviso).toMatch(/O agrupamento solicitado não se aplica a despesas/);
+    expect(out.aviso).not.toMatch(/agruparPor|'origem'|tipo=/);
   });
 });

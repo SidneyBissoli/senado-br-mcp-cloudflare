@@ -94,6 +94,14 @@ const CHAVE_GRUPO_CEAPS: Record<string, (d: any) => string> = {
   fornecedor: (d) => d.fornecedor || "(sem fornecedor)",
 };
 
+/** Human label for the grouping dimension (`agruparPor`), so responses never echo the raw param name. */
+const AGRUPAR_ROTULO: Record<string, string> = {
+  senador: "senador",
+  tipo: "tipo de despesa",
+  mes: "mês",
+  fornecedor: "fornecedor",
+};
+
 /**
  * Build the `estatisticas=true` response for CEAPS. Each row is one standalone expense
  * (no consolidation, unlike payroll): without `agruparPor` it crunches the distribution
@@ -113,6 +121,7 @@ export function estatisticasCeaps(
     }) as EstatisticasPorGrupo;
     return {
       agrupadoPor: opts.agruparPor,
+      agrupadoPorRotulo: AGRUPAR_ROTULO[opts.agruparPor] ?? opts.agruparPor,
       totalGrupos: resultado.totalGrupos,
       ...(resultado.aviso ? { aviso: resultado.aviso } : {}),
       grupos: resultado.grupos.map((g) => ({ grupo: g.grupo, ...arredondarEstatisticas(g) })),
