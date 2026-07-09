@@ -120,7 +120,16 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
         if (params.maoDeObra !== undefined) filtrados = filtrados.filter((c) => c.maoDeObra === params.maoDeObra);
         const limite = params.limite ?? 50;
         const contratos = filtrados.slice(0, limite);
+        const filtrosContrato = [
+          params.ano ? `ano=${params.ano}` : null,
+          params.objeto ? `objeto=${params.objeto}` : null,
+          params.fornecedor ? `fornecedor=${params.fornecedor}` : null,
+          params.numero ? `numero=${params.numero}` : null,
+          params.cnpj ? `cnpj=${params.cnpj}` : null,
+          params.maoDeObra !== undefined ? `maoDeObra=${params.maoDeObra}` : null,
+        ].filter((x): x is string => !!x);
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/contratos", {
+          dataset_id: ["contratos", ...filtrosContrato].join("; "),
           reference_period: params.ano ? String(params.ano) : undefined,
           retrieved_at: fetchedAt,
         });
@@ -208,7 +217,12 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
         );
         const todos = ensureArray(response);
         const limite = params.limite ?? 50;
+        const filtrosLicitacao = [
+          params.numero ? `numero=${params.numero}` : null,
+          params.objeto ? `objeto=${params.objeto}` : null,
+        ].filter((x): x is string => !!x);
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/licitacoes", {
+          dataset_id: ["licitacoes", ...filtrosLicitacao].join("; "),
           retrieved_at: fetchedAt,
         });
         return resultWithProvenance({
@@ -243,7 +257,13 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
         if (params.empresa) lista = lista.filter((t) => matchesFiltro(t.empresa || "", params.empresa!));
         if (params.lotacao) lista = lista.filter((t) => matchesFiltroCampo(t.lotacao, params.lotacao!));
         const limite = params.limite ?? 50;
+        const filtrosTerceirizado = [
+          params.nome ? `nome=${params.nome}` : null,
+          params.empresa ? `empresa=${params.empresa}` : null,
+          params.lotacao ? `lotacao=${params.lotacao}` : null,
+        ].filter((x): x is string => !!x);
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/terceirizados", {
+          dataset_id: ["terceirizados", ...filtrosTerceirizado].join("; "),
           retrieved_at: fetchedAt,
         });
         return resultWithProvenance({
@@ -294,7 +314,12 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
           contratos: ensureArray(e.contratos).map((c: any) => c.numero_formatado || c.numero || c.id).slice(0, 30),
           totalContratos: ensureArray(e.contratos).length,
         }));
+        const filtrosEmpresa = [
+          params.nome ? `nome=${params.nome}` : null,
+          params.cnpj ? `cnpj=${params.cnpj}` : null,
+        ].filter((x): x is string => !!x);
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/contratacoes/empresas", {
+          dataset_id: ["empresas", ...filtrosEmpresa].join("; "),
           retrieved_at: fetchedAt,
         });
         return resultWithProvenance({

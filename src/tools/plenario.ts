@@ -263,6 +263,7 @@ export function registerPlenarioTools(server: McpServer, baseUrl: string) {
           ? `${params.dataInicio}/${params.dataFim}`
           : params.data;
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
+          dataset_id: `orientacaoBancada; ${periodo}`,
           reference_period: periodo, retrieved_at: fetchedAt,
         });
         return resultWithProvenance({ count: votacoes.length, votacoes }, prov);
