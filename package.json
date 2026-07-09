@@ -29,6 +29,7 @@
     "ingest:ecidadania:ideias": "tsx scripts/ingest-ecidadania/index-ideias.ts",
     "ingest:ecidadania:ideias-detalhe": "tsx scripts/ingest-ecidadania/index-ideias-detalhe.ts",
     "ingest:ecidadania:consultas-votos": "tsx scripts/ingest-ecidadania/index-consultas-votos.ts",
+    "ingest:estrutura": "tsx scripts/ingest-estrutura/index.ts",
     "build:dataset": "tsx scripts/build-dataset/index.ts",
     "dataset:dictionary": "tsx scripts/build-dataset/index.ts --dictionary-only",
     "release:dataset": "tsx scripts/build-dataset/release.ts",

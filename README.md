@@ -17,7 +17,7 @@
 
 A **public, hosted** MCP server that gives AI assistants live, structured access to **Brazilian Senate open data** — **no installation, no account, no API key**. Point your MCP client at the hosted endpoint and start asking about senators, bills, votes, expenses, and more. It runs on Cloudflare Workers over Streamable HTTP.
 
-It exposes **66 tools**, **4 prompts**, and **5 resources** across two domains:
+It exposes **67 tools**, **4 prompts**, and **5 resources** across two domains:
 
 - **Legislative** — senators; bills and their tramitation; votes; committees; plenary sessions, results and presidential vetoes; party-bloc voting orientation; speeches and stenographic transcripts; blocs and leadership; federal legislation; and citizen participation via the e-Cidadania portal.
 - **Administrative** — CEAPS parliamentary-quota expenses; housing allowance; civil servants and payroll; overtime; interns; procurement contracts and biddings; outsourced staff; petty-cash funds; and budget execution.
@@ -87,7 +87,7 @@ own instance** — it is **not** required to use this public server.
 
 Prefer not to route queries through a third-party host (e.g. a newsroom policy)? The **same server**
 also runs as a **local stdio process** that talks **directly to the official government APIs** — same
-66 tools, same provenance envelope, no Cloudflare in the loop. This is the npm/stdio channel, published
+67 tools, same provenance envelope, no Cloudflare in the loop. This is the npm/stdio channel, published
 as [`senado-br-mcp`](https://www.npmjs.com/package/senado-br-mcp).
 
 Point a command-based client (Claude Desktop/Code, etc.) at the package — npm fetches and runs it,
@@ -125,7 +125,7 @@ list/corpus tools: without D1 they fall back to a live scrape of the ~5 REST hig
 
 This repo bundles a Claude [Agent Skill](https://platform.claude.com/docs/en/docs/agents-and-tools/agent-skills/overview)
 at [`.claude/skills/senado-br/`](.claude/skills/senado-br/SKILL.md) that teaches Claude **when** to reach for
-this server and **how** to use its 66 tools well — a themed tool map, common question→tool playbooks, the
+this server and **how** to use its 67 tools well — a themed tool map, common question→tool playbooks, the
 provenance contract, and gotchas (dates, the `codigoMateria` bridge, e-Cidadania's open-set listing, pagination).
 It points back to the server's own `senado://catalogo` / `senado://guia` resources rather than duplicating them.
 
@@ -534,7 +534,7 @@ In addition to the `provenance` envelope, `structuredContent` carries a top-leve
 
 `retrieved_at` fidelity is provided by the cache layer (`cachedFetchWithMeta`), which persists the fetch timestamp alongside the value, so it reflects the real upstream extraction even on a cache hit. Two exceptions report an honest live timestamp instead: the e-Cidadania **list** tools (read from D1) use the corpus's `lastScrapedAt` — the true age of the stored data — while e-Cidadania **detail** tools, scraped live, use the fetch time and a level-3 canonical item URL. The only path that falls back to the build-time default is the in-code static reference catalog (`senado_tabelas_referencia` `tipos-materia`), which has no upstream extraction instant.
 
-Coverage is **universal**: all 66 tools carry the envelope (verify with `grep -c 'resultWithProvenance(' src/tools/*.ts`). The **⊕** marks in the inventory below denote the original pilot tools (votes, bills, processes); the envelope now extends to every tool, so the marks are historical.
+Coverage is **universal**: all 67 tools carry the envelope (verify with `grep -c 'resultWithProvenance(' src/tools/*.ts`). The **⊕** marks in the inventory below denote the original pilot tools (votes, bills, processes); the envelope now extends to every tool, so the marks are historical.
 
 ## Citable dataset (e-Cidadania participation)
 
@@ -730,7 +730,15 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 |------|-------------|
 | `senado_execucao_orcamentaria` | Budget execution since 2013 (allocation, committed/settled/paid) and own revenues since 2012 (forecast vs collected) — aggregated by year, action, expense group, source or revenue origin; `estatisticas=true` returns whole-set distribution stats (min/max/mean/median/percentiles) + top/bottom ranking, or a group ranking by summed `campo` via `agruparPor`, with `campo` (default paid / collected) and `topN` |
 
-**Total: 66 tools**
+### Group T — Estrutura Organizacional (1 tool)
+
+Reads a bundled snapshot of the Senate's organizational tree (crawled from the institutional portal down to serviço level by `npm run ingest:estrutura`), since the open-data API only publishes units down to Secretaria and never links a leaf unit to its parent.
+
+| Tool | Description |
+|------|-------------|
+| `senado_estrutura_organizacional` | Organizational chart (organograma) resolved for a `unidade` (sigla like `DGER` or name): returns its `caminho` (ancestors) and every subordinate unit (`subordinadas[]` — secretarias, coordenações, serviços, núcleos — with `nivel`). Pairs with `senado_servidores`'s `subordinadasA` filter, which counts/lists all servants under a whole directorate (a servant sits in a leaf serviço, so filtering `lotacao` by the parent sigla returns 0). |
+
+**Total: 67 tools**
 
 ### Prompts (4)
 
@@ -750,7 +758,7 @@ Static context documents/tables (MCP `resources` capability), defined in `src/re
 | URI | Type | Content |
 | --- | --- | --- |
 | `senado://guia` | markdown | Visão geral e qual ferramenta usar por objetivo. |
-| `senado://catalogo` | markdown | As 66 ferramentas agrupadas por domínio. |
+| `senado://catalogo` | markdown | As 67 ferramentas agrupadas por domínio. |
 | `senado://glossario` | markdown | Siglas e termos do Senado (PEC, CEAPS, CCJ, RCN…). |
 | `senado://tabelas/tipos-materia` | json | Tipos de proposição (sigla/nome/descrição). |
 | `senado://tabelas/ufs` | json | As 27 unidades federativas. |
@@ -799,7 +807,8 @@ src/
     ├── servidores.ts        # Group P — 4 personnel tools
     ├── contratacoes.ts      # Group Q — 6 procurement tools
     ├── supridos.ts          # Group R — 1 petty-cash tool
-    └── orcamento-senado.ts  # Group S — 1 budget execution tool
+    ├── orcamento-senado.ts  # Group S — 1 budget execution tool
+    └── estrutura.ts         # Group T — 1 org-structure tool (reads src/data/ snapshot via src/estrutura/)
 scripts/
 └── ingest-ecidadania/    # Off-Worker full-corpus consultas ingestion (run via `npm run ingest:ecidadania`)
     ├── index.ts          # Orchestrator: crawl → status (/processo) → normalize → guards → out.sql
@@ -838,7 +847,7 @@ tests/                    # Vitest unit tests mirroring src/ (parsers, cache, th
 ## Connecting MCP Clients
 
 This is a **remote** server (Streamable HTTP, no install, open access) — point any MCP client at
-`https://senado.sidneybissoli.com/mcp`. Besides 66 tools, it exposes **prompts** (ready-made pt-BR
+`https://senado.sidneybissoli.com/mcp`. Besides 67 tools, it exposes **prompts** (ready-made pt-BR
 workflows: `senado_gastos_senador`, `senado_tramitacao_materia`, `senado_votos_senador`,
 `senado_panorama_ecidadania`) and **resources** (`senado://guia`, `senado://catalogo`,
 `senado://glossario`, `senado://tabelas/tipos-materia`, `senado://tabelas/ufs`).

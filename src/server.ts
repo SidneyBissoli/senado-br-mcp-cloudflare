@@ -24,6 +24,7 @@ import { registerContratacoesTools } from "./tools/contratacoes.js";
 import { registerServidoresTools } from "./tools/servidores.js";
 import { registerSupridosTools } from "./tools/supridos.js";
 import { registerOrcamentoSenadoTools } from "./tools/orcamento-senado.js";
+import { registerEstruturaTools } from "./tools/estrutura.js";
 import { registerPrompts } from "./prompts.js";
 import { registerResources } from "./resources.js";
 import { instrumentTool } from "./instrument.js";
@@ -161,6 +162,9 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
 
   // Group S — Orçamento do Senado (1 tool)
   registerOrcamentoSenadoTools(server);
+
+  // Group T — Estrutura Organizacional (1 tool — árvore de órgãos, snapshot bundlado)
+  registerEstruturaTools(server);
 
   // MCP prompts (4 reusable pt-BR workflow templates) and resources (5 static
   // context docs/tables) — advertised as the `prompts` and `resources` capabilities.

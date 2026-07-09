@@ -55,9 +55,9 @@ Dica: vários tools usam um parâmetro enum (\`secao\`/\`tipo\`/\`por\`/\`modo\`
 leia a descrição do tool para os valores aceitos.`;
 }
 
-/** Compact grouped catalog of all 66 tools. */
+/** Compact grouped catalog of all 67 tools. */
 export function buildCatalogo(): string {
-  return `# Catálogo de ferramentas (66)
+  return `# Catálogo de ferramentas (67)
 
 A — Senadores (5): senado_listar_senadores, senado_obter_senador, senado_votacoes_senador, senado_senador_historico, senado_senadores_afastados
 B — Matérias (2): senado_buscar_materias, senado_obter_materia
@@ -77,7 +77,8 @@ O — Senadores/Admin (2): senado_ceaps, senado_senadores_admin
 P — Servidores (4): senado_servidores, senado_remuneracoes_servidores, senado_horas_extras, senado_pessoal_tabelas
 Q — Contratações (6): senado_contratos, senado_contratacao_detalhe, senado_licitacoes, senado_terceirizados, senado_empresas_contratadas, senado_contratacoes_lista
 R — Suprimento de fundos (1): senado_suprimento_fundos
-S — Orçamento do Senado (1): senado_execucao_orcamentaria`;
+S — Orçamento do Senado (1): senado_execucao_orcamentaria
+T — Estrutura organizacional (1): senado_estrutura_organizacional`;
 }
 
 /** Glossary of common Senate acronyms and terms. */

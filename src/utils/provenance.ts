@@ -94,6 +94,13 @@ export const SOURCES = {
       "Fonte: Senado Federal, Portal de Dados Abertos (Administrativo) — adm.senado.gov.br/adm-dadosabertos.",
     license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
   },
+  /** Portal institucional — estrutura organizacional (www12.senado.leg.br/institucional/estrutura). */
+  SENADO_INSTITUCIONAL: {
+    source: "Senado Federal — Portal Institucional (Estrutura Organizacional)",
+    citation:
+      "Fonte: Senado Federal, Portal Institucional — Estrutura Organizacional (www12.senado.leg.br/institucional/estrutura).",
+    license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
+  },
   /** Portal e-Cidadania — www12.senado.leg.br/ecidadania. */
   ECIDADANIA: {
     source: "Senado Federal — Portal e-Cidadania",

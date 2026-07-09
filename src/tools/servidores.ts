@@ -24,6 +24,21 @@ import {
 } from "../utils/estatisticas.js";
 import { CACHE_SEMI_STATIC, CACHE_STATIC } from "../types.js";
 import { matchesFiltro, matchesFiltroCampo } from "./contratacoes.js";
+import { toolError } from "../utils/validation.js";
+import {
+  indiceEstrutura,
+  provenanceEstrutura,
+} from "./estrutura.js";
+import {
+  resolverOrgao,
+  sugerirOrgaos,
+  conjuntoCasamento,
+  lotacaoNoConjunto,
+  lotacaoReconhecida,
+  ehLotacaoParlamentar,
+  ESTRUTURA_VINTAGE,
+} from "../estrutura/resolver.js";
+import { withFieldSources } from "../utils/provenance.js";
 
 /** Parse a civil-servant list item (snake_case). */
 export function parseServidor(s: any) {
@@ -302,15 +317,45 @@ export function estatisticasHorasExtras(
   };
 }
 
+/**
+ * Particiona a lista de servidores contra a subárvore de uma unidade da estrutura organizacional.
+ * `sob` = servidores cuja lotação casa (por sigla ou nome) com algum órgão da subárvore. `naoClassificados`
+ * = servidores cuja lotação NÃO é reconhecida em nenhum nó da árvore E não é estrutura parlamentar
+ * (gabinete/liderança/escritório) — podem ou não pertencer à unidade, então o total "sob" é um piso.
+ * As lotações parlamentares reconhecidamente fora ficam simplesmente fora de `sob` sem virar ruído.
+ */
+export function particionarPorUnidade(
+  lista: ReturnType<typeof parseServidor>[],
+  indice: ReturnType<typeof indiceEstrutura>,
+  codUnidade: number,
+) {
+  const conjunto = conjuntoCasamento(indice, codUnidade);
+  const sob = lista.filter((s) => lotacaoNoConjunto(conjunto, s.lotacao as { sigla?: string | null; nome?: string | null } | null));
+  const porUnidade = new Map<string, number>();
+  for (const s of lista) {
+    const lot = s.lotacao as { sigla?: string | null; nome?: string | null } | null;
+    if (lotacaoReconhecida(indice, lot) || ehLotacaoParlamentar(lot?.nome)) continue;
+    const nm = (lot?.nome || "(sem lotação)").trim();
+    porUnidade.set(nm, (porUnidade.get(nm) || 0) + 1);
+  }
+  const naoClassificadosTotal = [...porUnidade.values()].reduce((a, b) => a + b, 0);
+  const amostraUnidades = [...porUnidade.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([nome, quantidade]) => ({ nome, quantidade }));
+  return { sob, naoClassificados: { total: naoClassificadosTotal, amostraUnidades } };
+}
+
 export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P1. senado_servidores
   server.tool(
     "senado_servidores",
-    "Lista servidores do Senado por `situacao` (ativos, efetivos, comissionados ou inativos), com filtros opcionais por `nome`, `lotacao` e `cargo`. Retorna `{ situacao, count, total, servidores[] }`, cada item com `nome`, `vinculo`, `situacao`, `cargo`, `funcao`, `lotacao`, `anoAdmissao` etc. Aplica `limite` (padrão 50, máx 500) e inclui `aviso` quando há truncamento — refine os filtros. Para remuneração use `senado_remuneracoes_servidores`; para estagiários/pensionistas/quantitativos use `senado_pessoal_tabelas`.",
+    "Lista servidores do Senado por `situacao` (ativos, efetivos, comissionados ou inativos), com filtros opcionais por `nome`, `lotacao` e `cargo`. Retorna `{ situacao, count, total, servidores[] }`, cada item com `nome`, `vinculo`, `situacao`, `cargo`, `funcao`, `lotacao`, `anoAdmissao` etc. Aplica `limite` (padrão 50, máx 500) e inclui `aviso` quando há truncamento — refine os filtros. **`subordinadasA`** (sigla ou nome de uma unidade, ex.: 'DGER') conta e lista TODOS os servidores de TODA a estrutura subordinada àquela unidade (não só a lotação direta): cruza a lotação de cada servidor com o organograma até o nível de serviço e devolve `{ subordinadasA, total (piso), servidores[], naoClassificados }` — use isto para 'quantas pessoas estão sob a Diretoria-Geral', pois filtrar `lotacao` pela sigla-mãe retorna 0 (os servidores ficam em serviços/núcleos subordinados). Para o organograma em si use `senado_estrutura_organizacional`; para remuneração use `senado_remuneracoes_servidores`.",
     {
       situacao: z.enum(["ativos", "efetivos", "comissionados", "inativos"]).optional().default("ativos").describe("Qual lista consultar (padrão: ativos)"),
       nome: z.string().optional().describe("Nome do servidor (busca parcial)"),
-      lotacao: z.string().optional().describe("Lotação/setor (busca parcial, ex: SEGRAF)"),
+      lotacao: z.string().optional().describe("Lotação/setor imediato (busca parcial, ex: SEGRAF). Para toda a estrutura subordinada a uma diretoria/secretaria, use `subordinadasA`."),
+      subordinadasA: z.string().optional().describe("Sigla ou nome de uma unidade (ex.: 'DGER', 'Diretoria-Geral'): conta/lista servidores de TODA a estrutura subordinada a ela (organograma até o nível de serviço), não só a lotação direta."),
       cargo: z.string().optional().describe("Cargo (busca parcial)"),
       limite: z.number().int().min(1).max(500).optional().default(50).describe("Máximo de resultados (padrão: 50)"),
     },
@@ -332,6 +377,43 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1/servidores/servidores/${situacao}`, {
           dataset_id: `servidores; situacao=${situacao}`, retrieved_at: fetchedAt,
         });
+
+        // Filtro hierárquico: cruza a lotação de cada servidor com a subárvore da unidade pedida.
+        if (params.subordinadasA) {
+          const indice = indiceEstrutura();
+          const alvo = resolverOrgao(indice, params.subordinadasA);
+          if (!alvo) {
+            const sugestoes = sugerirOrgaos(indice, params.subordinadasA);
+            const dica = sugestoes.length
+              ? ` Você quis dizer: ${sugestoes.map((s) => (s.sigla ? `${s.sigla} (${s.nome})` : s.nome)).join("; ")}?`
+              : "";
+            return toolError(`Unidade '${params.subordinadasA}' não encontrada na estrutura organizacional.${dica}`);
+          }
+          const { sob, naoClassificados } = particionarPorUnidade(lista, indice, alvo.cod);
+          // A classificação cruza a folha (fonte administrativa) com o organograma (fonte institucional).
+          const provComEstrutura = withFieldSources(prov, [
+            {
+              fields: ["subordinadasA", "total", "naoClassificados"],
+              source_url: provenanceEstrutura().source_url,
+              dataset_id: "estrutura-organizacional",
+              retrieved_at: ESTRUTURA_VINTAGE,
+            },
+          ]);
+          return resultWithProvenance({
+            situacao,
+            subordinadasA: { sigla: alvo.sigla, nome: alvo.nome },
+            total: sob.length,
+            count: Math.min(sob.length, limite),
+            ...(sob.length > limite ? { aviso: `Exibindo ${limite} de ${sob.length} servidores sob ${alvo.sigla ?? alvo.nome}. Refine com nome/cargo.` } : {}),
+            servidores: sob.slice(0, limite),
+            naoClassificados: {
+              total: naoClassificados.total,
+              nota: `Servidores em unidades administrativas cujo nome não foi reconhecido no organograma publicado (estrutura de ${ESTRUTURA_VINTAGE.slice(0, 10)}); podem ou não pertencer a esta unidade e NÃO entram na contagem 'total', que é portanto um piso.`,
+              amostraUnidades: naoClassificados.amostraUnidades,
+            },
+          }, provComEstrutura);
+        }
+
         return resultWithProvenance({
           situacao,
           count: Math.min(lista.length, limite),

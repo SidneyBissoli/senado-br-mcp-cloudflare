@@ -113,6 +113,9 @@ export const TOOL_TITLES: Record<string, string> = {
 
   // Orçamento do Senado
   senado_execucao_orcamentaria: "Execução orçamentária do Senado",
+
+  // Estrutura organizacional
+  senado_estrutura_organizacional: "Estrutura organizacional",
 };
 
 /**

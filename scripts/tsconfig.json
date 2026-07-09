@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "noEmit": true
   },
-  "include": ["ingest-ecidadania/**/*.ts", "build-dataset/**/*.ts"]
+  "include": ["ingest-ecidadania/**/*.ts", "build-dataset/**/*.ts", "ingest-estrutura/**/*.ts"]
 }

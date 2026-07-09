@@ -23,7 +23,7 @@ describe("createServer", () => {
     const tools = (server as any)._registeredTools;
     expect(tools).toBeDefined();
     const names = Object.keys(tools);
-    expect(names.length).toBe(66);
+    expect(names.length).toBe(67);
   });
 
   it("registers at least one tool from every group", () => {
