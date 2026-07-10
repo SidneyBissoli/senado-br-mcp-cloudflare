@@ -40,6 +40,21 @@ export interface ConjuntoCasamento {
 /** Órgãos servidos por padrão: o snapshot do portal + o complemento curado do Congresso Nacional. */
 const ORGAOS_PADRAO: OrgaoNode[] = [...ESTRUTURA_ORGANIZACIONAL.orgaos, ...COMPLEMENTO_CONGRESSO];
 
+/**
+ * Siglas CURADAS para unidades HOMÔNIMAS — o cadastro de servidores distingue por sigla
+ * unidades de mesmo nome em cúpulas diferentes, mas o portal não publica sigla nesses nós
+ * (todos `sigla: null`) e a tabela adm de lotações também não os alcança. Associação
+ * confirmada pelo mantenedor em 10/07/2026. Cada entrada é resolvida por nome normalizado +
+ * sigla de um ancestral, no índice: se a estrutura mudar e a busca não achar exatamente 1 nó,
+ * o alias simplesmente não se aplica (nunca chuta).
+ */
+const SIGLAS_CURADAS: Array<{ sigla: string; nome: string; ancestral: string }> = [
+  { sigla: "SEPLAG", nome: "Serviço de Planejamento e Gestão", ancestral: "SINFRA" },
+  { sigla: "SERCOINT", nome: "Serviço de Comunicação Integrada", ancestral: "ILB" },
+  { sigla: "SECINT", nome: "Serviço de Comunicação Integrada", ancestral: "SECOM" },
+  { sigla: "COTIN", nome: "Coordenação de Tecnologia da Informação", ancestral: "ILB" },
+];
+
 /** Constrói o índice a partir do snapshot+complemento (ou de uma lista passada — para teste). */
 export function construirIndice(orgaos: OrgaoNode[] = ORGAOS_PADRAO): IndiceEstrutura {
   const porCod = new Map<number, OrgaoNode>();
@@ -66,6 +81,22 @@ export function construirIndice(orgaos: OrgaoNode[] = ORGAOS_PADRAO): IndiceEstr
       arr.push(o.cod);
       filhosPorCod.set(o.codSuperior, arr);
     }
+  }
+  // Siglas curadas de homônimos: resolve nome+ancestral → nó; só aplica se achar exatamente 1.
+  for (const c of SIGLAS_CURADAS) {
+    if (porSigla.has(c.sigla)) continue;
+    const temAncestral = (o: OrgaoNode): boolean => {
+      const visto = new Set<number>([o.cod]);
+      let pai = o.codSuperior != null ? porCod.get(o.codSuperior) : undefined;
+      while (pai && !visto.has(pai.cod)) {
+        if (pai.sigla?.toUpperCase() === c.ancestral) return true;
+        visto.add(pai.cod);
+        pai = pai.codSuperior != null ? porCod.get(pai.codSuperior) : undefined;
+      }
+      return false;
+    };
+    const candidatos = (porNomeNormalizado.get(normalizarNome(c.nome)) ?? []).filter(temAncestral);
+    if (candidatos.length === 1) porSigla.set(c.sigla, candidatos[0]);
   }
   return { orgaos, porCod, filhosPorCod, porSigla, porNomeNormalizado, nosCasamento };
 }

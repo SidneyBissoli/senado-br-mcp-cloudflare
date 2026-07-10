@@ -355,6 +355,28 @@ describe("snapshot real da estrutura organizacional", () => {
     expect(lotacaoNoConjunto(conjuntoCasamento(indice, dger.cod), lot)).toBe(false);
   });
 
+  it("siglas curadas desambiguam homônimos (confirmação do mantenedor 10/07)", () => {
+    const casos: Array<[string, string, string]> = [
+      ["SEPLAG", "Serviço de Planejamento e Gestão", "SINFRA"],
+      ["SERCOINT", "Serviço de Comunicação Integrada", "ILB"],
+      ["SECINT", "Serviço de Comunicação Integrada", "SECOM"],
+      ["COTIN", "Coordenação de Tecnologia da Informação", "ILB"],
+    ];
+    for (const [sigla, nome, anc] of casos) {
+      const o = resolverOrgao(indice, sigla);
+      expect(o?.nome, sigla).toBe(nome);
+      expect(ancestrais(indice, o!.cod).map((a) => a.sigla), sigla).toContain(anc);
+    }
+    // A sigla curada arbitra o homônimo no casamento exato: SEPLAG cai sob a DGER, não sob a PRESID.
+    const dger = resolverOrgao(indice, "DGER")!;
+    const presid = resolverOrgao(indice, "PRESID")!;
+    const lot = { sigla: "SEPLAG", nome: "Serviço de Planejamento e Gestão" };
+    const codsDger = new Set(subarvore(indice, dger.cod).map((o) => o.cod));
+    const codsPresid = new Set(subarvore(indice, presid.cod).map((o) => o.cod));
+    expect(classificarLotacaoExata(indice, lot, codsDger)).toBe("dentro");
+    expect(classificarLotacaoExata(indice, lot, codsPresid)).toBe("fora");
+  });
+
   it("expande abreviação institucional CN → Congresso Nacional (COSEC)", () => {
     const c = casarLotacaoAproximado(indice, { nome: "Coordenação de Sessões e Colegiados do CN" });
     expect(c?.metodo).toBe("sigla-extenso");
