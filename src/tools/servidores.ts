@@ -32,9 +32,7 @@ import {
 import {
   resolverOrgao,
   sugerirOrgaos,
-  conjuntoCasamento,
-  lotacaoNoConjunto,
-  lotacaoReconhecida,
+  classificarLotacaoExata,
   casarLotacaoAproximado,
   casarLotacaoPorSufixoAncestral,
   aliasesDeSiglasDoCadastro,
@@ -326,7 +324,8 @@ export function estatisticasHorasExtras(
 /**
  * Particiona a lista de servidores contra a subárvore de uma unidade da estrutura organizacional.
  * `sob` = servidores cuja lotação casa com algum órgão da subárvore — pelo casamento EXATO
- * (sigla ou nome, semântica original) ou, em fallback, pelo APROXIMADO (sigla→extenso e prefixo
+ * (sigla decide primeiro; nome homônimo em cúpulas diferentes só decide se todos os nós caem
+ * do mesmo lado — ver `classificarLotacaoExata`) ou, em fallback, pelo APROXIMADO (sigla→extenso e prefixo
  * por token, p/ nomes truncados/abreviados do cadastro) quando ele é inequívoco (todos os
  * candidatos dentro da subárvore) ou pelo SUFIXO-ANCESTRAL (lotações de nome genérico
  * qualificadas com a sigla do órgão-pai, ex.: "Assessoria Técnica da DIREG" — as siglas que a
@@ -343,7 +342,6 @@ export function particionarPorUnidade(
   indice: ReturnType<typeof indiceEstrutura>,
   codUnidade: number,
 ) {
-  const conjunto = conjuntoCasamento(indice, codUnidade);
   const codsSubarvore = new Set(subarvore(indice, codUnidade).map((o) => o.cod));
   // Siglas que a árvore não publica (Diretorias-Executivas, nós sintéticos) vêm do próprio cadastro.
   const aliases = aliasesDeSiglasDoCadastro(
@@ -366,15 +364,19 @@ export function particionarPorUnidade(
   let afastadosOuEmTransito = 0;
   for (const s of lista) {
     const lot = s.lotacao as { sigla?: string | null; nome?: string | null } | null;
-    if (lotacaoNoConjunto(conjunto, lot)) { sob.push(s); continue; } // exato, dentro
-    if (lotacaoReconhecida(indice, lot)) continue; // exato, fora
-    const casamento = aproximado(lot);
-    if (casamento) {
-      const dentro = casamento.orgaos.filter((o) => codsSubarvore.has(o.cod)).length;
-      if (dentro === casamento.orgaos.length) { sob.push(s); continue; } // aproximado inequívoco, dentro
-      if (dentro === 0) continue; // aproximado inequívoco, fora
-      // ambíguo (candidatos dentro E fora): cai no não-classificado — não chutar.
+    const exato = classificarLotacaoExata(indice, lot, codsSubarvore, aliases);
+    if (exato === "dentro") { sob.push(s); continue; }
+    if (exato === "fora") continue;
+    if (exato === "desconhecido") {
+      const casamento = aproximado(lot);
+      if (casamento) {
+        const dentro = casamento.orgaos.filter((o) => codsSubarvore.has(o.cod)).length;
+        if (dentro === casamento.orgaos.length) { sob.push(s); continue; } // aproximado inequívoco, dentro
+        if (dentro === 0) continue; // aproximado inequívoco, fora
+        // ambíguo (candidatos dentro E fora): cai no não-classificado — não chutar.
+      }
     }
+    // exato "ambiguo" (homônimos dentro E fora) também desce até aqui — não chutar.
     if (ehPseudoUnidadeSituacional(lot?.nome)) { afastadosOuEmTransito++; continue; }
     if (ehLotacaoParlamentar(lot?.nome)) continue;
     const nm = (lot?.nome || "(sem lotação)").trim();

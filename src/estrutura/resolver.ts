@@ -50,13 +50,14 @@ export function construirIndice(orgaos: OrgaoNode[] = ORGAOS_PADRAO): IndiceEstr
   for (const o of orgaos) {
     porCod.set(o.cod, o);
     if (o.sigla) porSigla.set(o.sigla.toUpperCase(), o);
-    const tokens = tokenizarNome(o.nome);
-    const nn = tokens.join(" ");
+    const nn = normalizarNome(o.nome);
     if (nn) {
       const arr = porNomeNormalizado.get(nn) ?? [];
       arr.push(o);
       porNomeNormalizado.set(nn, arr);
-      nosCasamento.push({ orgao: o, tokens, nomeNormalizado: nn });
+      // O casamento aproximado enxerga os tokens com grafia corrigida (o exato fica cru).
+      const tokens = tokensParaCasamento(o.nome);
+      nosCasamento.push({ orgao: o, tokens, nomeNormalizado: tokens.join(" ") });
     }
   }
   for (const o of orgaos) {
@@ -138,6 +139,34 @@ export function conjuntoCasamento(indice: IndiceEstrutura, cod: number): Conjunt
     if (o.sigla) siglas.add(o.sigla.toUpperCase());
   }
   return { nomes, siglas };
+}
+
+/**
+ * Classificação EXATA de uma lotação frente a uma subárvore, com arbitragem de homônimos.
+ * A sigla decide primeiro (é única na árvore/aliases); sem sigla conhecida, o nome exato só
+ * decide se TODOS os nós homônimos caem do mesmo lado — nomes como "Serviço de Planejamento e
+ * Gestão" existem em cúpulas diferentes (CEPRES/PRESID e SINFRA/DGER) e contá-los dos dois
+ * lados dobraria a pessoa; lado misto = "ambiguo" (não chuta). "desconhecido" = nem sigla nem
+ * nome exato na árvore (candidato às camadas aproximadas).
+ */
+export type ClassificacaoExata = "dentro" | "fora" | "ambiguo" | "desconhecido";
+
+export function classificarLotacaoExata(
+  indice: IndiceEstrutura,
+  lotacao: { sigla?: string | null; nome?: string | null } | null | undefined,
+  codsSubarvore: Set<number>,
+  aliases?: Map<string, OrgaoNode>,
+): ClassificacaoExata {
+  const sigla = (lotacao?.sigla ?? "").trim().toUpperCase();
+  const noPorSigla = sigla ? (indice.porSigla.get(sigla) ?? aliases?.get(sigla)) : undefined;
+  if (noPorSigla) return codsSubarvore.has(noPorSigla.cod) ? "dentro" : "fora";
+  const nn = normalizarNome(lotacao?.nome);
+  const nos = nn ? indice.porNomeNormalizado.get(nn) : undefined;
+  if (!nos?.length) return "desconhecido";
+  const dentro = nos.filter((o) => codsSubarvore.has(o.cod)).length;
+  if (dentro === nos.length) return "dentro";
+  if (dentro === 0) return "fora";
+  return "ambiguo";
 }
 
 /** A lotação `{ sigla, nome }` de um servidor casa com o conjunto de uma subárvore? */
@@ -286,14 +315,24 @@ const EXPANSOES_INSTITUCIONAIS = new Map<string, string[]>([
 ]);
 
 /**
- * Grafias irregulares do cadastro — contrações que NÃO são prefixo da palavra plena (exceção
- * à regra geral do P1: toda abreviação real é prefixo) e erros de digitação conhecidos.
- * Aplicadas só do lado da lotação, antes do alinhamento.
+ * Grafias irregulares das DUAS fontes — contrações que NÃO são prefixo da palavra plena
+ * (exceção à regra geral do P1: toda abreviação real é prefixo) e erros de digitação
+ * conhecidos, tanto do cadastro de servidores quanto do portal institucional. Aplicadas aos
+ * tokens dos dois lados antes do alinhamento (o snapshot espelha o portal como publicado;
+ * a correção acontece só na hora de casar).
  */
-const GRAFIAS_IRREGULARES_CADASTRO = new Map<string, string>([
-  ["prc", "processo"],
+const GRAFIAS_IRREGULARES = new Map<string, string>([
+  ["prc", "processo"], // contração do cadastro ("Prc. Leg. Eletrônico")
+  ["profa", "professora"], // contração do cadastro ("Sen. Profa. Dorinha Seabra")
   ["admnistrativo", "administrativo"], // typo do cadastro ("Núcleo Admnistrativo da SECOM")
+  ["api", "apoio"], // typo do portal ("Escritório de Api Nº 01 do Senador Wilder Morais")
+  ["babalho", "barbalho"], // typo do portal ("…do Senador Jader Babalho")
 ]);
+
+/** Tokens canônicos para o casamento aproximado: tokenização + correção de grafias irregulares. */
+function tokensParaCasamento(nome: string | null | undefined): string[] {
+  return tokenizarNome(nome).map((t) => GRAFIAS_IRREGULARES.get(t) ?? t);
+}
 
 /**
  * Substitui tokens que aparecem em CAIXA-ALTA no nome cru e são sigla conhecida pelo nome por
@@ -334,7 +373,7 @@ export function casarLotacaoAproximado(
   lotacao: { sigla?: string | null; nome?: string | null } | null | undefined,
 ): CasamentoAproximado | null {
   const nomeCru = lotacao?.nome ?? "";
-  const tokens = tokenizarNome(nomeCru).map((t) => GRAFIAS_IRREGULARES_CADASTRO.get(t) ?? t);
+  const tokens = tokensParaCasamento(nomeCru);
   if (!tokens.length) return null;
   const expandidos = expandirSiglasNoNome(indice, nomeCru, tokens);
   if (expandidos) {
@@ -410,7 +449,7 @@ export function casarLotacaoPorSufixoAncestral(
   const sigla = m[1].replace(/\.$/, "").toUpperCase();
   const ancestral = indice.porSigla.get(sigla) ?? aliases?.get(sigla);
   if (!ancestral) return null;
-  const restoTokens = tokenizarNome(nomeCru.slice(0, m.index));
+  const restoTokens = tokensParaCasamento(nomeCru.slice(0, m.index));
   if (restoTokens.length < 2) return null; // nomes de 1 token são genéricos demais p/ esta camada
   const dentro = new Set(subarvore(indice, ancestral.cod).map((o) => o.cod));
   dentro.delete(ancestral.cod); // o alvo é uma unidade SOB o ancestral, não ele próprio

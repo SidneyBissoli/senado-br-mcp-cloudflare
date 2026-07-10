@@ -9,6 +9,7 @@ import {
   conjuntoCasamento,
   lotacaoNoConjunto,
   lotacaoReconhecida,
+  classificarLotacaoExata,
   casamentoPorTokens,
   casarLotacaoAproximado,
   casarLotacaoPorSufixoAncestral,
@@ -34,6 +35,9 @@ const ARVORE: OrgaoNode[] = [
   { cod: 8, sigla: null, nome: "Coordenação de Projetos e Obras de Infraestrutura", codSuperior: 2 },
   { cod: 9, sigla: null, nome: "Serviço de Apoio à Comissão de Educação", codSuperior: 5 },
   { cod: 10, sigla: null, nome: "Serviço de Apoio à Comissão de Meio Ambiente", codSuperior: 2 },
+  // Homônimos em cúpulas diferentes (como "Serviço de Planejamento e Gestão" CEPRES × SINFRA):
+  { cod: 11, sigla: null, nome: "Serviço de Planejamento Interno", codSuperior: 3 },
+  { cod: 12, sigla: null, nome: "Serviço de Planejamento Interno", codSuperior: 5 },
 ];
 
 describe("normalizarNome", () => {
@@ -66,8 +70,24 @@ describe("resolver — árvore sintética", () => {
   });
 
   it("subárvore inclui todos os descendentes e o próprio", () => {
-    expect(new Set(subarvore(indice, 2).map((o) => o.cod))).toEqual(new Set([2, 3, 4, 7, 8, 10]));
+    expect(new Set(subarvore(indice, 2).map((o) => o.cod))).toEqual(new Set([2, 3, 4, 7, 8, 10, 11]));
     expect(subarvore(indice, 4).map((o) => o.cod)).toEqual([4]); // folha
+  });
+
+  it("classificarLotacaoExata: sigla decide; homônimo só decide se todos caem do mesmo lado", () => {
+    const codsDger = new Set(subarvore(indice, 2).map((o) => o.cod));
+    const codsSf = new Set(subarvore(indice, 1).map((o) => o.cod));
+    // Sigla é única e decide primeiro.
+    expect(classificarLotacaoExata(indice, { sigla: "SEGRAF", nome: "qualquer" }, codsDger)).toBe("dentro");
+    expect(classificarLotacaoExata(indice, { sigla: "SGM", nome: "qualquer" }, codsDger)).toBe("fora");
+    // Homônimo (nós 11 ⊂ SEGRAF⊂DGER e 12 ⊂ SGM): um dentro e um fora = ambíguo (não chuta)…
+    expect(classificarLotacaoExata(indice, { nome: "Serviço de Planejamento Interno" }, codsDger)).toBe("ambiguo");
+    // …mas todos do mesmo lado decide (os dois estão sob a raiz SF).
+    expect(classificarLotacaoExata(indice, { nome: "Serviço de Planejamento Interno" }, codsSf)).toBe("dentro");
+    expect(classificarLotacaoExata(indice, { nome: "Serviço Fantasma" }, codsDger)).toBe("desconhecido");
+    // Alias derivado do cadastro vale como sigla.
+    const aliases = new Map([["XPTO", indice.porCod.get(4)!]]);
+    expect(classificarLotacaoExata(indice, { sigla: "XPTO", nome: "qualquer" }, codsDger, aliases)).toBe("dentro");
   });
 
   it("ancestrais vão do superior imediato até a raiz", () => {
@@ -219,6 +239,7 @@ describe("particionarPorUnidade", () => {
     parseServidor({ nome: "H", lotacao: { sigla: null, nome: "Serv. de Apoio à Com. de Educação" } }), // abreviada, resolvida FORA (SGM)
     parseServidor({ nome: "I", lotacao: { sigla: null, nome: "Gabinete da DGER" } }), // sigla no nome, sob DGER
     parseServidor({ nome: "J", lotacao: { sigla: "NSASF", nome: "Servidores Afastados - SF" } }), // pseudo-unidade situacional
+    parseServidor({ nome: "K", lotacao: { sigla: "SPI", nome: "Serviço de Planejamento Interno" } }), // homônimo dentro E fora
   ];
 
   it("conta a subárvore (piso) e isola os não classificados administrativos", () => {
@@ -226,12 +247,13 @@ describe("particionarPorUnidade", () => {
     // A/B exatos; F recuperado por abreviação; I por sigla→extenso (mesmo com cara de 'gabinete').
     expect(sob.map((s) => s.nome).sort()).toEqual(["A", "B", "F", "I"]);
     // C exata fora e H aproximada fora → excluídas sem ruído; D parlamentar → ignorada;
-    // E (desconhecida) e G (ambígua entre dentro/fora) entram em naoClassificados;
-    // J (situação funcional, lotação real não publicada) ganha rótulo próprio.
-    expect(naoClassificados.total).toBe(2);
+    // E (desconhecida), G (aproximada ambígua) e K (homônimo exato dentro E fora — nunca
+    // contar dos dois lados) entram em naoClassificados; J (registro do cadastro) tem rótulo próprio.
+    expect(naoClassificados.total).toBe(3);
     expect(naoClassificados.amostraUnidades.map((u) => u.nome).sort()).toEqual([
       "Serviço Desconhecido X",
       "Serviço de Apoio à Comissão de",
+      "Serviço de Planejamento Interno",
     ]);
     expect(afastadosOuEmTransito).toBe(1);
   });
@@ -300,6 +322,11 @@ describe("snapshot real da estrutura organizacional", () => {
       ["Serv. de C. de Qual e Mon. da Plat. de Tec. da Inf", "Serviço de Controle de Qualidade e Monitoração da Plataforma de Tecnologia da Informação"],
       // typo do cadastro corrigido pela tabela de grafias irregulares
       ["Núcleo Admnistrativo da SECOM", "Núcleo Administrativo da Secom"],
+      // contração "Profa." do cadastro (não é prefixo de "Professora")
+      ["Escritório de Ap. 1 da Sen. Profa. Dorinha Seabra", "Escritório de Apoio Nº 01 da Senadora Professora Dorinha Seabra"],
+      // typos do PORTAL corrigidos do lado do nó ("Api" por "Apoio"; "Babalho" por "Barbalho")
+      ["Escritório de Apoio nº 1 do Senador Wilder Morais", "Escritório de Api Nº 01 do Senador Wilder Morais"],
+      ["Escritório de Apoio 1 do Senador Jáder Barbalho", "Escritório de Apoio Nº 01 do Senador Jader Babalho"],
     ];
     for (const [lotacao, esperado] of casos) {
       const c = casarLotacaoAproximado(indice, { nome: lotacao });
