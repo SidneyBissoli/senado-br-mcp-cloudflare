@@ -104,14 +104,42 @@ describe("resolver — árvore sintética", () => {
 
 describe("casamentoPorTokens", () => {
   it("casa token exato, abreviação-prefixo e truncamento (lotação com menos tokens)", () => {
-    expect(casamentoPorTokens(["coord", "projetos"], ["coordenacao", "projetos", "obras"])).toBe(13);
-    expect(casamentoPorTokens(["coordenacao", "projetos"], ["coordenacao", "projetos"])).toBe(19);
+    expect(casamentoPorTokens(["coord", "projetos"], ["coordenacao", "projetos", "obras"]))
+      .toEqual({ chars: 13, skips: 0, cobreTudo: false });
+    expect(casamentoPorTokens(["coordenacao", "projetos"], ["coordenacao", "projetos"]))
+      .toEqual({ chars: 19, skips: 0, cobreTudo: true });
   });
-  it("rejeita token que não é prefixo, prefixo de 1 char e lotação mais longa que o nó", () => {
-    expect(casamentoPorTokens(["coord", "obras"], ["coordenacao", "projetos"])).toBe(0);
-    expect(casamentoPorTokens(["c", "projetos"], ["coordenacao", "projetos"])).toBe(0);
-    expect(casamentoPorTokens(["coordenacao", "projetos", "obras"], ["coordenacao", "projetos"])).toBe(0);
-    expect(casamentoPorTokens([], ["coordenacao"])).toBe(0);
+  it("salta tokens do nó que o cadastro omite (preposição/palavra), com contagem de saltos", () => {
+    // "Serv. de Apoio a Contratações de Tecnologia" ↔ "…Contratações EM Tecnologia"
+    expect(casamentoPorTokens(["servico", "apoio", "contratacoes", "tecnologia"],
+      ["servico", "apoio", "contratacoes", "em", "tecnologia"]))
+      .toEqual({ chars: 34, skips: 1, cobreTudo: false });
+    // "Serv. de C. de Qual e Mon…" ↔ "Serviço de CONTROLE de Qualidade e Monitoração…"
+    expect(casamentoPorTokens(["serv", "qual", "mon"], ["servico", "controle", "qualidade", "monitoracao"]))
+      .toEqual({ chars: 11, skips: 1, cobreTudo: false });
+  });
+  it("o primeiro token é âncora (não salta) e tokens de 1 char da lotação são ignorados", () => {
+    expect(casamentoPorTokens(["qualidade", "monitoracao"], ["servico", "qualidade", "monitoracao"])).toBeNull();
+    expect(casamentoPorTokens(["servico", "p", "areas"], ["servico", "para", "areas"]))
+      .toEqual({ chars: 12, skips: 1, cobreTudo: false }); // "p" ignorado; "para" saltado
+  });
+  it("dígitos são preservados e casam pelo valor (Escritório de Apoio 2 ↔ Nº 02, nunca Nº 01)", () => {
+    expect(casamentoPorTokens(["escritorio", "apoio", "2", "senador"], ["escritorio", "apoio", "n", "02", "senador"]))
+      .toEqual({ chars: 23, skips: 1, cobreTudo: false });
+    expect(casamentoPorTokens(["escritorio", "apoio", "2", "senador"], ["escritorio", "apoio", "n", "01", "senador"]))
+      .toBeNull();
+  });
+
+  it("tolera plural da lotação sobre singular do nó", () => {
+    expect(casamentoPorTokens(["servico", "expedicao", "remessas"], ["servico", "expedicao", "remessa"]))
+      .toEqual({ chars: 24, skips: 0, cobreTudo: true });
+  });
+  it("rejeita token que não é prefixo, só-1-char e lotação mais longa que o nó", () => {
+    expect(casamentoPorTokens(["coord", "obras"], ["coordenacao", "projetos"])).toBeNull();
+    expect(casamentoPorTokens(["c", "projetos"], ["coordenacao", "projetos"])).toBeNull(); // "projetos" vira âncora e não casa
+    expect(casamentoPorTokens(["c"], ["coordenacao"])).toBeNull(); // só tokens de 1 char = sem sinal
+    expect(casamentoPorTokens(["coordenacao", "projetos", "obras"], ["coordenacao", "projetos"])).toBeNull();
+    expect(casamentoPorTokens([], ["coordenacao"])).toBeNull();
   });
 });
 
@@ -249,6 +277,53 @@ describe("snapshot real da estrutura organizacional", () => {
       expect(c, lotacao).not.toBeNull();
       expect(c!.orgaos.map((o) => o.nome), lotacao).toEqual([esperado]);
     }
+  });
+
+  it("recupera as abreviações irregulares do cadastro validadas pelo mantenedor (10/07)", () => {
+    // Pares reais (lotação do cadastro → nó da árvore), subordinação confirmada à mão:
+    // PRDSTI/SEGRAF/SADCON (DGER), AUDIT e SECOM (fora da DGER).
+    const casos: Array<[string, string]> = [
+      // "T.I."/"TI" → Tecnologia da Informação
+      ["Núcleo de Segurança da Informação em T.I.", "Núcleo de Segurança da Informação Em Tecnologia da Informação"],
+      ["Serviço de Auditoria de Operações de TI", "Serviço de Auditoria de Operações de Tecnologia da Informação"],
+      ["Serviço de Auditoria de Gestão de TI", "Serviço de Auditoria de Gestão de Tecnologia da Informação"],
+      // contração "Prc." (não é prefixo de "Processo")
+      ["Serviço de Soluções para o Prc. Leg. Eletrônico", "Serviço de Soluções Para O Processo Legislativo Eletrônico"],
+      // "p/" vira token de 1 char (ignorado) + salto de "Para"
+      ["Serv. de Soluçoes p/ a Ativ. Parla. e Consultorias", "Serviço de Soluções Para a Atividade Parlamentar e Consultorias"],
+      ["Serv. de Soluç. p/ Áreas de Info., Doc. e Com. Soc", "Serviço de Soluções Para Áreas de Informação, documentação e Comunicação Social"],
+      // plural do cadastro sobre singular do nó
+      ["Serviço de Expedição e Remessas", "Serviço de Expedição e Remessa"],
+      // "de" (stopword) na lotação × "Em" (não-stopword) no nó → salto
+      ["Serviço de Apoio a Contratações de Tecnologia", "Serviço de Apoio a Contratações Em Tecnologia"],
+      // "C." de 1 char ignorado + salto de "Controle"
+      ["Serv. de C. de Qual e Mon. da Plat. de Tec. da Inf", "Serviço de Controle de Qualidade e Monitoração da Plataforma de Tecnologia da Informação"],
+    ];
+    for (const [lotacao, esperado] of casos) {
+      const c = casarLotacaoAproximado(indice, { nome: lotacao });
+      expect(c, lotacao).not.toBeNull();
+      expect(c!.orgaos.map((o) => o.nome), lotacao).toEqual([esperado]);
+    }
+  });
+
+  it("complemento do Congresso Nacional: raiz própria, fora do SF, casada por sigla", () => {
+    // Os cods fixos do complemento não colidem com o snapshot do portal.
+    const codsSnapshot = new Set(ESTRUTURA_ORGANIZACIONAL.orgaos.map((o) => o.cod));
+    for (const cod of [-900000, -900001, -900002, -900003]) expect(codsSnapshot.has(cod)).toBe(false);
+
+    const cn = resolverOrgao(indice, "CN")!;
+    expect(cn.nome).toBe("Congresso Nacional");
+    expect(subarvore(indice, cn.cod).map((o) => o.sigla).sort()).toEqual(["CMMC", "CMO", "CN", "CPCMS"]);
+    // CMO resolve e seu caminho é o CN — nunca o Senado/DGER.
+    const cmo = resolverOrgao(indice, "CMO")!;
+    expect(ancestrais(indice, cmo.cod).map((o) => o.sigla)).toEqual(["CN"]);
+    const dger = resolverOrgao(indice, "DGER")!;
+    expect(new Set(subarvore(indice, dger.cod).map((o) => o.cod)).has(cmo.cod)).toBe(false);
+    // A lotação do cadastro (nome truncado, sigla exata) é reconhecida e cai sob o CN.
+    const lot = { sigla: "CMO", nome: "Com. Mista de Plan. Orç. Públicos e Fiscalização" };
+    expect(lotacaoReconhecida(indice, lot)).toBe(true);
+    expect(lotacaoNoConjunto(conjuntoCasamento(indice, cn.cod), lot)).toBe(true);
+    expect(lotacaoNoConjunto(conjuntoCasamento(indice, dger.cod), lot)).toBe(false);
   });
 
   it("expande abreviação institucional CN → Congresso Nacional (COSEC)", () => {

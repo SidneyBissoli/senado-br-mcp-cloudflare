@@ -11,6 +11,7 @@
  */
 
 import { ESTRUTURA_ORGANIZACIONAL } from "../data/estrutura-organizacional.js";
+import { COMPLEMENTO_CONGRESSO } from "./complemento-cn.js";
 import { normalizarNome, tokenizarNome } from "./normalizar.js";
 import type { OrgaoNode } from "./tipos.js";
 
@@ -36,8 +37,11 @@ export interface ConjuntoCasamento {
   siglas: Set<string>;
 }
 
-/** Constrói o índice a partir do snapshot (ou de uma lista de órgãos passada — para teste). */
-export function construirIndice(orgaos: OrgaoNode[] = ESTRUTURA_ORGANIZACIONAL.orgaos): IndiceEstrutura {
+/** Órgãos servidos por padrão: o snapshot do portal + o complemento curado do Congresso Nacional. */
+const ORGAOS_PADRAO: OrgaoNode[] = [...ESTRUTURA_ORGANIZACIONAL.orgaos, ...COMPLEMENTO_CONGRESSO];
+
+/** Constrói o índice a partir do snapshot+complemento (ou de uma lista passada — para teste). */
+export function construirIndice(orgaos: OrgaoNode[] = ORGAOS_PADRAO): IndiceEstrutura {
   const porCod = new Map<number, OrgaoNode>();
   const filhosPorCod = new Map<number, number[]>();
   const porSigla = new Map<string, OrgaoNode>();
@@ -186,19 +190,57 @@ const MIN_CHARS_PREFIXO = 14;
 /** Especificidade mínima quando a lotação é prefixo LITERAL do nome do nó (truncamento puro). */
 const MIN_CHARS_TRUNCAMENTO = 10;
 
+const ehNumero = (t: string) => /^\d+$/.test(t);
+
 /**
- * Casa tokens da lotação contra tokens do nó, posição a posição: cada token deve ser igual ou
- * prefixo (≥2 chars) do correspondente; a lotação pode ter menos tokens (nome truncado).
- * Retorna a soma de caracteres casados (0 = não casa) — a pontuação do candidato.
+ * Um token da lotação casa com um token do nó? Igual, prefixo (abreviação/truncamento) ou
+ * plural; números casam pelo VALOR ("1" ↔ "01" — e "1" nunca casa "02"), pois o dígito é o que
+ * distingue "Escritório de Apoio Nº 01" do "Nº 02" do mesmo senador.
  */
-export function casamentoPorTokens(lot: string[], no: string[]): number {
-  if (!lot.length || lot.length > no.length) return 0;
+function tokenCasa(lot: string, no: string): boolean {
+  if (ehNumero(lot) || ehNumero(no)) return ehNumero(lot) && ehNumero(no) && Number(lot) === Number(no);
+  return lot === no || no.startsWith(lot) || lot === no + "s";
+}
+
+/** Resultado do alinhamento token a token (null = não casa). */
+export interface AlinhamentoTokens {
+  /** Soma de caracteres da lotação casados — a matéria-prima da pontuação. */
+  chars: number;
+  /** Tokens do NÓ saltados no alinhamento (o cadastro omite palavras: "em", "sobre", "Controle"…). */
+  skips: number;
+  /** A lotação cobriu todos os tokens do nó sem salto (casamento pleno). */
+  cobreTudo: boolean;
+}
+
+/**
+ * Alinha tokens da lotação contra tokens do nó, em ordem: cada token útil da lotação deve ser
+ * igual, prefixo (≥2 chars) ou plural de UM token do nó, podendo SALTAR tokens do nó no meio
+ * (o cadastro omite preposições fora da lista de stopwords e até palavras inteiras: "Serv. de
+ * C. de Qual…" ↔ "Serviço de Controle de Qualidade…"). O primeiro token é ÂNCORA — não salta —
+ * e tokens de 1 caractere da lotação ("p/", "C.") são ignorados (não carregam sinal). A
+ * lotação pode terminar antes do nó (nome truncado). Saltos são penalizados na pontuação de
+ * `melhoresPorPrefixo`, então um casamento posicional sempre vence um casamento com salto.
+ */
+export function casamentoPorTokens(lot: string[], no: string[]): AlinhamentoTokens | null {
+  // Tokens de 1 char não carregam sinal ("p/", "C.") — EXCETO dígitos ("Escritório de Apoio 2").
+  const uteis = lot.filter((t) => t.length >= 2 || ehNumero(t));
+  if (!uteis.length || uteis.length > no.length) return null;
+  let j = 0;
   let chars = 0;
-  for (let i = 0; i < lot.length; i++) {
-    if (lot[i] !== no[i] && !(lot[i].length >= 2 && no[i].startsWith(lot[i]))) return 0;
-    chars += lot[i].length;
+  let skips = 0;
+  for (let i = 0; i < uteis.length; i++) {
+    // Reserva 1 token do nó para cada token restante da lotação; o 1º token não salta.
+    const limite = i === 0 ? 1 : no.length - (uteis.length - i - 1);
+    let achou = -1;
+    for (let k = j; k < limite; k++) {
+      if (tokenCasa(uteis[i], no[k])) { achou = k; break; }
+    }
+    if (achou < 0) return null;
+    skips += achou - j;
+    chars += uteis[i].length;
+    j = achou + 1;
   }
-  return chars;
+  return { chars, skips, cobreTudo: skips === 0 && uteis.length === no.length };
 }
 
 /**
@@ -210,16 +252,18 @@ function melhoresPorPrefixo(indice: IndiceEstrutura, lotTokens: string[], apenas
   if (lotTokens.length < 2) return [];
   const juntado = lotTokens.join(" ");
   if (juntado.length < MIN_CHARS_TRUNCAMENTO) return [];
-  let melhorPontuacao = 0;
+  let melhorPontuacao = -Infinity;
   let melhores: OrgaoNode[] = [];
   for (const { orgao, tokens, nomeNormalizado } of indice.nosCasamento) {
     if (apenas && !apenas.has(orgao.cod)) continue;
-    const chars = casamentoPorTokens(lotTokens, tokens);
-    if (!chars) continue;
+    const m = casamentoPorTokens(lotTokens, tokens);
+    if (!m) continue;
     // Nomes curtos só casam como truncamento literal (prefixo de string do nome do nó).
     if (juntado.length < MIN_CHARS_PREFIXO && !nomeNormalizado.startsWith(juntado)) continue;
-    // Cobrir todos os tokens do nó desempata sobre casar só o começo de um nome mais longo.
-    const pontuacao = chars * 2 + (lotTokens.length === tokens.length ? 1 : 0);
+    // Cobrir todos os tokens do nó desempata sobre casar só o começo de um nome mais longo;
+    // saltos penalizam: um alinhamento posicional SEMPRE vence um com salto (chars é igual
+    // entre candidatos — é a soma dos tokens da lotação —, então o desempate é salto/cobertura).
+    const pontuacao = m.chars * 4 + (m.cobreTudo ? 2 : 0) - Math.min(m.skips, 3);
     if (pontuacao > melhorPontuacao) {
       melhorPontuacao = pontuacao;
       melhores = [orgao];
@@ -237,7 +281,15 @@ function melhoresPorPrefixo(indice: IndiceEstrutura, lotTokens: string[], apenas
 const EXPANSOES_INSTITUCIONAIS = new Map<string, string[]>([
   ["CN", ["congresso", "nacional"]],
   ["SF", ["senado", "federal"]],
+  // Sigla de CONCEITO (não de órgão): a árvore escreve por extenso, o cadastro abrevia.
+  ["TI", ["tecnologia", "informacao"]],
 ]);
+
+/**
+ * Contrações do cadastro que NÃO são prefixo da palavra plena — exceções à regra geral do P1
+ * (toda abreviação real é prefixo). Aplicadas só do lado da lotação, antes do alinhamento.
+ */
+const CONTRACOES_CADASTRO = new Map<string, string>([["prc", "processo"]]);
 
 /**
  * Substitui tokens que aparecem em CAIXA-ALTA no nome cru e são sigla conhecida pelo nome por
@@ -278,7 +330,7 @@ export function casarLotacaoAproximado(
   lotacao: { sigla?: string | null; nome?: string | null } | null | undefined,
 ): CasamentoAproximado | null {
   const nomeCru = lotacao?.nome ?? "";
-  const tokens = tokenizarNome(nomeCru);
+  const tokens = tokenizarNome(nomeCru).map((t) => CONTRACOES_CADASTRO.get(t) ?? t);
   if (!tokens.length) return null;
   const expandidos = expandirSiglasNoNome(indice, nomeCru, tokens);
   if (expandidos) {
