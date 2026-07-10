@@ -298,6 +298,8 @@ describe("snapshot real da estrutura organizacional", () => {
       ["Serviço de Apoio a Contratações de Tecnologia", "Serviço de Apoio a Contratações Em Tecnologia"],
       // "C." de 1 char ignorado + salto de "Controle"
       ["Serv. de C. de Qual e Mon. da Plat. de Tec. da Inf", "Serviço de Controle de Qualidade e Monitoração da Plataforma de Tecnologia da Informação"],
+      // typo do cadastro corrigido pela tabela de grafias irregulares
+      ["Núcleo Admnistrativo da SECOM", "Núcleo Administrativo da Secom"],
     ];
     for (const [lotacao, esperado] of casos) {
       const c = casarLotacaoAproximado(indice, { nome: lotacao });

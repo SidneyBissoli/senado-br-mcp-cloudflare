@@ -286,10 +286,14 @@ const EXPANSOES_INSTITUCIONAIS = new Map<string, string[]>([
 ]);
 
 /**
- * Contrações do cadastro que NÃO são prefixo da palavra plena — exceções à regra geral do P1
- * (toda abreviação real é prefixo). Aplicadas só do lado da lotação, antes do alinhamento.
+ * Grafias irregulares do cadastro — contrações que NÃO são prefixo da palavra plena (exceção
+ * à regra geral do P1: toda abreviação real é prefixo) e erros de digitação conhecidos.
+ * Aplicadas só do lado da lotação, antes do alinhamento.
  */
-const CONTRACOES_CADASTRO = new Map<string, string>([["prc", "processo"]]);
+const GRAFIAS_IRREGULARES_CADASTRO = new Map<string, string>([
+  ["prc", "processo"],
+  ["admnistrativo", "administrativo"], // typo do cadastro ("Núcleo Admnistrativo da SECOM")
+]);
 
 /**
  * Substitui tokens que aparecem em CAIXA-ALTA no nome cru e são sigla conhecida pelo nome por
@@ -330,7 +334,7 @@ export function casarLotacaoAproximado(
   lotacao: { sigla?: string | null; nome?: string | null } | null | undefined,
 ): CasamentoAproximado | null {
   const nomeCru = lotacao?.nome ?? "";
-  const tokens = tokenizarNome(nomeCru).map((t) => CONTRACOES_CADASTRO.get(t) ?? t);
+  const tokens = tokenizarNome(nomeCru).map((t) => GRAFIAS_IRREGULARES_CADASTRO.get(t) ?? t);
   if (!tokens.length) return null;
   const expandidos = expandirSiglasNoNome(indice, nomeCru, tokens);
   if (expandidos) {
@@ -416,9 +420,10 @@ export function casarLotacaoPorSufixoAncestral(
 }
 
 /**
- * Pseudo-unidades SITUACIONAIS do cadastro — "Servidores Afastados - SF", "Servidores em
- * Trânsito - SF" — não são órgãos do organograma, e sim situações funcionais: a lotação real
- * não é publicada. Ficam fora de qualquer casamento e merecem rótulo próprio na resposta.
+ * Unidades de PASSAGEM do cadastro — "Servidores Afastados - SF", "Servidores em Trânsito -
+ * SF". A lotação do servidor é essa mesma (é onde ele está lotado naquele instante); o que não
+ * existe é um nó correspondente no organograma publicado pelo portal, então elas ficam fora de
+ * qualquer casamento com a árvore e merecem rótulo próprio na resposta.
  */
 export function ehPseudoUnidadeSituacional(nome: string | null | undefined): boolean {
   return /^servidores\s+(afastados|em\s+tr[aâ]nsito)\b/i.test((nome ?? "").trim());

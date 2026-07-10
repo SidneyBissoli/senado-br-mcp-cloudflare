@@ -331,8 +331,8 @@ export function estatisticasHorasExtras(
  * candidatos dentro da subárvore) ou pelo SUFIXO-ANCESTRAL (lotações de nome genérico
  * qualificadas com a sigla do órgão-pai, ex.: "Assessoria Técnica da DIREG" — as siglas que a
  * árvore não tem vêm de aliases derivados do próprio cadastro). `afastadosOuEmTransito` =
- * pseudo-unidades situacionais do cadastro ("Servidores Afastados/em Trânsito - SF"), cuja
- * lotação real não é publicada. `naoClassificados` = servidores cuja lotação NÃO casou com
+ * lotados nas unidades de passagem do cadastro ("Servidores Afastados/em Trânsito - SF"),
+ * que não constam do organograma. `naoClassificados` = servidores cuja lotação NÃO casou com
  * nó algum (ou casou ambíguo — candidatos dentro E fora) E não é estrutura parlamentar
  * (gabinete/liderança/escritório) — podem ou não pertencer à unidade, então o total "sob" é um
  * piso. As lotações reconhecidas fora da subárvore e as parlamentares ficam fora sem virar ruído.
@@ -460,7 +460,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
               ? {
                   afastadosOuEmTransito: {
                     total: afastadosOuEmTransito,
-                    nota: "Servidores que o cadastro registra nas situações funcionais 'Servidores Afastados - SF' ou 'Servidores em Trânsito - SF' (a lotação real não é publicada); não entram na contagem 'total' nem em 'naoClassificados'.",
+                    nota: "Servidores lotados nas unidades de passagem do cadastro ('Servidores Afastados - SF' ou 'Servidores em Trânsito - SF' — quem está afastado/cedido ou momentaneamente sem exercício em unidade); essas unidades não constam do organograma publicado, então não entram na contagem 'total' nem em 'naoClassificados'.",
                   },
                 }
               : {}),
