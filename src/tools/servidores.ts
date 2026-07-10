@@ -331,8 +331,9 @@ export function estatisticasHorasExtras(
  * candidatos dentro da subárvore) ou pelo SUFIXO-ANCESTRAL (lotações de nome genérico
  * qualificadas com a sigla do órgão-pai, ex.: "Assessoria Técnica da DIREG" — as siglas que a
  * árvore não tem vêm de aliases derivados do próprio cadastro). `afastadosOuEmTransito` =
- * lotados nas unidades de passagem do cadastro ("Servidores Afastados/em Trânsito - SF"),
- * que não constam do organograma. `naoClassificados` = servidores cuja lotação NÃO casou com
+ * lotados nos registros do cadastro que não são órgãos do organograma ("Servidores Afastados
+ * - SF" = fora do exercício no Senado; "Servidores em Trânsito - SF" = unidade de passagem).
+ * `naoClassificados` = servidores cuja lotação NÃO casou com
  * nó algum (ou casou ambíguo — candidatos dentro E fora) E não é estrutura parlamentar
  * (gabinete/liderança/escritório) — podem ou não pertencer à unidade, então o total "sob" é um
  * piso. As lotações reconhecidas fora da subárvore e as parlamentares ficam fora sem virar ruído.
@@ -460,7 +461,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
               ? {
                   afastadosOuEmTransito: {
                     total: afastadosOuEmTransito,
-                    nota: "Servidores lotados nas unidades de passagem do cadastro ('Servidores Afastados - SF' ou 'Servidores em Trânsito - SF' — quem está afastado/cedido ou momentaneamente sem exercício em unidade); essas unidades não constam do organograma publicado, então não entram na contagem 'total' nem em 'naoClassificados'.",
+                    nota: "Servidores lotados em 'Servidores Afastados - SF' (fora do exercício no Senado: cedidos a outros órgãos, licenciados etc.) ou em 'Servidores em Trânsito - SF' (unidade de passagem: momentaneamente sem exercício em unidade, aguardando lotação); essas lotações de registro não constam do organograma, então não entram na contagem 'total' nem em 'naoClassificados'.",
                   },
                 }
               : {}),

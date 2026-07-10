@@ -420,10 +420,13 @@ export function casarLotacaoPorSufixoAncestral(
 }
 
 /**
- * Unidades de PASSAGEM do cadastro — "Servidores Afastados - SF", "Servidores em Trânsito -
- * SF". A lotação do servidor é essa mesma (é onde ele está lotado naquele instante); o que não
- * existe é um nó correspondente no organograma publicado pelo portal, então elas ficam fora de
- * qualquer casamento com a árvore e merecem rótulo próprio na resposta.
+ * Lotações de REGISTRO do cadastro, que não são órgãos do organograma: "Servidores em
+ * Trânsito - SF" é unidade de passagem (quem está momentaneamente sem exercício em unidade,
+ * aguardando lotação); "Servidores Afastados - SF" é o registro de quem está fora do exercício
+ * no Senado (cedido a outro órgão, licenciado etc.) — coisas distintas, nenhuma é "passagem"
+ * no caso dos afastados. A lotação do servidor é essa mesma; o que não existe é um nó
+ * correspondente na árvore publicada, então ficam fora de qualquer casamento e ganham rótulo
+ * próprio na resposta.
  */
 export function ehPseudoUnidadeSituacional(nome: string | null | undefined): boolean {
   return /^servidores\s+(afastados|em\s+tr[aâ]nsito)\b/i.test((nome ?? "").trim());
