@@ -1,13 +1,205 @@
 // GERADO por scripts/ingest-estrutura/index.ts — NÃO edite à mão.
 // Snapshot da árvore organizacional do Senado (portal institucional), até o nível de serviço.
-// Extraído em 2026-07-09T22:10:09.577Z. Rode `npm run ingest:estrutura` para atualizar.
+// Extraído em 2026-07-10T18:23:18.678Z. Rode `npm run ingest:estrutura` para atualizar.
 import type { EstruturaSnapshot } from "../estrutura/tipos.js";
 
 export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
-  "extraidoEm": "2026-07-09T22:10:09.577Z",
+  "extraidoEm": "2026-07-10T18:23:18.678Z",
   "fonteUrl": "https://www12.senado.leg.br/institucional/estrutura/orgaosenado",
-  "total": 789,
+  "total": 821,
   "orgaos": [
+    {
+      "cod": -2072346465,
+      "sigla": null,
+      "nome": "Escritório Setorial de Gestão da Conleg",
+      "codSuperior": 49
+    },
+    {
+      "cod": -2064230985,
+      "sigla": null,
+      "nome": "Núcleo de Setoriais Orçamentários da Área de Infraestrutura",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -2061985996,
+      "sigla": null,
+      "nome": "Núcleo de Direito dos Negócios",
+      "codSuperior": 49
+    },
+    {
+      "cod": -2026309172,
+      "sigla": null,
+      "nome": "Serviço de Gestão dos Sistemas Orçamentários",
+      "codSuperior": -496766141
+    },
+    {
+      "cod": -1985946632,
+      "sigla": null,
+      "nome": "Núcleo de Infraestrutura e Desenvolvimento",
+      "codSuperior": 49
+    },
+    {
+      "cod": -1983596623,
+      "sigla": null,
+      "nome": "Núcleo de Suporte Técnico-Legislativo",
+      "codSuperior": 49
+    },
+    {
+      "cod": -1947206177,
+      "sigla": null,
+      "nome": "Escritório Setorial de Gestão da Conorf",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -1866127248,
+      "sigla": null,
+      "nome": "Serviço de Apoio Gerencial",
+      "codSuperior": -1983596623
+    },
+    {
+      "cod": -1853156016,
+      "sigla": null,
+      "nome": "Núcleo de Direito do Estado",
+      "codSuperior": 49
+    },
+    {
+      "cod": -1594655485,
+      "sigla": null,
+      "nome": "Núcleo de Interesses Difusos e Coletivos",
+      "codSuperior": 49
+    },
+    {
+      "cod": -1570255667,
+      "sigla": null,
+      "nome": "Serviço de Assessoramento às Comissões e ao Plenário",
+      "codSuperior": -760963461
+    },
+    {
+      "cod": -1535157596,
+      "sigla": null,
+      "nome": "Gabinete Administrativo da Conorf",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -1441549054,
+      "sigla": null,
+      "nome": "Núcleo de Inovações Em Transparência e Processo Legislativo Orçamentário",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -1440628773,
+      "sigla": null,
+      "nome": "Núcleo de Coordenação de Projetos e Acompanhamento de Leis de Diretrizes Orçamentárias e de Planos Plurianuais",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -1268730471,
+      "sigla": null,
+      "nome": "Núcleo de Políticas Econômicas",
+      "codSuperior": 49
+    },
+    {
+      "cod": -1224627725,
+      "sigla": null,
+      "nome": "Serviço de Apoio à Comunicação e à Inovação",
+      "codSuperior": -760963461
+    },
+    {
+      "cod": -1208441720,
+      "sigla": null,
+      "nome": "Núcleo de Direitos Humanos e Segurança Pública",
+      "codSuperior": 49
+    },
+    {
+      "cod": -1054950258,
+      "sigla": null,
+      "nome": "Serviço de Pesquisa e Acompanhamento da Execução Orçamentária",
+      "codSuperior": -496766141
+    },
+    {
+      "cod": -897562922,
+      "sigla": null,
+      "nome": "Serviço de Apoio Técnico da Conleg",
+      "codSuperior": -1983596623
+    },
+    {
+      "cod": -860116733,
+      "sigla": null,
+      "nome": "Núcleo de Comunicação Política, História e Conhecimentos Gerais",
+      "codSuperior": 49
+    },
+    {
+      "cod": -815716443,
+      "sigla": null,
+      "nome": "Serviço de Apoio ao Processo Orçamentário",
+      "codSuperior": -496766141
+    },
+    {
+      "cod": -770256431,
+      "sigla": null,
+      "nome": "Conselho Técnico da Conleg",
+      "codSuperior": 49
+    },
+    {
+      "cod": -766883934,
+      "sigla": null,
+      "nome": "Núcleo de Coordenação de Projetos e Acompanhamento de Leis Orçamentárias Anuais",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -760963461,
+      "sigla": null,
+      "nome": "Núcleo de Acompanhamento Legislativo",
+      "codSuperior": 49
+    },
+    {
+      "cod": -658941994,
+      "sigla": null,
+      "nome": "Núcleo de Políticas Sociais",
+      "codSuperior": 49
+    },
+    {
+      "cod": -562121705,
+      "sigla": null,
+      "nome": "Núcleo de Setoriais Orçamentários da Área Social",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -550782056,
+      "sigla": null,
+      "nome": "Núcleo de Normas Orçamentário-Financeiras, Fiscalização e Pessoal",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -514364320,
+      "sigla": null,
+      "nome": "Núcleo de Receita Pública, Macroeconomia e Política Fiscal",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -496766141,
+      "sigla": null,
+      "nome": "Núcleo de Suporte Técnico, Gestão da Informação Orçamentária e Siga-Brasil",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -284288916,
+      "sigla": null,
+      "nome": "Núcleo de Setoriais Orçamentários das Áreas de Economia e de Poderes de Estado",
+      "codSuperior": 1340
+    },
+    {
+      "cod": -243810720,
+      "sigla": null,
+      "nome": "Núcleo de Estudos e Pesquisas da Consultoria Legislativa",
+      "codSuperior": 49
+    },
+    {
+      "cod": -177731816,
+      "sigla": null,
+      "nome": "Gabinete Administrativo da Conleg",
+      "codSuperior": 49
+    },
     {
       "cod": 49,
       "sigla": "CONLEG",

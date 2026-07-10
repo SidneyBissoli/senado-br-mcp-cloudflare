@@ -177,7 +177,7 @@ export function lotacaoReconhecida(
  * mantêm a semântica já validada em produção — use esta APENAS como fallback quando eles falham.
  */
 export interface CasamentoAproximado {
-  metodo: "sigla-extenso" | "prefixo";
+  metodo: "sigla-extenso" | "prefixo" | "sufixo-ancestral";
   orgaos: OrgaoNode[];
 }
 
@@ -201,14 +201,19 @@ export function casamentoPorTokens(lot: string[], no: string[]): number {
   return chars;
 }
 
-/** Melhores candidatos por prefixo de token (empatados na maior pontuação), com as guardas. */
-function melhoresPorPrefixo(indice: IndiceEstrutura, lotTokens: string[]): OrgaoNode[] {
+/**
+ * Melhores candidatos por prefixo de token (empatados na maior pontuação), com as guardas.
+ * `apenas` restringe a busca a um subconjunto de códigos (ex.: a subárvore de um ancestral) —
+ * a restrição precisa acontecer ANTES da pontuação, senão um candidato de fora "rouba" o topo.
+ */
+function melhoresPorPrefixo(indice: IndiceEstrutura, lotTokens: string[], apenas?: Set<number>): OrgaoNode[] {
   if (lotTokens.length < 2) return [];
   const juntado = lotTokens.join(" ");
   if (juntado.length < MIN_CHARS_TRUNCAMENTO) return [];
   let melhorPontuacao = 0;
   let melhores: OrgaoNode[] = [];
   for (const { orgao, tokens, nomeNormalizado } of indice.nosCasamento) {
+    if (apenas && !apenas.has(orgao.cod)) continue;
     const chars = casamentoPorTokens(lotTokens, tokens);
     if (!chars) continue;
     // Nomes curtos só casam como truncamento literal (prefixo de string do nome do nó).
@@ -226,10 +231,19 @@ function melhoresPorPrefixo(indice: IndiceEstrutura, lotTokens: string[]): Orgao
 }
 
 /**
+ * Abreviações INSTITUCIONAIS que o cadastro usa mas não são sigla de órgão da árvore —
+ * "Coordenação de Sessões e Colegiados do CN" ↔ "…do Congresso Nacional".
+ */
+const EXPANSOES_INSTITUCIONAIS = new Map<string, string[]>([
+  ["CN", ["congresso", "nacional"]],
+  ["SF", ["senado", "federal"]],
+]);
+
+/**
  * Substitui tokens que aparecem em CAIXA-ALTA no nome cru e são sigla conhecida pelo nome por
- * extenso do órgão correspondente. Retorna `null` se nada foi substituído (evita re-casamentos
- * idênticos). A exigência de caixa-alta no texto original evita expandir palavras comuns que
- * coincidam com alguma sigla.
+ * extenso do órgão correspondente (ou abreviação institucional pela sua expansão). Retorna
+ * `null` se nada foi substituído (evita re-casamentos idênticos). A exigência de caixa-alta no
+ * texto original evita expandir palavras comuns que coincidam com alguma sigla.
  */
 function expandirSiglasNoNome(indice: IndiceEstrutura, nomeCru: string, tokens: string[]): string[] | null {
   const palavrasCaixaAlta = new Set(
@@ -240,8 +254,12 @@ function expandirSiglasNoNome(indice: IndiceEstrutura, nomeCru: string, tokens: 
   for (const t of tokens) {
     const maiuscula = t.toUpperCase();
     const orgao = palavrasCaixaAlta.has(maiuscula) ? indice.porSigla.get(maiuscula) : undefined;
+    const institucional = palavrasCaixaAlta.has(maiuscula) ? EXPANSOES_INSTITUCIONAIS.get(maiuscula) : undefined;
     if (orgao) {
       out.push(...tokenizarNome(orgao.nome));
+      mudou = true;
+    } else if (institucional) {
+      out.push(...institucional);
       mudou = true;
     } else {
       out.push(t);
@@ -272,6 +290,86 @@ export function casarLotacaoAproximado(
     if (orgaos.length) return { metodo: "prefixo", orgaos };
   }
   return null;
+}
+
+/**
+ * Aliases sigla→órgão derivados do PRÓPRIO cadastro de servidores. O portal não publica sigla
+ * para vários nós (Diretorias-Executivas, coordenações profundas, nós sintéticos), mas o cadastro
+ * expõe o par `{ sigla, nome }` na lotação de quem trabalha DIRETAMENTE na unidade — ex.: alguém
+ * lotado em "Diretoria-Executiva de Gestão" carrega a sigla DIREG. Casa o nome com a árvore
+ * (exato; senão aproximado inequívoco) e associa a sigla ao nó. Siglas já conhecidas pela árvore
+ * e associações conflitantes (mesma sigla → nós diferentes) são descartadas — nunca chuta.
+ */
+export function aliasesDeSiglasDoCadastro(
+  indice: IndiceEstrutura,
+  lotacoes: Iterable<{ sigla?: string | null; nome?: string | null } | null | undefined>,
+): Map<string, OrgaoNode> {
+  const out = new Map<string, OrgaoNode>();
+  const conflitantes = new Set<string>();
+  const vistas = new Set<string>();
+  for (const lot of lotacoes) {
+    const sigla = (lot?.sigla ?? "").trim().toUpperCase();
+    const nome = (lot?.nome ?? "").trim();
+    if (!sigla || !nome || indice.porSigla.has(sigla)) continue;
+    const chave = `${sigla}|${nome}`;
+    if (vistas.has(chave)) continue;
+    vistas.add(chave);
+    let orgao: OrgaoNode | null = null;
+    const exatos = indice.porNomeNormalizado.get(normalizarNome(nome));
+    if (exatos?.length === 1) {
+      orgao = exatos[0];
+    } else if (!exatos?.length) {
+      const c = casarLotacaoAproximado(indice, lot);
+      if (c?.orgaos.length === 1) orgao = c.orgaos[0];
+    }
+    if (!orgao) continue;
+    const previo = out.get(sigla);
+    if (previo && previo.cod !== orgao.cod) conflitantes.add(sigla);
+    else out.set(sigla, orgao);
+  }
+  for (const s of conflitantes) out.delete(s);
+  return out;
+}
+
+/** Sufixo "d[a/e/o] SIGLA" no fim do nome CRU da lotação (sigla em caixa-alta, ≥2 chars). */
+const RE_SUFIXO_SIGLA = /\s+d[aeo]s?\s+([A-ZÀ-Ü][A-ZÀ-Ü0-9]+\.?)\s*$/;
+
+/**
+ * Camada sufixo-ancestral: o cadastro qualifica unidades de nome genérico com a sigla do órgão
+ * a que pertencem — "Assessoria Técnica da DIREG", "Coordenação-Geral da SCOM" — enquanto a
+ * árvore tem o nó batizado só com o nome genérico ("Assessoria Técnica", filho da
+ * Diretoria-Executiva de Gestão). O casamento por prefixo NÃO cobre isso por desenho (a lotação
+ * tem MAIS tokens que o nó). Aqui: destaca a sigla final, resolve-a num órgão (árvore ou
+ * `aliases` do cadastro), remove o sufixo e casa o resto — exato, senão por prefixo — APENAS
+ * dentro da subárvore desse órgão (é a desambiguação: há 10 "Assessoria Técnica" na árvore).
+ */
+export function casarLotacaoPorSufixoAncestral(
+  indice: IndiceEstrutura,
+  lotacao: { sigla?: string | null; nome?: string | null } | null | undefined,
+  aliases?: Map<string, OrgaoNode>,
+): CasamentoAproximado | null {
+  const nomeCru = (lotacao?.nome ?? "").trim();
+  const m = nomeCru.match(RE_SUFIXO_SIGLA);
+  if (!m) return null;
+  const sigla = m[1].replace(/\.$/, "").toUpperCase();
+  const ancestral = indice.porSigla.get(sigla) ?? aliases?.get(sigla);
+  if (!ancestral) return null;
+  const restoTokens = tokenizarNome(nomeCru.slice(0, m.index));
+  if (restoTokens.length < 2) return null; // nomes de 1 token são genéricos demais p/ esta camada
+  const dentro = new Set(subarvore(indice, ancestral.cod).map((o) => o.cod));
+  dentro.delete(ancestral.cod); // o alvo é uma unidade SOB o ancestral, não ele próprio
+  const exatos = (indice.porNomeNormalizado.get(restoTokens.join(" ")) ?? []).filter((o) => dentro.has(o.cod));
+  const orgaos = exatos.length ? exatos : melhoresPorPrefixo(indice, restoTokens, dentro);
+  return orgaos.length ? { metodo: "sufixo-ancestral", orgaos } : null;
+}
+
+/**
+ * Pseudo-unidades SITUACIONAIS do cadastro — "Servidores Afastados - SF", "Servidores em
+ * Trânsito - SF" — não são órgãos do organograma, e sim situações funcionais: a lotação real
+ * não é publicada. Ficam fora de qualquer casamento e merecem rótulo próprio na resposta.
+ */
+export function ehPseudoUnidadeSituacional(nome: string | null | undefined): boolean {
+  return /^servidores\s+(afastados|em\s+tr[aâ]nsito)\b/i.test((nome ?? "").trim());
 }
 
 /** Heurística: a lotação é de estrutura PARLAMENTAR (gabinete/liderança/escritório/bloco)? */

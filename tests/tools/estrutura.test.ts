@@ -11,6 +11,9 @@ import {
   lotacaoReconhecida,
   casamentoPorTokens,
   casarLotacaoAproximado,
+  casarLotacaoPorSufixoAncestral,
+  aliasesDeSiglasDoCadastro,
+  ehPseudoUnidadeSituacional,
   ehLotacaoParlamentar,
 } from "../../src/estrutura/resolver.js";
 import { ESTRUTURA_ORGANIZACIONAL } from "../../src/data/estrutura-organizacional.js";
@@ -165,6 +168,16 @@ describe("ehLotacaoParlamentar", () => {
   });
 });
 
+describe("ehPseudoUnidadeSituacional", () => {
+  it("reconhece as situações funcionais do cadastro e nada além delas", () => {
+    expect(ehPseudoUnidadeSituacional("Servidores Afastados - SF")).toBe(true);
+    expect(ehPseudoUnidadeSituacional("Servidores em Trânsito - SF")).toBe(true);
+    expect(ehPseudoUnidadeSituacional("Serviço de Apoio a Servidores Afastados")).toBe(false);
+    expect(ehPseudoUnidadeSituacional("Coordenação de Trânsito")).toBe(false);
+    expect(ehPseudoUnidadeSituacional(null)).toBe(false);
+  });
+});
+
 describe("particionarPorUnidade", () => {
   const indice = construirIndice(ARVORE);
   const servidores = [
@@ -177,19 +190,22 @@ describe("particionarPorUnidade", () => {
     parseServidor({ nome: "G", lotacao: { sigla: null, nome: "Serviço de Apoio à Comissão de" } }), // truncada AMBÍGUA (nós 9 fora e 10 dentro)
     parseServidor({ nome: "H", lotacao: { sigla: null, nome: "Serv. de Apoio à Com. de Educação" } }), // abreviada, resolvida FORA (SGM)
     parseServidor({ nome: "I", lotacao: { sigla: null, nome: "Gabinete da DGER" } }), // sigla no nome, sob DGER
+    parseServidor({ nome: "J", lotacao: { sigla: "NSASF", nome: "Servidores Afastados - SF" } }), // pseudo-unidade situacional
   ];
 
   it("conta a subárvore (piso) e isola os não classificados administrativos", () => {
-    const { sob, naoClassificados } = particionarPorUnidade(servidores, indice, 2);
+    const { sob, naoClassificados, afastadosOuEmTransito } = particionarPorUnidade(servidores, indice, 2);
     // A/B exatos; F recuperado por abreviação; I por sigla→extenso (mesmo com cara de 'gabinete').
     expect(sob.map((s) => s.nome).sort()).toEqual(["A", "B", "F", "I"]);
     // C exata fora e H aproximada fora → excluídas sem ruído; D parlamentar → ignorada;
-    // E (desconhecida) e G (ambígua entre dentro/fora) entram em naoClassificados.
+    // E (desconhecida) e G (ambígua entre dentro/fora) entram em naoClassificados;
+    // J (situação funcional, lotação real não publicada) ganha rótulo próprio.
     expect(naoClassificados.total).toBe(2);
     expect(naoClassificados.amostraUnidades.map((u) => u.nome).sort()).toEqual([
       "Serviço Desconhecido X",
       "Serviço de Apoio à Comissão de",
     ]);
+    expect(afastadosOuEmTransito).toBe(1);
   });
 });
 
@@ -235,6 +251,12 @@ describe("snapshot real da estrutura organizacional", () => {
     }
   });
 
+  it("expande abreviação institucional CN → Congresso Nacional (COSEC)", () => {
+    const c = casarLotacaoAproximado(indice, { nome: "Coordenação de Sessões e Colegiados do CN" });
+    expect(c?.metodo).toBe("sigla-extenso");
+    expect(c?.orgaos.map((o) => o.nome)).toEqual(["Coordenação de Sessões e Colegiados do Congresso Nacional"]);
+  });
+
   it("resolve 'Gabinete da DGER' para o Gabinete da Diretoria Geral (sob a DGER)", () => {
     const c = casarLotacaoAproximado(indice, { nome: "Gabinete da DGER" });
     expect(c?.metodo).toBe("sigla-extenso");
@@ -244,12 +266,75 @@ describe("snapshot real da estrutura organizacional", () => {
     expect(codsDger.has(c!.orgaos[0].cod)).toBe(true);
   });
 
-  it("não inventa casamento para os núcleos da CONLEG ausentes da árvore (problema 2)", () => {
-    // Estes DEVEM continuar não classificados até a árvore ser completada — não chutar.
+  it("núcleos da CONLEG/CONORF entraram na árvore como nós sintéticos, sob os pais certos (problema 2)", () => {
+    // O portal só os publica link-less nas páginas da CONLEG/CONORF; o crawler os materializa
+    // com cod negativo. Casamento agora é EXATO e a subárvore da consultoria os contém.
+    const conleg = resolverOrgao(indice, "CONLEG")!;
+    const conjunto = conjuntoCasamento(indice, conleg.cod);
     for (const nome of ["Núcleo de Políticas Econômicas", "Núcleo de Direito dos Negócios"]) {
-      const c = casarLotacaoAproximado(indice, { nome });
-      const nomes = c?.orgaos.map((o) => o.nome) ?? [];
-      expect(nomes.length === 0 || nomes.length > 1, `${nome} → ${nomes.join("; ")}`).toBe(true);
+      expect(lotacaoReconhecida(indice, { nome }), nome).toBe(true);
+      expect(lotacaoNoConjunto(conjunto, { nome }), nome).toBe(true);
     }
+    const conorf = resolverOrgao(indice, "CONORF")!;
+    const nomesConorf = subarvore(indice, conorf.cod).map((o) => o.nome);
+    expect(nomesConorf).toContain("Núcleo de Receita Pública, Macroeconomia e Política Fiscal");
+    // Neto (indentação 50px na página): serviço sob um núcleo sintético.
+    expect(nomesConorf).toContain("Serviço de Gestão dos Sistemas Orçamentários");
+  });
+
+  it("lotações truncadas do cadastro casam com os nós sintéticos (aproximado, inequívoco)", () => {
+    const conorf = resolverOrgao(indice, "CONORF")!;
+    const codsConorf = new Set(subarvore(indice, conorf.cod).map((o) => o.cod));
+    const c = casarLotacaoAproximado(indice, { nome: "Núcleo de Rec. Púb. Macroecon. e Política Fiscal" });
+    expect(c?.orgaos.map((o) => o.nome)).toEqual(["Núcleo de Receita Pública, Macroeconomia e Política Fiscal"]);
+    expect(codsConorf.has(c!.orgaos[0].cod)).toBe(true);
+  });
+
+  it("sufixo-ancestral: unidade genérica qualificada pela sigla do pai resolve dentro da subárvore certa", () => {
+    // "Assessoria Técnica" existe 10× na árvore; o sufixo desambigua. SGM/SCOM têm sigla na árvore.
+    const casos: Array<[string, string, string]> = [
+      ["Assessoria Técnico-Legislativa da SGM", "SGM", "Assessoria Técnico-Legislativa"],
+      ["Coordenação-Geral da SCOM", "SCOM", "Coordenação-Geral"],
+      ["Serviço de Reportagem da SRSF", "SRSF", "Serviço de Reportagem"],
+    ];
+    for (const [lotacao, siglaPai, esperado] of casos) {
+      const c = casarLotacaoPorSufixoAncestral(indice, { nome: lotacao });
+      expect(c?.metodo, lotacao).toBe("sufixo-ancestral");
+      expect(c?.orgaos.map((o) => o.nome), lotacao).toEqual([esperado]);
+      const pai = resolverOrgao(indice, siglaPai)!;
+      const cods = new Set(subarvore(indice, pai.cod).map((o) => o.cod));
+      expect(cods.has(c!.orgaos[0].cod), lotacao).toBe(true);
+    }
+  });
+
+  it("sufixo-ancestral com sigla que a árvore não tem usa aliases derivados do cadastro (DIREG)", () => {
+    // Sem alias, a sigla DIREG é desconhecida → null. Com o par {DIREG, Diretoria-Executiva de
+    // Gestão} visto no cadastro, "Assessoria Técnica da DIREG" resolve no nó certo (há 10 homônimas).
+    const lot = { sigla: "ATEC", nome: "Assessoria Técnica da DIREG" };
+    expect(casarLotacaoPorSufixoAncestral(indice, lot)).toBeNull();
+    const aliases = aliasesDeSiglasDoCadastro(indice, [
+      { sigla: "DIREG", nome: "Diretoria-Executiva de Gestão" },
+    ]);
+    expect(aliases.get("DIREG")?.nome).toBe("Diretoria-Executiva de Gestão");
+    const c = casarLotacaoPorSufixoAncestral(indice, lot, aliases);
+    expect(c?.orgaos).toHaveLength(1);
+    expect(c?.orgaos[0].nome).toBe("Assessoria Técnica");
+    expect(ancestrais(indice, c!.orgaos[0].cod).map((o) => o.nome)).toContain("Diretoria-Executiva de Gestão");
+  });
+
+  it("aliases do cadastro: resolve nome truncado, ignora sigla já conhecida e descarta conflito", () => {
+    const aliases = aliasesDeSiglasDoCadastro(indice, [
+      // Nome abreviado no cadastro → casa aproximado inequívoco com a Diretoria-Executiva.
+      { sigla: "DIRECON", nome: "Diretoria-Executiva de Gov. Contrat. e Licitatória" },
+      // Sigla que a árvore já tem: não vira alias.
+      { sigla: "SGM", nome: "Secretaria-Geral da Mesa" },
+      // Mesma sigla apontando para dois nós diferentes: descartada (não chuta).
+      { sigla: "XCONF", nome: "Diretoria-Executiva de Gestão" },
+      { sigla: "XCONF", nome: "Consultoria Legislativa" },
+      null,
+    ]);
+    expect(aliases.get("DIRECON")?.nome).toBe("Diretoria-Executiva de Governança Contratual e Licitatória");
+    expect(aliases.has("SGM")).toBe(false);
+    expect(aliases.has("XCONF")).toBe(false);
   });
 });

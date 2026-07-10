@@ -6,7 +6,9 @@
  * unidades-folha — serviços/núcleos/coordenações — ao seu superior). O portal institucional, ao
  * contrário, expõe a árvore COMPLETA até o nível de serviço: a página inicial embute os ~200 nós
  * de topo num `<input id="tree_orgaos">` (com sigla e caminho), e cada órgão tem uma página de
- * detalhe `orgaosenado?codorgao=N` que lista os filhos como links `codorgao=…`.
+ * detalhe `orgaosenado?codorgao=N` que lista os filhos como links `codorgao=…`. Algumas páginas
+ * (CONLEG, CONORF…) listam a subárvore SEM links, só por nome e indentação — esses filhos viram
+ * nós SINTÉTICOS (cod negativo determinístico), pois são a única publicação dessas unidades.
  *
  * Este crawler faz um BFS a partir da raiz, reconstrói a árvore inteira (cod, nome, superior),
  * retropreenche a sigla a partir do `tree_orgaos` (por código) e da tabela `/servidores/lotacoes`
@@ -112,15 +114,71 @@ function parseDetalhe(cod: number, html: string): { nome: string; filhos: Array<
   return { nome, filhos };
 }
 
-async function crawl(): Promise<{ nodes: Map<number, OrgaoNode>; falhas: number }> {
+/**
+ * Item da seção "Estrutura" de uma página de detalhe (`<li class="listaInstitucional">`).
+ * Algumas páginas (CONLEG cód 49, CONORF cód 1340…) listam a subárvore inteira aqui SEM links
+ * `codorgao=` — o item traz só o nome, e a hierarquia vem da indentação (`margin-left` em passos
+ * de 25px: 0 = o próprio órgão, 25 = filho, 50 = neto…). É a ÚNICA fonte pública desses nós.
+ */
+interface ItemEstrutura {
+  profundidade: number;
+  cod: number | null; // null = item sem link (candidato a nó sintético)
+  nome: string;
+}
+
+function parseItensEstrutura(html: string): ItemEstrutura[] {
+  const out: ItemEstrutura[] = [];
+  const re = /<li class="listaInstitucional"([^>]*)>([\s\S]*?)<\/li>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html))) {
+    const ml = m[1].match(/margin-left:\s*(\d+)px/);
+    const profundidade = ml ? Math.round(Number(ml[1]) / 25) : 0;
+    const codM = m[2].match(/codorgao=(\d+)/);
+    const nome = decodeEntities(m[2].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+    if (!nome) continue;
+    out.push({ profundidade, cod: codM ? Number(codM[1]) : null, nome });
+  }
+  return out;
+}
+
+/**
+ * Código DETERMINÍSTICO para um nó sintético (filho link-less): FNV-1a de `nome|codPai`,
+ * mapeado para a faixa NEGATIVA — nunca colide com os códigos reais do portal e não depende
+ * da ordem de visita do crawl (preserva a byte-estabilidade do snapshot entre execuções).
+ * Nunca vaza para o usuário (as tools expõem apenas sigla/nome).
+ */
+function codSintetico(nome: string, codPai: number): number {
+  const s = `${nome}|${codPai}`;
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return -(h % 0x7fffffff) - 1;
+}
+
+async function crawl(): Promise<{ nodes: Map<number, OrgaoNode>; falhas: number; sinteticos: number }> {
   const { siglaPorCod, seeds } = await lerTopoEmbutido();
   console.log(`topo embutido: ${seeds.length} nós semente (${siglaPorCod.size} com sigla)`);
 
   const nodes = new Map<number, OrgaoNode>();
-  for (const s of seeds) nodes.set(s.cod, { ...s });
+  // Índice incremental filho-por-nome-normalizado-sob-o-pai: evita duplicar como sintético um
+  // filho que a mesma página (ou outra rodada) já registrou com código real.
+  const filhoPorNome = new Map<number, Map<string, number>>();
+  const registrar = (n: OrgaoNode) => {
+    nodes.set(n.cod, n);
+    if (n.codSuperior != null) {
+      const m = filhoPorNome.get(n.codSuperior) ?? new Map<string, number>();
+      const nn = normalizarNome(n.nome);
+      if (nn && !m.has(nn)) m.set(nn, n.cod);
+      filhoPorNome.set(n.codSuperior, m);
+    }
+  };
+  for (const s of seeds) registrar({ ...s });
   let frontier = seeds.map((s) => s.cod);
   let round = 0;
   let falhas = 0;
+  let sinteticos = 0;
 
   while (frontier.length && nodes.size < MAX_NODES && round < MAX_ROUNDS) {
     round++;
@@ -144,15 +202,38 @@ async function crawl(): Promise<{ nodes: Map<number, OrgaoNode>; falhas: number 
         if (self && !self.nome && nome) self.nome = nome; // nome canônico do título
         for (const [c, txt] of filhos) {
           if (nodes.has(c)) continue; // BFS: 1ª descoberta = superior correto (mais raso)
-          nodes.set(c, { cod: c, sigla: siglaPorCod.get(c) ?? null, nome: txt, codSuperior: cod });
+          registrar({ cod: c, sigla: siglaPorCod.get(c) ?? null, nome: txt, codSuperior: cod });
           proximos.push(c);
+        }
+        // Filhos SEM link (`<li class="listaInstitucional">` sem codorgao): viram nós sintéticos
+        // com pai dado pela indentação. Itens COM link só entram na pilha de pais (a descoberta
+        // deles continua sendo a dos links acima — semântica original preservada).
+        const pilha: Array<{ profundidade: number; cod: number }> = [{ profundidade: 0, cod }];
+        for (const item of parseItensEstrutura(html)) {
+          if (item.profundidade === 0) continue; // o próprio órgão (título em negrito)
+          while (pilha.length > 1 && pilha[pilha.length - 1].profundidade >= item.profundidade) pilha.pop();
+          const codPai = pilha[pilha.length - 1].cod;
+          let codItem = item.cod;
+          if (codItem == null) {
+            const jaExiste = filhoPorNome.get(codPai)?.get(normalizarNome(item.nome));
+            if (jaExiste != null) {
+              codItem = jaExiste;
+            } else {
+              codItem = codSintetico(item.nome, codPai);
+              const ocupado = nodes.get(codItem);
+              if (ocupado) throw new Error(`colisão de cod sintético ${codItem}: "${ocupado.nome}" × "${item.nome}"`);
+              registrar({ cod: codItem, sigla: null, nome: item.nome, codSuperior: codPai });
+              sinteticos++;
+            }
+          }
+          pilha.push({ profundidade: item.profundidade, cod: codItem });
         }
       }
     }
     frontier = proximos;
     console.log(`round ${round}: total ${nodes.size}, novos ${proximos.length}, falhas acum. ${falhas}`);
   }
-  return { nodes, falhas };
+  return { nodes, falhas, sinteticos };
 }
 
 /** Retropreenche siglas ausentes casando o nome do nó com a tabela /servidores/lotacoes. */
@@ -205,7 +286,7 @@ async function main() {
   const anterior = await lerSnapshotAnterior(out);
   const force = process.env.INGEST_FORCE === "1";
 
-  const { nodes, falhas } = await crawl();
+  const { nodes, falhas, sinteticos } = await crawl();
   const preenchidas = await backfillSiglas(nodes);
   const orgaos = [...nodes.values()].sort((a, b) => a.cod - b.cod);
   const comSigla = orgaos.filter((o) => o.sigla).length;
@@ -247,7 +328,7 @@ async function main() {
   await writeFile(out, body, "utf8");
 
   console.log("─".repeat(60));
-  console.log(`órgãos: ${orgaos.length} (com sigla: ${comSigla}, retropreenchidas: ${preenchidas})`);
+  console.log(`órgãos: ${orgaos.length} (com sigla: ${comSigla}, retropreenchidas: ${preenchidas}, sintéticos: ${sinteticos})`);
   console.log(`falhas de fetch: ${falhas}`);
   console.log(inalterado ? "estrutura INALTERADA (arquivo idêntico — sem commit)" : "estrutura MUDOU (carimbo atualizado)");
   console.log(`escrito em ${out}`);

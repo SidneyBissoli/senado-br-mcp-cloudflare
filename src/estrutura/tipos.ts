@@ -11,7 +11,12 @@
 
 /** Um órgão da árvore: código interno, sigla (quando publicada), nome e código do superior. */
 export interface OrgaoNode {
-  /** Código interno do órgão no portal institucional (COD_ORGAO / `codorgao`). */
+  /**
+   * Código interno do órgão no portal institucional (COD_ORGAO / `codorgao`). NEGATIVO para nós
+   * SINTÉTICOS: unidades que o portal lista apenas por nome, sem página própria (ex.: núcleos da
+   * CONLEG/CONORF) — o crawler as materializa com código determinístico (hash de nome|codPai).
+   * Nunca exposto ao usuário (as tools devolvem só sigla/nome).
+   */
   cod: number;
   /** Sigla oficial (ex.: "DGER", "SEGRAF"). `null` quando o portal não a expõe (serviços/núcleos profundos). */
   sigla: string | null;

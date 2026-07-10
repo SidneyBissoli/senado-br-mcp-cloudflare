@@ -36,6 +36,9 @@ import {
   lotacaoNoConjunto,
   lotacaoReconhecida,
   casarLotacaoAproximado,
+  casarLotacaoPorSufixoAncestral,
+  aliasesDeSiglasDoCadastro,
+  ehPseudoUnidadeSituacional,
   ehLotacaoParlamentar,
   subarvore,
   ESTRUTURA_VINTAGE,
@@ -325,7 +328,11 @@ export function estatisticasHorasExtras(
  * `sob` = servidores cuja lotação casa com algum órgão da subárvore — pelo casamento EXATO
  * (sigla ou nome, semântica original) ou, em fallback, pelo APROXIMADO (sigla→extenso e prefixo
  * por token, p/ nomes truncados/abreviados do cadastro) quando ele é inequívoco (todos os
- * candidatos dentro da subárvore). `naoClassificados` = servidores cuja lotação NÃO casou com
+ * candidatos dentro da subárvore) ou pelo SUFIXO-ANCESTRAL (lotações de nome genérico
+ * qualificadas com a sigla do órgão-pai, ex.: "Assessoria Técnica da DIREG" — as siglas que a
+ * árvore não tem vêm de aliases derivados do próprio cadastro). `afastadosOuEmTransito` =
+ * pseudo-unidades situacionais do cadastro ("Servidores Afastados/em Trânsito - SF"), cuja
+ * lotação real não é publicada. `naoClassificados` = servidores cuja lotação NÃO casou com
  * nó algum (ou casou ambíguo — candidatos dentro E fora) E não é estrutura parlamentar
  * (gabinete/liderança/escritório) — podem ou não pertencer à unidade, então o total "sob" é um
  * piso. As lotações reconhecidas fora da subárvore e as parlamentares ficam fora sem virar ruído.
@@ -337,19 +344,25 @@ export function particionarPorUnidade(
 ) {
   const conjunto = conjuntoCasamento(indice, codUnidade);
   const codsSubarvore = new Set(subarvore(indice, codUnidade).map((o) => o.cod));
-  // O casamento aproximado varre a árvore inteira → memoiza por lotação (poucas distintas p/ ~7k servidores).
+  // Siglas que a árvore não publica (Diretorias-Executivas, nós sintéticos) vêm do próprio cadastro.
+  const aliases = aliasesDeSiglasDoCadastro(
+    indice,
+    lista.map((s) => s.lotacao as { sigla?: string | null; nome?: string | null } | null),
+  );
+  // Os casamentos aproximados varrem a árvore → memoiza por lotação (poucas distintas p/ ~7k servidores).
   const cacheAproximado = new Map<string, CasamentoAproximado | null>();
   const aproximado = (lot: { sigla?: string | null; nome?: string | null } | null) => {
     const chave = lot?.nome ?? "";
     let c = cacheAproximado.get(chave);
     if (c === undefined) {
-      c = casarLotacaoAproximado(indice, lot);
+      c = casarLotacaoAproximado(indice, lot) ?? casarLotacaoPorSufixoAncestral(indice, lot, aliases);
       cacheAproximado.set(chave, c);
     }
     return c;
   };
   const sob: typeof lista = [];
   const porUnidade = new Map<string, number>();
+  let afastadosOuEmTransito = 0;
   for (const s of lista) {
     const lot = s.lotacao as { sigla?: string | null; nome?: string | null } | null;
     if (lotacaoNoConjunto(conjunto, lot)) { sob.push(s); continue; } // exato, dentro
@@ -361,6 +374,7 @@ export function particionarPorUnidade(
       if (dentro === 0) continue; // aproximado inequívoco, fora
       // ambíguo (candidatos dentro E fora): cai no não-classificado — não chutar.
     }
+    if (ehPseudoUnidadeSituacional(lot?.nome)) { afastadosOuEmTransito++; continue; }
     if (ehLotacaoParlamentar(lot?.nome)) continue;
     const nm = (lot?.nome || "(sem lotação)").trim();
     porUnidade.set(nm, (porUnidade.get(nm) || 0) + 1);
@@ -370,14 +384,18 @@ export function particionarPorUnidade(
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
     .map(([nome, quantidade]) => ({ nome, quantidade }));
-  return { sob, naoClassificados: { total: naoClassificadosTotal, amostraUnidades } };
+  return {
+    sob,
+    naoClassificados: { total: naoClassificadosTotal, amostraUnidades },
+    afastadosOuEmTransito,
+  };
 }
 
 export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
   // P1. senado_servidores
   server.tool(
     "senado_servidores",
-    "Lista servidores do Senado por `situacao` (ativos, efetivos, comissionados ou inativos), com filtros opcionais por `nome`, `lotacao` e `cargo`. Retorna `{ situacao, count, total, servidores[] }`, cada item com `nome`, `vinculo`, `situacao`, `cargo`, `funcao`, `lotacao`, `anoAdmissao` etc. Aplica `limite` (padrão 50, máx 500) e inclui `aviso` quando há truncamento — refine os filtros. **`subordinadasA`** (sigla ou nome de uma unidade, ex.: 'DGER') conta e lista TODOS os servidores de TODA a estrutura subordinada àquela unidade (não só a lotação direta): cruza a lotação de cada servidor com o organograma até o nível de serviço e devolve `{ subordinadasA, total (piso), servidores[], naoClassificados }` — use isto para 'quantas pessoas estão sob a Diretoria-Geral', pois filtrar `lotacao` pela sigla-mãe retorna 0 (os servidores ficam em serviços/núcleos subordinados). Para o organograma em si use `senado_estrutura_organizacional`; para remuneração use `senado_remuneracoes_servidores`.",
+    "Lista servidores do Senado por `situacao` (ativos, efetivos, comissionados ou inativos), com filtros opcionais por `nome`, `lotacao` e `cargo`. Retorna `{ situacao, count, total, servidores[] }`, cada item com `nome`, `vinculo`, `situacao`, `cargo`, `funcao`, `lotacao`, `anoAdmissao` etc. Aplica `limite` (padrão 50, máx 500) e inclui `aviso` quando há truncamento — refine os filtros. **`subordinadasA`** (sigla ou nome de uma unidade, ex.: 'DGER') conta e lista TODOS os servidores de TODA a estrutura subordinada àquela unidade (não só a lotação direta): cruza a lotação de cada servidor com o organograma até o nível de serviço e devolve `{ subordinadasA, total (piso), servidores[], naoClassificados }` (mais `afastadosOuEmTransito` quando o cadastro registra servidores nessas situações funcionais) — use isto para 'quantas pessoas estão sob a Diretoria-Geral', pois filtrar `lotacao` pela sigla-mãe retorna 0 (os servidores ficam em serviços/núcleos subordinados). Para o organograma em si use `senado_estrutura_organizacional`; para remuneração use `senado_remuneracoes_servidores`.",
     {
       situacao: z.enum(["ativos", "efetivos", "comissionados", "inativos"]).optional().default("ativos").describe("Qual lista consultar (padrão: ativos)"),
       nome: z.string().optional().describe("Nome do servidor (busca parcial)"),
@@ -416,7 +434,7 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
               : "";
             return toolError(`Unidade '${params.subordinadasA}' não encontrada na estrutura organizacional.${dica}`);
           }
-          const { sob, naoClassificados } = particionarPorUnidade(lista, indice, alvo.cod);
+          const { sob, naoClassificados, afastadosOuEmTransito } = particionarPorUnidade(lista, indice, alvo.cod);
           // A classificação cruza a folha (fonte administrativa) com o organograma (fonte institucional).
           const provComEstrutura = withFieldSources(prov, [
             {
@@ -438,6 +456,14 @@ export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
               nota: `Servidores em unidades administrativas cujo nome não foi reconhecido no organograma publicado (estrutura de ${ESTRUTURA_VINTAGE.slice(0, 10)}); podem ou não pertencer a esta unidade e NÃO entram na contagem 'total', que é portanto um piso.`,
               amostraUnidades: naoClassificados.amostraUnidades,
             },
+            ...(afastadosOuEmTransito > 0
+              ? {
+                  afastadosOuEmTransito: {
+                    total: afastadosOuEmTransito,
+                    nota: "Servidores que o cadastro registra nas situações funcionais 'Servidores Afastados - SF' ou 'Servidores em Trânsito - SF' (a lotação real não é publicada); não entram na contagem 'total' nem em 'naoClassificados'.",
+                  },
+                }
+              : {}),
           }, provComEstrutura);
         }
 
