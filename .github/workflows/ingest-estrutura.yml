@@ -34,6 +34,12 @@ name: Ingest — Estrutura Organizacional
 # A estrutura administrativa muda raramente (reforma anunciada), então mensal basta. O snapshot é
 # byte-estável: quando a árvore não mudou o arquivo sai idêntico (o carimbo `extraidoEm` só bump em
 # mudança real), o passo de diff não acha nada e o job termina sem commit/deploy.
+#
+# ── SECRET DE DEPLOY ────────────────────────────────────────────────────────────────────────────────
+# O passo de deploy usa `secrets.CLOUDFLARE_DEPLOY_TOKEN` — token DEDICADO desta pipeline, criado com o
+# template "Edit Cloudflare Workers" da Cloudflare (separado do token D1 do e-Cidadania, que fica
+# intocado). Requer também `vars.CLOUDFLARE_ACCOUNT_ID`. Para publicar na mão a qualquer momento, dispare
+# o workflow com `force_deploy=true` (redeploya o código atual, idempotente).
 
 on:
   schedule:
@@ -46,6 +52,10 @@ on:
         default: true
       force:
         description: "Ignorar a guarda anti-catástrofe (reescreve mesmo com encolhimento grande)"
+        type: boolean
+        default: false
+      force_deploy:
+        description: "Deployar o Worker AGORA, mesmo sem mudança (testar o token / publicar na mão)"
         type: boolean
         default: false
 
@@ -61,8 +71,8 @@ jobs:
     runs-on: [self-hosted, senado-estrutura]
     timeout-minutes: 30
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      # Só o passo de deploy fala com a Cloudflare (o crawler é git-only). As credenciais ficam
+      # no passo de deploy, com o token DEDICADO desta pipeline — o token do e-Cidadania fica intocado.
       INGEST_FORCE: ${{ inputs.force && '1' || '0' }}
     steps:
       - name: Checkout
@@ -110,9 +120,13 @@ jobs:
           git commit -m "chore(estrutura): atualiza snapshot da árvore organizacional"
           git push
 
-      # Deploy do Worker para o novo snapshot entrar no ar. Requer que o secret CLOUDFLARE_API_TOKEN
-      # tenha permissão "Workers Scripts:Edit" (o token D1-only das ingestões e-Cidadania NÃO deploya).
-      # Pule com deploy=false no dispatch manual (ou faça `npm run deploy` à mão depois do commit).
+      # Deploy do Worker para o novo snapshot entrar no ar. Usa o token DEDICADO desta pipeline
+      # (secret CLOUDFLARE_DEPLOY_TOKEN, criado com o template "Edit Cloudflare Workers"), separado
+      # do token do e-Cidadania. Roda quando o snapshot muda (schedule, ou dispatch com deploy=true)
+      # OU quando force_deploy=true no dispatch (publicar/testar na mão, mesmo sem mudança — idempotente).
       - name: Deploy do Worker
-        if: steps.diff.outputs.changed == 'true' && (github.event_name == 'schedule' || inputs.deploy)
+        if: ${{ inputs.force_deploy || (steps.diff.outputs.changed == 'true' && (github.event_name == 'schedule' || inputs.deploy)) }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy
