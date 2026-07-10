@@ -11,8 +11,15 @@
  */
 
 import { ESTRUTURA_ORGANIZACIONAL } from "../data/estrutura-organizacional.js";
-import { normalizarNome } from "./normalizar.js";
+import { normalizarNome, tokenizarNome } from "./normalizar.js";
 import type { OrgaoNode } from "./tipos.js";
+
+/** Nó preparado para o casamento aproximado (tokens e nome normalizado pré-computados). */
+export interface NoCasamento {
+  orgao: OrgaoNode;
+  tokens: string[];
+  nomeNormalizado: string;
+}
 
 export interface IndiceEstrutura {
   orgaos: OrgaoNode[];
@@ -20,6 +27,7 @@ export interface IndiceEstrutura {
   filhosPorCod: Map<number, number[]>;
   porSigla: Map<string, OrgaoNode>;
   porNomeNormalizado: Map<string, OrgaoNode[]>;
+  nosCasamento: NoCasamento[];
 }
 
 /** Conjunto de casamento de uma subárvore: nomes normalizados + siglas (maiúsculas). */
@@ -34,14 +42,17 @@ export function construirIndice(orgaos: OrgaoNode[] = ESTRUTURA_ORGANIZACIONAL.o
   const filhosPorCod = new Map<number, number[]>();
   const porSigla = new Map<string, OrgaoNode>();
   const porNomeNormalizado = new Map<string, OrgaoNode[]>();
+  const nosCasamento: NoCasamento[] = [];
   for (const o of orgaos) {
     porCod.set(o.cod, o);
     if (o.sigla) porSigla.set(o.sigla.toUpperCase(), o);
-    const nn = normalizarNome(o.nome);
+    const tokens = tokenizarNome(o.nome);
+    const nn = tokens.join(" ");
     if (nn) {
       const arr = porNomeNormalizado.get(nn) ?? [];
       arr.push(o);
       porNomeNormalizado.set(nn, arr);
+      nosCasamento.push({ orgao: o, tokens, nomeNormalizado: nn });
     }
   }
   for (const o of orgaos) {
@@ -51,7 +62,7 @@ export function construirIndice(orgaos: OrgaoNode[] = ESTRUTURA_ORGANIZACIONAL.o
       filhosPorCod.set(o.codSuperior, arr);
     }
   }
-  return { orgaos, porCod, filhosPorCod, porSigla, porNomeNormalizado };
+  return { orgaos, porCod, filhosPorCod, porSigla, porNomeNormalizado, nosCasamento };
 }
 
 /**
@@ -147,6 +158,120 @@ export function lotacaoReconhecida(
   if (sigla && indice.porSigla.has(sigla)) return true;
   const nn = normalizarNome(lotacao.nome);
   return nn ? indice.porNomeNormalizado.has(nn) : false;
+}
+
+/**
+ * Casamento APROXIMADO de lotação — camadas para além do exato (sigla/nome), na ordem:
+ *
+ * 1. **sigla→extenso**: o cadastro às vezes embute uma sigla no nome ("Gabinete da DGER");
+ *    tokens em CAIXA-ALTA no nome cru que sejam sigla conhecida são substituídos pelo nome
+ *    por extenso do órgão e o resultado é casado EXATO ("gabinete diretoria geral").
+ * 2. **prefixo por token**: o cadastro trunca (largura fixa) e abreia o nome da lotação
+ *    ("Coord. de Projetos e Obras de Infraestrutura", "Núcleo de Quali. e Padron. de Proc.…");
+ *    cada token da lotação deve ser igual ou prefixo (≥2 chars) do token correspondente do nó,
+ *    podendo a lotação terminar antes (truncamento). Guardas de especificidade evitam casar
+ *    nomes genéricos; empate de pontuação devolve TODOS os candidatos (o chamador decide se a
+ *    ambiguidade importa — ex.: todos dentro da mesma subárvore ainda é resposta inequívoca).
+ *
+ * Camada nova e separada dos casadores exatos (`lotacaoNoConjunto`/`lotacaoReconhecida`), que
+ * mantêm a semântica já validada em produção — use esta APENAS como fallback quando eles falham.
+ */
+export interface CasamentoAproximado {
+  metodo: "sigla-extenso" | "prefixo";
+  orgaos: OrgaoNode[];
+}
+
+/** Especificidade mínima (chars do nome normalizado) p/ casar por prefixo com abreviações. */
+const MIN_CHARS_PREFIXO = 14;
+/** Especificidade mínima quando a lotação é prefixo LITERAL do nome do nó (truncamento puro). */
+const MIN_CHARS_TRUNCAMENTO = 10;
+
+/**
+ * Casa tokens da lotação contra tokens do nó, posição a posição: cada token deve ser igual ou
+ * prefixo (≥2 chars) do correspondente; a lotação pode ter menos tokens (nome truncado).
+ * Retorna a soma de caracteres casados (0 = não casa) — a pontuação do candidato.
+ */
+export function casamentoPorTokens(lot: string[], no: string[]): number {
+  if (!lot.length || lot.length > no.length) return 0;
+  let chars = 0;
+  for (let i = 0; i < lot.length; i++) {
+    if (lot[i] !== no[i] && !(lot[i].length >= 2 && no[i].startsWith(lot[i]))) return 0;
+    chars += lot[i].length;
+  }
+  return chars;
+}
+
+/** Melhores candidatos por prefixo de token (empatados na maior pontuação), com as guardas. */
+function melhoresPorPrefixo(indice: IndiceEstrutura, lotTokens: string[]): OrgaoNode[] {
+  if (lotTokens.length < 2) return [];
+  const juntado = lotTokens.join(" ");
+  if (juntado.length < MIN_CHARS_TRUNCAMENTO) return [];
+  let melhorPontuacao = 0;
+  let melhores: OrgaoNode[] = [];
+  for (const { orgao, tokens, nomeNormalizado } of indice.nosCasamento) {
+    const chars = casamentoPorTokens(lotTokens, tokens);
+    if (!chars) continue;
+    // Nomes curtos só casam como truncamento literal (prefixo de string do nome do nó).
+    if (juntado.length < MIN_CHARS_PREFIXO && !nomeNormalizado.startsWith(juntado)) continue;
+    // Cobrir todos os tokens do nó desempata sobre casar só o começo de um nome mais longo.
+    const pontuacao = chars * 2 + (lotTokens.length === tokens.length ? 1 : 0);
+    if (pontuacao > melhorPontuacao) {
+      melhorPontuacao = pontuacao;
+      melhores = [orgao];
+    } else if (pontuacao === melhorPontuacao) {
+      melhores.push(orgao);
+    }
+  }
+  return melhores;
+}
+
+/**
+ * Substitui tokens que aparecem em CAIXA-ALTA no nome cru e são sigla conhecida pelo nome por
+ * extenso do órgão correspondente. Retorna `null` se nada foi substituído (evita re-casamentos
+ * idênticos). A exigência de caixa-alta no texto original evita expandir palavras comuns que
+ * coincidam com alguma sigla.
+ */
+function expandirSiglasNoNome(indice: IndiceEstrutura, nomeCru: string, tokens: string[]): string[] | null {
+  const palavrasCaixaAlta = new Set(
+    (nomeCru.match(/\b[A-ZÀ-Ü][A-ZÀ-Ü0-9]{1,}\b/g) ?? []).map((p) => p.toUpperCase()),
+  );
+  let mudou = false;
+  const out: string[] = [];
+  for (const t of tokens) {
+    const maiuscula = t.toUpperCase();
+    const orgao = palavrasCaixaAlta.has(maiuscula) ? indice.porSigla.get(maiuscula) : undefined;
+    if (orgao) {
+      out.push(...tokenizarNome(orgao.nome));
+      mudou = true;
+    } else {
+      out.push(t);
+    }
+  }
+  return mudou ? out : null;
+}
+
+/**
+ * Tenta casar uma lotação NÃO reconhecida pelos casadores exatos: sigla→extenso exato, depois
+ * prefixo por token (nome original e, se houve expansão de sigla, o expandido). Retorna os
+ * candidatos empatados (`orgaos.length === 1` = casamento inequívoco) ou `null`.
+ */
+export function casarLotacaoAproximado(
+  indice: IndiceEstrutura,
+  lotacao: { sigla?: string | null; nome?: string | null } | null | undefined,
+): CasamentoAproximado | null {
+  const nomeCru = lotacao?.nome ?? "";
+  const tokens = tokenizarNome(nomeCru);
+  if (!tokens.length) return null;
+  const expandidos = expandirSiglasNoNome(indice, nomeCru, tokens);
+  if (expandidos) {
+    const exatos = indice.porNomeNormalizado.get(expandidos.join(" "));
+    if (exatos?.length) return { metodo: "sigla-extenso", orgaos: exatos };
+  }
+  for (const candidato of expandidos ? [tokens, expandidos] : [tokens]) {
+    const orgaos = melhoresPorPrefixo(indice, candidato);
+    if (orgaos.length) return { metodo: "prefixo", orgaos };
+  }
+  return null;
 }
 
 /** Heurística: a lotação é de estrutura PARLAMENTAR (gabinete/liderança/escritório/bloco)? */

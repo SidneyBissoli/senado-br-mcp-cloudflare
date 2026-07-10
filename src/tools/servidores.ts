@@ -35,8 +35,11 @@ import {
   conjuntoCasamento,
   lotacaoNoConjunto,
   lotacaoReconhecida,
+  casarLotacaoAproximado,
   ehLotacaoParlamentar,
+  subarvore,
   ESTRUTURA_VINTAGE,
+  type CasamentoAproximado,
 } from "../estrutura/resolver.js";
 import { withFieldSources } from "../utils/provenance.js";
 
@@ -319,10 +322,13 @@ export function estatisticasHorasExtras(
 
 /**
  * Particiona a lista de servidores contra a subárvore de uma unidade da estrutura organizacional.
- * `sob` = servidores cuja lotação casa (por sigla ou nome) com algum órgão da subárvore. `naoClassificados`
- * = servidores cuja lotação NÃO é reconhecida em nenhum nó da árvore E não é estrutura parlamentar
- * (gabinete/liderança/escritório) — podem ou não pertencer à unidade, então o total "sob" é um piso.
- * As lotações parlamentares reconhecidamente fora ficam simplesmente fora de `sob` sem virar ruído.
+ * `sob` = servidores cuja lotação casa com algum órgão da subárvore — pelo casamento EXATO
+ * (sigla ou nome, semântica original) ou, em fallback, pelo APROXIMADO (sigla→extenso e prefixo
+ * por token, p/ nomes truncados/abreviados do cadastro) quando ele é inequívoco (todos os
+ * candidatos dentro da subárvore). `naoClassificados` = servidores cuja lotação NÃO casou com
+ * nó algum (ou casou ambíguo — candidatos dentro E fora) E não é estrutura parlamentar
+ * (gabinete/liderança/escritório) — podem ou não pertencer à unidade, então o total "sob" é um
+ * piso. As lotações reconhecidas fora da subárvore e as parlamentares ficam fora sem virar ruído.
  */
 export function particionarPorUnidade(
   lista: ReturnType<typeof parseServidor>[],
@@ -330,11 +336,32 @@ export function particionarPorUnidade(
   codUnidade: number,
 ) {
   const conjunto = conjuntoCasamento(indice, codUnidade);
-  const sob = lista.filter((s) => lotacaoNoConjunto(conjunto, s.lotacao as { sigla?: string | null; nome?: string | null } | null));
+  const codsSubarvore = new Set(subarvore(indice, codUnidade).map((o) => o.cod));
+  // O casamento aproximado varre a árvore inteira → memoiza por lotação (poucas distintas p/ ~7k servidores).
+  const cacheAproximado = new Map<string, CasamentoAproximado | null>();
+  const aproximado = (lot: { sigla?: string | null; nome?: string | null } | null) => {
+    const chave = lot?.nome ?? "";
+    let c = cacheAproximado.get(chave);
+    if (c === undefined) {
+      c = casarLotacaoAproximado(indice, lot);
+      cacheAproximado.set(chave, c);
+    }
+    return c;
+  };
+  const sob: typeof lista = [];
   const porUnidade = new Map<string, number>();
   for (const s of lista) {
     const lot = s.lotacao as { sigla?: string | null; nome?: string | null } | null;
-    if (lotacaoReconhecida(indice, lot) || ehLotacaoParlamentar(lot?.nome)) continue;
+    if (lotacaoNoConjunto(conjunto, lot)) { sob.push(s); continue; } // exato, dentro
+    if (lotacaoReconhecida(indice, lot)) continue; // exato, fora
+    const casamento = aproximado(lot);
+    if (casamento) {
+      const dentro = casamento.orgaos.filter((o) => codsSubarvore.has(o.cod)).length;
+      if (dentro === casamento.orgaos.length) { sob.push(s); continue; } // aproximado inequívoco, dentro
+      if (dentro === 0) continue; // aproximado inequívoco, fora
+      // ambíguo (candidatos dentro E fora): cai no não-classificado — não chutar.
+    }
+    if (ehLotacaoParlamentar(lot?.nome)) continue;
     const nm = (lot?.nome || "(sem lotação)").trim();
     porUnidade.set(nm, (porUnidade.get(nm) || 0) + 1);
   }

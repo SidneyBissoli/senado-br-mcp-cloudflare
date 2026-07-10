@@ -12,18 +12,25 @@
 const STOPWORDS = new Set(["da", "de", "do", "dos", "das", "e", "a", "o", "as", "os"]);
 
 /**
- * Reduz um nome de órgão à sua forma canônica de casamento: NFD sem diacríticos, minúsculo,
- * pontuação → espaço, remoção de stopwords e colapso de espaços. Retorna "" para entrada vazia.
+ * Tokens canônicos de um nome de órgão: NFD sem diacríticos, minúsculo, pontuação → espaço,
+ * sem stopwords. É a matéria-prima do casamento token a token (nomes abreviados/truncados);
+ * `normalizarNome` é o join destes tokens. Retorna [] para entrada vazia.
  */
-export function normalizarNome(nome: string | null | undefined): string {
-  if (!nome) return "";
+export function tokenizarNome(nome: string | null | undefined): string[] {
+  if (!nome) return [];
   return nome
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // remove diacríticos (marcas combinantes)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ") // pontuação/símbolos → espaço
     .split(" ")
-    .filter((w) => w && !STOPWORDS.has(w))
-    .join(" ")
-    .trim();
+    .filter((w) => w && !STOPWORDS.has(w));
+}
+
+/**
+ * Reduz um nome de órgão à sua forma canônica de casamento: NFD sem diacríticos, minúsculo,
+ * pontuação → espaço, remoção de stopwords e colapso de espaços. Retorna "" para entrada vazia.
+ */
+export function normalizarNome(nome: string | null | undefined): string {
+  return tokenizarNome(nome).join(" ");
 }
