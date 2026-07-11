@@ -25,6 +25,8 @@ const EXPECTED_TOOLS = [
   "senado_ecidadania_obter_consulta",
   "senado_ecidadania_obter_ideia",
   "senado_encontro_plenario",
+  "senado_estrutura_organizacional",
+  "senado_servidores",
   "senado_listar_comissoes",
   "senado_listar_senadores",
   "senado_notas_taquigraficas",
