@@ -49,12 +49,12 @@ Endpoint MCP curado para submissao como ChatGPT App:
 https://senado.sidneybissoli.com/mcp/openai-app-v2
 ```
 
-O endpoint de app expoe uma allowlist de 25 ferramentas de alto sinal. `/mcp/openai-app` permanece como
+O endpoint de app expoe uma allowlist de 27 ferramentas de alto sinal. `/mcp/openai-app` permanece como
 alias legado, mas o endpoint recomendado para cadastro/revisao no ChatGPT e `/mcp/openai-app-v2`, para
 forcar clientes a recarregarem o schema atual. As ferramentas chamam os mesmos handlers do servidor
 completo e retornam o mesmo contrato de proveniencia; apenas a superficie anunciada ao cliente fica menor.
 
-As 25 ferramentas tambem anunciam um template UI compartilhado via `_meta.ui.resourceUri` e
+As 27 ferramentas tambem anunciam um template UI compartilhado via `_meta.ui.resourceUri` e
 `_meta["openai/outputTemplate"]`:
 
 ```text

@@ -52,13 +52,13 @@ https://senado.sidneybissoli.com/mcp/openai-app-v2
 ```
 
 This endpoint intentionally keeps the full public MCP server intact at `/mcp`, but limits tool discovery
-to 25 high-signal, intent-oriented tools for ChatGPT app use. `/mcp/openai-app` remains available as a
+to 27 high-signal, intent-oriented tools for ChatGPT app use. `/mcp/openai-app` remains available as a
 legacy alias, but new ChatGPT app configurations should use `/mcp/openai-app-v2` so clients fetch the
 current tool schema. The tools still call the same handlers and return the same provenance envelope; only
 the advertised surface is narrower. Any ChatGPT app listing should present this as an independent open-data
 research app, not as an official Senate, OpenAI or ChatGPT connector.
 
-For ChatGPT Apps, those 25 tools also advertise a shared MCP Apps UI template at
+For ChatGPT Apps, those 27 tools also advertise a shared MCP Apps UI template at
 `ui://senado-br-mcp/openai-app-dashboard-v2.html`. The self-contained widget renders the returned
 `structuredContent` as a compact dashboard with metrics, main records, and source/provenance, without
 adding another model-visible data tool.
@@ -137,7 +137,7 @@ Claude Code auto-discovers it when you work in this repo. To use it elsewhere, c
 
 - **Runtime:** Cloudflare Workers (ESM)
 - **Transport:** Streamable HTTP (MCP spec 2025-03-26) via `createMcpHandler` from `agents/mcp`
-- **Protocol:** MCP over JSON-RPC — `/mcp` handles the full public server; `/mcp/openai-app-v2` exposes a curated 25-tool profile plus a shared MCP Apps widget for OpenAI app review/submission (`/mcp/openai-app` remains as a legacy alias)
+- **Protocol:** MCP over JSON-RPC — `/mcp` handles the full public server; `/mcp/openai-app-v2` exposes a curated 27-tool profile plus a shared MCP Apps widget for OpenAI app review/submission (`/mcp/openai-app` remains as a legacy alias)
 - **SDK:** `@modelcontextprotocol/sdk` 1.26.0+ (per-request McpServer instances)
 - **Validation:** Zod schemas for all tool inputs
 - **Caching:** 2-layer (L0 memory + L1 Cache API) with SHA-256 keying

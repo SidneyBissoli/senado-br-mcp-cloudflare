@@ -23,7 +23,7 @@ foi submetido ou aprovado.
 | --- | --- |
 | Endpoint MCP remoto HTTPS | Implementado: `https://senado.sidneybissoli.com/mcp`. |
 | Endpoint curado para ChatGPT App | Implementado: `https://senado.sidneybissoli.com/mcp/openai-app-v2` (`/mcp/openai-app` permanece como alias legado). |
-| Superficie revisavel | Implementado: 25 tools de alto sinal no perfil OpenAI; endpoint completo preservado. |
+| Superficie revisavel | Implementado: 27 tools de alto sinal no perfil OpenAI; endpoint completo preservado. |
 | Instructions no handshake MCP | Implementado em `SERVER_INSTRUCTIONS` e `OPENAI_APP_SERVER_INSTRUCTIONS`. |
 | Metadados de tools | Implementado: tools read-only, non-destructive, idempotent, open-world, com template UI compartilhado. |
 | Widget MCP Apps / Apps SDK | Implementado: recurso `ui://senado-br-mcp/openai-app-dashboard-v2.html`, MIME `text/html;profile=mcp-app`, CSP sem dominios externos, dominio dedicado e bridge ChatGPT/MCP Apps. |

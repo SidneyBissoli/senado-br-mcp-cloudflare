@@ -65,7 +65,7 @@ describe("createServer", () => {
     const tools = (server as any)._registeredTools;
     const names = Object.keys(tools);
 
-    expect(OPENAI_APP_TOOL_ALLOWLIST.size).toBe(25);
+    expect(OPENAI_APP_TOOL_ALLOWLIST.size).toBe(27);
     expect(names.length).toBe(OPENAI_APP_TOOL_ALLOWLIST.size);
     for (const name of OPENAI_APP_TOOL_ALLOWLIST) {
       expect(names, `OpenAI app tool ${name} não registrado`).toContain(name);

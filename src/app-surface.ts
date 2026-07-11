@@ -64,6 +64,8 @@ export const OPENAI_APP_TOOL_ALLOWLIST = new Set([
   "senado_ceaps",
   "senado_contratos",
   "senado_contratacao_detalhe",
+  "senado_servidores",
+  "senado_estrutura_organizacional",
 ]);
 
 export function instructionsForProfile(profile: SenadoToolProfile): string {
