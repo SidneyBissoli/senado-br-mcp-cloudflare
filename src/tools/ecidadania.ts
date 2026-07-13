@@ -15,7 +15,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { toolError } from "../utils/validation.js";
 import { provenanceEcidadania, provenanceArquimedesVotos, resultWithProvenance } from "../utils/provenance.js";
-import { tagUntrustedFields, tagUntrustedList, neutralizeUntrustedText } from "../utils/untrusted.js";
+import { tagUntrustedFields, tagUntrustedList, neutralizeUntrustedText, sanitizeScrapedText } from "../utils/untrusted.js";
 import { logger } from "../utils/logger.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 import type { Env } from "../types.js";
@@ -419,9 +419,9 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           if (polarizacao >= 20 && polarizacao <= 40) motivo = "Tema com divisão moderada de opiniões, ideal para debate";
           else if (polarizacao > 40 && polarizacao <= 70) motivo = "Tema com tendência clara mas ainda com debate significativo";
           sugestoes.push({
-            tipo: "consulta", id: c.id, titulo: neutralizeUntrustedText(c.ementa.substring(0, 200)), motivo,
+            tipo: "consulta", id: c.id, titulo: sanitizeScrapedText(c.ementa.substring(0, 200)), motivo,
             metricas: { participacao: c.totalVotos, polarizacao: 100 - polarizacao },
-            materiaRelacionada: c.materia ? neutralizeUntrustedText(c.materia) : undefined, url: c.url,
+            materiaRelacionada: c.materia ? sanitizeScrapedText(c.materia) : undefined, url: c.url,
           });
         }
 
