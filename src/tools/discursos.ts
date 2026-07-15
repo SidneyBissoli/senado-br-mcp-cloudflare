@@ -15,6 +15,35 @@ import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
 import { USER_AGENT } from "../version.js";
 
+/**
+ * Aviso anexado quando `tipo=discursos` é chamado sem período. O upstream
+ * `/senador/{cod}/discursos` limita a resposta aos últimos 30 dias quando
+ * `dataInicio`/`dataFim` são omitidos (documentado no próprio Metadados:
+ * "Se não informar o período, serão retornados os discursos dos últimos
+ * 30 dias") — o que costuma vir vazio e induzir a conclusão errada de que
+ * o senador não discursou. `apartes` não tem essa janela (traz o histórico).
+ */
+export const DISCURSOS_SEM_PERIODO_AVISO =
+  "Sem dataInicio/dataFim, a fonte retorna apenas os discursos dos últimos 30 dias — " +
+  "esta lista NÃO é o histórico completo do senador. Para consultar o histórico, informe " +
+  "o período explícito (YYYYMMDD), por exemplo desde o início do mandato.";
+
+/**
+ * Monta o payload de `senado_discursos_senador`, anexando `aviso` quando
+ * `tipo=discursos` foi consultado sem período (janela upstream de 30 dias —
+ * ver DISCURSOS_SEM_PERIODO_AVISO).
+ */
+export function buildDiscursosSenadorResult(
+  codigoSenador: number,
+  tipo: string,
+  discursos: any[],
+  temPeriodo: boolean,
+) {
+  const payload: Record<string, unknown> = { codigoSenador, tipo, count: discursos.length, discursos };
+  if (tipo === "discursos" && !temPeriodo) payload.aviso = DISCURSOS_SEM_PERIODO_AVISO;
+  return payload;
+}
+
 /** Parse a speech summary from the senator or plenary speeches endpoint. */
 export function parseDiscursoResumo(d: any) {
   const pronunciamento = d.Pronunciamento || d;
@@ -56,13 +85,13 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
   // I1. senado_discursos_senador (tipo: discursos | apartes)
   server.tool(
     "senado_discursos_senador",
-    "Lista pronunciamentos de um senador, filtráveis por período e casa. `tipo` (padrão `discursos`) alterna entre `discursos` (falas próprias) e `apartes` (intervenções em falas de outros) — muda a fonte upstream e o conteúdo, mantendo a mesma estrutura. Retorna `{ codigoSenador, tipo, count, discursos }` sem paginação (`count` 0 e lista vazia quando não há pronunciamentos no período), cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `indexacao`, `url` e `nomeParlamentar` — sem o texto integral. Sem `dataInicio`/`dataFim` traz todo o histórico do senador. Obtenha o `codigoSenador` via `senado_listar_senadores` e o texto completo em `senado_discurso_texto` (campo `codigo`). Para discursos de todos os senadores num período use `senado_discursos_plenario`, não esta.",
+    "Lista pronunciamentos de um senador, filtráveis por período e casa. `tipo` (padrão `discursos`) alterna entre `discursos` (falas próprias) e `apartes` (intervenções em falas de outros) — muda a fonte upstream e o conteúdo, mantendo a mesma estrutura. Retorna `{ codigoSenador, tipo, count, discursos }` sem paginação (`count` 0 e lista vazia quando não há pronunciamentos no período), cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `indexacao`, `url` e `nomeParlamentar` — sem o texto integral. ATENÇÃO: para `tipo=discursos`, omitir `dataInicio`/`dataFim` faz a fonte retornar SOMENTE os últimos 30 dias (frequentemente vazio) — para o histórico, informe o período explícito (ex.: desde o início do mandato); apenas `apartes` traz o histórico completo sem período. Obtenha o `codigoSenador` via `senado_listar_senadores` e o texto completo em `senado_discurso_texto` (campo `codigo`). Para discursos de todos os senadores num período use `senado_discursos_plenario`, não esta.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
       tipo: z.enum(["discursos", "apartes"]).optional().default("discursos").describe("discursos = pronunciamentos próprios (padrão); apartes = intervenções em discursos de outros — altera a fonte e o conteúdo retornado"),
       casa: z.string().optional().describe("Restringe à casa: SF (Senado Federal) ou CN (Congresso Nacional); vazio traz ambas"),
-      dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Início do período (YYYYMMDD); use junto com dataFim"),
-      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Fim do período (YYYYMMDD); omitir dataInicio/dataFim traz todo o histórico"),
+      dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Início do período (YYYYMMDD); use junto com dataFim. Para tipo=discursos, sem período a fonte retorna só os últimos 30 dias"),
+      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Fim do período (YYYYMMDD); para tipo=discursos, omitir o período limita a resposta aos últimos 30 dias"),
     },
     async (params) => {
       try {
@@ -100,7 +129,10 @@ export function registerDiscursosTools(server: McpServer, baseUrl: string) {
           retrieved_at: fetchedAt,
         });
         return resultWithProvenance(
-          { codigoSenador: params.codigoSenador, tipo, count: discursos.length, discursos },
+          buildDiscursosSenadorResult(
+            params.codigoSenador, tipo, discursos,
+            Boolean(params.dataInicio || params.dataFim),
+          ),
           prov,
         );
       } catch (e) {

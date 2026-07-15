@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseDiscursoResumo, parseDiscursoPlenario } from "../../src/tools/discursos.js";
+import {
+  parseDiscursoResumo,
+  parseDiscursoPlenario,
+  buildDiscursosSenadorResult,
+  DISCURSOS_SEM_PERIODO_AVISO,
+} from "../../src/tools/discursos.js";
 import { ensureArray } from "../../src/utils/validation.js";
 import { digArrayRoot } from "../../src/utils/upstream-parse.js";
 
@@ -84,6 +89,34 @@ describe("discursos_senador nomeParlamentar (BUG-025)", () => {
       .map((d) => ({ ...d, nomeParlamentar: d.nomeParlamentar ?? nome }));
     expect(discursos).toHaveLength(2);
     expect(discursos.every((d) => d.nomeParlamentar === "Paulo Paim")).toBe(true);
+  });
+});
+
+describe("buildDiscursosSenadorResult (achado #8)", () => {
+  // O upstream /senador/{cod}/discursos limita a resposta aos últimos 30 dias
+  // quando o período é omitido; o aviso evita a conclusão errada de "senador
+  // sem discursos". Apartes não têm essa janela.
+  it("anexa aviso para tipo=discursos sem período", () => {
+    const r = buildDiscursosSenadorResult(581, "discursos", [], false);
+    expect(r.aviso).toBe(DISCURSOS_SEM_PERIODO_AVISO);
+    expect(r.count).toBe(0);
+  });
+
+  it("anexa aviso mesmo com resultados (a lista não é o histórico)", () => {
+    const r = buildDiscursosSenadorResult(581, "discursos", [{ codigo: "1" }], false);
+    expect(r.aviso).toBe(DISCURSOS_SEM_PERIODO_AVISO);
+    expect(r.count).toBe(1);
+  });
+
+  it("não anexa aviso quando o período foi informado", () => {
+    const r = buildDiscursosSenadorResult(581, "discursos", [], true);
+    expect(r.aviso).toBeUndefined();
+  });
+
+  it("não anexa aviso para tipo=apartes (upstream traz o histórico completo)", () => {
+    const r = buildDiscursosSenadorResult(581, "apartes", [], false);
+    expect(r.aviso).toBeUndefined();
+    expect(r.tipo).toBe("apartes");
   });
 });
 
