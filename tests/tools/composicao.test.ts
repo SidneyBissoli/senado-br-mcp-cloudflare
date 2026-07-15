@@ -132,6 +132,52 @@ describe("parseBlocoResumo — real nested Membro.Partido (BUG-012)", () => {
   });
 });
 
+describe("blocos dataDesligamento (achado #11)", () => {
+  // O upstream publica DataDesligamento por partido; sem expor o campo, membros
+  // históricos (PT no BLPRD até 17/02/2025) parecem composição vigente e o mesmo
+  // partido "aparece em 2 blocos ao mesmo tempo" (P42).
+  it("lista: expõe dataDesligamento e preserva membro histórico distinto do atual", () => {
+    const b = {
+      Bloco: {
+        CodigoBloco: "335",
+        NomeBloco: "Bloco Parlamentar da Resistência Democrática",
+        DataCriacao: "2023-02-01",
+        Membros: {
+          Membro: [
+            { Partido: { SiglaPartido: "PSB" }, DataAdesao: "2023-02-01" },
+            { Partido: { SiglaPartido: "PT" }, DataAdesao: "2023-02-01", DataDesligamento: "2025-02-17" },
+            { Partido: { SiglaPartido: "REDE" }, DataAdesao: "2023-02-01", DataDesligamento: "2023-02-01" },
+            { Partido: { SiglaPartido: "REDE" }, DataAdesao: "2023-04-25", DataDesligamento: "2024-01-30" },
+          ],
+        },
+      },
+    };
+    const r = parseBlocoResumo(b);
+    expect(r.partidos).toHaveLength(4);
+    expect(r.partidos[0].dataDesligamento).toBeNull(); // PSB segue no bloco
+    expect(r.partidos[1].dataDesligamento).toBe("2025-02-17"); // PT saiu
+    const atuais = r.partidos.filter((p: any) => p.dataDesligamento === null);
+    expect(atuais.map((p: any) => p.sigla)).toEqual(["PSB"]);
+  });
+
+  it("detalhe: converte dataDesligamento DD/MM/AAAA para ISO", () => {
+    const bloco = {
+      id: "335",
+      nomeBloco: "Bloco Parlamentar da Resistência Democrática",
+      dataCriacao: "01/02/2023",
+      composicaoBloco: {
+        composicao_bloco: [
+          { partido: { siglaPartido: "PSB" }, dataAdesao: "01/02/2023" },
+          { partido: { siglaPartido: "PT" }, dataAdesao: "01/02/2023", dataDesligamento: "17/02/2025" },
+        ],
+      },
+    };
+    const r = parseBlocoDetalhe(bloco);
+    expect(r.partidos[0].dataDesligamento).toBeNull();
+    expect(r.partidos[1].dataDesligamento).toBe("2025-02-17");
+  });
+});
+
 describe("parseBlocoDetalhe — real detail shape (BUG-013)", () => {
   it("parses the lowercase blocos.bloco detail with DD/MM dates and composicao_bloco", () => {
     const bloco = {

@@ -32,10 +32,13 @@ export function parseBlocoResumo(b: any) {
     nomeApelido: bloco.NomeApelido || bloco.nomeApelido || null,
     dataCriacao: bloco.DataCriacao || bloco.dataCriacao || null,
     dataExtincao: bloco.DataExtincao || bloco.dataExtincao || null,
+    // DataDesligamento distingue membro histórico de atual — sem ela, partidos que já
+    // saíram (ex.: PT no BLPRD até 17/02/2025) parecem estar em 2 blocos ao mesmo tempo.
     partidos: ensureArray(bloco.Membros?.Membro ?? bloco.membros).map((m: any) => ({
       sigla: m.Partido?.SiglaPartido || m.SiglaPartido || m.siglaPartido || null,
       nome: m.Partido?.NomePartido || m.NomePartido || m.nomePartido || null,
       dataAdesao: m.DataAdesao || m.dataAdesao || null,
+      dataDesligamento: m.DataDesligamento || m.dataDesligamento || null,
     })),
   };
 }
@@ -55,6 +58,7 @@ export function parseBlocoDetalhe(bloco: any) {
       sigla: c.partido?.siglaPartido || null,
       nome: c.partido?.nomePartido || null,
       dataAdesao: brDateToISO(c.dataAdesao),
+      dataDesligamento: brDateToISO(c.dataDesligamento),
     })),
   };
 }
@@ -107,7 +111,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
   // J1. senado_listar_blocos
   server.tool(
     "senado_listar_blocos",
-    "Lista todos os blocos parlamentares do Senado e seus partidos membros. Retorna `{ count, blocos }`, onde cada bloco traz `codigo`, `nome`, `nomeApelido`, `dataCriacao`, `dataExtincao` e a lista `partidos` (cada um com `sigla`, `nome`, `dataAdesao`). Use para descobrir o `codigo` de um bloco e depois detalhá-lo via `senado_obter_bloco`; para lideranças use `senado_liderancas`.",
+    "Lista todos os blocos parlamentares do Senado e seus partidos membros. Retorna `{ count, blocos }`, onde cada bloco traz `codigo`, `nome`, `nomeApelido`, `dataCriacao`, `dataExtincao` e a lista `partidos` (cada um com `sigla`, `nome`, `dataAdesao`, `dataDesligamento`). A lista inclui a composição HISTÓRICA de cada bloco: partido com `dataDesligamento` preenchida já saiu (a composição atual são os com `dataDesligamento` null) e o mesmo partido pode repetir com períodos de adesão distintos — sem esse filtro um partido parece estar em 2 blocos ao mesmo tempo. Use para descobrir o `codigo` de um bloco e depois detalhá-lo via `senado_obter_bloco`; para lideranças use `senado_liderancas`.",
     {},
     async () => {
       try {
@@ -135,7 +139,7 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
   // J2. senado_obter_bloco
   server.tool(
     "senado_obter_bloco",
-    "Obtém detalhes de um bloco parlamentar específico pelo seu código. Retorna um objeto com `codigo`, `nome`, `nomeApelido`, `dataCriacao`, `dataExtincao` e `partidos` (array com `sigla`, `nome`, `dataAdesao`); `dataExtincao` é `null` para blocos vigentes. Obtenha o parâmetro `codigo` primeiro via `senado_listar_blocos`; código inexistente retorna erro (\"Bloco parlamentar não encontrado\").",
+    "Obtém detalhes de um bloco parlamentar específico pelo seu código. Retorna um objeto com `codigo`, `nome`, `nomeApelido`, `dataCriacao`, `dataExtincao` e `partidos` (array com `sigla`, `nome`, `dataAdesao`, `dataDesligamento`); `dataExtincao` é `null` para blocos vigentes. `partidos` é a composição HISTÓRICA: quem tem `dataDesligamento` preenchida já saiu do bloco (composição atual = `dataDesligamento` null). Obtenha o parâmetro `codigo` primeiro via `senado_listar_blocos`; código inexistente retorna erro (\"Bloco parlamentar não encontrado\").",
     {
       codigo: z.number().int().positive().describe("Código do bloco parlamentar"),
     },
