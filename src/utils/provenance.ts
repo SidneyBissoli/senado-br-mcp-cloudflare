@@ -49,13 +49,54 @@
 
 import { z } from "zod";
 
+/**
+ * FUSO DO `retrieved_at` (prompt-tests P34/P39/P42–P45): timestamps em UTC ("Z") faziam
+ * respostas noturnas citarem a data do dia seguinte ("extraído em 15/07" no dia 14). Todo
+ * `retrieved_at` emitido é normalizado no ponto único `buildProvenance` para o horário de
+ * Brasília com offset explícito (-03:00 — fixo, o Brasil não adota horário de verão desde
+ * 2019), preservando o INSTANTE (a fidelidade ao momento real da extração não muda; só a
+ * representação). O rodapé humano diz "(horário de Brasília)" por extenso. O fuso do IP do
+ * requisitante NÃO serve aqui: em conectores MCP remotos o IP visto é o do backend do
+ * provedor de IA (Anthropic/OpenAI, tipicamente EUA), não o da pessoa.
+ */
+const BRASILIA_UTC_OFFSET_MS = 3 * 3_600_000;
+const BRASILIA_OFFSET = "-03:00";
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Converte um instante para ISO-8601 no fuso de Brasília (ex.: "2026-07-14T21:23:45-03:00").
+ * Datas puras (sem hora) e strings não-parseáveis passam inalteradas — nunca corrompe um
+ * vintage "2026-06-28" nem inventa horário onde não há.
+ */
+export function toBrasiliaIso(value: string | Date): string {
+  if (typeof value === "string" && DATE_ONLY_RE.test(value)) return value;
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const wall = new Date(d.getTime() - BRASILIA_UTC_OFFSET_MS).toISOString();
+  return wall.replace(/\.\d{3}Z$/, BRASILIA_OFFSET);
+}
+
+/**
+ * Versão humana do `retrieved_at` (já normalizado p/ Brasília) para o rodapé de fonte:
+ * "14/07/2026 às 21:23 (horário de Brasília)"; datas puras viram "14/07/2026". Strings fora
+ * do padrão passam inalteradas.
+ */
+export function humanizeRetrievedAt(value: string): string {
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!m) return value;
+  const [, y, mo, d, hh, mm] = m;
+  return hh !== undefined
+    ? `${d}/${mo}/${y} às ${hh}:${mm} (horário de Brasília)`
+    : `${d}/${mo}/${y}`;
+}
+
 /** Sub-fonte por campo (guia §1.4 — granularidade nível-campo p/ respostas multi-fonte). */
 export const FieldSourceSchema = z.object({
   fields: z.array(z.string().min(1)).min(1).describe("Campos do payload atribuídos a esta sub-fonte"),
   source_url: z.string().min(1).describe("URL canônica da sub-fonte que originou estes campos"),
   dataset_id: z.string().optional().describe("Identificador do conjunto da sub-fonte"),
   reference_period: z.string().optional().describe("Vintage/competência da sub-fonte"),
-  retrieved_at: z.string().optional().describe("ISO-8601 da extração desta sub-fonte no upstream"),
+  retrieved_at: z.string().optional().describe("ISO-8601 (horário de Brasília, -03:00) da extração desta sub-fonte no upstream"),
 });
 
 export type FieldSource = z.infer<typeof FieldSourceSchema>;
@@ -66,7 +107,7 @@ export const ProvenanceSchema = z.object({
   source_url: z.string().min(1).describe("URL canônica do endpoint/fonte oficial consultado"),
   dataset_id: z.string().optional().describe("Identificador do conjunto (código da matéria, da sessão, série, tabela)"),
   reference_period: z.string().optional().describe('Vintage/competência do dado (ex.: "2024", "2024-03-15")'),
-  retrieved_at: z.string().min(1).describe("ISO-8601 do momento da extração no upstream (não do build/deploy)"),
+  retrieved_at: z.string().min(1).describe("ISO-8601 no horário de Brasília (-03:00) do momento da extração no upstream (não do build/deploy)"),
   citation: z.string().min(1).describe("String de citação pronta para uso (texto humano)"),
   license: z.string().optional().describe("Licença/termos da fonte"),
   api_version: z.string().optional().describe("Versão do endpoint upstream, se exposta"),
@@ -146,9 +187,13 @@ export function buildProvenance(input: {
   api_version?: string;
   field_sources?: FieldSource[];
 }): Provenance {
+  const field_sources = input.field_sources?.map((fs) =>
+    fs.retrieved_at ? { ...fs, retrieved_at: toBrasiliaIso(fs.retrieved_at) } : fs,
+  );
   return ProvenanceSchema.parse({
     ...input,
-    retrieved_at: input.retrieved_at ?? new Date().toISOString(),
+    ...(field_sources ? { field_sources } : {}),
+    retrieved_at: toBrasiliaIso(input.retrieved_at ?? new Date()),
   });
 }
 
@@ -237,12 +282,17 @@ export function provenanceArquimedesVotos(extra?: {
  */
 export function withFieldSources(prov: Provenance, fieldSources: FieldSource[]): Provenance {
   if (fieldSources.length === 0) return prov;
-  return { ...prov, field_sources: fieldSources.map((fs) => FieldSourceSchema.parse(fs)) };
+  return {
+    ...prov,
+    field_sources: fieldSources.map((fs) =>
+      FieldSourceSchema.parse(fs.retrieved_at ? { ...fs, retrieved_at: toBrasiliaIso(fs.retrieved_at) } : fs),
+    ),
+  };
 }
 
 /** Linha de fonte compacta (Opção 1) anexada ao texto para clientes que só renderizam texto. */
 export function provenanceFooter(p: Provenance): string {
-  const parts = [`Fonte: ${p.source}`, p.source_url, `extraído em ${p.retrieved_at}`];
+  const parts = [`Fonte: ${p.source}`, p.source_url, `extraído em ${humanizeRetrievedAt(p.retrieved_at)}`];
   if (p.reference_period) parts.push(`competência ${p.reference_period}`);
   return `---\n${parts.join(" · ")}`;
 }

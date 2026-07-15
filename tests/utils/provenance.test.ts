@@ -10,6 +10,8 @@ import {
   provenanceFooter,
   withFieldSources,
   resultWithProvenance,
+  toBrasiliaIso,
+  humanizeRetrievedAt,
   PROVENANCE_META_KEY,
   ATTRIBUTION_META_KEY,
 } from "../../src/utils/provenance.js";
@@ -71,24 +73,74 @@ describe("FieldSourceSchema", () => {
 });
 
 describe("buildProvenance", () => {
-  it("defaults retrieved_at to an ISO-8601 timestamp", () => {
+  it("defaults retrieved_at to an ISO-8601 timestamp in Brasília time", () => {
     const p = buildProvenance({ source: "s", source_url: "u", citation: "a" });
     expect(p.retrieved_at).toMatch(ISO_RE);
+    expect(p.retrieved_at).toMatch(/-03:00$/);
   });
 
-  it("preserves an explicit retrieved_at (the cache-fidelity seam)", () => {
+  it("preserves the INSTANT of an explicit retrieved_at, re-expressed in Brasília time (P34/P39/P42-P45)", () => {
     const p = buildProvenance({
       source: "s",
       source_url: "u",
       citation: "a",
       retrieved_at: "2020-01-01T00:00:00.000Z",
     });
-    expect(p.retrieved_at).toBe("2020-01-01T00:00:00.000Z");
+    // Mesmo instante: meia-noite UTC = 21h do dia anterior em Brasília.
+    expect(p.retrieved_at).toBe("2019-12-31T21:00:00-03:00");
+    expect(new Date(p.retrieved_at).getTime()).toBe(new Date("2020-01-01T00:00:00.000Z").getTime());
+  });
+
+  it("is idempotent for a retrieved_at already in Brasília time", () => {
+    const p = buildProvenance({
+      source: "s",
+      source_url: "u",
+      citation: "a",
+      retrieved_at: "2026-07-14T21:23:45-03:00",
+    });
+    expect(p.retrieved_at).toBe("2026-07-14T21:23:45-03:00");
+  });
+
+  it("leaves date-only vintages and unparseable strings untouched", () => {
+    const dateOnly = buildProvenance({ source: "s", source_url: "u", citation: "a", retrieved_at: "2026-06-28" });
+    expect(dateOnly.retrieved_at).toBe("2026-06-28");
+    const weird = buildProvenance({ source: "s", source_url: "u", citation: "a", retrieved_at: "vintage-x" });
+    expect(weird.retrieved_at).toBe("vintage-x");
+  });
+
+  it("normalizes field_sources retrieved_at to Brasília time too", () => {
+    const p = buildProvenance({
+      source: "s",
+      source_url: "u",
+      citation: "a",
+      field_sources: [{ fields: ["ementa"], source_url: "u2", retrieved_at: "2026-01-01T01:00:00.000Z" }],
+    });
+    expect(p.field_sources?.[0].retrieved_at).toBe("2025-12-31T22:00:00-03:00");
   });
 
   it("throws on an invalid envelope (missing citation)", () => {
     // @ts-expect-error intentionally incomplete
     expect(() => buildProvenance({ source: "s", source_url: "u" })).toThrow();
+  });
+});
+
+describe("toBrasiliaIso / humanizeRetrievedAt", () => {
+  it("converts a UTC instant to explicit -03:00 wall time", () => {
+    expect(toBrasiliaIso("2026-07-15T00:23:45.123Z")).toBe("2026-07-14T21:23:45-03:00");
+  });
+
+  it("humanizes a Brasília timestamp with the explicit label", () => {
+    expect(humanizeRetrievedAt("2026-07-14T21:23:45-03:00")).toBe(
+      "14/07/2026 às 21:23 (horário de Brasília)",
+    );
+  });
+
+  it("humanizes a date-only vintage without inventing a time", () => {
+    expect(humanizeRetrievedAt("2026-06-28")).toBe("28/06/2026");
+  });
+
+  it("passes through strings outside the pattern", () => {
+    expect(humanizeRetrievedAt("vintage-x")).toBe("vintage-x");
   });
 });
 
@@ -144,7 +196,7 @@ describe("provenanceEcidadania", () => {
     const url = "https://www12.senado.leg.br/ecidadania/visualizacaomateria?id=42";
     const p = provenanceEcidadania(url, { dataset_id: "consulta=42", retrieved_at: "2026-01-02T03:04:05.000Z" });
     expect(p.source_url).toBe(url);
-    expect(p.retrieved_at).toBe("2026-01-02T03:04:05.000Z");
+    expect(p.retrieved_at).toBe("2026-01-02T00:04:05-03:00");
   });
 });
 
@@ -179,7 +231,8 @@ describe("provenanceFooter", () => {
     );
     expect(footer).toContain("Fonte: Senado Federal");
     expect(footer).toContain("https://x/votacao");
-    expect(footer).toContain("extraído em 2026-06-22T12:00:00.000Z");
+    // 12:00 UTC = 09:00 em Brasília, humanizado com o rótulo explícito do fuso.
+    expect(footer).toContain("extraído em 22/06/2026 às 09:00 (horário de Brasília)");
     expect(footer).toContain("competência 2024");
   });
 });
