@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseContrato, parseTerceirizado, matchesFiltro, matchesFiltroCampo, podarLicitacao } from "../../src/tools/contratacoes.js";
+import { parseContrato, parseTerceirizado, matchesFiltro, matchesFiltroCampo, podarLicitacao, ordenarEPaginar } from "../../src/tools/contratacoes.js";
 
 describe("podarLicitacao (OBS-20)", () => {
   it("drops the circular parent licitacao from each detalhamento", () => {
@@ -124,5 +124,28 @@ describe("matchesFiltroCampo (BUG-004/035)", () => {
     expect(matchesFiltroCampo("SINFRA", "sinfra")).toBe(true);
     expect(matchesFiltroCampo(null, "x")).toBe(false);
     expect(matchesFiltroCampo({ outro: "SEGRAF" }, "SEGRAF")).toBe(false);
+  });
+});
+
+describe("ordenarEPaginar (achado #2 / P63)", () => {
+  // Upstream lists come id-ascending (oldest first); desc must put the most recent first.
+  const lista = [1, 2, 3, 4, 5];
+
+  it("desc reverses so the most recent (last upstream) come first", () => {
+    expect(ordenarEPaginar(lista, "desc", 0, 3)).toEqual([5, 4, 3]);
+  });
+
+  it("asc preserves the upstream order", () => {
+    expect(ordenarEPaginar(lista, "asc", 0, 3)).toEqual([1, 2, 3]);
+  });
+
+  it("offset paginates after ordering, in both directions", () => {
+    expect(ordenarEPaginar(lista, "desc", 2, 2)).toEqual([3, 2]);
+    expect(ordenarEPaginar(lista, "asc", 3, 10)).toEqual([4, 5]);
+  });
+
+  it("offset beyond the list yields empty; input is not mutated", () => {
+    expect(ordenarEPaginar(lista, "desc", 99, 5)).toEqual([]);
+    expect(lista).toEqual([1, 2, 3, 4, 5]);
   });
 });

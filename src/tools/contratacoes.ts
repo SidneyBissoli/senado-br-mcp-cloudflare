@@ -85,6 +85,15 @@ export function matchesFiltroCampo(value: unknown, filtro: string): boolean {
   return false;
 }
 
+/**
+ * Order and paginate an in-Worker list. The upstream returns items by id ascending
+ * (oldest first); `desc` reverses so the most recent come first — the dominant use case.
+ */
+export function ordenarEPaginar<T>(lista: T[], ordem: "asc" | "desc", offset: number, limite: number): T[] {
+  const ordenada = ordem === "desc" ? [...lista].reverse() : lista;
+  return ordenada.slice(offset, offset + limite);
+}
+
 export function registerContratacoesTools(server: McpServer, admBaseUrl: string) {
   // Q1. senado_contratos
   server.tool(
@@ -336,10 +345,12 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
   // Q6. senado_contratacoes_lista
   server.tool(
     "senado_contratacoes_lista",
-    "Lista, conforme `tipo`, atas de registro de preço, notas de empenho ou menores aprendizes do Senado, com filtro textual opcional aplicado no Worker sobre todos os campos. Retorna `{ tipo, count, total, registros }`; para `atas_registro_preco`/`notas_empenho` cada registro segue o formato de contrato (`id`, `numero`, `objeto`, `empresa`, `subEspecie`, `vigencia`...), enquanto `menores_aprendizes` vêm como registros brutos da API (campos não normalizados). Limitado a `limite` (padrão 50, máx 500), com `aviso` ao truncar; `tipo` sem registros retorna lista vazia. Para aprofundar uma ata/empenho, use o `id` em `senado_contratacao_detalhe`.",
+    "Lista, conforme `tipo`, atas de registro de preço, notas de empenho ou menores aprendizes do Senado, com filtro textual opcional aplicado no Worker sobre todos os campos. Retorna `{ tipo, count, total, registros }`; para `atas_registro_preco`/`notas_empenho` cada registro segue o formato de contrato (`id`, `numero`, `objeto`, `empresa`, `subEspecie`, `vigencia`...), enquanto `menores_aprendizes` vêm como registros brutos da API (campos não normalizados). Ordenação por `ordem` sobre a sequência de id do upstream: `desc` (padrão) = mais recentes primeiro, `asc` = mais antigos primeiro; `offset` pula registros para paginar a cauda. Limitado a `limite` (padrão 50, máx 500), com `aviso` ao truncar; `tipo` sem registros retorna lista vazia. Para aprofundar uma ata/empenho, use o `id` em `senado_contratacao_detalhe`.",
     {
       tipo: z.enum(["atas_registro_preco", "notas_empenho", "menores_aprendizes"]).describe("Qual lista consultar"),
       filtro: z.string().optional().describe("Filtro textual (empresa, objeto, etc.)"),
+      ordem: z.enum(["asc", "desc"]).optional().default("desc").describe("desc = mais recentes primeiro (padrão); asc = mais antigos primeiro (ordem de id do upstream)"),
+      offset: z.number().int().min(0).optional().default(0).describe("Registros a pular após a ordenação (paginação; padrão: 0)"),
       limite: z.number().int().min(1).max(500).optional().default(50).describe("Máximo de resultados (padrão: 50)"),
     },
     async (params) => {
@@ -359,15 +370,18 @@ export function registerContratacoesTools(server: McpServer, admBaseUrl: string)
           lista = lista.filter((item: any) => matchesFiltro(JSON.stringify(item), f));
         }
         const limite = params.limite ?? 50;
+        const offset = params.offset ?? 0;
+        const ordem = params.ordem ?? "desc";
+        const registros = ordenarEPaginar(lista, ordem, offset, limite);
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1/contratacoes/${params.tipo}`, {
           dataset_id: `tipo=${params.tipo}`, retrieved_at: fetchedAt,
         });
         return resultWithProvenance({
           tipo: params.tipo,
-          count: Math.min(lista.length, limite),
+          count: registros.length,
           total: lista.length,
-          ...(lista.length > limite ? { aviso: `Exibindo ${limite} de ${lista.length} registros.` } : {}),
-          registros: lista.slice(0, limite),
+          ...(registros.length < lista.length ? { aviso: `Exibindo ${registros.length} de ${lista.length} registros (ordem=${ordem}, offset=${offset}). Use offset para paginar.` } : {}),
+          registros,
         }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao consultar lista de contratações");
