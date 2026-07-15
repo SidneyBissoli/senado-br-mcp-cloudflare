@@ -203,7 +203,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E3. senado_reunioes_comissao
   server.tool(
     "senado_reunioes_comissao",
-    "Lista reuniões de uma comissão (pela `sigla`) num intervalo `dataInicio`/`dataFim` (YYYYMMDD); sem datas, usa os últimos 30 dias. Retorna `{ sigla, periodo, count, reunioes }`, cada reunião com `codigo`, `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. Intervalos entre anos são divididos por ano internamente. Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` retornado em `senado_reuniao_comissao` para os detalhes da pauta.",
+    "Lista reuniões de uma comissão (pela `sigla`) num intervalo `dataInicio`/`dataFim` (YYYYMMDD); sem datas, usa os últimos 14 dias. Atenção: o upstream devolve a agenda de TODAS as comissões do período (o filtro por sigla é local), então janelas amplas (mensais/anuais) podem estourar o limite de tamanho da resposta (erro de payload): prefira janelas de até 2 semanas e divida períodos maiores em chamadas sucessivas. Retorna `{ sigla, periodo, count, reunioes }`, cada reunião com `codigo`, `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. Intervalos entre anos são divididos por ano internamente. Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` retornado em `senado_reuniao_comissao` para os detalhes da pauta.",
     {
       sigla: z.string().min(2).describe("Sigla da comissão"),
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
@@ -212,11 +212,12 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
     async (params) => {
       try {
         const sigla = params.sigla.toUpperCase();
-        // Default to last 30 days if no dates provided
+        // Default to last 14 days if no dates provided — the upstream returns ALL
+        // committees for the range and wider windows can blow the 5 MB response guard.
         const hoje = new Date();
-        const inicio30 = new Date(hoje);
-        inicio30.setDate(inicio30.getDate() - 30);
-        const di = params.dataInicio || formatDateYMD(inicio30);
+        const inicio14 = new Date(hoje);
+        inicio14.setDate(inicio14.getDate() - 14);
+        const di = params.dataInicio || formatDateYMD(inicio14);
         const df = params.dataFim || formatDateYMD(hoje);
 
         // The /comissao/agenda endpoint doesn't support cross-year ranges.
