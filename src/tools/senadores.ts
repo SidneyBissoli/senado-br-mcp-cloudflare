@@ -395,7 +395,7 @@ export function registerSenadoresTools(server: McpServer, baseUrl: string) {
   // A7. senado_senadores_afastados
   server.tool(
     "senado_senadores_afastados",
-    "Lista os senadores atualmente afastados (fora de exercício). Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio` (sempre `false`). Não requer parâmetros. Use `codigo` em `senado_obter_senador` para o detalhe; para os senadores em exercício (e busca por nome) use `senado_listar_senadores`.",
+    "Lista os senadores atualmente afastados (fora de exercício). Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio` (sempre `false`). Não requer parâmetros. Atenção: é a lista BRUTA do upstream, sem recorte de legislatura — pode conter registros históricos (ex.: senadores falecidos) e inconsistências pontuais com o detalhe do parlamentar; também não traz o vínculo titular↔suplente (para saber quem assumiu a vaga, consulte os mandatos em `senado_obter_senador`). Use `codigo` em `senado_obter_senador` para o detalhe; para os senadores em exercício (e busca por nome) use `senado_listar_senadores`.",
     {},
     async () => {
       try {
