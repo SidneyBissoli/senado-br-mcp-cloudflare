@@ -50,6 +50,51 @@ export function buildRequerimentosCpiResult(sigla: string, pagina: number, reque
   return payload;
 }
 
+/**
+ * Aviso anexado ao resumo de `senado_obter_comissao` quando `finalidade` vem
+ * vazia. No upstream `/comissao/{codigo}`, o campo `Finalidade` só existe para
+ * colegiados temporários (CPIs, comissões temporárias, comissões de MPV), que
+ * têm ato de criação com objeto definido; para comissões permanentes (CCJ,
+ * CAE etc.) a chave nem aparece — as competências constam do Regimento
+ * Interno, que a API não publica. Verificado ao vivo em 15/07/2026
+ * (CCJ/CAE sem a chave; CPIPED/CTECARGILL/CMMPV com texto).
+ */
+export const OBTER_COMISSAO_FINALIDADE_AVISO =
+  "A fonte só publica `finalidade` para colegiados temporários (CPIs, comissões temporárias " +
+  "e comissões de medida provisória). Para comissões permanentes o campo vem vazio — as " +
+  "competências estão no Regimento Interno do Senado, não disponível nesta API.";
+
+/**
+ * Monta o payload da seção `resumo` de `senado_obter_comissao` a partir do
+ * Colegiado do detalhe, anexando `aviso` quando `finalidade` é nula (campo
+ * condicional do upstream — ver OBTER_COMISSAO_FINALIDADE_AVISO).
+ */
+export function parseComissaoResumo(colegiado: any, sigla: string, secao: string) {
+  const cargos = ensureArray(colegiado.Cargos?.Cargo);
+  const presidente = cargos.find((c: any) => c.TipoCargo === "PRESIDENTE");
+  const vicePresidente = cargos.find((c: any) => c.TipoCargo === "VICE-PRESIDENTE");
+  const finalidade = colegiado.Finalidade || null;
+  const payload: Record<string, unknown> = {
+    codigo: parseInt(colegiado.CodigoColegiado || "0"),
+    secao,
+    sigla: colegiado.SiglaColegiado || sigla,
+    nome: colegiado.NomeColegiado || "",
+    tipo: colegiado.TipoColegiado?.TipoColegiado || null,
+    finalidade,
+    presidente: presidente
+      ? { nome: presidente.NomeParlamentar || "", codigo: parseInt(presidente.CodigoParlamentar || "0"), bancada: presidente.Bancada || null }
+      : null,
+    vicePresidente: vicePresidente
+      ? { nome: vicePresidente.NomeParlamentar || "", codigo: parseInt(vicePresidente.CodigoParlamentar || "0"), bancada: vicePresidente.Bancada || null }
+      : null,
+    totalMembros: parseInt(colegiado.QuantidadesMembros?.Distribuicao?.Senadores || "0") || null,
+    titulares: parseInt(colegiado.QuantidadesMembros?.Distribuicao?.SenadoresTitulares || "0") || null,
+    suplentes: parseInt(colegiado.QuantidadesMembros?.Distribuicao?.SenadoresSuplentes || "0") || null,
+  };
+  if (!finalidade) payload.aviso = OBTER_COMISSAO_FINALIDADE_AVISO;
+  return payload;
+}
+
 /** Resolve a committee sigla to its numeric code via the list endpoint. */
 export async function resolveComissaoCodigo(sigla: string, baseUrl: string): Promise<number | null> {
   const response = await cachedFetch("senado_listar_comissoes", {}, CACHE_SEMI_STATIC, () =>
@@ -118,7 +163,8 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   server.tool(
     "senado_obter_comissao",
     "Obtém dados de uma comissão pela `sigla`, conforme `secao` (padrão `resumo`): " +
-      "`resumo` → `{ codigo, sigla, nome, finalidade, presidente, vicePresidente, totalMembros, titulares, suplentes }` (presidente/vice com `nome`/`codigo`/`bancada`). " +
+      "`resumo` → `{ codigo, sigla, nome, tipo, finalidade, presidente, vicePresidente, totalMembros, titulares, suplentes }` (presidente/vice com `nome`/`codigo`/`bancada`). " +
+      "`finalidade` só vem preenchida para colegiados temporários (CPIs, comissões temporárias e de medida provisória); para comissões permanentes (CCJ, CAE etc.) a fonte não a publica e o campo vem nulo com um `aviso` — as competências estão no Regimento Interno. " +
       "`membros` → `{ sigla, secao, count, membros }`, cada membro com `codigo`, `nome`, `tipoVaga` (titular/suplente), `ativo` e `dataInicio`. " +
       "A sigla é resolvida internamente para código numérico; descubra-a via `senado_listar_comissoes`.",
     {
@@ -171,29 +217,10 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
         )[0];
         if (!colegiado) return toolError("Dados da comissão não encontrados.");
 
-        const cargos = ensureArray(colegiado.Cargos?.Cargo);
-        const presidente = cargos.find((c: any) => c.TipoCargo === "PRESIDENTE");
-        const vicePresidente = cargos.find((c: any) => c.TipoCargo === "VICE-PRESIDENTE");
-
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, resumoPath, {
           dataset_id: `comissao=${sigla}; codigo=${codigo}`, retrieved_at: fetchedAt,
         });
-        return resultWithProvenance({
-          codigo: parseInt(colegiado.CodigoColegiado || "0"),
-          secao,
-          sigla: colegiado.SiglaColegiado || sigla,
-          nome: colegiado.NomeColegiado || "",
-          finalidade: colegiado.Finalidade || null,
-          presidente: presidente
-            ? { nome: presidente.NomeParlamentar || "", codigo: parseInt(presidente.CodigoParlamentar || "0"), bancada: presidente.Bancada || null }
-            : null,
-          vicePresidente: vicePresidente
-            ? { nome: vicePresidente.NomeParlamentar || "", codigo: parseInt(vicePresidente.CodigoParlamentar || "0"), bancada: vicePresidente.Bancada || null }
-            : null,
-          totalMembros: parseInt(colegiado.QuantidadesMembros?.Distribuicao?.Senadores || "0") || null,
-          titulares: parseInt(colegiado.QuantidadesMembros?.Distribuicao?.SenadoresTitulares || "0") || null,
-          suplentes: parseInt(colegiado.QuantidadesMembros?.Distribuicao?.SenadoresSuplentes || "0") || null,
-        }, prov);
+        return resultWithProvenance(parseComissaoResumo(colegiado, sigla, secao), prov);
       } catch (e) {
         return errorFrom(e, "Comissão não encontrada");
       }

@@ -4,6 +4,8 @@ import {
   resolveComissaoCodigo,
   buildRequerimentosCpiResult,
   REQUERIMENTOS_CPI_AVISO_VAZIO,
+  parseComissaoResumo,
+  OBTER_COMISSAO_FINALIDADE_AVISO,
 } from "../../src/tools/comissoes.js";
 import { digArrayRoot } from "../../src/utils/upstream-parse.js";
 import { safeInt, toBool, normalizeText } from "../../src/utils/validation.js";
@@ -112,6 +114,43 @@ describe("obter_comissao membros (BUG-030)", () => {
     expect(membros[0].nome).toBe("Alan Rick");
     expect(membros[0].tipoVaga).toBe("Suplente");
     expect(membros[0].ativo).toBe(true);
+  });
+});
+
+describe("parseComissaoResumo finalidade condicional (achado #9)", () => {
+  // No upstream /comissao/{codigo}, a chave Finalidade só existe para colegiados
+  // temporários (CPI/CT/MPV); permanentes (CCJ, CAE) vêm sem ela.
+  it("comissão permanente sem Finalidade → finalidade null + aviso + tipo", () => {
+    const colegiado = {
+      CodigoColegiado: "34",
+      SiglaColegiado: "CCJ",
+      NomeColegiado: "Comissão de Constituição, Justiça e Cidadania",
+      TipoColegiado: { TipoColegiado: "Comissão Permanente", SiglaCasa: "SF", CodigoTipo: "21" },
+      Cargos: { Cargo: [{ TipoCargo: "PRESIDENTE", NomeParlamentar: "Fulano", CodigoParlamentar: "123" }] },
+      QuantidadesMembros: { Distribuicao: { Senadores: "54", SenadoresTitulares: "27", SenadoresSuplentes: "27" } },
+    };
+    const r = parseComissaoResumo(colegiado, "CCJ", "resumo");
+    expect(r.finalidade).toBeNull();
+    expect(r.aviso).toBe(OBTER_COMISSAO_FINALIDADE_AVISO);
+    expect(r.tipo).toBe("Comissão Permanente");
+    expect(r.codigo).toBe(34);
+    expect((r.presidente as any).nome).toBe("Fulano");
+    expect(r.totalMembros).toBe(54);
+  });
+
+  it("colegiado temporário com Finalidade → texto preservado, sem aviso", () => {
+    const colegiado = {
+      CodigoColegiado: "2805",
+      SiglaColegiado: "CPIPED",
+      NomeColegiado: "CPI da Exploração Sexual...",
+      TipoColegiado: { TipoColegiado: "Comissão Parlamentar de Inquérito" },
+      Finalidade: "Para, no prazo de 180 dias, realizar investigação...",
+    };
+    const r = parseComissaoResumo(colegiado, "CPIPED", "resumo");
+    expect(r.finalidade).toBe("Para, no prazo de 180 dias, realizar investigação...");
+    expect(r.aviso).toBeUndefined();
+    expect(r.tipo).toBe("Comissão Parlamentar de Inquérito");
+    expect(r.presidente).toBeNull();
   });
 });
 
