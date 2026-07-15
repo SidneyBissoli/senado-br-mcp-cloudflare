@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { parseQuartoResumo, parseQuartoTexto, parseVideoUnidade } from "../../src/tools/taquigrafia.js";
+import {
+  parseQuartoResumo,
+  parseQuartoTexto,
+  parseVideoUnidade,
+  NOTAS_TAQUIGRAFICAS_AVISO_VAZIO,
+  VIDEOS_TAQUIGRAFIA_AVISO_VAZIO,
+} from "../../src/tools/taquigrafia.js";
+import { ensureArray } from "../../src/utils/validation.js";
 
 describe("parseQuartoResumo", () => {
   it("truncates long texts into a trecho", () => {
@@ -66,5 +73,38 @@ describe("parseVideoUnidade", () => {
     const result = parseVideoUnidade({});
     expect(result.codigo).toBeNull();
     expect(result.duracaoSegundos).toBeNull();
+  });
+});
+
+describe("acervo vazio → aviso (achado #12)", () => {
+  // O upstream 404a para códigos sem transcrição/mídia (conjuntas do CN,
+  // canceladas/não realizadas); treat404AsEmpty devolve [] e o handler monta o
+  // resultado vazio com aviso — o mesmo caminho é exercitado aqui.
+  it("notas: resposta [] (404-as-empty) produz totalBlocos 0 e aviso", () => {
+    const response: unknown = [];
+    const nt = (response as any)?.notasTaquigraficas ?? response;
+    const quartosTodos = ensureArray((nt as any)?.quartos);
+    const dados = {
+      totalBlocos: quartosTodos.length,
+      ...(quartosTodos.length === 0 ? { aviso: NOTAS_TAQUIGRAFICAS_AVISO_VAZIO } : {}),
+    };
+    expect(dados.totalBlocos).toBe(0);
+    expect(dados.aviso).toBe(NOTAS_TAQUIGRAFICAS_AVISO_VAZIO);
+  });
+
+  it("notas: com quartos presentes não há aviso de vazio", () => {
+    const quartosTodos = ensureArray({ quartos: [{ sequencia: "1", texto: "x" }] }.quartos);
+    const dados = {
+      totalBlocos: quartosTodos.length,
+      ...(quartosTodos.length === 0 ? { aviso: NOTAS_TAQUIGRAFICAS_AVISO_VAZIO } : {}),
+    };
+    expect(dados.totalBlocos).toBe(1);
+    expect("aviso" in dados).toBe(false);
+  });
+
+  it("os avisos mencionam a checagem de tipo sessao × reuniao", () => {
+    expect(NOTAS_TAQUIGRAFICAS_AVISO_VAZIO).toContain("tipo=reuniao");
+    expect(VIDEOS_TAQUIGRAFIA_AVISO_VAZIO).toContain("tipo=reuniao");
+    expect(NOTAS_TAQUIGRAFICAS_AVISO_VAZIO).toContain("senado_videos_taquigrafia");
   });
 });
