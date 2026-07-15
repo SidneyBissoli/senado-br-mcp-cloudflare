@@ -65,6 +65,31 @@ export function formatIntBR(n: number): string {
   return Math.trunc(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
+/**
+ * Aviso fixo do detalhe da consulta pública. A página `visualizacaomateria`
+ * não publica o período da consulta em lugar nenhum (verificado ao vivo em
+ * 15/07/2026: a única data é o carimbo "Votos apurados até…"), então
+ * `dataAbertura`/`dataEncerramento` — e também `comissao`/`linkMateria` —
+ * vêm sempre null desta fonte. A consulta abre quando a matéria entra em
+ * tramitação e encerra quando sai, o que se reflete em `status`.
+ */
+export const OBTER_CONSULTA_DATAS_AVISO =
+  "O portal e-Cidadania não publica o período da consulta: dataAbertura/dataEncerramento " +
+  "(e também comissao/linkMateria) vêm sempre null. A consulta abre quando a matéria entra " +
+  "em tramitação e encerra quando sai — o campo `status` reflete essa situação.";
+
+/**
+ * Monta o payload de resposta de `senado_ecidadania_obter_consulta` a partir do
+ * detalhe raspado, SEM alterar o objeto gravado no write-through do corpus
+ * (o aviso e o comentarios null são só da resposta; mudar o payload persistido
+ * mudaria o contentHash de todas as linhas de ecidadania_detalhe).
+ * OBS-9: a página de consulta não tem recurso de comentários — o 0 raspado é
+ * espúrio; serve null (indisponível) em vez de sugerir "zero comentários".
+ */
+export function buildConsultaDetalheResult(r: Record<string, unknown>): Record<string, unknown> {
+  return { ...r, comentarios: null, aviso: OBTER_CONSULTA_DATAS_AVISO };
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // Tool registration
 // ══════════════════════════════════════════════════════════════════════════
@@ -145,7 +170,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
   // G2. senado_ecidadania_obter_consulta
   server.tool(
     "senado_ecidadania_obter_consulta",
-    "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `url` (campos como `comissao` e datas podem vir `null`). O campo `comentarios` vem `null`: a página de consulta não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_consultas` ou `senado_ecidadania_consultas_analise`.",
+    "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `url`. O portal não publica o período da consulta: `dataAbertura`/`dataEncerramento` (e `comissao`/`linkMateria`) vêm sempre `null` — a consulta abre quando a matéria entra em tramitação e encerra quando sai, refletido em `status`. O campo `comentarios` vem `null`: a página de consulta não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_consultas` ou `senado_ecidadania_consultas_analise`.",
     { id: z.number().int().positive().describe("ID da consulta pública") },
     async (params) => {
       try {
@@ -153,9 +178,7 @@ export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env
           obterConsultaInternal(params.id),
         );
         writeDetalheThrough(db, ctx, "consultas", params.id, r as Record<string, unknown>);
-        // OBS-9: consulta pages have no comments resource — the scraped count is a spurious 0.
-        // Serve null (indisponível) instead of implying "zero comments".
-        const detalhe = { ...(r as Record<string, unknown>), comentarios: null };
+        const detalhe = buildConsultaDetalheResult(r as Record<string, unknown>);
         return resultWithProvenance(
           tagUntrustedFields("consultas", detalhe),
           provDetalhe(r, `/visualizacaomateria?id=${params.id}`, `consulta=${params.id}`, fetchedAt),

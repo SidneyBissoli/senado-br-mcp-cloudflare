@@ -44,7 +44,32 @@ import {
   listarEventosInternal,
   obterEventoInternal,
   formatIntBR,
+  buildConsultaDetalheResult,
+  OBTER_CONSULTA_DATAS_AVISO,
 } from "../../src/tools/ecidadania.js";
+
+describe("buildConsultaDetalheResult (achado #10)", () => {
+  // A página visualizacaomateria não publica o período da consulta; o aviso
+  // explica os campos sempre-null. Só a RESPOSTA ganha aviso/comentarios null —
+  // o payload do write-through (corpus) fica intacto (contentHash estável).
+  it("anexa o aviso fixo e serve comentarios null (OBS-9)", () => {
+    const raspado = {
+      id: 173613, materia: "PL 1234/2026", votosSim: 61230, votosNao: 228,
+      dataAbertura: null, dataEncerramento: null, comissao: null, comentarios: 0,
+    };
+    const r = buildConsultaDetalheResult(raspado);
+    expect(r.aviso).toBe(OBTER_CONSULTA_DATAS_AVISO);
+    expect(r.comentarios).toBeNull();
+    expect(r.votosSim).toBe(61230);
+  });
+
+  it("não muta o objeto raspado (payload persistido no corpus)", () => {
+    const raspado: Record<string, unknown> = { id: 1, comentarios: 0 };
+    buildConsultaDetalheResult(raspado);
+    expect(raspado.comentarios).toBe(0);
+    expect("aviso" in raspado).toBe(false);
+  });
+});
 
 describe("formatIntBR (OBS-12)", () => {
   it("groups thousands with pt-BR dots", () => {
