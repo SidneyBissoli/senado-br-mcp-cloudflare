@@ -386,7 +386,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C6. senado_autores_atuais
   server.tool(
     "senado_autores_atuais",
-    "Lista parlamentares autores de processos em tramitação, ordenados por produção (maior número de matérias primeiro). Retorna `{ count, total, autores }`, cada autor com `codigo`, `nome`, `tratamento`, `uf` e `quantidadeMaterias`. Filtros opcionais `uf` e `nome` (busca parcial sem acento); `limite` padrão 50 (máx. 1000). Use o `codigo` em `senado_obter_senador` ou `senado_search_processos` (codigoParlamentarAutor).",
+    "Lista parlamentares autores de processos em tramitação, ordenados por produção (maior número de matérias primeiro). Atenção à semântica: 'atual' significa 'com processo AINDA EM TRAMITAÇÃO', não 'mandato vigente' — a lista mistura senadores, deputados e ex-parlamentares, e a mesma pessoa pode aparecer 2× com códigos distintos (ex.: como 'Senador' e como 'Deputado', pelo `tratamento`); não use como lista de senadores em exercício (para isso, `senado_listar_senadores`). Retorna `{ count, total, autores }`, cada autor com `codigo`, `nome`, `tratamento`, `uf` e `quantidadeMaterias`. Filtros opcionais `uf` e `nome` (busca parcial sem acento); `limite` padrão 50 (máx. 1000). Use o `codigo` em `senado_obter_senador` ou `senado_search_processos` (codigoParlamentarAutor).",
     {
       uf: z.string().max(2).optional().describe("Filtrar por UF (ex: SP)"),
       nome: z.string().optional().describe("Filtrar por nome (busca parcial)"),
