@@ -7,11 +7,11 @@ export const PRIVACY_URL = `${SITE_ORIGIN}/privacy`;
 export const TERMS_URL = `${SITE_ORIGIN}/terms`;
 
 const UPDATED_AT = "2026-06-28";
-const CONTACT_EMAIL = "sbissoli76@gmail.com";
+export const CONTACT_EMAIL = "sbissoli76@gmail.com";
 
-function htmlPage(title: string, body: string): string {
+export function htmlPage(title: string, body: string, lang = "en"): string {
   return `<!doctype html>
-<html lang="en">
+<html lang="${lang}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">

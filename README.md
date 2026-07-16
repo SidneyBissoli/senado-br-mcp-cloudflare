@@ -252,6 +252,7 @@ npm run deploy
 
 | Path | Methods | Description |
 |------|---------|-------------|
+| `/` | GET | Landing page (pt-BR) — identifies the client behind the outgoing User-Agent: what the service is, load posture, contact (always public) |
 | `/mcp` | POST, GET, DELETE, OPTIONS | MCP Streamable HTTP endpoint (managed by `createMcpHandler`) |
 | `/health` | GET | Health check — returns `ok` (always public) |
 | `/status` | GET | JSON: `status`, `version`, and last-deploy metadata (`deploy.id`/`tag`/`timestamp`) — liveness + current build, no MCP handshake needed (always public) |
