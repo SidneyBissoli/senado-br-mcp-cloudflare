@@ -79,6 +79,10 @@ describe("parseLideranca", () => {
     const result = parseLideranca({});
     expect(result.tipo).toBeNull();
     expect(result.parlamentar).toBeNull();
+    expect(result.casa).toBeNull();
+    expect(result.bloco).toBeNull();
+    expect(result.partido).toBeNull();
+    expect(result.numeroOrdemViceLider).toBeNull();
   });
 });
 
@@ -220,11 +224,68 @@ describe("parseLideranca — real flat camelCase (BUG-011)", () => {
     expect(r.tipo).toBe("L");
     expect(r.descricao).toBe("Líder do Congresso Nacional");
     expect(r.unidadeLideranca).toBe("Liderança do Governo no Congresso Nacional");
+    expect(r.casa).toBe("CN");
+    expect(r.dataDesignacao).toBe("2023-01-06");
+    expect(r.bloco).toBeNull(); // government leadership: no bloc unit
+    expect(r.partido).toBeNull(); // government leadership: no party unit
     expect(r.parlamentar).not.toBeNull();
     expect(r.parlamentar!.codigo).toBe(5012);
     expect(r.parlamentar!.nome).toBe("Randolfe Rodrigues");
     expect(r.parlamentar!.partido).toBe("PT");
     expect(r.parlamentar!.uf).toBeNull(); // not present in the flat payload
+  });
+});
+
+describe("parseLideranca — bloc and party units (achado #15)", () => {
+  it("exposes the led bloc on a bloc leadership (real fixture)", () => {
+    const l = {
+      casa: "SF",
+      codigo: 17338,
+      codigoBloco: 335,
+      codigoParlamentar: 5718,
+      codigoPartidoFiliacao: 557,
+      dataDesignacao: "2024-11-11",
+      descricaoTipoLideranca: "Líder do Senado Federal",
+      descricaoTipoUnidadeLideranca: "Liderança de Bloco no Senado Federal",
+      idTipoUnidadeLideranca: 2,
+      nomeBloco: "Bloco Parlamentar da Resistência Democrática",
+      nomeParlamentar: "Eliziane Gama",
+      siglaBloco: "BLPRD",
+      siglaPartidoFiliacao: "PSD",
+      siglaTipoLideranca: "L",
+    };
+    const r = parseLideranca(l);
+    expect(r.bloco).toEqual({
+      codigo: 335,
+      nome: "Bloco Parlamentar da Resistência Democrática",
+      sigla: "BLPRD",
+    });
+    expect(r.partido).toBeNull();
+    expect(r.casa).toBe("SF");
+    expect(r.parlamentar!.partido).toBe("PSD");
+  });
+
+  it("exposes the led party (distinct from the leader's filiação) on a party leadership", () => {
+    const l = {
+      casa: "SF",
+      codigoParlamentar: 5736,
+      codigoPartido: 418,
+      codigoPartidoFiliacao: 418,
+      dataDesignacao: "2023-02-02",
+      descricaoTipoUnidadeLideranca: "Liderança de Partido no Senado Federal",
+      nomeParlamentar: "Tereza Cristina",
+      nomePartido: "Progressistas",
+      siglaPartido: "PP",
+      siglaPartidoFiliacao: "PP",
+      siglaTipoLideranca: "L",
+      numeroOrdemViceLider: 3,
+    };
+    const r = parseLideranca(l);
+    expect(r.partido).toEqual({ codigo: 418, sigla: "PP", nome: "Progressistas" });
+    expect(r.bloco).toBeNull();
+    expect(r.numeroOrdemViceLider).toBe(3);
+    expect(r.dataDesignacao).toBe("2023-02-02");
+    expect(r.dataTermino).toBeNull();
   });
 });
 

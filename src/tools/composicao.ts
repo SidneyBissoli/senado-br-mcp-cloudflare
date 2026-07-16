@@ -66,10 +66,15 @@ export function parseBlocoDetalhe(bloco: any) {
 /**
  * Parse a leadership entry from /composicao/lideranca (flat camelCase array).
  * The payload carries the parliamentarian fields flat on the item (no nested Lider,
- * no UF). Legacy PascalCase fallbacks are kept defensively.
+ * no UF). Bloc leaderships bring codigoBloco/nomeBloco/siglaBloco and party
+ * leaderships bring codigoPartido/siglaPartido/nomePartido (the led unit, distinct
+ * from the leader's siglaPartidoFiliacao). Legacy PascalCase fallbacks are kept
+ * defensively.
  */
 export function parseLideranca(l: any) {
   const hasParlamentar = l.codigoParlamentar != null || l.Lider != null;
+  const hasBloco = l.codigoBloco != null || l.nomeBloco || l.siglaBloco;
+  const hasPartidoUnidade = l.codigoPartido != null || l.siglaPartido || l.nomePartido;
   return {
     tipo: l.siglaTipoLideranca || l.SiglaTipoLideranca || l.TipoLideranca || null,
     descricao: l.descricaoTipoLideranca || l.DescricaoTipoLideranca || null,
@@ -78,6 +83,24 @@ export function parseLideranca(l: any) {
       l.UnidadeLideranca?.NomeUnidadeLideranca ||
       l.nomeUnidadeLideranca ||
       null,
+    casa: l.casa || null,
+    dataDesignacao: brDateToISO(l.dataDesignacao),
+    dataTermino: brDateToISO(l.dataTermino),
+    numeroOrdemViceLider: l.numeroOrdemViceLider ?? null,
+    bloco: hasBloco
+      ? {
+          codigo: l.codigoBloco ?? null,
+          nome: l.nomeBloco || null,
+          sigla: l.siglaBloco || null,
+        }
+      : null,
+    partido: hasPartidoUnidade
+      ? {
+          codigo: l.codigoPartido ?? null,
+          sigla: l.siglaPartido || null,
+          nome: l.nomePartido || null,
+        }
+      : null,
     parlamentar: hasParlamentar
       ? {
           codigo: l.codigoParlamentar ?? l.Lider?.CodigoParlamentar ?? null,
@@ -171,9 +194,9 @@ export function registerComposicaoTools(server: McpServer, baseUrl: string) {
   // J3. senado_liderancas
   server.tool(
     "senado_liderancas",
-    "Lista as lideranças do Senado e do Congresso Nacional (líderes, vice-líderes etc.). Retorna `{ count, liderancas }`, cada item com `tipo`, `descricao`, `unidadeLideranca` e `parlamentar` (`codigo`, `nome`, `partido`, `uf`). Filtre por `casa` (SF/CN), `codigoParlamentar`, `vigente` (S/N) ou `siglaTipoLideranca`; sem filtros retorna todas. Para a composição de blocos use `senado_listar_blocos`.",
+    "Lista as lideranças do Senado, da Câmara e do Congresso Nacional (líderes, vice-líderes etc.). Retorna `{ count, liderancas }`, cada item com `tipo`, `descricao`, `unidadeLideranca`, `casa`, `dataDesignacao`, `dataTermino`, `numeroOrdemViceLider`, `bloco` (`codigo`/`nome`/`sigla` — preenchido quando a liderança é de bloco; o `codigo` serve em `senado_obter_bloco`), `partido` (`codigo`/`sigla`/`nome` — a unidade liderada, quando liderança de partido) e `parlamentar` (`codigo`, `nome`, `partido` de filiação, `uf`). A fonte NÃO publica a UF do parlamentar (vem sempre `null`) — obtenha-a via `senado_obter_senador` pelo `codigo`. Filtre por `casa` (SF/CN/CD), `codigoParlamentar`, `vigente` (S/N) ou `siglaTipoLideranca`; sem filtros retorna todas as casas. Para a composição de blocos use `senado_listar_blocos`.",
     {
-      casa: z.string().optional().describe("Casa legislativa (SF=Senado, CN=Congresso)"),
+      casa: z.string().optional().describe("Casa legislativa (SF=Senado, CN=Congresso, CD=Câmara dos Deputados)"),
       codigoParlamentar: z.number().int().optional().describe("Código do parlamentar"),
       vigente: z.string().optional().describe("Apenas vigentes (S/N)"),
       siglaTipoLideranca: z.string().optional().describe("Tipo de liderança (ex: LIDER, VICE-LIDER)"),

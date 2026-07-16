@@ -662,7 +662,7 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 |------|-------------|
 | `senado_listar_blocos` | Blocos parlamentares do Senado e seus partidos membros |
 | `senado_obter_bloco` | Detalhes de um bloco parlamentar específico |
-| `senado_liderancas` | Lideranças do Senado/Congresso (líderes, vice-líderes), filtráveis |
+| `senado_liderancas` | Lideranças do Senado/Câmara/Congresso (líderes, vice-líderes) com o bloco/partido liderado, filtráveis |
 | `senado_mesa` | Membros da Mesa Diretora via `casa` enum: senado (Mesa do SF) ou congresso (Mesa do CN) |
 
 ### Group K — Budget (1 tool)
