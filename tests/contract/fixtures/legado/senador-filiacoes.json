@@ -1,0 +1,45 @@
+{
+  "FiliacaoParlamentar": {
+    "Metadados": {
+      "DataVersaoServico": "2021-09-09",
+      "DescricaoDataSet": "Retorna a relação de Filiações Partidárias do Senador informado no parâmetro.",
+      "Versao": "15/07/2026 23:25:58",
+      "VersaoServico": "5"
+    },
+    "Parlamentar": {
+      "Codigo": "5672",
+      "Filiacoes": {
+        "Filiacao": [
+          {
+            "DataFiliacao": "2025-11-12",
+            "Partido": {
+              "CodigoPartido": "521",
+              "NomePartido": "REPUBLICANOS",
+              "SiglaPartido": "REPUBLICANOS"
+            }
+          },
+          {
+            "DataDesfiliacao": "2025-11-10",
+            "DataFiliacao": "2022-02-24",
+            "Partido": {
+              "CodigoPartido": "582",
+              "NomePartido": "União Brasil",
+              "SiglaPartido": "UNIÃO"
+            }
+          },
+          {
+            "DataDesfiliacao": "2022-02-23",
+            "DataFiliacao": "2017-08-01",
+            "Partido": {
+              "CodigoPartido": "554",
+              "NomePartido": "Democratas",
+              "SiglaPartido": "DEM"
+            }
+          }
+        ]
+      },
+      "Nome": "Alan Rick"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/FiliacaoParlamentarv5.xsd"
+  }
+}

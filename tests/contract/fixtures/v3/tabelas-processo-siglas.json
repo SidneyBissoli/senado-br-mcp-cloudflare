@@ -1,0 +1,20 @@
+[
+  {
+    "dataFim": "2024-09-18T00:00:00",
+    "dataInicio": "2017-01-01T00:00:00",
+    "descricao": "Aviso da Comissão de Educação",
+    "sigla": "ACE"
+  },
+  {
+    "dataFim": null,
+    "dataInicio": "2023-01-01T00:00:00",
+    "descricao": "Ato Conjunto Legislativo",
+    "sigla": "ACL"
+  },
+  {
+    "dataFim": "2005-05-24T00:00:00",
+    "dataInicio": "1940-01-01T00:00:00",
+    "descricao": "Anteprojeto de Lei do DF",
+    "sigla": "ADF"
+  }
+]

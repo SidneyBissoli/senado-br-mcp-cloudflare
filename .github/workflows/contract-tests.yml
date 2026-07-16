@@ -1,0 +1,56 @@
+name: Contract tests (upstream shape drift)
+
+# Nightly detection of upstream shape drift: refreshes the contract fixtures
+# from the LIVE Senado APIs and runs the contract tier against them. A failure
+# in the "live" step means the upstream changed the shape of a field some
+# parser depends on — the worst silent-failure mode for a data tool.
+#
+# The tier is intentionally separate from `npm test` (unit suite stays
+# network-free); see docs/contract-tests.pt-BR.md.
+
+on:
+  schedule:
+    # 03:20 America/Sao_Paulo (06:20 UTC) every night
+    - cron: "20 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Sanity: the tier must be green against the COMMITTED fixtures before
+      # we talk to the live upstream — a failure here is a repo bug (test or
+      # fixture out of sync), not drift.
+      - name: Contract tests (committed fixtures)
+        run: npm run test:contract
+
+      # Refresh every fixture from the live upstream (working tree only,
+      # nothing is committed), then re-run the same assertions.
+      - name: Refresh fixtures from live upstream
+        run: npm run contract:refresh
+
+      - name: Contract tests (live-refreshed fixtures)
+        run: npm run test:contract
+
+      # Visibility: show what changed shape-wise even when tests pass
+      # (new/removed optional fields, reordered samples, etc.).
+      - name: Fixture diff vs committed (informational)
+        if: always()
+        run: git --no-pager diff --stat -- tests/contract/fixtures || true

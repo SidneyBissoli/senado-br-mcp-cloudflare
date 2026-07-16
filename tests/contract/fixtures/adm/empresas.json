@@ -1,0 +1,198 @@
+[
+  {
+    "atas_registro_preco": [
+      {
+        "data_assinatura": "2026-04-13",
+        "data_fim_vigencia": "2027-10-13",
+        "data_inicio_vigencia": "2026-04-13",
+        "data_publicacao": "2026-04-28",
+        "data_ultima_atualizacao": "2026-04-28",
+        "empresa": {
+          "cpf_cnpj": "64.343.195/0001-55",
+          "nome": "64.343.195 GIOVANNA DO VALE LOPES ALVES SALES"
+        },
+        "fundamentacao_legal": "Lei nº 14.133/2021, art. 28, inciso I",
+        "id": 9046,
+        "ind_mao_de_obra": false,
+        "licitacao": {
+          "modalidade": "Pregão Eletrônico",
+          "numero": "0900222026"
+        },
+        "numero": "20260065",
+        "objeto": "Fornecimento de equipamentos para áreas industriais do parque gráfico, alguns serão exigidas a instalação, a configuração e o treinamento operacional, inerentes para a continuidade das atividades da Secretaria de Editoração e Publicações – SEGRAF do Senado Federal (Itens 09 e 12).",
+        "orgaos_gestores": [],
+        "processo_principal": "200016420202518",
+        "sub_especie": {
+          "nome": "Contrato",
+          "sigla": "CT"
+        }
+      }
+    ],
+    "contratos": [
+      {
+        "data_assinatura": "2026-04-13",
+        "data_fim_vigencia": "2027-10-13",
+        "data_inicio_vigencia": "2026-04-13",
+        "data_publicacao": "2026-04-28",
+        "data_ultima_atualizacao": "2026-04-28",
+        "empresa": {
+          "cpf_cnpj": "64.343.195/0001-55",
+          "nome": "64.343.195 GIOVANNA DO VALE LOPES ALVES SALES"
+        },
+        "fundamentacao_legal": "Lei nº 14.133/2021, art. 28, inciso I",
+        "id": 9046,
+        "ind_mao_de_obra": false,
+        "licitacao": {
+          "modalidade": "Pregão Eletrônico",
+          "numero": "0900222026"
+        },
+        "numero": "20260065",
+        "numero_formatado": "CT-CT/20260065",
+        "objeto": "Fornecimento de equipamentos para áreas industriais do parque gráfico, alguns serão exigidas a instalação, a configuração e o treinamento operacional, inerentes para a continuidade das atividades da Secretaria de Editoração e Publicações – SEGRAF do Senado Federal (Itens 09 e 12).",
+        "orgaos_gestores": [],
+        "processo_principal": "200016420202518",
+        "sub_especie": {
+          "nome": "Contrato",
+          "sigla": "CT"
+        },
+        "unidade_gestora": {
+          "nome": "Senado Federal",
+          "sigla": "SF"
+        }
+      }
+    ],
+    "cpf_cnpj": "64.343.195/0001-55",
+    "id": 5513,
+    "nome": "64.343.195 GIOVANNA DO VALE LOPES ALVES SALES",
+    "notas_empenho": [
+      {
+        "data_assinatura": "2026-04-13",
+        "data_fim_vigencia": "2027-10-13",
+        "data_inicio_vigencia": "2026-04-13",
+        "data_publicacao": "2026-04-28",
+        "data_ultima_atualizacao": "2026-04-28",
+        "empresa": {
+          "cpf_cnpj": "64.343.195/0001-55",
+          "nome": "64.343.195 GIOVANNA DO VALE LOPES ALVES SALES"
+        },
+        "fundamentacao_legal": "Lei nº 14.133/2021, art. 28, inciso I",
+        "id": 9046,
+        "ind_mao_de_obra": false,
+        "licitacao": {
+          "modalidade": "Pregão Eletrônico",
+          "numero": "0900222026"
+        },
+        "numero": "20260065",
+        "objeto": "Fornecimento de equipamentos para áreas industriais do parque gráfico, alguns serão exigidas a instalação, a configuração e o treinamento operacional, inerentes para a continuidade das atividades da Secretaria de Editoração e Publicações – SEGRAF do Senado Federal (Itens 09 e 12).",
+        "orgaos_gestores": [],
+        "processo_principal": "200016420202518",
+        "sub_especie": {
+          "nome": "Contrato",
+          "sigla": "CT"
+        }
+      }
+    ]
+  },
+  {
+    "atas_registro_preco": [],
+    "contratos": [],
+    "cpf_cnpj": "63.425.472/0001-06",
+    "id": 5427,
+    "nome": "63.425.472 GABRIELA PEREIRA LIMA REIS",
+    "notas_empenho": []
+  },
+  {
+    "atas_registro_preco": [
+      {
+        "data_assinatura": "2025-12-26",
+        "data_fim_vigencia": "2026-11-28",
+        "data_inicio_vigencia": "2025-11-28",
+        "data_publicacao": "2025-12-27",
+        "data_ultima_atualizacao": "2025-12-05",
+        "empresa": {
+          "cpf_cnpj": "62.013.661/0001-09",
+          "nome": "62.013.661 JHONATAN RIBEIRO MARINS"
+        },
+        "fundamentacao_legal": "Lei nº 14.133/2021, art. 28, inciso I",
+        "id": 10006504,
+        "ind_mao_de_obra": false,
+        "licitacao": {
+          "modalidade": "Pregão Eletrônico SRP",
+          "numero": "0900802025"
+        },
+        "numero": "20250074",
+        "objeto": "Fornecimento de insumos gráficos para impressão offset e serviço de acabamento inerentes para a continuidade das atividades da Secretaria de Editoração e Publicações – SEGRAF do Senado Federal (Item 15),",
+        "orgaos_gestores": [],
+        "processo_principal": "002000217142024",
+        "sub_especie": {
+          "nome": "Ata de Registro de Preços",
+          "sigla": "RP"
+        }
+      }
+    ],
+    "contratos": [
+      {
+        "data_assinatura": "2025-12-26",
+        "data_fim_vigencia": "2026-11-28",
+        "data_inicio_vigencia": "2025-11-28",
+        "data_publicacao": "2025-12-27",
+        "data_ultima_atualizacao": "2025-12-05",
+        "empresa": {
+          "cpf_cnpj": "62.013.661/0001-09",
+          "nome": "62.013.661 JHONATAN RIBEIRO MARINS"
+        },
+        "fundamentacao_legal": "Lei nº 14.133/2021, art. 28, inciso I",
+        "id": 10006504,
+        "ind_mao_de_obra": false,
+        "licitacao": {
+          "modalidade": "Pregão Eletrônico SRP",
+          "numero": "0900802025"
+        },
+        "numero": "20250074",
+        "numero_formatado": "RP-RP/20250074",
+        "objeto": "Fornecimento de insumos gráficos para impressão offset e serviço de acabamento inerentes para a continuidade das atividades da Secretaria de Editoração e Publicações – SEGRAF do Senado Federal (Item 15),",
+        "orgaos_gestores": [],
+        "processo_principal": "002000217142024",
+        "sub_especie": {
+          "nome": "Ata de Registro de Preços",
+          "sigla": "RP"
+        },
+        "unidade_gestora": {
+          "nome": "Senado Federal",
+          "sigla": "SF"
+        }
+      }
+    ],
+    "cpf_cnpj": "62.013.661/0001-09",
+    "id": 5340,
+    "nome": "62.013.661 JHONATAN RIBEIRO MARINS",
+    "notas_empenho": [
+      {
+        "data_assinatura": "2025-12-26",
+        "data_fim_vigencia": "2026-11-28",
+        "data_inicio_vigencia": "2025-11-28",
+        "data_publicacao": "2025-12-27",
+        "data_ultima_atualizacao": "2025-12-05",
+        "empresa": {
+          "cpf_cnpj": "62.013.661/0001-09",
+          "nome": "62.013.661 JHONATAN RIBEIRO MARINS"
+        },
+        "fundamentacao_legal": "Lei nº 14.133/2021, art. 28, inciso I",
+        "id": 10006504,
+        "ind_mao_de_obra": false,
+        "licitacao": {
+          "modalidade": "Pregão Eletrônico SRP",
+          "numero": "0900802025"
+        },
+        "numero": "20250074",
+        "objeto": "Fornecimento de insumos gráficos para impressão offset e serviço de acabamento inerentes para a continuidade das atividades da Secretaria de Editoração e Publicações – SEGRAF do Senado Federal (Item 15),",
+        "orgaos_gestores": [],
+        "processo_principal": "002000217142024",
+        "sub_especie": {
+          "nome": "Ata de Registro de Preços",
+          "sigla": "RP"
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,41 @@
+[
+  {
+    "codigo": 3592585,
+    "dataUnidade": "2025-04-01T14:03:43-03:00",
+    "descricao": "Abertura",
+    "descricaoOrador": "Humberto Costa (Presidente Senador PT-PE)",
+    "duracaoAudio": "28",
+    "duracaoVideo": "28",
+    "enderecoAudio": "https://www12.senado.leg.br/portalcedoc/pcedoc/2025/20250401/20250401141504_1918646.MP3",
+    "enderecoThumbnail": "https://www12.senado.leg.br/portalcedoc/pcedoc/ThumbDb/000003/592/3592585u.jpg",
+    "enderecoVideo": "https://www12.senado.leg.br/portalcedoc/pcedoc/2025/20250401/20250401141504_1918648.MP4",
+    "horaExibicao": "14:03:43",
+    "nomeOrador": "Humberto Costa (Presidente Senador PT-PE)"
+  },
+  {
+    "codigo": 3592624,
+    "dataUnidade": "2025-04-01T14:04:11-03:00",
+    "descricao": "Leitura de Expediente",
+    "descricaoOrador": "Humberto Costa (Presidente Senador PT-PE)",
+    "duracaoAudio": "69",
+    "duracaoVideo": "69",
+    "enderecoAudio": "https://www12.senado.leg.br/portalcedoc/pcedoc/2025/20250401/20250401141505_1918647.MP3",
+    "enderecoThumbnail": "https://www12.senado.leg.br/portalcedoc/pcedoc/ThumbDb/000003/592/3592624u.jpg",
+    "enderecoVideo": "https://www12.senado.leg.br/portalcedoc/pcedoc/2025/20250401/20250401141505_1918649.MP4",
+    "horaExibicao": "14:04:11",
+    "nomeOrador": "Humberto Costa (Presidente Senador PT-PE)"
+  },
+  {
+    "codigo": 3592587,
+    "dataUnidade": "2025-04-01T14:05:20-03:00",
+    "descricao": "Pronunciamento",
+    "descricaoOrador": "Eduardo Girão (Senador Novo-CE)",
+    "duracaoAudio": "602",
+    "duracaoVideo": "602",
+    "enderecoAudio": "https://www12.senado.leg.br/portalcedoc/pcedoc/2025/20250401/20250401142105_1918651.MP3",
+    "enderecoThumbnail": "https://www12.senado.leg.br/portalcedoc/pcedoc/ThumbDb/000003/592/3592587u.jpg",
+    "enderecoVideo": "https://www12.senado.leg.br/portalcedoc/pcedoc/2025/20250401/20250401142105_1918652.MP4",
+    "horaExibicao": "14:05:20",
+    "nomeOrador": "Eduardo Girão (Senador Novo-CE)"
+  }
+]

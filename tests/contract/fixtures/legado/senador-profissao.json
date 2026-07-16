@@ -1,0 +1,23 @@
+{
+  "HistoricoAcademicoParlamentar": {
+    "Metadados": {
+      "DataVersaoServico": "2021-09-09",
+      "DescricaoDataSet": "Retorna a relação das Profissões do Senador informado no parâmetro.",
+      "Versao": "15/07/2026 23:26:00",
+      "VersaoServico": "1"
+    },
+    "Parlamentar": {
+      "Codigo": "6358",
+      "Nome": "Ana Paula Lobato",
+      "Profissoes": {
+        "Profissao": [
+          {
+            "IndicadorAtividadePrincipal": "Sim",
+            "NomeProfissao": "Enfermeiro(a)"
+          }
+        ]
+      }
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/HistoricoAcademicoParlamentarv1.xsd"
+  }
+}

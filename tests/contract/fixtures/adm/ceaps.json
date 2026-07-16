@@ -1,0 +1,47 @@
+[
+  {
+    "ano": 2025,
+    "codSenador": 5953,
+    "cpfCnpj": "17.895.646/0001-87",
+    "data": "2025-06-27",
+    "detalhamento": "DESPESA COM TRANSPORTE PRIVADO URBANO MEDIANTE APLICATIVO.",
+    "documento": null,
+    "fornecedor": "UBER DO BRASIL TECNOLOGIA LTDA.",
+    "id": 2260454,
+    "mes": 6,
+    "nomeSenador": "FABIANO CONTARATO",
+    "tipoDespesa": "Locomoção, hospedagem, alimentação, combustíveis e lubrificantes",
+    "tipoDocumento": "Recibo",
+    "valorReembolsado": 6.33
+  },
+  {
+    "ano": 2025,
+    "codSenador": 5953,
+    "cpfCnpj": "17.895.646/0001-87",
+    "data": "2025-06-28",
+    "detalhamento": "DESPESA COM TRANSPORTE PRIVADO URBANO MEDIANTE APLICATIVO.",
+    "documento": null,
+    "fornecedor": "UBER DO BRASIL TECNOLOGIA LTDA.",
+    "id": 2260452,
+    "mes": 6,
+    "nomeSenador": "FABIANO CONTARATO",
+    "tipoDespesa": "Locomoção, hospedagem, alimentação, combustíveis e lubrificantes",
+    "tipoDocumento": "Recibo",
+    "valorReembolsado": 7.38
+  },
+  {
+    "ano": 2025,
+    "codSenador": 5953,
+    "cpfCnpj": "17.895.646/0001-87",
+    "data": "2025-06-28",
+    "detalhamento": "DESPESA COM TRANSPORTE PRIVADO URBANO MEDIANTE APLICATIVO.",
+    "documento": null,
+    "fornecedor": "UBER DO BRASIL TECNOLOGIA LTDA.",
+    "id": 2260451,
+    "mes": 6,
+    "nomeSenador": "FABIANO CONTARATO",
+    "tipoDespesa": "Locomoção, hospedagem, alimentação, combustíveis e lubrificantes",
+    "tipoDocumento": "Recibo",
+    "valorReembolsado": 11.23
+  }
+]

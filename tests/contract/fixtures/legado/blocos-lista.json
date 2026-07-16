@@ -1,0 +1,101 @@
+{
+  "ListaBlocoParlamentar": {
+    "Blocos": {
+      "Bloco": [
+        {
+          "CodigoBloco": "346",
+          "DataCriacao": "2023-03-20",
+          "Membros": {
+            "Membro": [
+              {
+                "DataAdesao": "2023-03-20",
+                "Partido": {
+                  "CodigoPartido": "418",
+                  "NomePartido": "Progressistas",
+                  "SiglaPartido": "PP"
+                }
+              },
+              {
+                "DataAdesao": "2023-03-20",
+                "Partido": {
+                  "CodigoPartido": "521",
+                  "NomePartido": "REPUBLICANOS",
+                  "SiglaPartido": "REPUBLICANOS"
+                }
+              }
+            ]
+          },
+          "NomeApelido": "BLALIANÇA",
+          "NomeBloco": "Bloco Parlamentar Aliança"
+        },
+        {
+          "CodigoBloco": "358",
+          "DataCriacao": "2025-02-18",
+          "Membros": {
+            "Membro": [
+              {
+                "DataAdesao": "2025-02-18",
+                "Partido": {
+                  "CodigoPartido": "582",
+                  "NomePartido": "União Brasil",
+                  "SiglaPartido": "UNIÃO"
+                }
+              },
+              {
+                "DataAdesao": "2025-02-18",
+                "Partido": {
+                  "CodigoPartido": "577",
+                  "NomePartido": "Podemos",
+                  "SiglaPartido": "PODEMOS"
+                }
+              },
+              {
+                "DataAdesao": "2025-02-18",
+                "Partido": {
+                  "CodigoPartido": "33",
+                  "NomePartido": "Movimento Democrático Brasileiro",
+                  "SiglaPartido": "MDB"
+                }
+              }
+            ]
+          },
+          "NomeApelido": "BLDEM",
+          "NomeBloco": "Bloco Parlamentar Democracia"
+        },
+        {
+          "CodigoBloco": "359",
+          "DataCriacao": "2025-02-18",
+          "Membros": {
+            "Membro": [
+              {
+                "DataAdesao": "2025-02-18",
+                "Partido": {
+                  "CodigoPartido": "20",
+                  "NomePartido": "Partido Democrático Trabalhista",
+                  "SiglaPartido": "PDT"
+                }
+              },
+              {
+                "DataAdesao": "2025-02-18",
+                "Partido": {
+                  "CodigoPartido": "71",
+                  "NomePartido": "Partido dos Trabalhadores",
+                  "SiglaPartido": "PT"
+                }
+              }
+            ]
+          },
+          "NomeApelido": "BLPBR",
+          "NomeBloco": "Bloco Parlamentar Pelo Brasil"
+        }
+      ]
+    },
+    "Metadados": {
+      "DataVersaoServico": "2017-02-01",
+      "DescricaoDataSet": "Obtém a Lista e a Composição dos Blocos Parlamentares no Senado Federal.",
+      "Versao": "15/07/2026 08:22:42",
+      "VersaoServico": "4"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaBlocoParlamentarv4.xsd"
+  }
+}

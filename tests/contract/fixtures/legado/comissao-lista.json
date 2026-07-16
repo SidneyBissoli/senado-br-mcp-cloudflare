@@ -1,0 +1,50 @@
+{
+  "ListaColegiados": {
+    "Colegiados": {
+      "Colegiado": [
+        {
+          "Codigo": "38",
+          "CodigoTipoColegiado": "21",
+          "DataInicio": "1900-01-01",
+          "DescricaoTipoColegiado": "Comissão Permanente",
+          "Nome": "Comissão de Assuntos Econômicos",
+          "Publica": "S",
+          "Sigla": "CAE",
+          "SiglaCasa": "SF",
+          "SiglaTipoColegiado": "PERMANENTE"
+        },
+        {
+          "Codigo": "1702",
+          "CodigoTipoColegiado": "124",
+          "DataInicio": "2006-12-26",
+          "DescricaoTipoColegiado": "Comitê da CMO",
+          "Finalidade": "Art. 25 da Resolução nº 1 de 2006-CN.",
+          "Nome": "Comitê de Admissibilidade de Emendas",
+          "Publica": "N",
+          "Sigla": "CAEM",
+          "SiglaCasa": "CN",
+          "SiglaTipoColegiado": "CCMO"
+        },
+        {
+          "Codigo": "2636",
+          "CodigoTipoColegiado": "66",
+          "DataInicio": "2023-09-19",
+          "DescricaoTipoColegiado": "Subcomissão Permanente",
+          "Finalidade": "opinar sobre questões municipalistas, tais como: (a) desenvolvimento econômico-social; (b) políticas de financiamento das ações de competência municipal, inclusive mediante transferências constitucionais; (c) endividamento público; (d) política tributária; (e) viabilidade econômica e fiscal para criação, incorporação, fusão e desmembramento de municípios; (f) cooperação técnica e financeira com a União; (g) políticas de geração de emprego e renda; e (h) políticas de ordenamento territorial.",
+          "Nome": "Subcomissão Permanente Municipalista",
+          "Publica": "S",
+          "Sigla": "CAESM",
+          "SiglaCasa": "SF",
+          "SiglaTipoColegiado": "SUBPECOPE"
+        }
+      ]
+    },
+    "Metadados": {
+      "DataVersaoServico": "2017-02-01",
+      "DescricaoDataSet": "Obtém a Lista geral de Colegiados EM ATIVIDADE no Congresso Nacional.",
+      "Versao": "15/07/2026 08:22:43",
+      "VersaoServico": "2"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaColegiadosv2.xsd"
+  }
+}

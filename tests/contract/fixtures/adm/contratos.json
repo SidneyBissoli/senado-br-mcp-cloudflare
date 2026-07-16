@@ -1,0 +1,109 @@
+[
+  {
+    "data_assinatura": "2004-10-15",
+    "data_fim_vigencia": null,
+    "data_inicio_vigencia": "2004-10-15",
+    "data_publicacao": null,
+    "data_ultima_atualizacao": "2015-04-01",
+    "empresa": {
+      "cpf_cnpj": "04.206.050/0001-80",
+      "nome": "TIM CELULAR S/A"
+    },
+    "fundamentacao_legal": null,
+    "id": 541,
+    "ind_mao_de_obra": false,
+    "licitacao": {
+      "modalidade": "Não se Aplica",
+      "numero": null
+    },
+    "numero": "20040116",
+    "numero_formatado": "CT-CT/20040116",
+    "objeto": "Fornecimento gracioso de conteúdo de canais de televisao para transmissão, ao vivo, em celulares ativados em Planos de Serviço TIM.",
+    "orgaos_gestores": [
+      {
+        "id": 541,
+        "nome": "COMISSÃO PERMANENTE DE GESTÃO DE CONTRATOS - SECOM",
+        "sigla": "COPEGE",
+        "tipo_gestao": "Comissão"
+      }
+    ],
+    "processo_principal": "200015585200448",
+    "sub_especie": {
+      "nome": "Contrato",
+      "sigla": "CT"
+    },
+    "unidade_gestora": {
+      "nome": "Senado Federal",
+      "sigla": "SF"
+    }
+  },
+  {
+    "data_assinatura": "2005-02-10",
+    "data_fim_vigencia": null,
+    "data_inicio_vigencia": "2005-02-10",
+    "data_publicacao": "2005-02-16",
+    "data_ultima_atualizacao": "2015-04-01",
+    "empresa": {
+      "cpf_cnpj": "00.000.000/0365-26",
+      "nome": "PODERES EXECUTIVO, LEGISLATIVO E JUDICIÁRIO"
+    },
+    "fundamentacao_legal": null,
+    "id": 513,
+    "ind_mao_de_obra": false,
+    "licitacao": {
+      "modalidade": "Não se Aplica",
+      "numero": null
+    },
+    "numero": "20050061",
+    "numero_formatado": "CN-TC/20050061",
+    "objeto": "Implantação dos serviços de televisao para o exterior, no âmbito da RADIOBRAS.",
+    "orgaos_gestores": [
+      {
+        "id": 513,
+        "nome": "COMISSÃO PERMANENTE DE GESTÃO DE CONTRATOS - SECOM",
+        "sigla": "COPEGE",
+        "tipo_gestao": "Comissão"
+      }
+    ],
+    "processo_principal": "200004950200570",
+    "sub_especie": {
+      "nome": "Termo de Compromisso",
+      "sigla": "TC"
+    },
+    "unidade_gestora": {
+      "nome": "Senado Federal",
+      "sigla": "SF"
+    }
+  },
+  {
+    "data_assinatura": "2008-01-01",
+    "data_fim_vigencia": null,
+    "data_inicio_vigencia": "2008-01-01",
+    "data_publicacao": "2008-04-02",
+    "data_ultima_atualizacao": "2024-10-14",
+    "empresa": {
+      "cpf_cnpj": "00.497.560/0001-01",
+      "nome": "SUPERIOR TRIBUNAL MILITAR - STM."
+    },
+    "fundamentacao_legal": null,
+    "id": 608,
+    "ind_mao_de_obra": false,
+    "licitacao": {
+      "modalidade": "Não se Aplica",
+      "numero": null
+    },
+    "numero": "20080002",
+    "numero_formatado": "CS-CS/20080002",
+    "objeto": "Cessão de Uso do espaço fisico, localizado na sala 02 do 27º andar do Edifício Anexo I do Senado Federal, com área de 25,84m², para instalação da Asessoria Parlamentar do STM.",
+    "orgaos_gestores": [],
+    "processo_principal": "200002914200814",
+    "sub_especie": {
+      "nome": "Cessão de Uso",
+      "sigla": "CS"
+    },
+    "unidade_gestora": {
+      "nome": "Senado Federal",
+      "sigla": "SF"
+    }
+  }
+]

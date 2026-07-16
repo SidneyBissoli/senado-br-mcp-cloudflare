@@ -1,0 +1,60 @@
+{
+  "MesaSenado": {
+    "Colegiados": {
+      "Colegiado": [
+        {
+          "Cargos": {
+            "Cargo": [
+              {
+                "Bancada": "(UNIÃO-AP)",
+                "Cargo": [
+                  "PRESIDENTE"
+                ],
+                "Http": "3830",
+                "NomeParlamentar": "Senador Davi Alcolumbre",
+                "NumeroOrdemImpressao": "1",
+                "Origem": "P"
+              },
+              {
+                "Bancada": "(PL-TO)",
+                "Cargo": [
+                  "1º VICE-PRESIDENTE"
+                ],
+                "Http": "3777",
+                "NomeParlamentar": "Senador Eduardo Gomes",
+                "NumeroOrdemImpressao": "2",
+                "Origem": "P"
+              },
+              {
+                "Bancada": "(PT-PE)",
+                "Cargo": [
+                  "2º VICE-PRESIDENTE"
+                ],
+                "Http": "5008",
+                "NomeParlamentar": "Senador Humberto Costa",
+                "NumeroOrdemImpressao": "3",
+                "Origem": "P"
+              }
+            ]
+          },
+          "CodigoColegiado": "2015",
+          "CodigoTipoColegiado": "109",
+          "DataInicio": "1900-01-01",
+          "DescricaoTipoColegiado": "Mesa",
+          "NomeColegiado": "COMISSÃO DIRETORA DO SENADO FEDERAL",
+          "SiglaCasa": "SF",
+          "SiglaColegiado": "CDIR",
+          "Suplentes": "4",
+          "Titulares": "7"
+        }
+      ]
+    },
+    "Metadados": {
+      "DataVersaoServico": "2021-10-25",
+      "DescricaoDataSet": "Obtém a Composição dos integrantes da Mesa Diretora do Senado Federal.",
+      "Versao": "15/07/2026 08:23:13",
+      "VersaoServico": "2"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/MesaSenadov2.xsd"
+  }
+}

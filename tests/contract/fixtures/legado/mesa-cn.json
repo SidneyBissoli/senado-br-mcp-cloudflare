@@ -1,0 +1,175 @@
+{
+  "MesaCongresso": {
+    "Colegiados": {
+      "Colegiado": [
+        {
+          "Cargos": {
+            "Cargo": [
+              {
+                "Bancada": "(UNIÃO-AP)",
+                "CodigoCargo": "1",
+                "CodigoParlamentar": "3830",
+                "NomeParlamentar": "Senador Davi Alcolumbre",
+                "TipoCargo": "PRESIDENTE"
+              },
+              {
+                "Bancada": "(PL-RJ)",
+                "CodigoCargo": "143",
+                "CodigoDeputadoNaCamara": "178937",
+                "CodigoParlamentar": "5771",
+                "NomeParlamentar": "Deputado Altineu Côrtes",
+                "TipoCargo": "1ª VICE-PRESIDENTE"
+              },
+              {
+                "Bancada": "(PT-PE)",
+                "CodigoCargo": "5",
+                "CodigoParlamentar": "5008",
+                "NomeParlamentar": "Senador Humberto Costa",
+                "TipoCargo": "2ª VICE-PRESIDENTE"
+              }
+            ]
+          },
+          "CodigoColegiado": "1616",
+          "Membros_bloco_cd": {
+            "Membro": [
+              {
+                "Membros_cd": {
+                  "Membro": [
+                    {
+                      "CodigoDeputadoNaCamara": "178937",
+                      "CodigoParlamentar": "5771",
+                      "NomeParlamentar": "Deputado Altineu Côrtes",
+                      "NumeroOrdem": "1",
+                      "OrigemParlamentar": "Câmara",
+                      "Partido": "PL",
+                      "ProprietarioVaga": "1º Vice-Presidente",
+                      "Ramais": "5336",
+                      "SiglaUf": "RJ",
+                      "TipoVaga": "Titular"
+                    }
+                  ]
+                },
+                "NumeroMembros": "1"
+              },
+              {
+                "Membros_cd": {
+                  "Membro": [
+                    {
+                      "CodigoDeputadoNaCamara": "204426",
+                      "CodigoParlamentar": "6131",
+                      "NomeParlamentar": "Deputado Carlos Veras",
+                      "NumeroOrdem": "1",
+                      "OrigemParlamentar": "Câmara",
+                      "Partido": "PT",
+                      "ProprietarioVaga": "1º Secretário",
+                      "Ramais": "5870",
+                      "SiglaUf": "PE",
+                      "TipoVaga": "Titular"
+                    }
+                  ]
+                },
+                "NumeroMembros": "1"
+              },
+              {
+                "Membros_cd": {
+                  "Membro": [
+                    {
+                      "CodigoDeputadoNaCamara": "220561",
+                      "CodigoParlamentar": "6452",
+                      "NomeParlamentar": "Deputada Delegada Katarina",
+                      "NumeroOrdem": "1",
+                      "OrigemParlamentar": "Câmara",
+                      "Partido": "PSD",
+                      "ProprietarioVaga": "3º Secretário",
+                      "Ramais": "5756",
+                      "SiglaUf": "SE",
+                      "TipoVaga": "Titular"
+                    }
+                  ]
+                },
+                "NumeroMembros": "1"
+              }
+            ]
+          },
+          "Membros_bloco_sf": {
+            "PartidoBloco": [
+              {
+                "Membros_sf": {
+                  "Membro": [
+                    {
+                      "CodigoParlamentar": "3830",
+                      "NomeParlamentar": "Senador Davi Alcolumbre",
+                      "NumeroOrdem": "1",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "UNIÃO",
+                      "ProprietarioVaga": "Presidente",
+                      "Ramais": "6717 / 6720",
+                      "SiglaUf": "AP",
+                      "TipoVaga": "Titular"
+                    }
+                  ]
+                },
+                "NumeroMembros": "1"
+              },
+              {
+                "Membros_sf": {
+                  "Membro": [
+                    {
+                      "CodigoParlamentar": "5008",
+                      "NomeParlamentar": "Senador Humberto Costa",
+                      "NumeroOrdem": "1",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "PT",
+                      "ProprietarioVaga": "2º Vice-Presidente",
+                      "Ramais": "6285 / 6286",
+                      "SiglaUf": "PE",
+                      "TipoVaga": "Titular"
+                    }
+                  ]
+                },
+                "NumeroMembros": "1"
+              },
+              {
+                "Membros_sf": {
+                  "Membro": [
+                    {
+                      "CodigoParlamentar": "475",
+                      "NomeParlamentar": "Senador Confúcio Moura",
+                      "NumeroOrdem": "1",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "MDB",
+                      "ProprietarioVaga": "2º Secretário",
+                      "Ramais": "2470 / 2163",
+                      "SiglaUf": "RO",
+                      "TipoVaga": "Titular"
+                    }
+                  ]
+                },
+                "NumeroMembros": "1"
+              }
+            ]
+          },
+          "NomeColegiado": "Mesa Diretora do Congresso Nacional",
+          "QuantidadesMembros": {
+            "DeputadosTitulares": "3",
+            "SenadoresTitulares": "4",
+            "Titulares": "7"
+          },
+          "SiglaColegiado": "Mesa",
+          "TipoColegiado": {
+            "CodigoTipo": "111",
+            "Sigla_casa": "CN",
+            "TipoColegiado": "Mesa"
+          }
+        }
+      ]
+    },
+    "Metadados": {
+      "DataVersaoServico": "2021-10-25",
+      "DescricaoDataSet": "Obtém a Composição dos integrantes da Mesa Diretora do Congresso Nacional.",
+      "Versao": "15/07/2026 08:23:13",
+      "VersaoServico": "2"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/cn/MesaCongressov2.xsd"
+  }
+}

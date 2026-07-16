@@ -1,0 +1,27 @@
+{
+  "data": [
+    {
+      "auxilioMoradia": "N",
+      "estadoEleito": "AC",
+      "imovelFuncional": "S",
+      "nomeParlamentar": "ALAN RICK",
+      "partidoEleito": "REPUBLICANOS"
+    },
+    {
+      "auxilioMoradia": "N",
+      "estadoEleito": "SE",
+      "imovelFuncional": "S",
+      "nomeParlamentar": "ALESSANDRO VIEIRA",
+      "partidoEleito": "MDB"
+    },
+    {
+      "auxilioMoradia": "N",
+      "estadoEleito": "MA",
+      "imovelFuncional": "S",
+      "nomeParlamentar": "ANA PAULA LOBATO",
+      "partidoEleito": "PSB"
+    }
+  ],
+  "msg": "Dados gerados com sucesso",
+  "statusCode": 200
+}

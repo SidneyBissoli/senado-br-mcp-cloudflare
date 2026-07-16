@@ -1,0 +1,33 @@
+{
+  "ListaTiposUsoPalavra": {
+    "Metadados": {
+      "DataVersaoServico": "2019-12-04",
+      "DescricaoDataSet": "Lista os tipos de Uso da Palavra.",
+      "Versao": "15/07/2026 08:23:04",
+      "VersaoServico": "1"
+    },
+    "TiposUsoPalavra": {
+      "TipoUsoPalavra": [
+        {
+          "Codigo": "4825",
+          "Descricao": "Aparte",
+          "IndicadorAtivo": "S",
+          "Sigla": "APA"
+        },
+        {
+          "Codigo": "5004",
+          "Descricao": "Aparte - Presidência",
+          "IndicadorAtivo": "S",
+          "Sigla": "APP"
+        },
+        {
+          "Codigo": "4835",
+          "Descricao": "Breve comunicação",
+          "IndicadorAtivo": "N",
+          "Sigla": "BCO"
+        }
+      ]
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaTiposUsoPalavrav1.xsd"
+  }
+}

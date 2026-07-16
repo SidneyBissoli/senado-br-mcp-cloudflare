@@ -1,0 +1,36 @@
+{
+  "ListaAutores": {
+    "Autores": {
+      "Autor": [
+        {
+          "CodigoParlamentar": "4981",
+          "FormaTratamento": "Senador ",
+          "NomeParlamentar": "Acir Gurgacz",
+          "QuantidadeMaterias": "56",
+          "UfParlamentar": "RO",
+          "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador4981.jpg",
+          "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/4981"
+        },
+        {
+          "CodigoParlamentar": "6089",
+          "FormaTratamento": "Deputado ",
+          "NomeParlamentar": "Acácio Favacho",
+          "QuantidadeMaterias": "2"
+        },
+        {
+          "CodigoParlamentar": "5749",
+          "FormaTratamento": "Deputado ",
+          "NomeParlamentar": "Adalberto Cavalcanti",
+          "QuantidadeMaterias": "1"
+        }
+      ]
+    },
+    "Metadados": {
+      "DataVersaoServico": "2020-07-16",
+      "DescricaoDataSet": "Lista de Autores de Materias",
+      "Versao": "15/07/2026 22:28:11",
+      "VersaoServico": "6"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaAutoresv6.xsd"
+  }
+}

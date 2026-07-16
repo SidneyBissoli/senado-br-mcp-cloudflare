@@ -1,0 +1,188 @@
+{
+  "AfastamentoAtual": {
+    "Metadados": {
+      "DataVersaoServico": "2021-09-09",
+      "DescricaoDataSet": "Lista dos Senadores atualmente afastados (Fora de Exercício).",
+      "Versao": "15/07/2026 22:18:42",
+      "VersaoServico": "4"
+    },
+    "Parlamentares": {
+      "Parlamentar": [
+        {
+          "IdentificacaoParlamentar": {
+            "CodigoParlamentar": "6366",
+            "EmailParlamentar": "sen.andreamaral@senado.leg.br",
+            "FormaTratamento": "Senador",
+            "NomeCompletoParlamentar": "Andre Augusto Castro do Amaral",
+            "NomeParlamentar": "André Amaral",
+            "SexoParlamentar": "Masculino",
+            "SiglaPartidoParlamentar": "UNIÃO",
+            "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador6366.jpg",
+            "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/6366"
+          },
+          "Mandato": {
+            "CodigoMandato": "605",
+            "DescricaoParticipacao": "1º Suplente",
+            "Exercicios": {
+              "Exercicio": [
+                {
+                  "CodigoExercicio": "3063",
+                  "DataFim": "2024-10-17",
+                  "DataInicio": "2024-06-20",
+                  "DescricaoCausaAfastamento": "Retorno do titular",
+                  "SiglaCausaAfastamento": "RET"
+                }
+              ]
+            },
+            "PrimeiraLegislaturaDoMandato": {
+              "DataFim": "2027-01-31",
+              "DataInicio": "2023-02-01",
+              "NumeroLegislatura": "57"
+            },
+            "SegundaLegislaturaDoMandato": {
+              "DataFim": "2031-01-31",
+              "DataInicio": "2027-02-01",
+              "NumeroLegislatura": "58"
+            },
+            "Suplentes": {
+              "Suplente": [
+                {
+                  "CodigoParlamentar": "6367",
+                  "DescricaoParticipacao": "2º Suplente",
+                  "NomeParlamentar": "Erik Marinho"
+                }
+              ]
+            },
+            "Titular": {
+              "CodigoParlamentar": "4642",
+              "DescricaoParticipacao": "Titular",
+              "NomeParlamentar": "Efraim Filho"
+            },
+            "UfParlamentar": "PB"
+          }
+        },
+        {
+          "IdentificacaoParlamentar": {
+            "CodigoParlamentar": "751",
+            "EmailParlamentar": "sen.aroldedeoliveira@senado.leg.br",
+            "FormaTratamento": "Senador",
+            "NomeCompletoParlamentar": "Arolde de Oliveira",
+            "NomeParlamentar": "Arolde de Oliveira",
+            "SexoParlamentar": "Masculino",
+            "SiglaPartidoParlamentar": "PSD",
+            "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador751.jpg",
+            "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/751"
+          },
+          "Mandato": {
+            "CodigoMandato": "545",
+            "DescricaoParticipacao": "Titular",
+            "Exercicios": {
+              "Exercicio": [
+                {
+                  "CodigoExercicio": "2891",
+                  "DataFim": "2020-10-21",
+                  "DataInicio": "2019-02-01",
+                  "DescricaoCausaAfastamento": "Falecimento",
+                  "SiglaCausaAfastamento": "FAL"
+                }
+              ]
+            },
+            "PrimeiraLegislaturaDoMandato": {
+              "DataFim": "2023-01-31",
+              "DataInicio": "2019-02-01",
+              "NumeroLegislatura": "56"
+            },
+            "SegundaLegislaturaDoMandato": {
+              "DataFim": "2027-01-31",
+              "DataInicio": "2023-02-01",
+              "NumeroLegislatura": "57"
+            },
+            "Suplentes": {
+              "Suplente": [
+                {
+                  "CodigoParlamentar": "5936",
+                  "DescricaoParticipacao": "1º Suplente",
+                  "NomeParlamentar": "Carlos Portinho"
+                },
+                {
+                  "CodigoParlamentar": "5934",
+                  "DescricaoParticipacao": "2º Suplente",
+                  "NomeParlamentar": "Renata Guerra"
+                }
+              ]
+            },
+            "UfParlamentar": "RJ"
+          }
+        },
+        {
+          "IdentificacaoParlamentar": {
+            "CodigoParlamentar": "6350",
+            "EmailParlamentar": "sen.augustabrito@senado.leg.br",
+            "FormaTratamento": "Senadora",
+            "NomeCompletoParlamentar": "Augusta Brito de Paula",
+            "NomeParlamentar": "Augusta Brito",
+            "SexoParlamentar": "Feminino",
+            "SiglaPartidoParlamentar": "PT",
+            "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador6350.jpg",
+            "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/6350"
+          },
+          "Mandato": {
+            "CodigoMandato": "598",
+            "DescricaoParticipacao": "1º Suplente",
+            "Exercicios": {
+              "Exercicio": [
+                {
+                  "CodigoExercicio": "3087",
+                  "DataFim": "2026-04-02",
+                  "DataInicio": "2025-02-04",
+                  "DescricaoCausaAfastamento": "Retorno do titular",
+                  "SiglaCausaAfastamento": "RET"
+                },
+                {
+                  "CodigoExercicio": "3066",
+                  "DataFim": "2025-02-01",
+                  "DataInicio": "2024-07-31",
+                  "DescricaoCausaAfastamento": "Retorno do titular",
+                  "SiglaCausaAfastamento": "RET"
+                },
+                {
+                  "CodigoExercicio": "3052",
+                  "DataFim": "2024-03-31",
+                  "DataInicio": "2023-12-14",
+                  "DescricaoCausaAfastamento": "Licença com convocação de suplente (superior a 120 dias)",
+                  "SiglaCausaAfastamento": "LCS"
+                }
+              ]
+            },
+            "PrimeiraLegislaturaDoMandato": {
+              "DataFim": "2027-01-31",
+              "DataInicio": "2023-02-01",
+              "NumeroLegislatura": "57"
+            },
+            "SegundaLegislaturaDoMandato": {
+              "DataFim": "2031-01-31",
+              "DataInicio": "2027-02-01",
+              "NumeroLegislatura": "58"
+            },
+            "Suplentes": {
+              "Suplente": [
+                {
+                  "CodigoParlamentar": "6351",
+                  "DescricaoParticipacao": "2º Suplente",
+                  "NomeParlamentar": "Janaína Farias"
+                }
+              ]
+            },
+            "Titular": {
+              "CodigoParlamentar": "6336",
+              "DescricaoParticipacao": "Titular",
+              "NomeParlamentar": "Camilo Santana"
+            },
+            "UfParlamentar": "CE"
+          }
+        }
+      ]
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/AfastamentoAtualv4.xsd"
+  }
+}

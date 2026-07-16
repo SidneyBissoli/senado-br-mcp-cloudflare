@@ -1,0 +1,23 @@
+[
+  {
+    "dataInicial": "1983-02-01",
+    "nome": "NABOR TELES DA ROCHA JÚNIOR",
+    "remuneracao": "30.416,22",
+    "sequencial": 2411369,
+    "tipo": "EX-SENADOR IPC"
+  },
+  {
+    "dataInicial": "1986-01-01",
+    "nome": "HUGO NAPOLEÃO DO REGO NETO",
+    "remuneracao": "30.416,22",
+    "sequencial": 2412918,
+    "tipo": "EX-SENADOR IPC"
+  },
+  {
+    "dataInicial": "1987-02-01",
+    "nome": "JOSÉ DE SOUZA MARTINS FILHO",
+    "remuneracao": "15.069,01",
+    "sequencial": 2367530,
+    "tipo": "EX-SENADOR IPC"
+  }
+]

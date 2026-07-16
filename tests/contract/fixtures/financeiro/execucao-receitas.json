@@ -1,0 +1,40 @@
+{
+  "receitas": [
+    {
+      "ano": "2026",
+      "categoria_economica_cod_desc": "1 - RECEITAS CORRENTES",
+      "data_carga": "#SYNTAX",
+      "especie_cod_desc": "131 - EXPLORAÇÃO DO PATRIMÔNIO IMOBILIÁRIO DO ESTADO",
+      "mes": "01",
+      "natureza_receita_cod_desc": "13110111 - ALUGUÉIS E ARRENDAMENTOS - PRINCIPAL",
+      "orgao_superior_cod": "02000 - SENADO FEDERAL",
+      "origem_cod_desc": "13 - RECEITA PATRIMONIAL",
+      "receita_anual_prevista": 0,
+      "receita_arrecadada": 2483.6
+    },
+    {
+      "ano": "2026",
+      "categoria_economica_cod_desc": "1 - RECEITAS CORRENTES",
+      "data_carga": "#SYNTAX",
+      "especie_cod_desc": "131 - EXPLORAÇÃO DO PATRIMÔNIO IMOBILIÁRIO DO ESTADO",
+      "mes": "02",
+      "natureza_receita_cod_desc": "13110111 - ALUGUÉIS E ARRENDAMENTOS - PRINCIPAL",
+      "orgao_superior_cod": "02000 - SENADO FEDERAL",
+      "origem_cod_desc": "13 - RECEITA PATRIMONIAL",
+      "receita_anual_prevista": 0,
+      "receita_arrecadada": 2483.6
+    },
+    {
+      "ano": "2026",
+      "categoria_economica_cod_desc": "1 - RECEITAS CORRENTES",
+      "data_carga": "#SYNTAX",
+      "especie_cod_desc": "131 - EXPLORAÇÃO DO PATRIMÔNIO IMOBILIÁRIO DO ESTADO",
+      "mes": "05",
+      "natureza_receita_cod_desc": "13110111 - ALUGUÉIS E ARRENDAMENTOS - PRINCIPAL",
+      "orgao_superior_cod": "02000 - SENADO FEDERAL",
+      "origem_cod_desc": "13 - RECEITA PATRIMONIAL",
+      "receita_anual_prevista": 0,
+      "receita_arrecadada": 24309.35
+    }
+  ]
+}

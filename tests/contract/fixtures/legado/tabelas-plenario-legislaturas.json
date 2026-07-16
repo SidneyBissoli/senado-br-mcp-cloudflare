@@ -1,0 +1,77 @@
+{
+  "ListaLegislatura": {
+    "Legislaturas": {
+      "Legislatura": [
+        {
+          "DataEleicao": "2026-10-04",
+          "DataFim": "2031-01-31",
+          "DataInicio": "2027-02-01",
+          "NumeroLegislatura": "58"
+        },
+        {
+          "DataEleicao": "2022-10-02",
+          "DataFim": "2027-01-31",
+          "DataInicio": "2023-02-01",
+          "NumeroLegislatura": "57",
+          "SessoesLegislativas": {
+            "SessaoLegislativa": [
+              {
+                "DataFim": "2023-02-01",
+                "DataInicio": "2023-02-01",
+                "NumeroSessaoLegislativa": "1",
+                "TipoSessaoLegislativa": "Preparatória"
+              },
+              {
+                "DataFim": "2023-12-22",
+                "DataInicio": "2023-02-02",
+                "NumeroSessaoLegislativa": "1",
+                "TipoSessaoLegislativa": "Ordinária"
+              },
+              {
+                "DataFim": "2024-12-23",
+                "DataInicio": "2024-02-02",
+                "NumeroSessaoLegislativa": "2",
+                "TipoSessaoLegislativa": "Ordinária"
+              }
+            ]
+          }
+        },
+        {
+          "DataEleicao": "2018-10-07",
+          "DataFim": "2023-01-31",
+          "DataInicio": "2019-02-01",
+          "NumeroLegislatura": "56",
+          "SessoesLegislativas": {
+            "SessaoLegislativa": [
+              {
+                "DataFim": "2019-02-01",
+                "DataInicio": "2019-02-01",
+                "NumeroSessaoLegislativa": "1",
+                "TipoSessaoLegislativa": "Preparatória"
+              },
+              {
+                "DataFim": "2019-12-23",
+                "DataInicio": "2019-02-02",
+                "NumeroSessaoLegislativa": "1",
+                "TipoSessaoLegislativa": "Ordinária"
+              },
+              {
+                "DataFim": "2020-12-23",
+                "DataInicio": "2020-02-03",
+                "NumeroSessaoLegislativa": "2",
+                "TipoSessaoLegislativa": "Ordinária"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Metadados": {
+      "DataVersaoServico": "2019-08-27",
+      "DescricaoDataSet": "Obtém a lista de todas as Legislaturas e suas Sessões Legislativas.",
+      "Versao": "15/07/2026 08:22:44",
+      "VersaoServico": "3"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaLegislaturav3.xsd"
+  }
+}

@@ -1,0 +1,124 @@
+{
+  "DetalheDocumento": {
+    "Metadados": {
+      "DataVersaoServico": "2017-02-01",
+      "DescricaoDataSet": "Obtém detalhes de uma Norma Jurídica por meio do código informado no parâmetro.",
+      "Versao": "15/07/2026 23:27:29",
+      "VersaoServico": "3"
+    },
+    "documentos": {
+      "documento": [
+        {
+          "catalogo": "",
+          "classes": {
+            "classe": [
+              "Classificação Temática Unificada / Meio Ambiente / Desenvolvimento Sustentável",
+              "Classificação Temática Unificada / Infraestrutura / Minas e Energia / Energia"
+            ]
+          },
+          "disps": "",
+          "edivs": {
+            "ediv": [
+              {
+                "codnormaAnterior": "551354",
+                "comentario": "Declaração de Alteração Permanente",
+                "datAssinatura": "06/08/1997",
+                "itens": {
+                  "item": [
+                    {
+                      "comentario": "Acréscimo",
+                      "dispositivo": "Art. 68-G, caput "
+                    },
+                    {
+                      "comentario": "Acréscimo",
+                      "dispositivo": "Art. 68-G, Parágrafo Único "
+                    }
+                  ]
+                },
+                "nomeNormaAnterior": "Lei nº 9.478 de 06/08/1997"
+              },
+              {
+                "codnormaAnterior": "26330795",
+                "comentario": "Declaração de Acréscimo Vetado",
+                "datAssinatura": "26/12/2017",
+                "itens": "",
+                "nomeNormaAnterior": "Lei nº 13.576 de 26/12/2017"
+              },
+              {
+                "codnormaAnterior": "26330795",
+                "comentario": "Declaração de Acréscimo Vetado",
+                "datAssinatura": "26/12/2017",
+                "itens": "",
+                "nomeNormaAnterior": "Lei nº 13.576 de 26/12/2017"
+              }
+            ]
+          },
+          "ementa": "Altera a Lei nº 13.576, de 26 de dezembro de 2017, que dispõe sobre a Política Nacional de Biocombustíveis (RenovaBio), para nela incluir os produtores independentes de matéria-prima destinada à produção de biocombustível; e altera a Lei nº 9.478, de 6 de agosto de 1997.",
+          "id": "40035256",
+          "identificacao": {
+            "apelido": "LEI-15082-2024-12-30",
+            "dataassinatura": "30/12/2024",
+            "descricao": "Lei Numerada",
+            "norma": "LEI-15082-2024-12-30",
+            "normaNome": "Lei nº 15.082 de 30/12/2024",
+            "numero": "15082",
+            "tipo": "LEI-n",
+            "urlDocumento": "https://normas.leg.br/?urn=urn:lex:br:federal:lei:2024-12-30;15082"
+          },
+          "indexacao": {
+            "frase": [
+              " ALTERAÇÃO ,  LEI FEDERAL ,  Política Nacional de Biocombustíveis (RenovaBio) ,  INCLUSÃO ,  PRODUTOR ,  CANA DE AÇUCAR ,  MATERIA-PRIMA ,  PRODUÇÃO ,  Biocombustível ,  PRINCIPIO JURIDICO ,  DEFINIÇÃO ,  PREVISÃO ,  CRIME CONTRA O MEIO AMBIENTE ,  MULTA ,  DISTRIBUIDOR ,  DESCUMPRIMENTO ,  OBJETIVO ,  ALCANCE ,  REDUÇÃO ,  EMISSÃO ,  GAS ,  EFEITO ESTUFA ,  AUSENCIA ,  PAGAMENTO ,  PARTICIPAÇÃO ,  PROIBIÇÃO ,  COMERCIALIZAÇÃO ,  IMPORTAÇÃO ,  COMBUSTIVEL ,  INADIMPLENCIA ,  RELAÇÃO ,  SANÇÃO ,  PUBLICAÇÃO ,  ATUALIZAÇÃO ,  AGENCIA NACIONAL DO PETROLEO GAS NATURAL E BIOCOMBUSTIVEIS (ANP) ,  POSSIBILIDADE ,  REVOGAÇÃO ,  AUTORIZAÇÃO ,  EXERCICIO ,  ATIVIDADE ,  RECEITA ,  ORIGEM ,  NEGOCIAÇÃO ,  CREDITO DE CARBONO .",
+              " ALTERAÇÃO ,  LEI FEDERAL ,  NECESSIDADE ,  DISTRIBUIDOR ,  COMBUSTIVEL ,  COMPROVAÇÃO ,  ESTOQUE ,  AQUISIÇÃO ,  RETIRADA ,  Biodiesel ,  COMPATIBILIDADE ,  VOLUME ,  REQUISITOS ,  COMERCIALIZAÇÃO ."
+            ]
+          },
+          "publicacoes": {
+            "publicacao": [
+              {
+                "coluna": "1",
+                "data": "31/12/2024",
+                "dispositivo": "Publicação Original   [Diário Oficial da União  de 31/12/2024] (p. 868, col. 1)",
+                "fonte": "Diário Oficial da União  de 31/12/2024",
+                "id": "40035289",
+                "pagina": "868",
+                "siglaFonte": "DOU-2024-12-31",
+                "temTexto": "S",
+                "tipo": "PUB"
+              }
+            ]
+          },
+          "vides": {
+            "vide": [
+              {
+                "codnormaposterior": "40035979",
+                "coluna": "1",
+                "comentario": "Declaração de Veto Original",
+                "datAssinatura": "30/12/2024",
+                "datapub": "31/12/2024",
+                "edicao": "40034935",
+                "itens": "",
+                "nomeNormaPosterior": "Mensagem de Veto Parcial nº 1.709 de 30/12/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 31/12/2024] (p. 877, col. 1)",
+                "pagina": "877",
+                "tipoEdicao": "750"
+              },
+              {
+                "codnormaposterior": "40035979",
+                "coluna": "1",
+                "comentario": "Declaração de Veto Original",
+                "datAssinatura": "30/12/2024",
+                "datapub": "31/12/2024",
+                "edicao": "40034935",
+                "itens": "",
+                "nomeNormaPosterior": "Mensagem de Veto Parcial nº 1.709 de 30/12/2024",
+                "nomePub": "Publicação Original   [Diário Oficial da União  de 31/12/2024] (p. 877, col. 1)",
+                "pagina": "877",
+                "tipoEdicao": "750"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/DetalheDocumentov3.xsd"
+  }
+}

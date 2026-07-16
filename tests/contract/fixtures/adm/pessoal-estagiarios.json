@@ -1,0 +1,24 @@
+{
+  "data": [
+    {
+      "curso": "Letras - Português",
+      "nome": "Ada Brígida Barbosa Rocha",
+      "nomeOrgao": "SERVIÇO DE REVISÃO",
+      "siglaOrgao": "SERVSO"
+    },
+    {
+      "curso": "Tecnologia Em Processos Gerenciais",
+      "nome": "Adeilson Morais De Aquino",
+      "nomeOrgao": "NÚCLEO DE GESTÃO DE CONTRATOS DE TECNOLOGIA DA INFORMAÇÃO",
+      "siglaOrgao": "NGCTI"
+    },
+    {
+      "curso": "Ead - Administracao",
+      "nome": "Adelia Corte Dos Santos",
+      "nomeOrgao": "SERVIÇO DE REGISTRO E CONTROLE DE PESSOAL EFETIVO",
+      "siglaOrgao": "SERCOPE"
+    }
+  ],
+  "msg": "Dados gerados com sucesso",
+  "statusCode": 200
+}

@@ -1,0 +1,1643 @@
+{
+  "AgendaReuniao": {
+    "Metadados": {
+      "DataVersaoServico": "2020-08-07",
+      "DescricaoDataSet": "Agenda das Reuniões das Comissões no período informado.",
+      "Versao": "15/07/2026 23:29:14",
+      "VersaoServico": "2"
+    },
+    "reunioes": {
+      "reuniao": [
+        {
+          "codigo": "13528",
+          "codigoSituacao": "6",
+          "colegiadoCriador": {
+            "codigo": "2703",
+            "codigoTipo": "22",
+            "descricaoTipo": "Comissão Parlamentar de Inquérito",
+            "materiasOriginadoras": {
+              "ano": "2024",
+              "codMateriaLegado": "165666",
+              "idProcesso": "8725036",
+              "nomeFormatado": "RQS 680/2024",
+              "numero": "00680",
+              "sigla": "RQS"
+            },
+            "nome": "CPI das BETS",
+            "sigla": "CPIBETS",
+            "siglaCasa": "SF"
+          },
+          "colegiados": {
+            "codigo": "2703",
+            "codigoTipoColegiado": "22",
+            "composicaoPublica": "true",
+            "isSubcomissao": "false",
+            "nome": "CPI das BETS",
+            "nomeTipoColegiado": "Comissão Parlamentar de Inquérito",
+            "numeroReuniao": "16",
+            "publicoPortal": "true",
+            "sigla": "CPIBETS",
+            "siglaCasa": "SF"
+          },
+          "confirmada": "false",
+          "continuacaoCancelada": "false",
+          "dataInicio": "2025-05-08T10:30:00.000",
+          "dataInicioFormatadaComObsHorario": "08/05/2025 às 10h30",
+          "dataReuniao": [
+            {
+              "codigo": "64847",
+              "codigoSituacao": "6",
+              "dataEvento": "2025-05-08T13:44:00.000",
+              "descricaoSituacao": "Realizada",
+              "realizada": "true"
+            },
+            {
+              "codigo": "64842",
+              "codigoSituacao": "3",
+              "dataEvento": "2025-05-08T11:05:00.000",
+              "descricaoSituacao": "Aberta",
+              "realizada": "false"
+            },
+            {
+              "codigo": "64808",
+              "codigoSituacao": "1",
+              "dataEvento": "2025-05-08T10:30:00.000",
+              "descricaoSituacao": "Agendada",
+              "realizada": "false"
+            }
+          ],
+          "descricao": "16ª, Reunião",
+          "foiAgendadaAposTerSidoSuspensa": "false",
+          "idUltimaPublicacaoPautaSimples": "15b73dd3-7ff6-4f26-b8ad-b7b147ee71ab",
+          "idUltimaPublicacaoResultado": "d9d8f552-d37c-4b39-ab4d-9f93752e2633",
+          "isExibirNoPortal": "true",
+          "local": "Anexo II, Ala Senador Alexandre Costa, Plenário nº 3",
+          "numReuniaoConjunta": "16",
+          "partes": {
+            "codigo": "17448",
+            "codigoTipo": "7",
+            "descricaoTipo": "Oitiva",
+            "evento": {
+              "codigo": "9434",
+              "convidados": [
+                {
+                  "cargo": "Presidente do CONAR - Conselho Nacional Autorregulamentação Publicitária",
+                  "codigo": "38820",
+                  "depoenteOitiva": {
+                    "pessoaFisica": {
+                      "nome": "Sérgio Pompilio",
+                      "sexo": "M"
+                    },
+                    "tipo": "PF"
+                  },
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Sérgio Pompilio",
+                  "ordem": "1",
+                  "requerimentosOitiva": {
+                    "ano": "2024",
+                    "assunto": "Depoimento",
+                    "autor": {
+                      "cargo": "Senador",
+                      "casa": "SF",
+                      "codigo": "4770",
+                      "codigoDeputado": "4931",
+                      "data": "2024-11-13T00:00:00.000",
+                      "isDeputado": "false",
+                      "isSenador": "true",
+                      "liderancas": [
+                        {
+                          "titulo": "Vice-líder do Senado Federal"
+                        },
+                        {
+                          "nomePartido": "Partido Liberal",
+                          "siglaPartido": "PL",
+                          "titulo": "Vice-líder do Senado Federal"
+                        }
+                      ],
+                      "nome": "Izalci Lucas Ferreira",
+                      "nomeComCargo": "Senador Izalci Lucas",
+                      "nomeComCargoResumido": "Sen. Izalci Lucas",
+                      "nomeParlamentar": "Izalci Lucas",
+                      "partido": "Partido Liberal",
+                      "sexo": "M",
+                      "siglaPartido": "PL",
+                      "ufPartido": "DF",
+                      "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador4770.jpg",
+                      "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/4770"
+                    },
+                    "autoria": "Senador Izalci Lucas",
+                    "codigo": "7881",
+                    "codigoSituacao": "70",
+                    "colegiado": {
+                      "codigo": "2703",
+                      "codigoTipoColegiado": "22",
+                      "composicaoPublica": "true",
+                      "isSubcomissao": "false",
+                      "nome": "CPI das BETS",
+                      "nomeTipoColegiado": "Comissão Parlamentar de Inquérito",
+                      "publicoPortal": "true",
+                      "sigla": "CPIBETS",
+                      "siglaCasa": "SF"
+                    },
+                    "dataApreciacao": "2024-11-19T00:00:00.000",
+                    "dataApresentacao": "2024-11-13T00:00:00.000",
+                    "depoentes": {
+                      "pessoaFisica": {
+                        "nome": "Sérgio Pompilio",
+                        "sexo": "M"
+                      },
+                      "tipo": "PF"
+                    },
+                    "documento": {
+                      "idEcmSenado": "8cacc899-fb3b-4a79-bf31-5870757ee0bd",
+                      "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/8cacc899-fb3b-4a79-bf31-5870757ee0bd",
+                      "mimeType": "application/pdf"
+                    },
+                    "documentosEnviados": {
+                      "ano": "2025",
+                      "arquivos": {
+                        "codigo": "7011",
+                        "descricao": "Ofício 159-2025",
+                        "documento": {
+                          "idEcmSenado": "709f37a5-df93-4d06-9c65-578533a10d2d",
+                          "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/709f37a5-df93-4d06-9c65-578533a10d2d",
+                          "mimeType": "application/pdf"
+                        },
+                        "sigiloso": "false",
+                        "tipo": {
+                          "codigo": "10",
+                          "codigoConarq": "04.02.05.07",
+                          "descricao": "Ofício",
+                          "idTipoDoma": "69"
+                        },
+                        "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/709f37a5-df93-4d06-9c65-578533a10d2d"
+                      },
+                      "assunto": "Convite",
+                      "codigo": "6847",
+                      "dataExpedicao": "2025-05-06",
+                      "descricao": "CPIBETS - Documento Enviado nº 159/2025",
+                      "destinatario": {
+                        "nome": "CONAR - Conselho Nacional de Autorregulamentação Publicitária"
+                      },
+                      "ementa": "Convida o presidente do CONAR, Sérgio Pompilio, a prestar depoimento à CPIBETS.",
+                      "numero": "159",
+                      "requerimentosRespondidos": {
+                        "ano": "2024",
+                        "codigoTipo": "2",
+                        "descricaoTipo": "Convite",
+                        "numero": "116",
+                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9842888"
+                      }
+                    },
+                    "documentosRecebidos": {
+                      "arquivos": {
+                        "codigo": "10879",
+                        "descricao": "Of 05-2025",
+                        "documento": {
+                          "idEcmSenado": "64266618-5c0a-4c19-8733-e8f325c3bcbb",
+                          "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/64266618-5c0a-4c19-8733-e8f325c3bcbb",
+                          "mimeType": "application/pdf"
+                        },
+                        "sigiloso": "false",
+                        "tipo": {
+                          "codigo": "10",
+                          "codigoConarq": "04.02.05.07",
+                          "descricao": "Ofício",
+                          "idTipoDoma": "69"
+                        },
+                        "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/64266618-5c0a-4c19-8733-e8f325c3bcbb"
+                      },
+                      "assunto": "Convite",
+                      "codigo": "7246",
+                      "codigoConarq": "04.02.05.07",
+                      "dataEmissaoOrigem": "2025-05-06",
+                      "dataRecebimento": "2025-05-06",
+                      "descricao": "CPIBETS - Documento Recebido nº 139",
+                      "emResposta": {
+                        "ano": "2025",
+                        "codigo": "6847",
+                        "descricao": "CPIBETS - Documento Enviado nº 159/2025",
+                        "numero": "159",
+                        "requerimentosRespondidos": {
+                          "ano": "2024",
+                          "numero": "116",
+                          "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9842888"
+                        }
+                      },
+                      "ementa": "Confirmação de participação do presidente do CONAR na CPIBETS",
+                      "numCaixaFinal": "0",
+                      "numCaixaInicial": "0",
+                      "numero": "139",
+                      "remetente": {
+                        "nome": "CONAR - Conselho Nacional de Autorregulamentação Publicitária"
+                      }
+                    },
+                    "ementa": "Convida o senhor Sérgio Pompilio, Presidente do Conselho Nacional de Autorregulamentação Publicitária (Conar).",
+                    "idDoma": "9842888",
+                    "numero": "116",
+                    "numeroSedol": "SF249096827744",
+                    "situacao": "Aprovado",
+                    "tipoRequerimento": "Convite",
+                    "tituloParaPauta": "Requerimento Nº 116/2024",
+                    "versao": "2026-03-19T02:05:28.905"
+                  },
+                  "sexo": "M"
+                },
+                {
+                  "cargo": "Influenciador digital",
+                  "codigo": "38836",
+                  "depoenteOitiva": {
+                    "pessoaFisica": {
+                      "nome": "Luiz Ricardo Melquiades",
+                      "sexo": "M"
+                    },
+                    "tipo": "PF"
+                  },
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Luiz Ricardo Melquiades",
+                  "ordem": "2",
+                  "requerimentosOitiva": {
+                    "ano": "2025",
+                    "assunto": "Depoimento",
+                    "autor": {
+                      "cargo": "Senadora",
+                      "casa": "SF",
+                      "codigo": "5988",
+                      "data": "2025-05-06T00:00:00.000",
+                      "isDeputado": "false",
+                      "isSenador": "true",
+                      "liderancas": {
+                        "nomeUnidadeLideranca": "Liderança da Bancada Feminina",
+                        "titulo": "Vice-líder do Senado Federal"
+                      },
+                      "nome": "Soraya Vieira Thronicke",
+                      "nomeComCargo": "Senadora Soraya Thronicke",
+                      "nomeComCargoResumido": "Sen. Soraya Thronicke",
+                      "nomeParlamentar": "Soraya Thronicke",
+                      "partido": "Podemos",
+                      "sexo": "F",
+                      "siglaPartido": "PODEMOS",
+                      "ufPartido": "MS",
+                      "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5988.jpg",
+                      "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5988"
+                    },
+                    "autoria": "Senadora Soraya Thronicke",
+                    "codigo": "8223",
+                    "codigoSituacao": "70",
+                    "colegiado": {
+                      "codigo": "2703",
+                      "codigoTipoColegiado": "22",
+                      "composicaoPublica": "true",
+                      "isSubcomissao": "false",
+                      "nome": "CPI das BETS",
+                      "nomeTipoColegiado": "Comissão Parlamentar de Inquérito",
+                      "publicoPortal": "true",
+                      "sigla": "CPIBETS",
+                      "siglaCasa": "SF"
+                    },
+                    "dataApreciacao": "2025-05-07T00:00:00.000",
+                    "dataApresentacao": "2025-05-06T00:00:00.000",
+                    "depoentes": {
+                      "pessoaFisica": {
+                        "nome": "Luiz Ricardo Melquiades",
+                        "sexo": "M"
+                      },
+                      "tipo": "PF"
+                    },
+                    "documento": {
+                      "idEcmSenado": "5d4fc084-e81c-41b8-954b-3ab004b55033",
+                      "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/5d4fc084-e81c-41b8-954b-3ab004b55033",
+                      "mimeType": "application/pdf"
+                    },
+                    "documentosEnviados": {
+                      "ano": "2025",
+                      "arquivos": {
+                        "codigo": "7015",
+                        "descricao": "OF 158",
+                        "documento": {
+                          "idEcmSenado": "37ddab7d-fd95-4748-8fa4-f0244cdc6c08",
+                          "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/37ddab7d-fd95-4748-8fa4-f0244cdc6c08",
+                          "mimeType": "application/pdf"
+                        },
+                        "sigiloso": "false",
+                        "tipo": {
+                          "codigo": "10",
+                          "codigoConarq": "04.02.05.07",
+                          "descricao": "Ofício",
+                          "idTipoDoma": "69"
+                        },
+                        "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/37ddab7d-fd95-4748-8fa4-f0244cdc6c08"
+                      },
+                      "assunto": "Convocação",
+                      "codigo": "6851",
+                      "dataExpedicao": "2025-05-08",
+                      "descricao": "CPIBETS - Documento Enviado nº 158/2025",
+                      "destinatario": {
+                        "nome": "Luiz Ricardo Melquiades Santiago",
+                        "sexo": "M"
+                      },
+                      "ementa": "Convocação para depoimento à CPIBETS",
+                      "numero": "158",
+                      "requerimentosRespondidos": {
+                        "ano": "2025",
+                        "codigoTipo": "3",
+                        "descricaoTipo": "Convocação",
+                        "numero": "446",
+                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9945435"
+                      }
+                    },
+                    "ementa": "Convoca o Sr. Luiz Ricardo Melquiades, influencer, na qualidade de testemunha.",
+                    "idDoma": "9945435",
+                    "numero": "446",
+                    "numeroSedol": "SF250872463710",
+                    "situacao": "Aprovado",
+                    "tipoRequerimento": "Convocação",
+                    "tituloParaPauta": "Requerimento Nº 446/2025",
+                    "versao": "2026-03-19T02:05:28.936"
+                  },
+                  "sexo": "M"
+                }
+              ],
+              "finalidade": "Depoimentos",
+              "isPublicado": "true",
+              "isRealizado": "false",
+              "participantes": [
+                {
+                  "apresentacoes": {
+                    "descricao": "Apresentação do Conar",
+                    "idEcmSenado": "368d5816-92f1-4ba1-8746-f421c1c3f7b3",
+                    "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/368d5816-92f1-4ba1-8746-f421c1c3f7b3",
+                    "mimeType": "application/pdf",
+                    "nome": "2025_Conar_Institucional_CPIBETS.pdf"
+                  },
+                  "cargo": "Presidente do CONAR - Conselho Nacional Autorregulamentação Publicitária",
+                  "codigo": "30490",
+                  "codigoConvidado": "38820",
+                  "depoenteOitiva": {
+                    "pessoaFisica": {
+                      "nome": "Sérgio Pompilio",
+                      "sexo": "M"
+                    },
+                    "tipo": "PF"
+                  },
+                  "isDepoentePresente": "true",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Sérgio Pompilio",
+                  "ordem": "1",
+                  "requerimentosOitiva": {
+                    "ano": "2024",
+                    "assunto": "Depoimento",
+                    "autor": {
+                      "cargo": "Senador",
+                      "casa": "SF",
+                      "codigo": "4770",
+                      "codigoDeputado": "4931",
+                      "data": "2024-11-13T00:00:00.000",
+                      "isDeputado": "false",
+                      "isSenador": "true",
+                      "liderancas": [
+                        {
+                          "titulo": "Vice-líder do Senado Federal"
+                        },
+                        {
+                          "nomePartido": "Partido Liberal",
+                          "siglaPartido": "PL",
+                          "titulo": "Vice-líder do Senado Federal"
+                        }
+                      ],
+                      "nome": "Izalci Lucas Ferreira",
+                      "nomeComCargo": "Senador Izalci Lucas",
+                      "nomeComCargoResumido": "Sen. Izalci Lucas",
+                      "nomeParlamentar": "Izalci Lucas",
+                      "partido": "Partido Liberal",
+                      "sexo": "M",
+                      "siglaPartido": "PL",
+                      "ufPartido": "DF",
+                      "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador4770.jpg",
+                      "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/4770"
+                    },
+                    "autoria": "Senador Izalci Lucas",
+                    "codigo": "7881",
+                    "codigoSituacao": "70",
+                    "colegiado": {
+                      "codigo": "2703",
+                      "codigoTipoColegiado": "22",
+                      "composicaoPublica": "true",
+                      "isSubcomissao": "false",
+                      "nome": "CPI das BETS",
+                      "nomeTipoColegiado": "Comissão Parlamentar de Inquérito",
+                      "publicoPortal": "true",
+                      "sigla": "CPIBETS",
+                      "siglaCasa": "SF"
+                    },
+                    "dataApreciacao": "2024-11-19T00:00:00.000",
+                    "dataApresentacao": "2024-11-13T00:00:00.000",
+                    "depoentes": {
+                      "pessoaFisica": {
+                        "nome": "Sérgio Pompilio",
+                        "sexo": "M"
+                      },
+                      "tipo": "PF"
+                    },
+                    "documento": {
+                      "idEcmSenado": "8cacc899-fb3b-4a79-bf31-5870757ee0bd",
+                      "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/8cacc899-fb3b-4a79-bf31-5870757ee0bd",
+                      "mimeType": "application/pdf"
+                    },
+                    "documentosEnviados": {
+                      "ano": "2025",
+                      "arquivos": {
+                        "codigo": "7011",
+                        "descricao": "Ofício 159-2025",
+                        "documento": {
+                          "idEcmSenado": "709f37a5-df93-4d06-9c65-578533a10d2d",
+                          "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/709f37a5-df93-4d06-9c65-578533a10d2d",
+                          "mimeType": "application/pdf"
+                        },
+                        "sigiloso": "false",
+                        "tipo": {
+                          "codigo": "10",
+                          "codigoConarq": "04.02.05.07",
+                          "descricao": "Ofício",
+                          "idTipoDoma": "69"
+                        },
+                        "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/709f37a5-df93-4d06-9c65-578533a10d2d"
+                      },
+                      "assunto": "Convite",
+                      "codigo": "6847",
+                      "dataExpedicao": "2025-05-06",
+                      "descricao": "CPIBETS - Documento Enviado nº 159/2025",
+                      "destinatario": {
+                        "nome": "CONAR - Conselho Nacional de Autorregulamentação Publicitária"
+                      },
+                      "ementa": "Convida o presidente do CONAR, Sérgio Pompilio, a prestar depoimento à CPIBETS.",
+                      "numero": "159",
+                      "requerimentosRespondidos": {
+                        "ano": "2024",
+                        "codigoTipo": "2",
+                        "descricaoTipo": "Convite",
+                        "numero": "116",
+                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9842888"
+                      }
+                    },
+                    "documentosRecebidos": {
+                      "arquivos": {
+                        "codigo": "10879",
+                        "descricao": "Of 05-2025",
+                        "documento": {
+                          "idEcmSenado": "64266618-5c0a-4c19-8733-e8f325c3bcbb",
+                          "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/64266618-5c0a-4c19-8733-e8f325c3bcbb",
+                          "mimeType": "application/pdf"
+                        },
+                        "sigiloso": "false",
+                        "tipo": {
+                          "codigo": "10",
+                          "codigoConarq": "04.02.05.07",
+                          "descricao": "Ofício",
+                          "idTipoDoma": "69"
+                        },
+                        "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/64266618-5c0a-4c19-8733-e8f325c3bcbb"
+                      },
+                      "assunto": "Convite",
+                      "codigo": "7246",
+                      "codigoConarq": "04.02.05.07",
+                      "dataEmissaoOrigem": "2025-05-06",
+                      "dataRecebimento": "2025-05-06",
+                      "descricao": "CPIBETS - Documento Recebido nº 139",
+                      "emResposta": {
+                        "ano": "2025",
+                        "codigo": "6847",
+                        "descricao": "CPIBETS - Documento Enviado nº 159/2025",
+                        "numero": "159",
+                        "requerimentosRespondidos": {
+                          "ano": "2024",
+                          "numero": "116",
+                          "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9842888"
+                        }
+                      },
+                      "ementa": "Confirmação de participação do presidente do CONAR na CPIBETS",
+                      "numCaixaFinal": "0",
+                      "numCaixaInicial": "0",
+                      "numero": "139",
+                      "remetente": {
+                        "nome": "CONAR - Conselho Nacional de Autorregulamentação Publicitária"
+                      }
+                    },
+                    "ementa": "Convida o senhor Sérgio Pompilio, Presidente do Conselho Nacional de Autorregulamentação Publicitária (Conar).",
+                    "idDoma": "9842888",
+                    "numero": "116",
+                    "numeroSedol": "SF249096827744",
+                    "situacao": "Aprovado",
+                    "tipoRequerimento": "Convite",
+                    "tituloParaPauta": "Requerimento Nº 116/2024",
+                    "versao": "2026-03-19T02:05:28.967"
+                  },
+                  "sexo": "M"
+                },
+                {
+                  "cargo": "Influenciador digital",
+                  "codigo": "30508",
+                  "codigoConvidado": "38836",
+                  "depoenteOitiva": {
+                    "pessoaFisica": {
+                      "nome": "Luiz Ricardo Melquiades",
+                      "sexo": "M"
+                    },
+                    "tipo": "PF"
+                  },
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Luiz Ricardo Melquiades",
+                  "ordem": "2",
+                  "requerimentosOitiva": {
+                    "ano": "2025",
+                    "assunto": "Depoimento",
+                    "autor": {
+                      "cargo": "Senadora",
+                      "casa": "SF",
+                      "codigo": "5988",
+                      "data": "2025-05-06T00:00:00.000",
+                      "isDeputado": "false",
+                      "isSenador": "true",
+                      "liderancas": {
+                        "nomeUnidadeLideranca": "Liderança da Bancada Feminina",
+                        "titulo": "Vice-líder do Senado Federal"
+                      },
+                      "nome": "Soraya Vieira Thronicke",
+                      "nomeComCargo": "Senadora Soraya Thronicke",
+                      "nomeComCargoResumido": "Sen. Soraya Thronicke",
+                      "nomeParlamentar": "Soraya Thronicke",
+                      "partido": "Podemos",
+                      "sexo": "F",
+                      "siglaPartido": "PODEMOS",
+                      "ufPartido": "MS",
+                      "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5988.jpg",
+                      "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5988"
+                    },
+                    "autoria": "Senadora Soraya Thronicke",
+                    "codigo": "8223",
+                    "codigoSituacao": "70",
+                    "colegiado": {
+                      "codigo": "2703",
+                      "codigoTipoColegiado": "22",
+                      "composicaoPublica": "true",
+                      "isSubcomissao": "false",
+                      "nome": "CPI das BETS",
+                      "nomeTipoColegiado": "Comissão Parlamentar de Inquérito",
+                      "publicoPortal": "true",
+                      "sigla": "CPIBETS",
+                      "siglaCasa": "SF"
+                    },
+                    "dataApreciacao": "2025-05-07T00:00:00.000",
+                    "dataApresentacao": "2025-05-06T00:00:00.000",
+                    "depoentes": {
+                      "pessoaFisica": {
+                        "nome": "Luiz Ricardo Melquiades",
+                        "sexo": "M"
+                      },
+                      "tipo": "PF"
+                    },
+                    "documento": {
+                      "idEcmSenado": "5d4fc084-e81c-41b8-954b-3ab004b55033",
+                      "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/5d4fc084-e81c-41b8-954b-3ab004b55033",
+                      "mimeType": "application/pdf"
+                    },
+                    "documentosEnviados": {
+                      "ano": "2025",
+                      "arquivos": {
+                        "codigo": "7015",
+                        "descricao": "OF 158",
+                        "documento": {
+                          "idEcmSenado": "37ddab7d-fd95-4748-8fa4-f0244cdc6c08",
+                          "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/37ddab7d-fd95-4748-8fa4-f0244cdc6c08",
+                          "mimeType": "application/pdf"
+                        },
+                        "sigiloso": "false",
+                        "tipo": {
+                          "codigo": "10",
+                          "codigoConarq": "04.02.05.07",
+                          "descricao": "Ofício",
+                          "idTipoDoma": "69"
+                        },
+                        "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/37ddab7d-fd95-4748-8fa4-f0244cdc6c08"
+                      },
+                      "assunto": "Convocação",
+                      "codigo": "6851",
+                      "dataExpedicao": "2025-05-08",
+                      "descricao": "CPIBETS - Documento Enviado nº 158/2025",
+                      "destinatario": {
+                        "nome": "Luiz Ricardo Melquiades Santiago",
+                        "sexo": "M"
+                      },
+                      "ementa": "Convocação para depoimento à CPIBETS",
+                      "numero": "158",
+                      "requerimentosRespondidos": {
+                        "ano": "2025",
+                        "codigoTipo": "3",
+                        "descricaoTipo": "Convocação",
+                        "numero": "446",
+                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9945435"
+                      }
+                    },
+                    "ementa": "Convoca o Sr. Luiz Ricardo Melquiades, influencer, na qualidade de testemunha.",
+                    "idDoma": "9945435",
+                    "numero": "446",
+                    "numeroSedol": "SF250872463710",
+                    "situacao": "Aprovado",
+                    "tipoRequerimento": "Convocação",
+                    "tituloParaPauta": "Requerimento Nº 446/2025",
+                    "versao": "2026-03-19T02:05:28.987"
+                  },
+                  "sexo": "M"
+                }
+              ],
+              "resultadoTexto": "Oitiva do Sr. Sérgio Pompilio realizada. Ausente o Sr. Luiz Ricardo Melquiades."
+            },
+            "isDeliberativa": "false",
+            "nome": "Oitiva",
+            "sequencial": "1",
+            "sequencialFormatado": "1ª PARTE"
+          },
+          "permitePresencaApp": "false",
+          "permiteVotacaoSemPresencaFisica": "false",
+          "possuiVotacaoSecreta": "false",
+          "presidente": {
+            "cargo": "Senador",
+            "casa": "SF",
+            "codigo": "4770",
+            "codigoDeputado": "4931",
+            "data": "2025-05-08T00:00:00.000",
+            "isDeputado": "false",
+            "isSenador": "true",
+            "liderancas": {
+              "nomePartido": "Partido Liberal",
+              "siglaPartido": "PL",
+              "titulo": "Vice-líder do Senado Federal"
+            },
+            "nome": "Izalci Lucas Ferreira",
+            "nomeComCargo": "Senador Izalci Lucas",
+            "nomeComCargoResumido": "Sen. Izalci Lucas",
+            "nomeParlamentar": "Izalci Lucas",
+            "partido": "Partido Liberal",
+            "sexo": "M",
+            "siglaPartido": "PL",
+            "ufPartido": "DF",
+            "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador4770.jpg",
+            "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/4770"
+          },
+          "realizada": "true",
+          "secreta": "false",
+          "sessaoLegislativa": {
+            "codigo": "873",
+            "descricao": "57a. Legislatura (2025) - 3a. Sessão Legislativa Ordinária",
+            "fim": "2025-12-22",
+            "inicio": "2025-02-03",
+            "numero": "3",
+            "numeroLegislatura": "57"
+          },
+          "situacao": "Realizada",
+          "status": "Realizada",
+          "tipo": {
+            "codigo": "5",
+            "descricao": "Reunião",
+            "sigla": "REU"
+          },
+          "tipoPresenca": "Presencial",
+          "titulo": "16ª Reunião",
+          "urlUltimaAtaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/01405dbc-d880-48cc-83a7-d6a4842baf6a?rendition_principal",
+          "urlUltimaPautaCheiaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/e89c0b75-0d2a-42f8-9639-43b6fe4011b3",
+          "urlUltimaPautaSimplesPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/15b73dd3-7ff6-4f26-b8ad-b7b147ee71ab",
+          "urlUltimoResultadoPublicado": "https://legis.senado.leg.br/sdleg-getter/documento/download/d9d8f552-d37c-4b39-ab4d-9f93752e2633",
+          "versao": "2026-03-19T02:05:29.004",
+          "videos": {
+            "codigo": "6769",
+            "dataHoraReuniao": "2025-05-08T10:30:00.000",
+            "ordem": "1",
+            "url": "https://www.youtube.com/watch?v=8ItujTLzoag"
+          }
+        },
+        {
+          "codigo": "13526",
+          "codigoSituacao": "6",
+          "colegiadoCriador": {
+            "codigo": "40",
+            "codigoTipo": "21",
+            "descricaoTipo": "Comissão Permanente",
+            "nome": "Comissão de Assuntos Sociais",
+            "sigla": "CAS",
+            "siglaCasa": "SF"
+          },
+          "colegiados": {
+            "codigo": "40",
+            "codigoTipoColegiado": "21",
+            "composicaoPublica": "true",
+            "isSubcomissao": "false",
+            "nome": "Comissão de Assuntos Sociais",
+            "nomeTipoColegiado": "Comissão Permanente",
+            "numeroReuniao": "12",
+            "publicoPortal": "true",
+            "sigla": "CAS",
+            "siglaCasa": "SF"
+          },
+          "confirmada": "false",
+          "continuacaoCancelada": "false",
+          "dataInicio": "2025-05-08T10:00:00.000",
+          "dataInicioFormatadaComObsHorario": "08/05/2025 às 10h",
+          "dataReuniao": [
+            {
+              "codigo": "64846",
+              "codigoSituacao": "6",
+              "dataEvento": "2025-05-08T12:28:00.000",
+              "descricaoSituacao": "Realizada",
+              "realizada": "true"
+            },
+            {
+              "codigo": "64840",
+              "codigoSituacao": "3",
+              "dataEvento": "2025-05-08T10:05:00.000",
+              "descricaoSituacao": "Aberta",
+              "realizada": "false"
+            },
+            {
+              "codigo": "64797",
+              "codigoSituacao": "1",
+              "dataEvento": "2025-05-08T10:00:00.000",
+              "descricaoSituacao": "Agendada",
+              "realizada": "false"
+            }
+          ],
+          "descricao": "12ª, Extraordinária",
+          "foiAgendadaAposTerSidoSuspensa": "false",
+          "idUltimaPublicacaoPautaSimples": "241a3a7d-e96c-4059-ac95-5bcbc5556927",
+          "idUltimaPublicacaoResultado": "0c1a8e0b-f215-4226-ac01-a9ef0a1bdd2e",
+          "isExibirNoPortal": "true",
+          "linkECidadania": "https://www12.senado.leg.br/ecidadania/visualizacaoaudiencia?id=33622",
+          "local": "Anexo II, Ala Senador Nilo Coelho, Plenário nº 6",
+          "numReuniaoConjunta": "12",
+          "partes": {
+            "codigo": "17446",
+            "codigoTipo": "1",
+            "descricaoTipo": "Audiência Pública Interativa",
+            "evento": {
+              "codigo": "9432",
+              "convidados": [
+                {
+                  "cargo": "Coordenador-Geral da Política Nacional de Prevenção e Controle do Câncer do Ministério da Saúde",
+                  "codigo": "38811",
+                  "codigoSituacao": "2",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "José Barreto Campello Cavalheira",
+                  "ordem": "1",
+                  "sexo": "M"
+                },
+                {
+                  "cargo": "Representante da Diretoria de Desenvolvimento Setorial da Agência Nacional de Saúde Suplementar - ANS",
+                  "codigo": "38812",
+                  "codigoSituacao": "4",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Ana Paula Silva Cavalcante",
+                  "ordem": "2",
+                  "sexo": "F"
+                },
+                {
+                  "cargo": "Representante da Diretoria de Normas e Habilitação dos Produtos da Agência Nacional de Saúde Suplementar - ANS",
+                  "codigo": "38813",
+                  "codigoSituacao": "4",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Rafael Pedreira Vinhas",
+                  "ordem": "3",
+                  "sexo": "M"
+                }
+              ],
+              "domasRelacionados": [
+                {
+                  "descricaoFinalidade": "Solicitação de realização de Audiência Pública Interativa",
+                  "doma": {
+                    "ano": "2025",
+                    "autoria": "Senador Nelsinho Trad (PSD/MS)",
+                    "autorias": {
+                      "descricaoTipo": "Senador",
+                      "isAutoriaComOutros": "false",
+                      "nome": "Nelsinho Trad",
+                      "ordem": "1",
+                      "parlamentar": {
+                        "cargo": "Senador",
+                        "casa": "SF",
+                        "codigo": "5985",
+                        "data": "2025-03-06T00:00:00.000",
+                        "isDeputado": "false",
+                        "isSenador": "true",
+                        "nome": "Nelson Trad Filho",
+                        "nomeComCargo": "Senador Nelsinho Trad",
+                        "nomeComCargoResumido": "Sen. Nelsinho Trad",
+                        "nomeParlamentar": "Nelsinho Trad",
+                        "partido": "Partido Social Democrático",
+                        "sexo": "M",
+                        "siglaPartido": "PSD",
+                        "ufPartido": "MS",
+                        "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5985.jpg",
+                        "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5985"
+                      },
+                      "siglaTipo": "SENADOR",
+                      "tratamento": "Senador"
+                    },
+                    "codigoMateria": "167443",
+                    "complementar": "false",
+                    "consolidacao": "false",
+                    "dataApresentacao": "2025-03-06T13:29:58.000",
+                    "descricaoTipoDoma": "Requerimento",
+                    "ementa": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, a realização de audiência pública, com o objetivo de debater as recentes decisões da Agência Nacional de Saúde Suplementar (ANS), que têm gerado grande repercussão e preocupação na sociedade brasileira. O objetivo desta audiência é esclarecer as medidas adotadas pela agência e discutir eventuais impactos sobre os usuários de planos de saúde.",
+                    "idConteudoInformacional": "7600330",
+                    "idDoma": "9909668",
+                    "idProcesso": "8799035",
+                    "idTipoDoma": "87",
+                    "identificacao": "REQ 4/2025 - CAS",
+                    "identificacaoPorExtenso": "Requerimento da Comissão de Assuntos Sociais n° 4, de 2025",
+                    "identificado": "true",
+                    "numero": "00004",
+                    "numeroSedol": "SF253205298910",
+                    "proposicao": "true",
+                    "sigla": "REQ",
+                    "siglaPorExtenso": "Requerimento",
+                    "siglaTipoDoma": "REQUERIMENTO",
+                    "textos": [
+                      {
+                        "codigoColegiado": "40",
+                        "conteudoInformacional": "REQ 4/2025 - CAS",
+                        "dataAtualizacao": "2025-03-06",
+                        "descricao": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, a realização de audiência pública, com o objetivo de debater as recentes decisões da Agência Nacional de Saúde Suplementar (ANS), que têm gerado grande repercussão e preocupação na sociedade brasileira. O objetivo desta audiência é esclarecer as medidas adotadas pela agência e discutir eventuais impactos sobre os usuários de planos de saúde.",
+                        "descricaoTipoDoma": "Requerimento",
+                        "idDoma": "9909668",
+                        "idProcesso": "8799035",
+                        "identificacao": "Requerimento",
+                        "siglaTipoDoma": "REQUERIMENTO",
+                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9909668"
+                      },
+                      {
+                        "codigoColegiado": "40",
+                        "dataAtualizacao": "2025-03-12",
+                        "descricao": "Listagem ou relatório descritivo-Lista de Presença da reunião da 2ª Reunião CAS",
+                        "descricaoTipoDoma": "Listagem ou relatório descritivo",
+                        "idDoma": "9912406",
+                        "identificacao": "Listagem ou relatório descritivo",
+                        "siglaTipoDoma": "LISTAGEM_RELATORIO",
+                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9912406"
+                      },
+                      {
+                        "codigoColegiado": "40",
+                        "conteudoInformacional": "REQ 16/2025 - CAS",
+                        "dataAtualizacao": "2025-04-08",
+                        "descricao": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, que na Audiência Pública objeto do REQ 4/2025 - CAS sejam incluídos os convidados que especifica.",
+                        "descricaoTipoDoma": "Requerimento",
+                        "idDoma": "9930096",
+                        "idProcesso": "8813888",
+                        "identificacao": "Requerimento",
+                        "siglaTipoDoma": "REQUERIMENTO",
+                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9930096"
+                      }
+                    ]
+                  },
+                  "finalidade": "C",
+                  "ordem": "1"
+                },
+                {
+                  "descricaoFinalidade": "Solicitação de realização de Audiência Pública Interativa",
+                  "doma": {
+                    "ano": "2025",
+                    "autoria": "Senador Nelsinho Trad (PSD/MS), Senadora Damares Alves (REPUBLICANOS/DF)",
+                    "autorias": [
+                      {
+                        "descricaoTipo": "Senador",
+                        "isAutoriaComOutros": "true",
+                        "nome": "Nelsinho Trad",
+                        "ordem": "1",
+                        "parlamentar": {
+                          "cargo": "Senador",
+                          "casa": "SF",
+                          "codigo": "5985",
+                          "data": "2025-04-08T00:00:00.000",
+                          "isDeputado": "false",
+                          "isSenador": "true",
+                          "nome": "Nelson Trad Filho",
+                          "nomeComCargo": "Senador Nelsinho Trad",
+                          "nomeComCargoResumido": "Sen. Nelsinho Trad",
+                          "nomeParlamentar": "Nelsinho Trad",
+                          "partido": "Partido Social Democrático",
+                          "sexo": "M",
+                          "siglaPartido": "PSD",
+                          "ufPartido": "MS",
+                          "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5985.jpg",
+                          "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5985"
+                        },
+                        "siglaTipo": "SENADOR",
+                        "tratamento": "Senador"
+                      },
+                      {
+                        "descricaoTipo": "Senador",
+                        "isAutoriaComOutros": "true",
+                        "nome": "Damares Alves",
+                        "ordem": "2",
+                        "parlamentar": {
+                          "cargo": "Senadora",
+                          "casa": "SF",
+                          "codigo": "6335",
+                          "data": "2025-04-08T00:00:00.000",
+                          "isDeputado": "false",
+                          "isSenador": "true",
+                          "liderancas": {
+                            "nomeUnidadeLideranca": "Liderança da Minoria",
+                            "titulo": "Vice-líder do Congresso Nacional"
+                          },
+                          "nome": "Damares Regina Alves",
+                          "nomeComCargo": "Senadora Damares Alves",
+                          "nomeComCargoResumido": "Sen. Damares Alves",
+                          "nomeParlamentar": "Damares Alves",
+                          "partido": "REPUBLICANOS",
+                          "sexo": "F",
+                          "siglaPartido": "REPUBLICANOS",
+                          "ufPartido": "DF",
+                          "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador6335.jpg",
+                          "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/6335"
+                        },
+                        "siglaTipo": "SENADOR",
+                        "tratamento": "Senadora"
+                      }
+                    ],
+                    "codigoMateria": "168004",
+                    "complementar": "false",
+                    "consolidacao": "false",
+                    "dataApresentacao": "2025-04-08T11:31:43.000",
+                    "descricaoTipoDoma": "Requerimento",
+                    "ementa": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, que na Audiência Pública objeto do REQ 4/2025 - CAS sejam incluídos os convidados que especifica.",
+                    "idConteudoInformacional": "7603917",
+                    "idDoma": "9930096",
+                    "idProcesso": "8813888",
+                    "idTipoDoma": "87",
+                    "identificacao": "REQ 16/2025 - CAS",
+                    "identificacaoPorExtenso": "Requerimento da Comissão de Assuntos Sociais n° 16, de 2025",
+                    "identificado": "true",
+                    "numero": "00016",
+                    "numeroSedol": "SF257806646306",
+                    "proposicao": "true",
+                    "sigla": "REQ",
+                    "siglaPorExtenso": "Requerimento",
+                    "siglaTipoDoma": "REQUERIMENTO",
+                    "textos": [
+                      {
+                        "codigoColegiado": "40",
+                        "conteudoInformacional": "REQ 16/2025 - CAS",
+                        "dataAtualizacao": "2025-04-08",
+                        "descricao": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, que na Audiência Pública objeto do REQ 4/2025 - CAS sejam incluídos os convidados que especifica.",
+                        "descricaoTipoDoma": "Requerimento",
+                        "idDoma": "9930096",
+                        "idProcesso": "8813888",
+                        "identificacao": "Requerimento",
+                        "siglaTipoDoma": "REQUERIMENTO",
+                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9930096"
+                      },
+                      {
+                        "codigoColegiado": "40",
+                        "dataAtualizacao": "2025-04-23",
+                        "descricao": "Listagem ou relatório descritivo-Lista de Presença da reunião da 9ª Reunião CAS",
+                        "descricaoTipoDoma": "Listagem ou relatório descritivo",
+                        "idDoma": "9938361",
+                        "identificacao": "Listagem ou relatório descritivo",
+                        "siglaTipoDoma": "LISTAGEM_RELATORIO",
+                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9938361"
+                      }
+                    ]
+                  },
+                  "finalidade": "C",
+                  "ordem": "2"
+                }
+              ],
+              "finalidade": "Debater as recentes decisões da Agência Nacional de Saúde Suplementar que têm gerado grande repercussão e preocupação na sociedade brasileira, esclarecer as medidas adotadas pela agência e discutir eventuais impactos sobre os usuários de planos de saúde.",
+              "isPublicado": "true",
+              "isRealizado": "true",
+              "observacoes": "A reunião será interativa, transmitida ao vivo e aberta à participação dos interessados por meio do portal e-cidadania, na internet, em senado.leg.br/ecidadania ou pelo telefone da ouvidoria 0800 061 22 11.",
+              "participantes": [
+                {
+                  "apresentacoes": {
+                    "descricao": "Apresentação",
+                    "idEcmSenado": "32454f54-2b26-4b77-aab2-4bef7febfa9b",
+                    "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/32454f54-2b26-4b77-aab2-4bef7febfa9b",
+                    "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "nome": "Apresentação Ana Paula ANS.pptx"
+                  },
+                  "cargo": "Representante da Diretoria de Desenvolvimento Setorial da Agência Nacional de Saúde Suplementar - ANS",
+                  "codigo": "30509",
+                  "codigoConvidado": "38812",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Ana Paula Silva Cavalcante",
+                  "ordem": "1",
+                  "sexo": "F"
+                },
+                {
+                  "apresentacoes": {
+                    "descricao": "Apresentação",
+                    "idEcmSenado": "3e6a32c1-0e50-405c-922a-405bb6d9ee89",
+                    "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/3e6a32c1-0e50-405c-922a-405bb6d9ee89",
+                    "mimeType": "application/pdf",
+                    "nome": "Apresentação Rafael ANS.pdf"
+                  },
+                  "cargo": "Representante da Diretoria de Normas e Habilitação dos Produtos da Agência Nacional de Saúde Suplementar - ANS",
+                  "codigo": "30510",
+                  "codigoConvidado": "38813",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Rafael Pedreira Vinhas",
+                  "ordem": "2",
+                  "sexo": "M"
+                },
+                {
+                  "apresentacoes": {
+                    "descricao": "Apresentação",
+                    "idEcmSenado": "4f09f1a7-b440-4075-a7da-988f7e3484d4",
+                    "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/4f09f1a7-b440-4075-a7da-988f7e3484d4",
+                    "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "nome": "José Barreto - MS Confere^ncia de Lideranc¸as em Sau´de da Mulher_atualizado.pptx"
+                  },
+                  "cargo": "Coordenador-Geral da Política Nacional de Prevenção e Controle do Câncer do Ministério da Saúde",
+                  "codigo": "30511",
+                  "codigoConvidado": "38811",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "José Barreto Campello Carvalheira",
+                  "ordem": "3",
+                  "sexo": "M"
+                }
+              ],
+              "resultadoObservacoes": "A reunião foi interativa, transmitida ao vivo e aberta à participação dos interessados por meio do portal e-cidadania, na internet, em senado.leg.br/ecidadania ou pelo telefone da Ouvidoria 0800 061 22 11.",
+              "resultadoTexto": "Realizada."
+            },
+            "isDeliberativa": "false",
+            "nome": "Audiência Pública Interativa",
+            "sequencial": "1",
+            "sequencialFormatado": "1ª PARTE"
+          },
+          "permitePresencaApp": "false",
+          "permiteVotacaoSemPresencaFisica": "false",
+          "possuiVotacaoSecreta": "false",
+          "presidente": {
+            "cargo": "Senador",
+            "casa": "SF",
+            "codigo": "5985",
+            "data": "2025-05-08T00:00:00.000",
+            "isDeputado": "false",
+            "isSenador": "true",
+            "nome": "Nelson Trad Filho",
+            "nomeComCargo": "Senador Nelsinho Trad",
+            "nomeComCargoResumido": "Sen. Nelsinho Trad",
+            "nomeParlamentar": "Nelsinho Trad",
+            "partido": "Partido Social Democrático",
+            "sexo": "M",
+            "siglaPartido": "PSD",
+            "ufPartido": "MS",
+            "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5985.jpg",
+            "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5985"
+          },
+          "realizada": "true",
+          "secreta": "false",
+          "sessaoLegislativa": {
+            "codigo": "873",
+            "descricao": "57a. Legislatura (2025) - 3a. Sessão Legislativa Ordinária",
+            "fim": "2025-12-22",
+            "inicio": "2025-02-03",
+            "numero": "3",
+            "numeroLegislatura": "57"
+          },
+          "situacao": "Realizada",
+          "status": "Realizada",
+          "tipo": {
+            "codigo": "2",
+            "descricao": "Extraordinária",
+            "sigla": "EXT"
+          },
+          "tipoPresenca": "Presencial",
+          "titulo": "12ª Reunião Extraordinária",
+          "urlUltimaAtaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/8b365344-85d1-4f52-bd19-46adf18f8425?rendition_principal",
+          "urlUltimaAtaPublicadaDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=03/06/2025&paginaDireta=189&indSuplemento=sim&codSuplemento=A",
+          "urlUltimaPautaCheiaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/dde84f60-eb3d-4715-b257-0eb9635c455b",
+          "urlUltimaPautaSimplesPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/241a3a7d-e96c-4059-ac95-5bcbc5556927",
+          "urlUltimoResultadoPublicado": "https://legis.senado.leg.br/sdleg-getter/documento/download/0c1a8e0b-f215-4226-ac01-a9ef0a1bdd2e",
+          "versao": "2026-03-19T02:05:29.152",
+          "videos": {
+            "codigo": "6763",
+            "dataHoraReuniao": "2025-05-08T10:00:00.000",
+            "ordem": "1",
+            "url": "https://www.youtube.com/watch?v=CpTlB4a_eR4"
+          }
+        },
+        {
+          "codigo": "13449",
+          "codigoSituacao": "2",
+          "colegiadoCriador": {
+            "codigo": "54",
+            "codigoTipo": "21",
+            "descricaoTipo": "Comissão Permanente",
+            "nome": "Comissão de Relações Exteriores e Defesa Nacional",
+            "sigla": "CRE",
+            "siglaCasa": "SF"
+          },
+          "colegiados": {
+            "codigo": "54",
+            "codigoTipoColegiado": "21",
+            "composicaoPublica": "true",
+            "isSubcomissao": "false",
+            "nome": "Comissão de Relações Exteriores e Defesa Nacional",
+            "nomeTipoColegiado": "Comissão Permanente",
+            "numeroReuniao": "7",
+            "publicoPortal": "true",
+            "sigla": "CRE",
+            "siglaCasa": "SF"
+          },
+          "confirmada": "false",
+          "continuacaoCancelada": "false",
+          "dataInicio": "2025-05-08T10:00:00.000",
+          "dataInicioFormatadaComObsHorario": "08/05/2025 às 10h",
+          "dataReuniao": [
+            {
+              "codigo": "64747",
+              "codigoSituacao": "2",
+              "dataEvento": "2025-04-29T21:32:00.000",
+              "descricaoSituacao": "Não Realizada",
+              "motivo": "Transferida para o dia 7 de maio",
+              "observacao": "Em razão do cancelamento da 6ª Reunião",
+              "realizada": "false",
+              "rotuloDivulgacao": "Cancelada"
+            },
+            {
+              "codigo": "64613",
+              "codigoSituacao": "1",
+              "dataEvento": "2025-05-08T10:00:00.000",
+              "descricaoSituacao": "Agendada",
+              "realizada": "false"
+            }
+          ],
+          "descricao": "7ª, Ordinária",
+          "descricaoDeNaoRealizacao": "Cancelada",
+          "foiAgendadaAposTerSidoSuspensa": "false",
+          "idUltimaPublicacaoPautaSimples": "85e09f23-fea2-4f9c-85b7-32db731c5b39",
+          "isExibirNoPortal": "true",
+          "linkECidadania": "https://www12.senado.leg.br/ecidadania/principalaudiencia",
+          "local": "Anexo II, Ala Senador Alexandre Costa, Plenário nº 7",
+          "numReuniaoConjunta": "7",
+          "partes": {
+            "codigo": "17357",
+            "codigoTipo": "2",
+            "descricaoTipo": "Deliberativa",
+            "isDeliberativa": "true",
+            "itens": [
+              {
+                "apreciado": "false",
+                "autorItemPauta": {
+                  "isColegiado": "false",
+                  "isParlamentar": "false",
+                  "nomeAutoria": "Presidência da República",
+                  "possuiOutrosAutores": "false",
+                  "tipoAutoriaDomaDescricao": "Presidente da República",
+                  "tipoAutoriaDomaSigla": "PRESIDENTE_REPUBLICA"
+                },
+                "cabecalhoParecer": "MSF 1/2025",
+                "categoria": "Matéria",
+                "classificacao": {
+                  "codigo": "1",
+                  "descricao": "Vinculado a uma matéria"
+                },
+                "codigo": "97542",
+                "dataHoraEstadoAtual": "2025-04-14T12:25:30.000",
+                "descricao": "MSF 1/2025",
+                "doma": {
+                  "ano": "2025",
+                  "autoria": "Presidência da República",
+                  "autorias": {
+                    "descricaoTipo": "Presidente da República",
+                    "isAutoriaComOutros": "false",
+                    "nome": "Presidência da República",
+                    "ordem": "1",
+                    "siglaTipo": "PRESIDENTE_REPUBLICA"
+                  },
+                  "codigoMateria": "167953",
+                  "complementar": "false",
+                  "consolidacao": "false",
+                  "dataApresentacao": "2025-04-07T13:38:44.000",
+                  "dataFecho": "2024-12-18T00:00:00.000",
+                  "descricaoTipoDoma": "Mensagem",
+                  "ementa": "Submete à apreciação do Senado Federal, de conformidade com o art. 52, inciso IV, da Constituição Federal, e com o art. 39, combinado com o art. 46 da Lei nº 11.440, de 2006, o nome do Senhor RICARDO JOSÉ LUSTOSA LEAL, Ministro de Segunda Classe do Quadro Especial da Carreira de Diplomata do Ministério das Relações Exteriores, para exercer o cargo de Embaixador do Brasil na República Democrática de Timor-Leste.",
+                  "idConteudoInformacional": "7596475",
+                  "idDoma": "9882887",
+                  "idProcesso": "8781953",
+                  "idTipoDoma": "66",
+                  "identificacao": "MSF 1/2025",
+                  "identificacaoPorExtenso": "Mensagem (SF) n° 1, de 2025",
+                  "identificado": "true",
+                  "numero": "00001",
+                  "numeroSedol": "SF248065865428",
+                  "proposicao": "true",
+                  "sigla": "MSF",
+                  "siglaPorExtenso": "Mensagem (SF)",
+                  "siglaTipoDoma": "MENSAGEM",
+                  "textos": [
+                    {
+                      "codigoColegiado": "1998",
+                      "dataAtualizacao": "2025-04-07",
+                      "descricao": "-",
+                      "descricaoTipoDoma": "Avulso inicial da matéria",
+                      "idDoma": "9929140",
+                      "identificacao": "Avulso inicial da matéria",
+                      "siglaTipoDoma": "AVULSO_INICIAL",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9929140"
+                    },
+                    {
+                      "codigoColegiado": "1998",
+                      "conteudoInformacional": "MSF 1/2025",
+                      "dataAtualizacao": "2025-04-07",
+                      "descricao": "Submete à apreciação do Senado Federal, de conformidade com o art. 52, inciso IV, da Constituição Federal, e com o art. 39, combinado com o art. 46 da Lei nº 11.440, de 2006, o nome do Senhor RICARDO JOSÉ LUSTOSA LEAL, Ministro de Segunda Classe do Quadro Especial da Carreira de Diplomata do Ministério das Relações Exteriores, para exercer o cargo de Embaixador do Brasil na República Democrática de Timor-Leste.",
+                      "descricaoTipoDoma": "Mensagem",
+                      "idDoma": "9882887",
+                      "idProcesso": "8781953",
+                      "identificacao": "Mensagem",
+                      "siglaTipoDoma": "MENSAGEM",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9882887"
+                    },
+                    {
+                      "codigoColegiado": "54",
+                      "dataAtualizacao": "2025-04-30",
+                      "descricao": "Planejamento estratégico do indicado.",
+                      "descricaoTipoDoma": "Listagem ou relatório descritivo",
+                      "idDoma": "9943134",
+                      "identificacao": "Listagem ou relatório descritivo",
+                      "siglaTipoDoma": "LISTAGEM_RELATORIO",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9943134"
+                    }
+                  ]
+                },
+                "emDeliberacao": "false",
+                "isTerminativo": "false",
+                "nome": "MSF 1/2025",
+                "nomeFormatadoComOrdem": "1 - MSF 1/2025",
+                "ordem": "1",
+                "ordemDeliberacao": "1",
+                "possuiVotacaoSecreta": "false",
+                "relatorio": "Não apresentado",
+                "resultadoPublico": "false",
+                "revisado": "false",
+                "siglaRelatorio": "Não apresentado",
+                "textosPauta": [
+                  {
+                    "codigoColegiado": "1998",
+                    "dataAtualizacao": "2025-04-07",
+                    "descricao": "-",
+                    "descricaoTipoDoma": "Avulso inicial da matéria",
+                    "idDoma": "9929140",
+                    "identificacao": "Avulso inicial da matéria",
+                    "ordemNaPauta": "1",
+                    "siglaColegiado": "PLEN",
+                    "siglaTipoDoma": "AVULSO_INICIAL",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9929140"
+                  },
+                  {
+                    "codigoColegiado": "54",
+                    "dataAtualizacao": "2025-04-30",
+                    "descricao": "Planejamento estratégico do indicado.",
+                    "descricaoTipoDoma": "Listagem ou relatório descritivo",
+                    "idDoma": "9943134",
+                    "identificacao": "Listagem ou relatório descritivo",
+                    "ordemNaPauta": "2",
+                    "siglaColegiado": "CRE",
+                    "siglaTipoDoma": "LISTAGEM_RELATORIO",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9943134"
+                  },
+                  {
+                    "codigoColegiado": "54",
+                    "dataAtualizacao": "2025-05-06",
+                    "descricao": "Da COMISSÃO DE RELAÇÕES EXTERIORES E DEFESA NACIONAL, sobre a Mensagem (SF) n° 1, de 2025, que Submete à apreciação do Senado Federal, de conformidade com o art. 52, inciso IV, da Constituição Federal, e com o art. 39, combinado com o art. 46 da Lei nº 11.440, de 2006, o nome do Senhor RICARDO JOSÉ LUSTOSA LEAL, Ministro de Segunda Classe do Quadro Especial da Carreira de Diplomata do Ministério das Relações Exteriores, para exercer o cargo de Embaixador do Brasil na República Democrática de Timor-Leste.",
+                    "descricaoTipoDoma": "Relatório Legislativo",
+                    "idDoma": "9945834",
+                    "identificacao": "Relatório Legislativo",
+                    "ordemNaPauta": "3",
+                    "siglaColegiado": "CRE",
+                    "siglaTipoDoma": "RELATORIO",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9945834"
+                  }
+                ],
+                "tipo": "MATE",
+                "tipoPauta": "Pauta",
+                "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9882887"
+              },
+              {
+                "apreciado": "false",
+                "autorItemPauta": {
+                  "isColegiado": "false",
+                  "isParlamentar": "false",
+                  "nomeAutoria": "Presidência da República",
+                  "possuiOutrosAutores": "false",
+                  "tipoAutoriaDomaDescricao": "Presidente da República",
+                  "tipoAutoriaDomaSigla": "PRESIDENTE_REPUBLICA"
+                },
+                "cabecalhoParecer": "MSF 5/2025",
+                "categoria": "Matéria",
+                "classificacao": {
+                  "codigo": "1",
+                  "descricao": "Vinculado a uma matéria"
+                },
+                "codigo": "97547",
+                "dataHoraEstadoAtual": "2025-04-14T12:25:30.000",
+                "descricao": "MSF 5/2025",
+                "doma": {
+                  "ano": "2025",
+                  "autoria": "Presidência da República",
+                  "autorias": {
+                    "descricaoTipo": "Presidente da República",
+                    "isAutoriaComOutros": "false",
+                    "nome": "Presidência da República",
+                    "ordem": "1",
+                    "siglaTipo": "PRESIDENTE_REPUBLICA"
+                  },
+                  "codigoMateria": "167957",
+                  "complementar": "false",
+                  "consolidacao": "false",
+                  "dataApresentacao": "2025-02-04T09:33:21.000",
+                  "dataFecho": "2025-01-30T00:00:00.000",
+                  "descricaoTipoDoma": "Mensagem",
+                  "ementa": "Submete à apreciação do Senado Federal, de conformidade com o art. 52, inciso IV, da Constituição Federal, e com o art. 39, combinado com o art. 41 da Lei nº 11.440, de 2006, o nome do Senhor JOÃO MENDES PEREIRA, Ministro de Primeira Classe da Carreira de Diplomata do Ministério das Relações Exteriores, para exercer o cargo de Embaixador do Brasil na República do Panamá.",
+                  "idConteudoInformacional": "7597477",
+                  "idDoma": "9890800",
+                  "idProcesso": "8787122",
+                  "idTipoDoma": "66",
+                  "identificacao": "MSF 5/2025",
+                  "identificacaoPorExtenso": "Mensagem (SF) n° 5, de 2025",
+                  "identificado": "true",
+                  "numero": "00005",
+                  "numeroSedol": "SF254053229022",
+                  "proposicao": "true",
+                  "sigla": "MSF",
+                  "siglaPorExtenso": "Mensagem (SF)",
+                  "siglaTipoDoma": "MENSAGEM",
+                  "textos": [
+                    {
+                      "codigoColegiado": "1998",
+                      "conteudoInformacional": "MSF 5/2025",
+                      "dataAtualizacao": "2025-02-04",
+                      "descricao": "Submete à apreciação do Senado Federal, de conformidade com o art. 52, inciso IV, da Constituição Federal, e com o art. 39, combinado com o art. 41 da Lei nº 11.440, de 2006, o nome do Senhor JOÃO MENDES PEREIRA, Ministro de Primeira Classe da Carreira de Diplomata do Ministério das Relações Exteriores, para exercer o cargo de Embaixador do Brasil na República do Panamá.",
+                      "descricaoTipoDoma": "Mensagem",
+                      "idDoma": "9890800",
+                      "idProcesso": "8787122",
+                      "identificacao": "Mensagem",
+                      "siglaTipoDoma": "MENSAGEM",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9890800"
+                    },
+                    {
+                      "codigoColegiado": "1998",
+                      "dataAtualizacao": "2025-04-07",
+                      "descricao": "-",
+                      "descricaoTipoDoma": "Avulso inicial da matéria",
+                      "idDoma": "9929208",
+                      "identificacao": "Avulso inicial da matéria",
+                      "siglaTipoDoma": "AVULSO_INICIAL",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9929208"
+                    },
+                    {
+                      "codigoColegiado": "54",
+                      "dataAtualizacao": "2025-04-30",
+                      "descricao": "Planejamento estratégico do indicado.",
+                      "descricaoTipoDoma": "Listagem ou relatório descritivo",
+                      "idDoma": "9943167",
+                      "identificacao": "Listagem ou relatório descritivo",
+                      "siglaTipoDoma": "LISTAGEM_RELATORIO",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9943167"
+                    }
+                  ]
+                },
+                "emDeliberacao": "false",
+                "isTerminativo": "false",
+                "nome": "MSF 5/2025",
+                "nomeFormatadoComOrdem": "2 - MSF 5/2025",
+                "ordem": "2",
+                "ordemDeliberacao": "6",
+                "possuiVotacaoSecreta": "false",
+                "relatorio": "Não apresentado",
+                "resultadoPublico": "false",
+                "revisado": "false",
+                "siglaRelatorio": "Não apresentado",
+                "textosPauta": [
+                  {
+                    "codigoColegiado": "1998",
+                    "dataAtualizacao": "2025-04-07",
+                    "descricao": "-",
+                    "descricaoTipoDoma": "Avulso inicial da matéria",
+                    "idDoma": "9929208",
+                    "identificacao": "Avulso inicial da matéria",
+                    "ordemNaPauta": "1",
+                    "siglaColegiado": "PLEN",
+                    "siglaTipoDoma": "AVULSO_INICIAL",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9929208"
+                  },
+                  {
+                    "codigoColegiado": "54",
+                    "dataAtualizacao": "2025-04-30",
+                    "descricao": "Planejamento estratégico do indicado.",
+                    "descricaoTipoDoma": "Listagem ou relatório descritivo",
+                    "idDoma": "9943167",
+                    "identificacao": "Listagem ou relatório descritivo",
+                    "ordemNaPauta": "2",
+                    "siglaColegiado": "CRE",
+                    "siglaTipoDoma": "LISTAGEM_RELATORIO",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9943167"
+                  },
+                  {
+                    "codigoColegiado": "54",
+                    "dataAtualizacao": "2025-05-05",
+                    "descricao": "Da COMISSÃO DE RELAÇÕES EXTERIORES E DEFESA NACIONAL, sobre a Mensagem (SF) n° 5, de 2025, que Submete à apreciação do Senado Federal, de conformidade com o art. 52, inciso IV, da Constituição Federal, e com o art. 39, combinado com o art. 41 da Lei nº 11.440, de 2006, o nome do Senhor JOÃO MENDES PEREIRA, Ministro de Primeira Classe da Carreira de Diplomata do Ministério das Relações Exteriores, para exercer o cargo de Embaixador do Brasil na República do Panamá.",
+                    "descricaoTipoDoma": "Relatório Legislativo",
+                    "idDoma": "9944133",
+                    "identificacao": "Relatório Legislativo",
+                    "ordemNaPauta": "3",
+                    "siglaColegiado": "CRE",
+                    "siglaTipoDoma": "RELATORIO",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9944133"
+                  }
+                ],
+                "tipo": "MATE",
+                "tipoPauta": "Pauta",
+                "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9890800"
+              },
+              {
+                "apreciado": "false",
+                "autorItemPauta": {
+                  "isColegiado": "false",
+                  "isParlamentar": "false",
+                  "nomeAutoria": "Presidência da República",
+                  "possuiOutrosAutores": "false",
+                  "tipoAutoriaDomaDescricao": "Presidente da República",
+                  "tipoAutoriaDomaSigla": "PRESIDENTE_REPUBLICA"
+                },
+                "cabecalhoParecer": "MSF 6/2025",
+                "categoria": "Matéria",
+                "classificacao": {
+                  "codigo": "1",
+                  "descricao": "Vinculado a uma matéria"
+                },
+                "codigo": "97554",
+                "dataHoraEstadoAtual": "2025-04-14T12:29:01.000",
+                "descricao": "MSF 6/2025",
+                "doma": {
+                  "ano": "2025",
+                  "autoria": "Presidência da República",
+                  "autorias": {
+                    "descricaoTipo": "Presidente da República",
+                    "isAutoriaComOutros": "false",
+                    "nome": "Presidência da República",
+                    "ordem": "1",
+                    "siglaTipo": "PRESIDENTE_REPUBLICA"
+                  },
+                  "codigoMateria": "167958",
+                  "complementar": "false",
+                  "consolidacao": "false",
+                  "dataApresentacao": "2025-02-04T10:46:36.000",
+                  "dataFecho": "2025-01-30T00:00:00.000",
+                  "descricaoTipoDoma": "Mensagem",
+                  "ementa": "Submete à apreciação do Senado Federal, de conformidade com o art. 52, inciso IV, da Constituição Federal, e com o art. 39, combinado com o art. 41 da Lei nº 11.440, de 2006, o nome da Senhora MARIA CLARA DE ABREU RADA, Ministra de Primeira Classe da Carreira de Diplomata do Ministério das Relações Exteriores, para exercer o cargo de Embaixadora do Brasil na República da Sérvia e, cumulativamente, em Montenegro.",
+                  "idConteudoInformacional": "7597480",
+                  "idDoma": "9890821",
+                  "idProcesso": "8787136",
+                  "idTipoDoma": "66",
+                  "identificacao": "MSF 6/2025",
+                  "identificacaoPorExtenso": "Mensagem (SF) n° 6, de 2025",
+                  "identificado": "true",
+                  "numero": "00006",
+                  "numeroSedol": "SF252183661350",
+                  "proposicao": "true",
+                  "sigla": "MSF",
+                  "siglaPorExtenso": "Mensagem (SF)",
+                  "siglaTipoDoma": "MENSAGEM",
+                  "textos": [
+                    {
+                      "codigoColegiado": "1998",
+                      "conteudoInformacional": "MSF 6/2025",
+                      "dataAtualizacao": "2025-02-04",
+                      "descricao": "Submete à apreciação do Senado Federal, de conformidade com o art. 52, inciso IV, da Constituição Federal, e com o art. 39, combinado com o art. 41 da Lei nº 11.440, de 2006, o nome da Senhora MARIA CLARA DE ABREU RADA, Ministra de Primeira Classe da Carreira de Diplomata do Ministério das Relações Exteriores, para exercer o cargo de Embaixadora do Brasil na República da Sérvia e, cumulativamente, em Montenegro.",
+                      "descricaoTipoDoma": "Mensagem",
+                      "idDoma": "9890821",
+                      "idProcesso": "8787136",
+                      "identificacao": "Mensagem",
+                      "siglaTipoDoma": "MENSAGEM",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9890821"
+                    },
+                    {
+                      "codigoColegiado": "1998",
+                      "dataAtualizacao": "2025-04-07",
+                      "descricao": "-",
+                      "descricaoTipoDoma": "Avulso inicial da matéria",
+                      "idDoma": "9929146",
+                      "identificacao": "Avulso inicial da matéria",
+                      "siglaTipoDoma": "AVULSO_INICIAL",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9929146"
+                    },
+                    {
+                      "codigoColegiado": "54",
+                      "dataAtualizacao": "2025-04-30",
+                      "descricao": "Planejamento estratégico do indicado",
+                      "descricaoTipoDoma": "Listagem ou relatório descritivo",
+                      "idDoma": "9942964",
+                      "identificacao": "Listagem ou relatório descritivo",
+                      "siglaTipoDoma": "LISTAGEM_RELATORIO",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9942964"
+                    }
+                  ]
+                },
+                "emDeliberacao": "false",
+                "isTerminativo": "false",
+                "nome": "MSF 6/2025",
+                "nomeFormatadoComOrdem": "3 - MSF 6/2025",
+                "ordem": "3",
+                "ordemDeliberacao": "8",
+                "possuiVotacaoSecreta": "false",
+                "relatorio": "Não apresentado",
+                "resultadoPublico": "false",
+                "revisado": "false",
+                "siglaRelatorio": "Não apresentado",
+                "textosPauta": [
+                  {
+                    "codigoColegiado": "1998",
+                    "dataAtualizacao": "2025-04-07",
+                    "descricao": "-",
+                    "descricaoTipoDoma": "Avulso inicial da matéria",
+                    "idDoma": "9929146",
+                    "identificacao": "Avulso inicial da matéria",
+                    "ordemNaPauta": "1",
+                    "siglaColegiado": "PLEN",
+                    "siglaTipoDoma": "AVULSO_INICIAL",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9929146"
+                  },
+                  {
+                    "codigoColegiado": "54",
+                    "dataAtualizacao": "2025-04-30",
+                    "descricao": "Planejamento estratégico do indicado",
+                    "descricaoTipoDoma": "Listagem ou relatório descritivo",
+                    "idDoma": "9942964",
+                    "identificacao": "Listagem ou relatório descritivo",
+                    "ordemNaPauta": "2",
+                    "siglaColegiado": "CRE",
+                    "siglaTipoDoma": "LISTAGEM_RELATORIO",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9942964"
+                  },
+                  {
+                    "codigoColegiado": "54",
+                    "dataAtualizacao": "2025-04-30",
+                    "descricao": "Da COMISSÃO DE RELAÇÕES EXTERIORES E DEFESA NACIONAL, sobre a Mensagem (SF) n° 6, de 2025, que Submete à apreciação do Senado Federal, de conformidade com o art. 52, inciso IV, da Constituição Federal, e com o art. 39, combinado com o art. 41 da Lei nº 11.440, de 2006, o nome da Senhora MARIA CLARA DE ABREU RADA, Ministra de Primeira Classe da Carreira de Diplomata do Ministério das Relações Exteriores, para exercer o cargo de Embaixadora do Brasil na República da Sérvia e, cumulativamente, em Montenegro.",
+                    "descricaoTipoDoma": "Relatório Legislativo",
+                    "idDoma": "9943172",
+                    "identificacao": "Relatório Legislativo",
+                    "ordemNaPauta": "3",
+                    "siglaColegiado": "CRE",
+                    "siglaTipoDoma": "RELATORIO",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9943172"
+                  }
+                ],
+                "tipo": "MATE",
+                "tipoPauta": "Pauta",
+                "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9890821"
+              }
+            ],
+            "nome": "Indicação de Autoridades",
+            "sequencial": "1",
+            "sequencialFormatado": "1ª PARTE"
+          },
+          "permitePresencaApp": "false",
+          "permiteVotacaoSemPresencaFisica": "false",
+          "possuiVotacaoSecreta": "false",
+          "realizada": "false",
+          "secreta": "false",
+          "sessaoLegislativa": {
+            "codigo": "873",
+            "descricao": "57a. Legislatura (2025) - 3a. Sessão Legislativa Ordinária",
+            "fim": "2025-12-22",
+            "inicio": "2025-02-03",
+            "numero": "3",
+            "numeroLegislatura": "57"
+          },
+          "situacao": "Não Realizada",
+          "status": "Cancelada",
+          "tipo": {
+            "codigo": "1",
+            "descricao": "Ordinária",
+            "sigla": "ORD"
+          },
+          "tipoPresenca": "Presencial",
+          "titulo": "7ª Reunião Ordinária",
+          "urlSumarioDosPareceres": "https://sac.senado.leg.br/sac/servlet/RecuperaQuadroSinteseComissaoServlet?codigo=13449",
+          "urlUltimaPautaCheiaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/863465ec-0169-4dfe-bc86-b5e781182525",
+          "urlUltimaPautaSimplesPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/85e09f23-fea2-4f9c-85b7-32db731c5b39",
+          "versao": "2026-03-19T02:06:01.839"
+        }
+      ]
+    }
+  }
+}

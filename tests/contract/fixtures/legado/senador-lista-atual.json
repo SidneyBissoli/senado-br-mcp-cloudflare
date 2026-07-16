@@ -1,0 +1,234 @@
+{
+  "ListaParlamentarEmExercicio": {
+    "Metadados": {
+      "DataVersaoServico": "2020-07-15",
+      "DescricaoDataSet": "Lista dos Parlamentares que estão atualmente em Exercício. Informações atuais sobre o Parlamentar.",
+      "Versao": "15/07/2026 23:20:22",
+      "VersaoServico": "4"
+    },
+    "Parlamentares": {
+      "Parlamentar": [
+        {
+          "IdentificacaoParlamentar": {
+            "Bloco": {
+              "CodigoBloco": "346",
+              "DataCriacao": "2023-03-20",
+              "NomeApelido": "BLALIANÇA",
+              "NomeBloco": "Bloco Parlamentar Aliança"
+            },
+            "CodigoParlamentar": "5672",
+            "CodigoPublicoNaLegAtual": "800",
+            "EmailParlamentar": "sen.alanrick@senado.leg.br",
+            "FormaTratamento": "Senador ",
+            "MembroLideranca": "Sim",
+            "MembroMesa": "Não",
+            "NomeCompletoParlamentar": "Alan Rick Miranda",
+            "NomeParlamentar": "Alan Rick",
+            "SexoParlamentar": "Masculino",
+            "SiglaPartidoParlamentar": "REPUBLICANOS",
+            "Telefones": {
+              "Telefone": [
+                {
+                  "IndicadorFax": "Não",
+                  "NumeroTelefone": "33036333",
+                  "OrdemPublicacao": "1"
+                }
+              ]
+            },
+            "UfParlamentar": "AC",
+            "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador5672.jpg",
+            "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/5672"
+          },
+          "Mandato": {
+            "CodigoMandato": "596",
+            "DescricaoParticipacao": "Titular",
+            "Exercicios": {
+              "Exercicio": [
+                {
+                  "CodigoExercicio": "3028",
+                  "DataInicio": "2023-02-01"
+                }
+              ]
+            },
+            "PrimeiraLegislaturaDoMandato": {
+              "DataFim": "2027-01-31",
+              "DataInicio": "2023-02-01",
+              "NumeroLegislatura": "57"
+            },
+            "SegundaLegislaturaDoMandato": {
+              "DataFim": "2031-01-31",
+              "DataInicio": "2027-02-01",
+              "NumeroLegislatura": "58"
+            },
+            "Suplentes": {
+              "Suplente": [
+                {
+                  "CodigoParlamentar": "6343",
+                  "DescricaoParticipacao": "1º Suplente",
+                  "NomeParlamentar": "Gemil Junior"
+                },
+                {
+                  "CodigoParlamentar": "6344",
+                  "DescricaoParticipacao": "2º Suplente",
+                  "NomeParlamentar": "Coronel Casagrande"
+                }
+              ]
+            },
+            "UfParlamentar": "AC"
+          }
+        },
+        {
+          "IdentificacaoParlamentar": {
+            "Bloco": {
+              "CodigoBloco": "358",
+              "DataCriacao": "2025-02-18",
+              "NomeApelido": "BLDEM",
+              "NomeBloco": "Bloco Parlamentar Democracia"
+            },
+            "CodigoParlamentar": "5982",
+            "CodigoPublicoNaLegAtual": "829",
+            "EmailParlamentar": "sen.alessandrovieira@senado.leg.br",
+            "FormaTratamento": "Senador ",
+            "MembroLideranca": "Não",
+            "MembroMesa": "Não",
+            "NomeCompletoParlamentar": "Alessandro Vieira",
+            "NomeParlamentar": "Alessandro Vieira",
+            "SexoParlamentar": "Masculino",
+            "SiglaPartidoParlamentar": "MDB",
+            "Telefones": {
+              "Telefone": [
+                {
+                  "IndicadorFax": "Não",
+                  "NumeroTelefone": "33039011",
+                  "OrdemPublicacao": "1"
+                },
+                {
+                  "IndicadorFax": "Não",
+                  "NumeroTelefone": "33039014",
+                  "OrdemPublicacao": "2"
+                }
+              ]
+            },
+            "UfParlamentar": "SE",
+            "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador5982.jpg",
+            "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/5982"
+          },
+          "Mandato": {
+            "CodigoMandato": "559",
+            "DescricaoParticipacao": "Titular",
+            "Exercicios": {
+              "Exercicio": [
+                {
+                  "CodigoExercicio": "2888",
+                  "DataInicio": "2019-02-01"
+                }
+              ]
+            },
+            "PrimeiraLegislaturaDoMandato": {
+              "DataFim": "2023-01-31",
+              "DataInicio": "2019-02-01",
+              "NumeroLegislatura": "56"
+            },
+            "SegundaLegislaturaDoMandato": {
+              "DataFim": "2027-01-31",
+              "DataInicio": "2023-02-01",
+              "NumeroLegislatura": "57"
+            },
+            "Suplentes": {
+              "Suplente": [
+                {
+                  "CodigoParlamentar": "5980",
+                  "DescricaoParticipacao": "1º Suplente",
+                  "NomeParlamentar": "Fernando Carvalho"
+                },
+                {
+                  "CodigoParlamentar": "5981",
+                  "DescricaoParticipacao": "2º Suplente",
+                  "NomeParlamentar": "Major Ildomario"
+                }
+              ]
+            },
+            "UfParlamentar": "SE"
+          }
+        },
+        {
+          "IdentificacaoParlamentar": {
+            "Bloco": {
+              "CodigoBloco": "335",
+              "DataCriacao": "2023-02-01",
+              "NomeApelido": "BLPRD",
+              "NomeBloco": "Bloco Parlamentar da Resistência Democrática"
+            },
+            "CodigoParlamentar": "6358",
+            "CodigoPublicoNaLegAtual": "920",
+            "EmailParlamentar": "sen.anapaulalobato@senado.leg.br",
+            "FormaTratamento": "Senadora ",
+            "MembroLideranca": "Não",
+            "MembroMesa": "Sim",
+            "NomeCompletoParlamentar": "Ana Paula Dias Lobato Nova Alves",
+            "NomeParlamentar": "Ana Paula Lobato",
+            "SexoParlamentar": "Feminino",
+            "SiglaPartidoParlamentar": "PSB",
+            "Telefones": {
+              "Telefone": [
+                {
+                  "IndicadorFax": "Não",
+                  "NumeroTelefone": "33032967",
+                  "OrdemPublicacao": "1"
+                }
+              ]
+            },
+            "UfParlamentar": "MA",
+            "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador6358.jpg",
+            "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/6358"
+          },
+          "Mandato": {
+            "CodigoMandato": "602",
+            "DescricaoParticipacao": "1º Suplente",
+            "Exercicios": {
+              "Exercicio": [
+                {
+                  "CodigoExercicio": "3057",
+                  "DataInicio": "2024-02-21"
+                },
+                {
+                  "CodigoExercicio": "3038",
+                  "DataFim": "2024-01-31",
+                  "DataInicio": "2023-02-02",
+                  "DescricaoCausaAfastamento": "Retorno do titular",
+                  "SiglaCausaAfastamento": "RET"
+                }
+              ]
+            },
+            "PrimeiraLegislaturaDoMandato": {
+              "DataFim": "2027-01-31",
+              "DataInicio": "2023-02-01",
+              "NumeroLegislatura": "57"
+            },
+            "SegundaLegislaturaDoMandato": {
+              "DataFim": "2031-01-31",
+              "DataInicio": "2027-02-01",
+              "NumeroLegislatura": "58"
+            },
+            "Suplentes": {
+              "Suplente": [
+                {
+                  "CodigoParlamentar": "6359",
+                  "DescricaoParticipacao": "2º Suplente",
+                  "NomeParlamentar": "Lourdinha"
+                }
+              ]
+            },
+            "Titular": {
+              "CodigoParlamentar": "4605",
+              "DescricaoParticipacao": "Titular",
+              "NomeParlamentar": "Flávio Dino"
+            },
+            "UfParlamentar": "MA"
+          }
+        }
+      ]
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaParlamentarEmExerciciov4.xsd"
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "MembroComissaoParlamentar": {
+    "Metadados": {
+      "DataVersaoServico": "2021-09-09",
+      "DescricaoDataSet": "Retorna a relação das Comissões das quais um Senador é membro.",
+      "Versao": "15/07/2026 23:25:57",
+      "VersaoServico": "5"
+    },
+    "Parlamentar": {
+      "Codigo": "5672",
+      "MembroComissoes": {
+        "Comissao": [
+          {
+            "DataInicio": "2026-03-17",
+            "DescricaoParticipacao": "Titular",
+            "IdentificacaoComissao": {
+              "CodigoComissao": "2040",
+              "NomeComissao": "Grupo Parlamentar Brasil - Argentina",
+              "SiglaCasaComissao": "CN",
+              "SiglaComissao": "GPARGENTINA"
+            }
+          },
+          {
+            "DataInicio": "2023-11-07",
+            "DescricaoParticipacao": "Titular",
+            "IdentificacaoComissao": {
+              "CodigoComissao": "2242",
+              "NomeComissao": "Grupo Parlamentar Brasil - Peru",
+              "SiglaCasaComissao": "CN",
+              "SiglaComissao": "GPPERU"
+            }
+          },
+          {
+            "DataFim": "2023-01-31",
+            "DataInicio": "2021-03-24",
+            "DescricaoParticipacao": "Titular",
+            "IdentificacaoComissao": {
+              "CodigoComissao": "2437",
+              "NomeComissao": "Grupo Parlamentar Brasil - Bolívia",
+              "SiglaCasaComissao": "CN",
+              "SiglaComissao": "GPBOLIVIA"
+            }
+          }
+        ]
+      },
+      "Nome": "Alan Rick"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/MembroComissaoParlamentarv5.xsd"
+  }
+}

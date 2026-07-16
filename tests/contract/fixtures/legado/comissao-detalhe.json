@@ -1,0 +1,271 @@
+{
+  "ComissoesCongressoNacional": {
+    "Colegiados": {
+      "Colegiado": [
+        {
+          "Cargos": {
+            "Cargo": [
+              {
+                "Bancada": "(PSD-BA)",
+                "CodigoCargo": "1",
+                "CodigoParlamentar": "5523",
+                "NomeParlamentar": "Senador Otto Alencar",
+                "ObservacaoCargo": "7",
+                "TipoCargo": "PRESIDENTE"
+              },
+              {
+                "Bancada": "(PSD-GO)",
+                "CodigoCargo": "2",
+                "CodigoParlamentar": "5899",
+                "NomeParlamentar": "Senador Vanderlan Cardoso",
+                "ObservacaoCargo": "14",
+                "TipoCargo": "VICE-PRESIDENTE"
+              }
+            ]
+          },
+          "CodigoColegiado": "34",
+          "DataInicio": "01/01/1900",
+          "Eventos": {},
+          "EventosProrrogacao": {
+            "Prorrogacao": [
+              {
+                "Leitura": "01/01/1900"
+              }
+            ]
+          },
+          "InformacoesSecretaria": {
+            "AgendaReuniao": "Quartas-Feiras 10:00 horas",
+            "NumeroFax": "3303-4315",
+            "Secretario": "Ednaldo Magalhães Siqueira",
+            "TelefoneSecretaria": "61 3303-3972",
+            "eMail": "ccj@senado.gov.br"
+          },
+          "MembrosBlocoCD": {
+            "Membro": [
+              {
+                "MembrosCD": {}
+              }
+            ]
+          },
+          "MembrosBlocoSF": {
+            "PartidoBloco": [
+              {
+                "MembrosSF": {
+                  "Membro": [
+                    {
+                      "CodigoParlamentar": "4994",
+                      "NomeParlamentar": "Senador Eduardo Braga",
+                      "NumeroOrdem": "1",
+                      "ObservacaoParlamentar": "1,12",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "MDB",
+                      "ProprietarioVaga": "Bloco Parlamentar Democracia",
+                      "Ramais": "6230",
+                      "SiglaUf": "AM",
+                      "TipoVaga": "Titular"
+                    },
+                    {
+                      "CodigoParlamentar": "742",
+                      "NomeParlamentar": "Senador Marcelo Castro",
+                      "NumeroOrdem": "1",
+                      "ObservacaoParlamentar": "1,12,50",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "MDB",
+                      "ProprietarioVaga": "Bloco Parlamentar Democracia",
+                      "Ramais": "6130 / 4078",
+                      "SiglaUf": "PI",
+                      "TipoVaga": "Suplente"
+                    },
+                    {
+                      "CodigoParlamentar": "70",
+                      "NomeParlamentar": "Senador Renan Calheiros",
+                      "NumeroOrdem": "2",
+                      "ObservacaoParlamentar": "1,12",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "MDB",
+                      "ProprietarioVaga": "Bloco Parlamentar Democracia",
+                      "Ramais": "2261 / 2268",
+                      "SiglaUf": "AL",
+                      "TipoVaga": "Titular"
+                    }
+                  ]
+                },
+                "NumeroMembros": "18",
+                "PartidosBloco": {
+                  "Partidos": [
+                    {
+                      "SiglaPartido": "MDB"
+                    },
+                    {
+                      "SiglaPartido": "PSDB"
+                    },
+                    {
+                      "SiglaPartido": "PODEMOS"
+                    }
+                  ]
+                },
+                "UnidadePartidaria": "Bloco Parlamentar Democracia"
+              },
+              {
+                "MembrosSF": {
+                  "Membro": [
+                    {
+                      "CodigoParlamentar": "5523",
+                      "NomeParlamentar": "Senador Otto Alencar",
+                      "NumeroOrdem": "1",
+                      "ObservacaoParlamentar": "4",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "PSD",
+                      "ProprietarioVaga": "Bloco Parlamentar da Resistência Democrática",
+                      "Ramais": "3172 / 1467",
+                      "SiglaUf": "BA",
+                      "TipoVaga": "Titular"
+                    },
+                    {
+                      "CodigoParlamentar": "5973",
+                      "NomeParlamentar": "Senador Cid Gomes",
+                      "NumeroOrdem": "1",
+                      "ObservacaoParlamentar": "4,48,49",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "PSB",
+                      "ProprietarioVaga": "Bloco Parlamentar da Resistência Democrática",
+                      "Ramais": "6460 / 6399",
+                      "SiglaUf": "CE",
+                      "TipoVaga": "Suplente"
+                    },
+                    {
+                      "CodigoParlamentar": "5525",
+                      "NomeParlamentar": "Senador Omar Aziz",
+                      "NumeroOrdem": "2",
+                      "ObservacaoParlamentar": "4",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "PSD",
+                      "ProprietarioVaga": "Bloco Parlamentar da Resistência Democrática",
+                      "Ramais": "6579 / 6581",
+                      "SiglaUf": "AM",
+                      "TipoVaga": "Titular"
+                    }
+                  ]
+                },
+                "NumeroMembros": "12",
+                "PartidosBloco": {
+                  "Partidos": [
+                    {
+                      "SiglaPartido": "PSB"
+                    },
+                    {
+                      "SiglaPartido": "PSD"
+                    }
+                  ]
+                },
+                "UnidadePartidaria": "Bloco Parlamentar da Resistência Democrática"
+              },
+              {
+                "MembrosSF": {
+                  "Membro": [
+                    {
+                      "CodigoParlamentar": "5936",
+                      "NomeParlamentar": "Senador Carlos Portinho",
+                      "NumeroOrdem": "1",
+                      "ObservacaoParlamentar": "2,53,57",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "PL",
+                      "ProprietarioVaga": "Bloco Parlamentar Vanguarda",
+                      "Ramais": "6640 / 6613",
+                      "SiglaUf": "RJ",
+                      "TipoVaga": "Titular"
+                    },
+                    {
+                      "CodigoParlamentar": "6381",
+                      "NomeParlamentar": "Senador Hermes Klann",
+                      "NumeroOrdem": "1",
+                      "ObservacaoParlamentar": "2,55",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "PL",
+                      "ProprietarioVaga": "Bloco Parlamentar Vanguarda",
+                      "Ramais": "3784 / 3756",
+                      "SiglaUf": "SC",
+                      "TipoVaga": "Suplente"
+                    },
+                    {
+                      "CodigoParlamentar": "5976",
+                      "NomeParlamentar": "Senador Eduardo Girão",
+                      "NumeroOrdem": "2",
+                      "ObservacaoParlamentar": "2,60,61",
+                      "OrigemParlamentar": "Senado",
+                      "Partido": "NOVO",
+                      "ProprietarioVaga": "Bloco Parlamentar Vanguarda",
+                      "Ramais": "6677 / 6679",
+                      "SiglaUf": "CE",
+                      "TipoVaga": "Titular"
+                    }
+                  ]
+                },
+                "NumeroMembros": "10",
+                "PartidosBloco": {
+                  "Partidos": [
+                    {
+                      "SiglaPartido": "PL"
+                    },
+                    {
+                      "SiglaPartido": "NOVO"
+                    },
+                    {
+                      "SiglaPartido": "AVANTE"
+                    }
+                  ]
+                },
+                "UnidadePartidaria": "Bloco Parlamentar Vanguarda"
+              }
+            ]
+          },
+          "NomeColegiado": "Comissão de Constituição, Justiça e Cidadania",
+          "ObservacoesComissao": {
+            "ObservacaoComissao": [
+              {
+                "Linha": "***************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************************",
+                "ObservacaoColegiado": "1 (uma) vaga compartilhada entre os Blocos Parlamentares Democracia, Pelo Brasil e Aliança, de acordo com o cálculo de proporcionalidade de 18/02/2025."
+              }
+            ]
+          },
+          "ObservacoesVaga": {
+            "ObservacaoVaga": [
+              {
+                "Linha": "1",
+                "ObservacaoParlamentar": "Em 18.02.2025, os Senadores Eduardo Braga, Renan Calheiros, Jader Barbalho e Veneziano Vital do Rêgo foram designados membros titulares, e os Senadores Alessandro Vieira, Marcelo Castro e Giordano membros suplentes, pelo Bloco Parlamentar Democracia, para compor a Comissão (Of. 005/2025-GLMDB)."
+              },
+              {
+                "Linha": "2",
+                "ObservacaoParlamentar": "Em 18.02.2025, os Senadores Carlos Portinho, Eduardo Girão, Magno Malta, Marcos Rogério e Rogerio Marinho foram designados membros titulares, e os Senadores Jorge Seif, Izalci Lucas, Eduardo Gomes, Flávio Bolsonaro e Jaime Bagattoli membros suplentes, pelo Bloco Parlamentar Vanguarda, para compor a Comissão (Of. 008/2025-BLVANG)."
+              },
+              {
+                "Linha": "3",
+                "ObservacaoParlamentar": "Em 18.02.2025, os Senadores Sergio Moro e Alan Rick foram designados membros titulares, e os Senadores Professora Dorinha Seabra e Marcio Bittar membros suplentes, pelo Bloco Parlamentar Democracia, para compor a Comissão (Of. 12/2025-GLUNIAO)."
+              }
+            ]
+          },
+          "QuantidadesMembros": {
+            "Distribuicao": {
+              "Senadores": "54",
+              "SenadoresSuplentes": "27",
+              "SenadoresTitulares": "27"
+            }
+          },
+          "Requerimentos": {},
+          "SiglaColegiado": "CCJ",
+          "SubComissao": {},
+          "TipoColegiado": {
+            "CodigoTipo": "21",
+            "SiglaCasa": "SF",
+            "TipoColegiado": "Comissão Permanente"
+          }
+        }
+      ]
+    },
+    "Metadados": {
+      "Versao": "15/07/2026 23:26:17",
+      "VersaoServico": "3"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/cn/ComissoesCongressoNacionalv3.xsd"
+  }
+}

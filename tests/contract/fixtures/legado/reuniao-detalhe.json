@@ -1,0 +1,721 @@
+{
+  "DetalheReuniao": {
+    "Metadados": {
+      "DataVersaoServico": "2020-05-04",
+      "DescricaoDataSet": "Informações detalhadas da Reunião de Comissão.",
+      "Versao": "15/07/2026 23:29:15",
+      "VersaoServico": "2"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/DetalheReuniaov2.xsd",
+    "reuniao": {
+      "codigo": "13528",
+      "codigoSituacao": "6",
+      "colegiadoCriador": {
+        "codigo": "2703",
+        "codigoTipo": "22",
+        "descricaoTipo": "Comissão Parlamentar de Inquérito",
+        "materiasOriginadoras": {
+          "ano": "2024",
+          "codMateriaLegado": "165666",
+          "idProcesso": "8725036",
+          "nomeFormatado": "RQS 680/2024",
+          "numero": "00680",
+          "sigla": "RQS"
+        },
+        "nome": "CPI das BETS",
+        "sigla": "CPIBETS",
+        "siglaCasa": "SF"
+      },
+      "colegiados": {
+        "codigo": "2703",
+        "codigoTipoColegiado": "22",
+        "composicaoPublica": "true",
+        "isSubcomissao": "false",
+        "nome": "CPI das BETS",
+        "nomeTipoColegiado": "Comissão Parlamentar de Inquérito",
+        "numeroReuniao": "16",
+        "publicoPortal": "true",
+        "sigla": "CPIBETS",
+        "siglaCasa": "SF"
+      },
+      "confirmada": "false",
+      "continuacaoCancelada": "false",
+      "dataInicio": "2025-05-08T10:30:00.000",
+      "dataInicioFormatadaComObsHorario": "08/05/2025 às 10h30",
+      "dataReuniao": [
+        {
+          "codigo": "64847",
+          "codigoSituacao": "6",
+          "dataEvento": "2025-05-08T13:44:00.000",
+          "descricaoSituacao": "Realizada",
+          "realizada": "true"
+        },
+        {
+          "codigo": "64842",
+          "codigoSituacao": "3",
+          "dataEvento": "2025-05-08T11:05:00.000",
+          "descricaoSituacao": "Aberta",
+          "realizada": "false"
+        },
+        {
+          "codigo": "64808",
+          "codigoSituacao": "1",
+          "dataEvento": "2025-05-08T10:30:00.000",
+          "descricaoSituacao": "Agendada",
+          "realizada": "false"
+        }
+      ],
+      "descricao": "16ª, Reunião",
+      "foiAgendadaAposTerSidoSuspensa": "false",
+      "idUltimaPublicacaoPautaSimples": "15b73dd3-7ff6-4f26-b8ad-b7b147ee71ab",
+      "idUltimaPublicacaoResultado": "d9d8f552-d37c-4b39-ab4d-9f93752e2633",
+      "isExibirNoPortal": "true",
+      "local": "Anexo II, Ala Senador Alexandre Costa, Plenário nº 3",
+      "numReuniaoConjunta": "16",
+      "partes": {
+        "codigo": "17448",
+        "codigoTipo": "7",
+        "descricaoTipo": "Oitiva",
+        "evento": {
+          "codigo": "9434",
+          "convidados": [
+            {
+              "cargo": "Presidente do CONAR - Conselho Nacional Autorregulamentação Publicitária",
+              "codigo": "38820",
+              "depoenteOitiva": {
+                "pessoaFisica": {
+                  "nome": "Sérgio Pompilio",
+                  "sexo": "M"
+                },
+                "tipo": "PF"
+              },
+              "isDepoentePresente": "false",
+              "isPorVideoConferencia": "false",
+              "nome": "Sérgio Pompilio",
+              "ordem": "1",
+              "requerimentosOitiva": {
+                "ano": "2024",
+                "assunto": "Depoimento",
+                "autor": {
+                  "cargo": "Senador",
+                  "casa": "SF",
+                  "codigo": "4770",
+                  "codigoDeputado": "4931",
+                  "data": "2024-11-13T00:00:00.000",
+                  "isDeputado": "false",
+                  "isSenador": "true",
+                  "liderancas": [
+                    {
+                      "titulo": "Vice-líder do Senado Federal"
+                    },
+                    {
+                      "nomePartido": "Partido Liberal",
+                      "siglaPartido": "PL",
+                      "titulo": "Vice-líder do Senado Federal"
+                    }
+                  ],
+                  "nome": "Izalci Lucas Ferreira",
+                  "nomeComCargo": "Senador Izalci Lucas",
+                  "nomeComCargoResumido": "Sen. Izalci Lucas",
+                  "nomeParlamentar": "Izalci Lucas",
+                  "partido": "Partido Liberal",
+                  "sexo": "M",
+                  "siglaPartido": "PL",
+                  "ufPartido": "DF",
+                  "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador4770.jpg",
+                  "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/4770"
+                },
+                "autoria": "Senador Izalci Lucas",
+                "codigo": "7881",
+                "codigoSituacao": "70",
+                "colegiado": {
+                  "codigo": "2703",
+                  "codigoTipoColegiado": "22",
+                  "composicaoPublica": "true",
+                  "isSubcomissao": "false",
+                  "nome": "CPI das BETS",
+                  "nomeTipoColegiado": "Comissão Parlamentar de Inquérito",
+                  "publicoPortal": "true",
+                  "sigla": "CPIBETS",
+                  "siglaCasa": "SF"
+                },
+                "dataApreciacao": "2024-11-19T00:00:00.000",
+                "dataApresentacao": "2024-11-13T00:00:00.000",
+                "depoentes": {
+                  "pessoaFisica": {
+                    "nome": "Sérgio Pompilio",
+                    "sexo": "M"
+                  },
+                  "tipo": "PF"
+                },
+                "documento": {
+                  "idEcmSenado": "8cacc899-fb3b-4a79-bf31-5870757ee0bd",
+                  "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/8cacc899-fb3b-4a79-bf31-5870757ee0bd",
+                  "mimeType": "application/pdf"
+                },
+                "documentosEnviados": {
+                  "ano": "2025",
+                  "arquivos": {
+                    "codigo": "7011",
+                    "descricao": "Ofício 159-2025",
+                    "documento": {
+                      "idEcmSenado": "709f37a5-df93-4d06-9c65-578533a10d2d",
+                      "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/709f37a5-df93-4d06-9c65-578533a10d2d",
+                      "mimeType": "application/pdf"
+                    },
+                    "sigiloso": "false",
+                    "tipo": {
+                      "codigo": "10",
+                      "codigoConarq": "04.02.05.07",
+                      "descricao": "Ofício",
+                      "idTipoDoma": "69"
+                    },
+                    "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/709f37a5-df93-4d06-9c65-578533a10d2d"
+                  },
+                  "assunto": "Convite",
+                  "codigo": "6847",
+                  "dataExpedicao": "2025-05-06",
+                  "descricao": "CPIBETS - Documento Enviado nº 159/2025",
+                  "destinatario": {
+                    "nome": "CONAR - Conselho Nacional de Autorregulamentação Publicitária"
+                  },
+                  "ementa": "Convida o presidente do CONAR, Sérgio Pompilio, a prestar depoimento à CPIBETS.",
+                  "numero": "159",
+                  "requerimentosRespondidos": {
+                    "ano": "2024",
+                    "codigoTipo": "2",
+                    "descricaoTipo": "Convite",
+                    "numero": "116",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9842888"
+                  }
+                },
+                "documentosRecebidos": {
+                  "arquivos": {
+                    "codigo": "10879",
+                    "descricao": "Of 05-2025",
+                    "documento": {
+                      "idEcmSenado": "64266618-5c0a-4c19-8733-e8f325c3bcbb",
+                      "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/64266618-5c0a-4c19-8733-e8f325c3bcbb",
+                      "mimeType": "application/pdf"
+                    },
+                    "sigiloso": "false",
+                    "tipo": {
+                      "codigo": "10",
+                      "codigoConarq": "04.02.05.07",
+                      "descricao": "Ofício",
+                      "idTipoDoma": "69"
+                    },
+                    "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/64266618-5c0a-4c19-8733-e8f325c3bcbb"
+                  },
+                  "assunto": "Convite",
+                  "codigo": "7246",
+                  "codigoConarq": "04.02.05.07",
+                  "dataEmissaoOrigem": "2025-05-06",
+                  "dataRecebimento": "2025-05-06",
+                  "descricao": "CPIBETS - Documento Recebido nº 139",
+                  "emResposta": {
+                    "ano": "2025",
+                    "codigo": "6847",
+                    "descricao": "CPIBETS - Documento Enviado nº 159/2025",
+                    "numero": "159",
+                    "requerimentosRespondidos": {
+                      "ano": "2024",
+                      "numero": "116",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9842888"
+                    }
+                  },
+                  "ementa": "Confirmação de participação do presidente do CONAR na CPIBETS",
+                  "numCaixaFinal": "0",
+                  "numCaixaInicial": "0",
+                  "numero": "139",
+                  "remetente": {
+                    "nome": "CONAR - Conselho Nacional de Autorregulamentação Publicitária"
+                  }
+                },
+                "ementa": "Convida o senhor Sérgio Pompilio, Presidente do Conselho Nacional de Autorregulamentação Publicitária (Conar).",
+                "idDoma": "9842888",
+                "numero": "116",
+                "numeroSedol": "SF249096827744",
+                "situacao": "Aprovado",
+                "tipoRequerimento": "Convite",
+                "tituloParaPauta": "Requerimento Nº 116/2024",
+                "versao": "2026-03-19T02:05:28.905"
+              },
+              "sexo": "M"
+            },
+            {
+              "cargo": "Influenciador digital",
+              "codigo": "38836",
+              "depoenteOitiva": {
+                "pessoaFisica": {
+                  "nome": "Luiz Ricardo Melquiades",
+                  "sexo": "M"
+                },
+                "tipo": "PF"
+              },
+              "isDepoentePresente": "false",
+              "isPorVideoConferencia": "false",
+              "nome": "Luiz Ricardo Melquiades",
+              "ordem": "2",
+              "requerimentosOitiva": {
+                "ano": "2025",
+                "assunto": "Depoimento",
+                "autor": {
+                  "cargo": "Senadora",
+                  "casa": "SF",
+                  "codigo": "5988",
+                  "data": "2025-05-06T00:00:00.000",
+                  "isDeputado": "false",
+                  "isSenador": "true",
+                  "liderancas": {
+                    "nomeUnidadeLideranca": "Liderança da Bancada Feminina",
+                    "titulo": "Vice-líder do Senado Federal"
+                  },
+                  "nome": "Soraya Vieira Thronicke",
+                  "nomeComCargo": "Senadora Soraya Thronicke",
+                  "nomeComCargoResumido": "Sen. Soraya Thronicke",
+                  "nomeParlamentar": "Soraya Thronicke",
+                  "partido": "Podemos",
+                  "sexo": "F",
+                  "siglaPartido": "PODEMOS",
+                  "ufPartido": "MS",
+                  "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5988.jpg",
+                  "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5988"
+                },
+                "autoria": "Senadora Soraya Thronicke",
+                "codigo": "8223",
+                "codigoSituacao": "70",
+                "colegiado": {
+                  "codigo": "2703",
+                  "codigoTipoColegiado": "22",
+                  "composicaoPublica": "true",
+                  "isSubcomissao": "false",
+                  "nome": "CPI das BETS",
+                  "nomeTipoColegiado": "Comissão Parlamentar de Inquérito",
+                  "publicoPortal": "true",
+                  "sigla": "CPIBETS",
+                  "siglaCasa": "SF"
+                },
+                "dataApreciacao": "2025-05-07T00:00:00.000",
+                "dataApresentacao": "2025-05-06T00:00:00.000",
+                "depoentes": {
+                  "pessoaFisica": {
+                    "nome": "Luiz Ricardo Melquiades",
+                    "sexo": "M"
+                  },
+                  "tipo": "PF"
+                },
+                "documento": {
+                  "idEcmSenado": "5d4fc084-e81c-41b8-954b-3ab004b55033",
+                  "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/5d4fc084-e81c-41b8-954b-3ab004b55033",
+                  "mimeType": "application/pdf"
+                },
+                "documentosEnviados": {
+                  "ano": "2025",
+                  "arquivos": {
+                    "codigo": "7015",
+                    "descricao": "OF 158",
+                    "documento": {
+                      "idEcmSenado": "37ddab7d-fd95-4748-8fa4-f0244cdc6c08",
+                      "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/37ddab7d-fd95-4748-8fa4-f0244cdc6c08",
+                      "mimeType": "application/pdf"
+                    },
+                    "sigiloso": "false",
+                    "tipo": {
+                      "codigo": "10",
+                      "codigoConarq": "04.02.05.07",
+                      "descricao": "Ofício",
+                      "idTipoDoma": "69"
+                    },
+                    "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/37ddab7d-fd95-4748-8fa4-f0244cdc6c08"
+                  },
+                  "assunto": "Convocação",
+                  "codigo": "6851",
+                  "dataExpedicao": "2025-05-08",
+                  "descricao": "CPIBETS - Documento Enviado nº 158/2025",
+                  "destinatario": {
+                    "nome": "Luiz Ricardo Melquiades Santiago",
+                    "sexo": "M"
+                  },
+                  "ementa": "Convocação para depoimento à CPIBETS",
+                  "numero": "158",
+                  "requerimentosRespondidos": {
+                    "ano": "2025",
+                    "codigoTipo": "3",
+                    "descricaoTipo": "Convocação",
+                    "numero": "446",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9945435"
+                  }
+                },
+                "ementa": "Convoca o Sr. Luiz Ricardo Melquiades, influencer, na qualidade de testemunha.",
+                "idDoma": "9945435",
+                "numero": "446",
+                "numeroSedol": "SF250872463710",
+                "situacao": "Aprovado",
+                "tipoRequerimento": "Convocação",
+                "tituloParaPauta": "Requerimento Nº 446/2025",
+                "versao": "2026-03-19T02:05:28.936"
+              },
+              "sexo": "M"
+            }
+          ],
+          "finalidade": "Depoimentos",
+          "isPublicado": "true",
+          "isRealizado": "false",
+          "participantes": [
+            {
+              "apresentacoes": {
+                "descricao": "Apresentação do Conar",
+                "idEcmSenado": "368d5816-92f1-4ba1-8746-f421c1c3f7b3",
+                "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/368d5816-92f1-4ba1-8746-f421c1c3f7b3",
+                "mimeType": "application/pdf",
+                "nome": "2025_Conar_Institucional_CPIBETS.pdf"
+              },
+              "cargo": "Presidente do CONAR - Conselho Nacional Autorregulamentação Publicitária",
+              "codigo": "30490",
+              "codigoConvidado": "38820",
+              "depoenteOitiva": {
+                "pessoaFisica": {
+                  "nome": "Sérgio Pompilio",
+                  "sexo": "M"
+                },
+                "tipo": "PF"
+              },
+              "isDepoentePresente": "true",
+              "isPorVideoConferencia": "false",
+              "nome": "Sérgio Pompilio",
+              "ordem": "1",
+              "requerimentosOitiva": {
+                "ano": "2024",
+                "assunto": "Depoimento",
+                "autor": {
+                  "cargo": "Senador",
+                  "casa": "SF",
+                  "codigo": "4770",
+                  "codigoDeputado": "4931",
+                  "data": "2024-11-13T00:00:00.000",
+                  "isDeputado": "false",
+                  "isSenador": "true",
+                  "liderancas": [
+                    {
+                      "titulo": "Vice-líder do Senado Federal"
+                    },
+                    {
+                      "nomePartido": "Partido Liberal",
+                      "siglaPartido": "PL",
+                      "titulo": "Vice-líder do Senado Federal"
+                    }
+                  ],
+                  "nome": "Izalci Lucas Ferreira",
+                  "nomeComCargo": "Senador Izalci Lucas",
+                  "nomeComCargoResumido": "Sen. Izalci Lucas",
+                  "nomeParlamentar": "Izalci Lucas",
+                  "partido": "Partido Liberal",
+                  "sexo": "M",
+                  "siglaPartido": "PL",
+                  "ufPartido": "DF",
+                  "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador4770.jpg",
+                  "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/4770"
+                },
+                "autoria": "Senador Izalci Lucas",
+                "codigo": "7881",
+                "codigoSituacao": "70",
+                "colegiado": {
+                  "codigo": "2703",
+                  "codigoTipoColegiado": "22",
+                  "composicaoPublica": "true",
+                  "isSubcomissao": "false",
+                  "nome": "CPI das BETS",
+                  "nomeTipoColegiado": "Comissão Parlamentar de Inquérito",
+                  "publicoPortal": "true",
+                  "sigla": "CPIBETS",
+                  "siglaCasa": "SF"
+                },
+                "dataApreciacao": "2024-11-19T00:00:00.000",
+                "dataApresentacao": "2024-11-13T00:00:00.000",
+                "depoentes": {
+                  "pessoaFisica": {
+                    "nome": "Sérgio Pompilio",
+                    "sexo": "M"
+                  },
+                  "tipo": "PF"
+                },
+                "documento": {
+                  "idEcmSenado": "8cacc899-fb3b-4a79-bf31-5870757ee0bd",
+                  "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/8cacc899-fb3b-4a79-bf31-5870757ee0bd",
+                  "mimeType": "application/pdf"
+                },
+                "documentosEnviados": {
+                  "ano": "2025",
+                  "arquivos": {
+                    "codigo": "7011",
+                    "descricao": "Ofício 159-2025",
+                    "documento": {
+                      "idEcmSenado": "709f37a5-df93-4d06-9c65-578533a10d2d",
+                      "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/709f37a5-df93-4d06-9c65-578533a10d2d",
+                      "mimeType": "application/pdf"
+                    },
+                    "sigiloso": "false",
+                    "tipo": {
+                      "codigo": "10",
+                      "codigoConarq": "04.02.05.07",
+                      "descricao": "Ofício",
+                      "idTipoDoma": "69"
+                    },
+                    "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/709f37a5-df93-4d06-9c65-578533a10d2d"
+                  },
+                  "assunto": "Convite",
+                  "codigo": "6847",
+                  "dataExpedicao": "2025-05-06",
+                  "descricao": "CPIBETS - Documento Enviado nº 159/2025",
+                  "destinatario": {
+                    "nome": "CONAR - Conselho Nacional de Autorregulamentação Publicitária"
+                  },
+                  "ementa": "Convida o presidente do CONAR, Sérgio Pompilio, a prestar depoimento à CPIBETS.",
+                  "numero": "159",
+                  "requerimentosRespondidos": {
+                    "ano": "2024",
+                    "codigoTipo": "2",
+                    "descricaoTipo": "Convite",
+                    "numero": "116",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9842888"
+                  }
+                },
+                "documentosRecebidos": {
+                  "arquivos": {
+                    "codigo": "10879",
+                    "descricao": "Of 05-2025",
+                    "documento": {
+                      "idEcmSenado": "64266618-5c0a-4c19-8733-e8f325c3bcbb",
+                      "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/64266618-5c0a-4c19-8733-e8f325c3bcbb",
+                      "mimeType": "application/pdf"
+                    },
+                    "sigiloso": "false",
+                    "tipo": {
+                      "codigo": "10",
+                      "codigoConarq": "04.02.05.07",
+                      "descricao": "Ofício",
+                      "idTipoDoma": "69"
+                    },
+                    "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/64266618-5c0a-4c19-8733-e8f325c3bcbb"
+                  },
+                  "assunto": "Convite",
+                  "codigo": "7246",
+                  "codigoConarq": "04.02.05.07",
+                  "dataEmissaoOrigem": "2025-05-06",
+                  "dataRecebimento": "2025-05-06",
+                  "descricao": "CPIBETS - Documento Recebido nº 139",
+                  "emResposta": {
+                    "ano": "2025",
+                    "codigo": "6847",
+                    "descricao": "CPIBETS - Documento Enviado nº 159/2025",
+                    "numero": "159",
+                    "requerimentosRespondidos": {
+                      "ano": "2024",
+                      "numero": "116",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9842888"
+                    }
+                  },
+                  "ementa": "Confirmação de participação do presidente do CONAR na CPIBETS",
+                  "numCaixaFinal": "0",
+                  "numCaixaInicial": "0",
+                  "numero": "139",
+                  "remetente": {
+                    "nome": "CONAR - Conselho Nacional de Autorregulamentação Publicitária"
+                  }
+                },
+                "ementa": "Convida o senhor Sérgio Pompilio, Presidente do Conselho Nacional de Autorregulamentação Publicitária (Conar).",
+                "idDoma": "9842888",
+                "numero": "116",
+                "numeroSedol": "SF249096827744",
+                "situacao": "Aprovado",
+                "tipoRequerimento": "Convite",
+                "tituloParaPauta": "Requerimento Nº 116/2024",
+                "versao": "2026-03-19T02:05:28.967"
+              },
+              "sexo": "M"
+            },
+            {
+              "cargo": "Influenciador digital",
+              "codigo": "30508",
+              "codigoConvidado": "38836",
+              "depoenteOitiva": {
+                "pessoaFisica": {
+                  "nome": "Luiz Ricardo Melquiades",
+                  "sexo": "M"
+                },
+                "tipo": "PF"
+              },
+              "isDepoentePresente": "false",
+              "isPorVideoConferencia": "false",
+              "nome": "Luiz Ricardo Melquiades",
+              "ordem": "2",
+              "requerimentosOitiva": {
+                "ano": "2025",
+                "assunto": "Depoimento",
+                "autor": {
+                  "cargo": "Senadora",
+                  "casa": "SF",
+                  "codigo": "5988",
+                  "data": "2025-05-06T00:00:00.000",
+                  "isDeputado": "false",
+                  "isSenador": "true",
+                  "liderancas": {
+                    "nomeUnidadeLideranca": "Liderança da Bancada Feminina",
+                    "titulo": "Vice-líder do Senado Federal"
+                  },
+                  "nome": "Soraya Vieira Thronicke",
+                  "nomeComCargo": "Senadora Soraya Thronicke",
+                  "nomeComCargoResumido": "Sen. Soraya Thronicke",
+                  "nomeParlamentar": "Soraya Thronicke",
+                  "partido": "Podemos",
+                  "sexo": "F",
+                  "siglaPartido": "PODEMOS",
+                  "ufPartido": "MS",
+                  "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5988.jpg",
+                  "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5988"
+                },
+                "autoria": "Senadora Soraya Thronicke",
+                "codigo": "8223",
+                "codigoSituacao": "70",
+                "colegiado": {
+                  "codigo": "2703",
+                  "codigoTipoColegiado": "22",
+                  "composicaoPublica": "true",
+                  "isSubcomissao": "false",
+                  "nome": "CPI das BETS",
+                  "nomeTipoColegiado": "Comissão Parlamentar de Inquérito",
+                  "publicoPortal": "true",
+                  "sigla": "CPIBETS",
+                  "siglaCasa": "SF"
+                },
+                "dataApreciacao": "2025-05-07T00:00:00.000",
+                "dataApresentacao": "2025-05-06T00:00:00.000",
+                "depoentes": {
+                  "pessoaFisica": {
+                    "nome": "Luiz Ricardo Melquiades",
+                    "sexo": "M"
+                  },
+                  "tipo": "PF"
+                },
+                "documento": {
+                  "idEcmSenado": "5d4fc084-e81c-41b8-954b-3ab004b55033",
+                  "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/5d4fc084-e81c-41b8-954b-3ab004b55033",
+                  "mimeType": "application/pdf"
+                },
+                "documentosEnviados": {
+                  "ano": "2025",
+                  "arquivos": {
+                    "codigo": "7015",
+                    "descricao": "OF 158",
+                    "documento": {
+                      "idEcmSenado": "37ddab7d-fd95-4748-8fa4-f0244cdc6c08",
+                      "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/37ddab7d-fd95-4748-8fa4-f0244cdc6c08",
+                      "mimeType": "application/pdf"
+                    },
+                    "sigiloso": "false",
+                    "tipo": {
+                      "codigo": "10",
+                      "codigoConarq": "04.02.05.07",
+                      "descricao": "Ofício",
+                      "idTipoDoma": "69"
+                    },
+                    "urlAcesso": "https://legis.senado.leg.br/sdleg-getter/documento/download/37ddab7d-fd95-4748-8fa4-f0244cdc6c08"
+                  },
+                  "assunto": "Convocação",
+                  "codigo": "6851",
+                  "dataExpedicao": "2025-05-08",
+                  "descricao": "CPIBETS - Documento Enviado nº 158/2025",
+                  "destinatario": {
+                    "nome": "Luiz Ricardo Melquiades Santiago",
+                    "sexo": "M"
+                  },
+                  "ementa": "Convocação para depoimento à CPIBETS",
+                  "numero": "158",
+                  "requerimentosRespondidos": {
+                    "ano": "2025",
+                    "codigoTipo": "3",
+                    "descricaoTipo": "Convocação",
+                    "numero": "446",
+                    "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9945435"
+                  }
+                },
+                "ementa": "Convoca o Sr. Luiz Ricardo Melquiades, influencer, na qualidade de testemunha.",
+                "idDoma": "9945435",
+                "numero": "446",
+                "numeroSedol": "SF250872463710",
+                "situacao": "Aprovado",
+                "tipoRequerimento": "Convocação",
+                "tituloParaPauta": "Requerimento Nº 446/2025",
+                "versao": "2026-03-19T02:05:28.987"
+              },
+              "sexo": "M"
+            }
+          ],
+          "resultadoTexto": "Oitiva do Sr. Sérgio Pompilio realizada. Ausente o Sr. Luiz Ricardo Melquiades."
+        },
+        "isDeliberativa": "false",
+        "nome": "Oitiva",
+        "sequencial": "1",
+        "sequencialFormatado": "1ª PARTE"
+      },
+      "permitePresencaApp": "false",
+      "permiteVotacaoSemPresencaFisica": "false",
+      "possuiVotacaoSecreta": "false",
+      "presidente": {
+        "cargo": "Senador",
+        "casa": "SF",
+        "codigo": "4770",
+        "codigoDeputado": "4931",
+        "data": "2025-05-08T00:00:00.000",
+        "isDeputado": "false",
+        "isSenador": "true",
+        "liderancas": {
+          "nomePartido": "Partido Liberal",
+          "siglaPartido": "PL",
+          "titulo": "Vice-líder do Senado Federal"
+        },
+        "nome": "Izalci Lucas Ferreira",
+        "nomeComCargo": "Senador Izalci Lucas",
+        "nomeComCargoResumido": "Sen. Izalci Lucas",
+        "nomeParlamentar": "Izalci Lucas",
+        "partido": "Partido Liberal",
+        "sexo": "M",
+        "siglaPartido": "PL",
+        "ufPartido": "DF",
+        "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador4770.jpg",
+        "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/4770"
+      },
+      "realizada": "true",
+      "secreta": "false",
+      "sessaoLegislativa": {
+        "codigo": "873",
+        "descricao": "57a. Legislatura (2025) - 3a. Sessão Legislativa Ordinária",
+        "fim": "2025-12-22",
+        "inicio": "2025-02-03",
+        "numero": "3",
+        "numeroLegislatura": "57"
+      },
+      "situacao": "Realizada",
+      "status": "Realizada",
+      "tipo": {
+        "codigo": "5",
+        "descricao": "Reunião",
+        "sigla": "REU"
+      },
+      "tipoPresenca": "Presencial",
+      "titulo": "16ª Reunião",
+      "urlUltimaAtaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/01405dbc-d880-48cc-83a7-d6a4842baf6a?rendition_principal",
+      "urlUltimaPautaCheiaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/e89c0b75-0d2a-42f8-9639-43b6fe4011b3",
+      "urlUltimaPautaSimplesPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/15b73dd3-7ff6-4f26-b8ad-b7b147ee71ab",
+      "urlUltimoResultadoPublicado": "https://legis.senado.leg.br/sdleg-getter/documento/download/d9d8f552-d37c-4b39-ab4d-9f93752e2633",
+      "versao": "2026-03-19T02:05:29.004",
+      "videos": {
+        "codigo": "6769",
+        "dataHoraReuniao": "2025-05-08T10:30:00.000",
+        "ordem": "1",
+        "url": "https://www.youtube.com/watch?v=8ItujTLzoag"
+      }
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "ListaDocumento": {
+    "Metadados": {
+      "DataVersaoServico": "2017-02-01",
+      "DescricaoDataSet": "Obtém a lista de Legislação Federal com base nos parâmetros informados.",
+      "Versao": "15/07/2026 23:27:28",
+      "VersaoServico": "3"
+    },
+    "documentos": {
+      "documento": [
+        {
+          "anoassinatura": "2024",
+          "apelido": "LEI-15082-2024-12-30",
+          "dataassinatura": "30/12/2024",
+          "descricao": "Lei Numerada",
+          "ementa": "Altera a Lei nº 13.576, de 26 de dezembro de 2017, que dispõe sobre a Política Nacional de Biocombustíveis (RenovaBio), para nela incluir os produtores independentes de matéria-prima destinada à produção de biocombustível; e altera a Lei nº 9.478, de 6 de agosto de 1997.",
+          "id": "40035256",
+          "norma": "LEI-15082-2024-12-30",
+          "normaNome": "Lei nº 15.082 de 30/12/2024",
+          "numero": "15082",
+          "tipo": "LEI-n"
+        },
+        {
+          "anoassinatura": "2024",
+          "apelido": "LEI-15080-2024-12-30 , Lei de Diretrizes Orçamentárias - LDO (2025)",
+          "dataassinatura": "30/12/2024",
+          "descricao": "Lei Numerada",
+          "ementa": "Dispõe sobre as diretrizes para a elaboração e a execução da Lei Orçamentária de 2025 e dá outras providências.",
+          "id": "40035025",
+          "norma": "LEI-15080-2024-12-30",
+          "normaNome": "Lei nº 15.080 de 30/12/2024",
+          "numero": "15080",
+          "tipo": "LEI-n"
+        },
+        {
+          "anoassinatura": "2024",
+          "apelido": "LEI-15081-2024-12-30",
+          "dataassinatura": "30/12/2024",
+          "descricao": "Lei Numerada",
+          "ementa": "Altera a Lei nº 11.977, de 7 de julho de 2009, que dispõe sobre o Programa Minha Casa, Minha Vida (PMCMV), para assegurar o apoio técnico e financeiro às iniciativas de regularização fundiária de assentamentos urbanos.",
+          "id": "40035193",
+          "norma": "LEI-15081-2024-12-30",
+          "normaNome": "Lei nº 15.081 de 30/12/2024",
+          "numero": "15081",
+          "tipo": "LEI-n"
+        }
+      ]
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaDocumentov3.xsd"
+  }
+}

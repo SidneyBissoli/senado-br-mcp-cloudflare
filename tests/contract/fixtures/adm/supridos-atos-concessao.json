@@ -1,0 +1,349 @@
+[
+  {
+    "ano": 2024,
+    "codigoAtoConcessao": "00702024",
+    "codigo_suprido": "14361",
+    "data": "2024-04-16",
+    "dataAplicacao": "2024-07-15",
+    "dataComprovacao": "2024-07-30",
+    "dataProcessamento": "2026-07-14 10:00:03",
+    "dataPublicacaoBASF": "2024-04-22",
+    "elementoDespesa": [],
+    "empenhos": [
+      {
+        "codigoAtoConcessao": "00702024",
+        "data": "2024-04-17",
+        "dataProcessamento": "2026-07-14 10:00:03",
+        "descricao": "Serviços de Terceiros de Pessoa Jurídica",
+        "numero": "2024NE001864",
+        "rubrica": "339039",
+        "valorConcedido": 7200,
+        "valorExecutado": 7200
+      }
+    ],
+    "matriculaSolicitante": "38043",
+    "movimentacoes": null,
+    "numeroProcesso": 200006848202471,
+    "prazoAplicacao": 90,
+    "prazoComprovacao": 15,
+    "regimeEspecial": false,
+    "transacoes": [
+      {
+        "codigoAtoConcessao": "00702024",
+        "data": "2024-06-03",
+        "dataProcessamento": "2026-07-14",
+        "fornecedor": "SULBRAS COMERCIO DE PEÇAS E EQUIPAMENTOS LTDA.",
+        "id": 38712,
+        "inscricao": "09631550000183",
+        "numero": "902",
+        "objetos": [
+          {
+            "descricaoObjeto": "Conserto inversor",
+            "descricaoSubtipoDespesa": "Manutenção conservação de máquinas e equipamentos",
+            "descricaoTipoDespesa": "Serviços de Terceiros de Pessoa Jurídica",
+            "id": 36723,
+            "quantidade": 1,
+            "rubrica": "33903917",
+            "valorTotal": 7200,
+            "valorUnitario": 7200
+          }
+        ],
+        "rubricas": "33903917",
+        "tipo": "NOTA_FISCAL",
+        "tipoInscricao": "Pessoa jurídica",
+        "tipoInscricaoTemp": "PESSOA_JURIDICA",
+        "valor": 7200
+      }
+    ],
+    "valorTotalElementosDespesa": 7200,
+    "valorTotalEmpenhos": 7200,
+    "valorTotalMovimentacoes": 0,
+    "valorTotalTransacoes": 7200
+  },
+  {
+    "ano": 2024,
+    "codigoAtoConcessao": "00822024",
+    "codigo_suprido": "14361",
+    "data": "2024-04-26",
+    "dataAplicacao": "2024-07-25",
+    "dataComprovacao": "2024-08-09",
+    "dataProcessamento": "2026-07-14 10:00:03",
+    "dataPublicacaoBASF": "2024-05-02",
+    "elementoDespesa": [],
+    "empenhos": [
+      {
+        "codigoAtoConcessao": "00822024",
+        "data": "2024-04-26",
+        "dataProcessamento": "2026-07-14 10:00:03",
+        "descricao": "Serviços de Terceiros de Pessoa Jurídica",
+        "numero": "2024NE001950",
+        "rubrica": "339039",
+        "valorConcedido": 8000,
+        "valorExecutado": 1895.39
+      },
+      {
+        "codigoAtoConcessao": "00822024",
+        "data": "2024-04-26",
+        "dataProcessamento": "2026-07-14 10:00:03",
+        "descricao": "Material de Consumo",
+        "numero": "2024NE001949",
+        "rubrica": "339030",
+        "valorConcedido": 8000,
+        "valorExecutado": 7984.8
+      }
+    ],
+    "matriculaSolicitante": "38043",
+    "movimentacoes": null,
+    "numeroProcesso": 200008060202408,
+    "prazoAplicacao": 90,
+    "prazoComprovacao": 15,
+    "regimeEspecial": false,
+    "transacoes": [
+      {
+        "codigoAtoConcessao": "00822024",
+        "data": "2024-05-03",
+        "dataProcessamento": "2026-07-14",
+        "fornecedor": "CASA DA MADEIRA LTDA",
+        "id": 38074,
+        "inscricao": "05197310000323",
+        "numero": "172469",
+        "objetos": [
+          {
+            "descricaoObjeto": "Compensado p/ palhete",
+            "descricaoSubtipoDespesa": "Material de acondicionamento e embalagem",
+            "descricaoTipoDespesa": "Material de Consumo",
+            "id": 36023,
+            "quantidade": 12,
+            "rubrica": "33903019",
+            "valorTotal": 2862,
+            "valorUnitario": 238.5
+          }
+        ],
+        "rubricas": "33903019",
+        "tipo": "NOTA_FISCAL",
+        "tipoInscricao": "Pessoa jurídica",
+        "tipoInscricaoTemp": "PESSOA_JURIDICA",
+        "valor": 2862
+      },
+      {
+        "codigoAtoConcessao": "00822024",
+        "data": "2024-05-17",
+        "dataProcessamento": "2026-07-14",
+        "fornecedor": "PROMASTER INS. GRAF. IND E COM. LTDA.",
+        "id": 38376,
+        "inscricao": "06167062000250",
+        "numero": "007744",
+        "objetos": [
+          {
+            "descricaoObjeto": "Canaleta",
+            "descricaoSubtipoDespesa": "Material para manutenção de bens móveis",
+            "descricaoTipoDespesa": "Material de Consumo",
+            "id": 36343,
+            "quantidade": 1,
+            "rubrica": "33903025",
+            "valorTotal": 181.4,
+            "valorUnitario": 181.4
+          },
+          {
+            "descricaoObjeto": "Canaleta",
+            "descricaoSubtipoDespesa": "Material para manutenção de bens móveis",
+            "descricaoTipoDespesa": "Material de Consumo",
+            "id": 36344,
+            "quantidade": 1,
+            "rubrica": "33903025",
+            "valorTotal": 181.4,
+            "valorUnitario": 181.4
+          }
+        ],
+        "rubricas": "33903025",
+        "tipo": "NOTA_FISCAL",
+        "tipoInscricao": "Pessoa jurídica",
+        "tipoInscricaoTemp": "PESSOA_JURIDICA",
+        "valor": 362.8
+      },
+      {
+        "codigoAtoConcessao": "00822024",
+        "data": "2024-05-17",
+        "dataProcessamento": "2026-07-14",
+        "fornecedor": "SANTOS DISTRIBUIDORA DE PLASTICOS LTDA",
+        "id": 38378,
+        "inscricao": "24903060000263",
+        "numero": "3.680",
+        "objetos": [
+          {
+            "descricaoObjeto": "Lona",
+            "descricaoSubtipoDespesa": "Material para manutenção de bens móveis",
+            "descricaoTipoDespesa": "Material de Consumo",
+            "id": 36383,
+            "quantidade": 25,
+            "rubrica": "33903025",
+            "valorTotal": 1450,
+            "valorUnitario": 58
+          }
+        ],
+        "rubricas": "33903025",
+        "tipo": "NOTA_FISCAL",
+        "tipoInscricao": "Pessoa jurídica",
+        "tipoInscricaoTemp": "PESSOA_JURIDICA",
+        "valor": 1450
+      }
+    ],
+    "valorTotalElementosDespesa": 16000,
+    "valorTotalEmpenhos": 16000,
+    "valorTotalMovimentacoes": 0,
+    "valorTotalTransacoes": 9880.19
+  },
+  {
+    "ano": 2024,
+    "codigoAtoConcessao": "00192024",
+    "codigo_suprido": "14361",
+    "data": "2024-01-16",
+    "dataAplicacao": "2024-04-15",
+    "dataComprovacao": "2024-04-30",
+    "dataProcessamento": "2026-07-14 10:00:03",
+    "dataPublicacaoBASF": "2024-01-22",
+    "elementoDespesa": [],
+    "empenhos": [
+      {
+        "codigoAtoConcessao": "00192024",
+        "data": "2024-01-17",
+        "dataProcessamento": "2026-07-14 10:00:03",
+        "descricao": "Serviços de Terceiros de Pessoa Jurídica",
+        "numero": "2024NE000553",
+        "rubrica": "339039",
+        "valorConcedido": 6000,
+        "valorExecutado": 0
+      },
+      {
+        "codigoAtoConcessao": "00192024",
+        "data": "2024-01-17",
+        "dataProcessamento": "2026-07-14 10:00:03",
+        "descricao": "Material de Consumo",
+        "numero": "2024NE000552",
+        "rubrica": "339030",
+        "valorConcedido": 6000,
+        "valorExecutado": 3864.92
+      }
+    ],
+    "matriculaSolicitante": "38043",
+    "movimentacoes": null,
+    "numeroProcesso": 200000846202479,
+    "prazoAplicacao": 90,
+    "prazoComprovacao": 15,
+    "regimeEspecial": false,
+    "transacoes": [
+      {
+        "codigoAtoConcessao": "00192024",
+        "data": "2024-01-26",
+        "dataProcessamento": "2026-07-14",
+        "fornecedor": "Bokobras Embalagens IND COM LTDA.",
+        "id": 36101,
+        "inscricao": "03009846000180",
+        "numero": "19.596",
+        "objetos": [
+          {
+            "descricaoObjeto": "Cordão sintético",
+            "descricaoSubtipoDespesa": "Material de acondicionamento e embalagem",
+            "descricaoTipoDespesa": "Material de Consumo",
+            "id": 34647,
+            "quantidade": 8450,
+            "rubrica": "33903019",
+            "valorTotal": 1690,
+            "valorUnitario": 0.2
+          }
+        ],
+        "rubricas": "33903019",
+        "tipo": "NOTA_FISCAL",
+        "tipoInscricao": "Pessoa jurídica",
+        "tipoInscricaoTemp": "PESSOA_JURIDICA",
+        "valor": 1690
+      },
+      {
+        "codigoAtoConcessao": "00192024",
+        "data": "2024-02-07",
+        "dataProcessamento": "2026-07-14",
+        "fornecedor": "ROLAPEL ROLAMENTOS LTDA",
+        "id": 36741,
+        "inscricao": "01086472000171",
+        "numero": "95.396",
+        "objetos": [
+          {
+            "descricaoObjeto": "Correia",
+            "descricaoSubtipoDespesa": "Material para manutenção de bens móveis",
+            "descricaoTipoDespesa": "Material de Consumo",
+            "id": 34648,
+            "quantidade": 1,
+            "rubrica": "33903025",
+            "valorTotal": 75,
+            "valorUnitario": 75
+          },
+          {
+            "descricaoObjeto": "Correia",
+            "descricaoSubtipoDespesa": "Material para manutenção de bens móveis",
+            "descricaoTipoDespesa": "Material de Consumo",
+            "id": 34649,
+            "quantidade": 3,
+            "rubrica": "33903025",
+            "valorTotal": 585,
+            "valorUnitario": 195
+          },
+          {
+            "descricaoObjeto": "Retentor",
+            "descricaoSubtipoDespesa": "Material para manutenção de bens móveis",
+            "descricaoTipoDespesa": "Material de Consumo",
+            "id": 34650,
+            "quantidade": 2,
+            "rubrica": "33903025",
+            "valorTotal": 50,
+            "valorUnitario": 25
+          }
+        ],
+        "rubricas": "33903025",
+        "tipo": "NOTA_FISCAL",
+        "tipoInscricao": "Pessoa jurídica",
+        "tipoInscricaoTemp": "PESSOA_JURIDICA",
+        "valor": 710
+      },
+      {
+        "codigoAtoConcessao": "00192024",
+        "data": "2024-03-08",
+        "dataProcessamento": "2026-07-14",
+        "fornecedor": "HU INFINITO COMPONENTES ELETRONICOS LTDA",
+        "id": 37006,
+        "inscricao": "14855232000136",
+        "numero": "067691",
+        "objetos": [
+          {
+            "descricaoObjeto": "Capacitor",
+            "descricaoSubtipoDespesa": "Material elétrico e eletrônico",
+            "descricaoTipoDespesa": "Material de Consumo",
+            "id": 34964,
+            "quantidade": 2,
+            "rubrica": "33903026",
+            "valorTotal": 1.48,
+            "valorUnitario": 0.74
+          },
+          {
+            "descricaoObjeto": "Capacitor",
+            "descricaoSubtipoDespesa": "Material elétrico e eletrônico",
+            "descricaoTipoDespesa": "Material de Consumo",
+            "id": 34965,
+            "quantidade": 2,
+            "rubrica": "33903026",
+            "valorTotal": 2.66,
+            "valorUnitario": 1.33
+          }
+        ],
+        "rubricas": "33903026",
+        "tipo": "NOTA_FISCAL",
+        "tipoInscricao": "Pessoa jurídica",
+        "tipoInscricaoTemp": "PESSOA_JURIDICA",
+        "valor": 4.14
+      }
+    ],
+    "valorTotalElementosDespesa": 12000,
+    "valorTotalEmpenhos": 12000,
+    "valorTotalMovimentacoes": 0,
+    "valorTotalTransacoes": 3864.92
+  }
+]

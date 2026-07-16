@@ -1,0 +1,47 @@
+{
+  "ComposicaoAtivaComissaoSf": {
+    "ComposicaoComissao": {
+      "IdentificacaoComissao": [
+        {
+          "CodigoComissao": "34",
+          "NomeCasaComissao": "Senado Federal",
+          "NomeComissao": "Comissão de Constituição, Justiça e Cidadania",
+          "SiglaCasaComissao": "SF",
+          "SiglaComissao": "CCJ"
+        }
+      ],
+      "Membros": {
+        "Membro": [
+          {
+            "CodigoMembro": "5672",
+            "DataInicioMembroVaga": "2026-04-07",
+            "IndicadorVagaAtiva": "Sim",
+            "NomeMembro": "Alan Rick",
+            "TipoVaga": "Suplente"
+          },
+          {
+            "CodigoMembro": "5982",
+            "DataInicioMembroVaga": "2026-04-24",
+            "IndicadorVagaAtiva": "Sim",
+            "NomeMembro": "Alessandro Vieira",
+            "TipoVaga": "Suplente"
+          },
+          {
+            "CodigoMembro": "6358",
+            "DataInicioMembroVaga": "2026-04-23",
+            "IndicadorVagaAtiva": "Sim",
+            "NomeMembro": "Ana Paula Lobato",
+            "TipoVaga": "Titular"
+          }
+        ]
+      }
+    },
+    "Metadados": {
+      "DataVersaoServico": "2019-02-07",
+      "DescricaoDataSet": "Composição atual de uma comissão do Senado.",
+      "Versao": "15/07/2026 23:26:18",
+      "VersaoServico": "3"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ComposicaoAtivaComissaoSfv3.xsd"
+  }
+}

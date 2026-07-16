@@ -1,0 +1,111 @@
+{
+  "DiscursosParlamentar": {
+    "Metadados": {
+      "DataVersaoServico": "2021-06-29",
+      "DescricaoDataSet": "Discursos do Parlamentar. Se não informar o período, serão retornados os discursos dos últimos 30 dias.",
+      "Versao": "15/07/2026 23:26:01",
+      "VersaoServico": "5"
+    },
+    "Parlamentar": {
+      "IdentificacaoParlamentar": {
+        "CodigoParlamentar": "475",
+        "CodigoPublicoNaLegAtual": "867",
+        "EmailParlamentar": "sen.confuciomoura@senado.leg.br",
+        "FormaTratamento": "Senador ",
+        "NomeCompletoParlamentar": "Confúcio Aires Moura",
+        "NomeParlamentar": "Confúcio Moura",
+        "SexoParlamentar": "Masculino",
+        "SiglaPartidoParlamentar": "MDB",
+        "UfParlamentar": "RO",
+        "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador475.jpg",
+        "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/475"
+      },
+      "Pronunciamentos": {
+        "Pronunciamento": [
+          {
+            "CodigoPronunciamento": "512673",
+            "DataPronunciamento": "2025-03-31",
+            "Indexacao": "DEFESA, IMPORTANCIA, REGULAMENTAÇÃO, REFORMA TRIBUTARIA, DESBUROCRATIZAÇÃO, ECONOMIA, FACILITAÇÃO, EXPORTAÇÃO, BUSCA, MERCADO INTERNACIONAL, COMENTARIO, NECESSIDADE, FISCALIZAÇÃO, POLITICAS PUBLICAS, LEI GERAL, SANEAMENTO, REGISTRO, DIFICULDADE, REGIÃO NORTE, ENFASE, ESTADO DE RONDONIA (RO), EXPOSIÇÃO, REGULARIZAÇÃO FUNDIÁRIA, EXCESSO, BUROCRACIA, CRITICA, POLARIZAÇÃO POLITICA, OBSERVAÇÃO, DEMORA, ATENDIMENTO, SAUDE PUBLICA, CIRURGIA, CONSULTA.",
+            "NomeCasaPronunciamento": "Senado Federal",
+            "Publicacoes": {
+              "Publicacao": [
+                {
+                  "DataPublicacao": "2025-04-01",
+                  "DescricaoVeiculoPublicacao": "DSF",
+                  "IndicadorRepublicacao": "Não",
+                  "NumeroPagFimPublicacao": "19",
+                  "NumeroPagInicioPublicacao": "16",
+                  "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=01/04/2025&paginaDireta=16"
+                }
+              ]
+            },
+            "SessaoPlenaria": {
+              "CodigoSessao": "452157",
+              "CodigoSessaoLegislativa": "873",
+              "DataSessao": "2025-03-31",
+              "HoraInicioSessao": "14:00:00",
+              "NomeCasaSessao": "Senado Federal",
+              "NumeroSessao": "15",
+              "SiglaCasaSessao": "SF",
+              "SiglaTipoSessao": "NDL"
+            },
+            "SiglaCasaPronunciamento": "SF",
+            "SiglaPartidoParlamentarNaData": "MDB",
+            "TextoResumo": "Exposição sobre a importância da regulamentação da reforma tributária, da fiscalização da execução de políticas públicas, a exemplo da Lei Geral de Saneamento, e da regularização de terras no Brasil. Críticas ao excesso de burocracia da Administração Pública e à polarização política que, segundo S. Exa., compromete o avanço institucional.",
+            "TipoUsoPalavra": {
+              "Codigo": "4819",
+              "Descricao": "Discurso",
+              "IndicadorAtivo": "Sim",
+              "Sigla": "DIS"
+            },
+            "UfParlamentarNaData": "RO",
+            "UrlTexto": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512673",
+            "UrlTextoBinario": "https://legis.senado.gov.br/disse/dadosabertos/arquivoTextoPronunciamento/512673"
+          },
+          {
+            "CodigoPronunciamento": "512300",
+            "DataPronunciamento": "2025-03-17",
+            "Indexacao": "NECESSIDADE, REGULARIZAÇÃO, PROPRIEDADE RURAL, ASSENTAMENTO RURAL, POSSE, INSTITUTO NACIONAL DE COLONIZAÇÃO E REFORMA AGRARIA (INCRA), OBJETIVO, PROPRIETARIO, SEGURANÇA JURIDICA, PACIFICAÇÃO, CONFLITO, DISPUTA, TERRAS, AMAZONIA, ESPECIFICAÇÃO, ESTADO DE RONDONIA (RO).",
+            "NomeCasaPronunciamento": "Senado Federal",
+            "Publicacoes": {
+              "Publicacao": [
+                {
+                  "DataPublicacao": "2025-03-18",
+                  "DescricaoVeiculoPublicacao": "DSF",
+                  "IndicadorRepublicacao": "Não",
+                  "NumeroPagFimPublicacao": "37",
+                  "NumeroPagInicioPublicacao": "34",
+                  "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=18/03/2025&paginaDireta=34"
+                }
+              ]
+            },
+            "SessaoPlenaria": {
+              "CodigoSessao": "452139",
+              "CodigoSessaoLegislativa": "873",
+              "DataSessao": "2025-03-17",
+              "HoraInicioSessao": "14:00:00",
+              "NomeCasaSessao": "Senado Federal",
+              "NumeroSessao": "7",
+              "SiglaCasaSessao": "SF",
+              "SiglaTipoSessao": "NDL"
+            },
+            "SiglaCasaPronunciamento": "SF",
+            "SiglaPartidoParlamentarNaData": "MDB",
+            "TextoResumo": "Comentários sobre os os conflitos agrários existentes no Brasil, com destaque à chacina de Corumbiara, em 1995, no Estado de Rondônia. Alerta sobre a insegurança jurídica de assentados e apelo ao Governo Federal pela regularização fundiária via títulos da dívida agrária e por financiamentos adequados à população rural.",
+            "TipoUsoPalavra": {
+              "Codigo": "4819",
+              "Descricao": "Discurso",
+              "IndicadorAtivo": "Sim",
+              "Sigla": "DIS"
+            },
+            "UfParlamentarNaData": "RO",
+            "UrlTexto": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512300",
+            "UrlTextoBinario": "https://legis.senado.gov.br/disse/dadosabertos/arquivoTextoPronunciamento/512300"
+          }
+        ]
+      },
+      "UrlGlossario": "http://legis.senado.leg.br/dadosabertos/senador/"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/DiscursosParlamentarv5.xsd"
+  }
+}

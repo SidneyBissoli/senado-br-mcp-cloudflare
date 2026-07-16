@@ -1,0 +1,59 @@
+{
+  "DetalheParlamentar": {
+    "Metadados": {
+      "DataVersaoServico": "2021-09-09",
+      "DescricaoDataSet": "Retorna os detalhes de um Senador informado no parâmetro.",
+      "Versao": "15/07/2026 22:36:26",
+      "VersaoServico": "6"
+    },
+    "Parlamentar": {
+      "DadosBasicosParlamentar": {
+        "DataNascimento": "1976-10-23",
+        "EnderecoParlamentar": "Senado Federal Anexo 2   Ala Teotônio Vilela Gabinete 05",
+        "Naturalidade": "Rio Branco",
+        "UfNaturalidade": "AC"
+      },
+      "IdentificacaoParlamentar": {
+        "CodigoParlamentar": "5672",
+        "CodigoPublicoNaLegAtual": "800",
+        "EmailParlamentar": "sen.alanrick@senado.leg.br",
+        "NomeCompletoParlamentar": "Alan Rick Miranda",
+        "NomeParlamentar": "Alan Rick",
+        "SexoParlamentar": "Masculino",
+        "SiglaPartidoParlamentar": "REPUBLICANOS",
+        "UfParlamentar": "AC",
+        "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador5672.jpg",
+        "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/5672"
+      },
+      "OutrasInformacoes": {
+        "Servico": [
+          {
+            "DescricaoServico": "Apartes do parlamentar",
+            "NomeServico": "ApartesParlamentar",
+            "UrlServico": "https://legis.senado.leg.br/dadosabertos/senador/5672/apartes?v=5"
+          },
+          {
+            "DescricaoServico": "Cargos do parlamentar ao longo do(s) mandato(s).",
+            "NomeServico": "CargoParlamentar",
+            "UrlServico": "https://legis.senado.leg.br/dadosabertos/senador/5672/cargos?v=5"
+          },
+          {
+            "DescricaoServico": "Discursos do parlamentar. Se não informar o período, serão retornados os discursos dos últimos 30 dias.",
+            "NomeServico": "DiscursosParlamentar",
+            "UrlServico": "https://legis.senado.leg.br/dadosabertos/senador/5672/discursos?v=5"
+          }
+        ]
+      },
+      "Telefones": {
+        "Telefone": [
+          {
+            "IndicadorFax": "Não",
+            "NumeroTelefone": "33036333",
+            "OrdemPublicacao": "1"
+          }
+        ]
+      }
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/DetalheParlamentarv6.xsd"
+  }
+}

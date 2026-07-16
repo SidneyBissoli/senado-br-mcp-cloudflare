@@ -1,0 +1,80 @@
+[
+  {
+    "data_assinatura": "2017-03-09",
+    "data_fim_vigencia": "2018-03-08",
+    "data_inicio_vigencia": "2017-03-09",
+    "data_publicacao": "2017-03-13",
+    "data_ultima_atualizacao": "2017-03-10",
+    "empresa": {
+      "cpf_cnpj": "03.359.898/0001-87",
+      "nome": "REDE BRASIL EMPREENDIMENTOS FARMACEUTICOS LTDA - ME"
+    },
+    "fundamentacao_legal": "Lei 10520/02, art 11º - As compras e contratações de bens e serviços comuns efetuadas pelo SRP poderão adotar a modalidade de pregão, conforme regulamento específico.",
+    "id": 423,
+    "ind_mao_de_obra": false,
+    "licitacao": {
+      "modalidade": "Pregão Eletrônico SRP",
+      "numero": "0000012017"
+    },
+    "numero": "20170009",
+    "objeto": "Contratação  de  empresa especializada  para  o  fornecimento  de  medicamentos  para  uso  no  Serviço  Médico  de Emergência do Senado Federal.",
+    "orgaos_gestores": [],
+    "processo_principal": "002000033642016",
+    "sub_especie": {
+      "nome": "Ata de Registro de Preços",
+      "sigla": "RP"
+    }
+  },
+  {
+    "data_assinatura": "2017-03-09",
+    "data_fim_vigencia": "2018-03-08",
+    "data_inicio_vigencia": "2017-03-09",
+    "data_publicacao": "2017-03-13",
+    "data_ultima_atualizacao": "2017-03-13",
+    "empresa": {
+      "cpf_cnpj": "21.297.758/0001-03",
+      "nome": "PRÓ-SAÚDE DISTRIBUIDORA DE MEDICAMENTOS EIRELI-ME"
+    },
+    "fundamentacao_legal": "Lei 10520/02, art 11º - As compras e contratações de bens e serviços comuns efetuadas pelo SRP poderão adotar a modalidade de pregão, conforme regulamento específico.",
+    "id": 424,
+    "ind_mao_de_obra": false,
+    "licitacao": {
+      "modalidade": "Pregão Eletrônico SRP",
+      "numero": "0000012017"
+    },
+    "numero": "20170008",
+    "objeto": "Fornecimento de medicamentos para uso no Serviço Médico de Emergência do Senado Federal.",
+    "orgaos_gestores": [],
+    "processo_principal": "002000033642016",
+    "sub_especie": {
+      "nome": "Ata de Registro de Preços",
+      "sigla": "RP"
+    }
+  },
+  {
+    "data_assinatura": "2017-03-09",
+    "data_fim_vigencia": "2018-03-08",
+    "data_inicio_vigencia": "2017-03-09",
+    "data_publicacao": "2017-03-13",
+    "data_ultima_atualizacao": "2017-03-14",
+    "empresa": {
+      "cpf_cnpj": "23.312.871/0001-46",
+      "nome": "EXEMPLARMED COMÉRCIO DE PRODUTOS HOSPITALARES LTDA - ME."
+    },
+    "fundamentacao_legal": "Lei 10520/02, art 11º - As compras e contratações de bens e serviços comuns efetuadas pelo SRP poderão adotar a modalidade de pregão, conforme regulamento específico.",
+    "id": 425,
+    "ind_mao_de_obra": false,
+    "licitacao": {
+      "modalidade": "Pregão Eletrônico SRP",
+      "numero": "0000012017"
+    },
+    "numero": "20170007",
+    "objeto": "Contratação  de  empresa especializada  para  o  fornecimento  de  medicamentos  para  uso  no  Serviço  Médico  de Emergência do Senado Federal.",
+    "orgaos_gestores": [],
+    "processo_principal": "002000033642016",
+    "sub_especie": {
+      "nome": "Ata de Registro de Preços",
+      "sigla": "RP"
+    }
+  }
+]

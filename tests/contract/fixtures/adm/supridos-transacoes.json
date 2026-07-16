@@ -1,0 +1,80 @@
+[
+  {
+    "codigoAtoConcessao": "00012024",
+    "data": "2024-01-15",
+    "dataProcessamento": "2026-07-14",
+    "fornecedor": "ES BLINDAGENS E LOCAÇÕES LTDA",
+    "id": 35561,
+    "inscricao": "45754539000174",
+    "numero": "003",
+    "objetos": [
+      {
+        "descricaoObjeto": "Locação de veículos.",
+        "descricaoSubtipoDespesa": "Locação de meios de transporte",
+        "descricaoTipoDespesa": "Passagens e Despesas com Locomoção",
+        "id": 33701,
+        "quantidade": 4,
+        "rubrica": "33903303",
+        "valorTotal": 1495,
+        "valorUnitario": 332.22
+      }
+    ],
+    "rubricas": "33903303",
+    "tipo": "RECIBO",
+    "tipoInscricao": "Pessoa jurídica",
+    "tipoInscricaoTemp": "PESSOA_JURIDICA",
+    "valor": 1495
+  },
+  {
+    "codigoAtoConcessao": "00012024",
+    "data": "2024-01-15",
+    "dataProcessamento": "2026-07-14",
+    "fornecedor": "ES BLINDAGENS E LOCAÇÕES LTDA",
+    "id": 35581,
+    "inscricao": "45754539000174",
+    "numero": "002",
+    "objetos": [
+      {
+        "descricaoObjeto": "Locação de veículos.",
+        "descricaoSubtipoDespesa": "Locação de meios de transporte",
+        "descricaoTipoDespesa": "Passagens e Despesas com Locomoção",
+        "id": 33721,
+        "quantidade": 5,
+        "rubrica": "33903303",
+        "valorTotal": 7377.85,
+        "valorUnitario": 1475.57
+      }
+    ],
+    "rubricas": "33903303",
+    "tipo": "RECIBO",
+    "tipoInscricao": "Pessoa jurídica",
+    "tipoInscricaoTemp": "PESSOA_JURIDICA",
+    "valor": 7377.85
+  },
+  {
+    "codigoAtoConcessao": "00012024",
+    "data": "2024-01-15",
+    "dataProcessamento": "2026-07-14",
+    "fornecedor": "ES BLINDAGENS E LOCAÇÕES LTDA",
+    "id": 35601,
+    "inscricao": "45754539000174",
+    "numero": "004",
+    "objetos": [
+      {
+        "descricaoObjeto": "Locação de veículos.",
+        "descricaoSubtipoDespesa": "Locação de meios de transporte",
+        "descricaoTipoDespesa": "Passagens e Despesas com Locomoção",
+        "id": 33722,
+        "quantidade": 2,
+        "rubrica": "33903303",
+        "valorTotal": 2951.15,
+        "valorUnitario": 1475.58
+      }
+    ],
+    "rubricas": "33903303",
+    "tipo": "RECIBO",
+    "tipoInscricao": "Pessoa jurídica",
+    "tipoInscricaoTemp": "PESSOA_JURIDICA",
+    "valor": 2951.15
+  }
+]

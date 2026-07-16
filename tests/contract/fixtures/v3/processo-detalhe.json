@@ -1,0 +1,174 @@
+{
+  "ano": 2025,
+  "autoriaIniciativa": [
+    {
+      "autor": "Gilberto Nascimento",
+      "cargo": "Deputado Federal",
+      "casaEnte": "CD",
+      "codigoParlamentar": 3760,
+      "descricaoTipo": "DEPUTADO",
+      "ente": "Câmara dos Deputados",
+      "idEnte": 2,
+      "ordem": 1,
+      "outrosAutoresNaoInformados": "Não",
+      "partido": "Partido Social Cristão",
+      "sexo": "M",
+      "siglaCargo": "DEPUTADO",
+      "siglaEnte": "CD",
+      "siglaPartido": "PSC",
+      "siglaTipo": "DEPUTADO"
+    }
+  ],
+  "autuacoes": [
+    {
+      "descricao": "Autuação Principal",
+      "idEnteControleAtual": 55312,
+      "informesLegislativos": [
+        {
+          "colegiado": {
+            "casa": "SF",
+            "codigo": 1998,
+            "nome": "Plenário do Senado Federal",
+            "sigla": "PLEN"
+          },
+          "data": "2025-02-03 09:38:02",
+          "descricao": "Autuado o Projeto de Lei nº 8/2025, proveniente da Câmara dos Deputados. O projeto vai à publicação.",
+          "documentosAssociados": [
+            {
+              "autoria": "Câmara dos Deputados",
+              "data": "2024-12-27T18:26:28",
+              "descricao": "Altera o Decreto-Lei nº 2.848, de 7 de dezembro de 1940 (Código Penal), para prever o gerontocídio como circunstância qualificadora do crime de homicídio, e a Lei nº 8.072, de 25 de julho de 1990 (Lei dos Crimes Hediondos), para incluir o gerontocídio no rol dos crimes hediondos.",
+              "id": 9885611,
+              "identificacao": "PL 8/2025",
+              "siglaTipo": "PROJETO_LEI_ORDINARIA",
+              "tipo": "Projeto de Lei Ordinária",
+              "url": "http://legis.senado.leg.br/sdleg-getter/documento?dm=9885611"
+            },
+            {
+              "autoria": "Senado Federal",
+              "data": "2025-02-03T00:00:00",
+              "descricao": "-",
+              "id": 9890049,
+              "identificacao": "Avulso inicial da matéria - SF250139066000",
+              "siglaTipo": "AVULSO_INICIAL",
+              "tipo": "Avulso inicial da matéria",
+              "url": "http://legis.senado.leg.br/sdleg-getter/documento?dm=9890049"
+            }
+          ],
+          "enteAdministrativo": {
+            "casa": "SF",
+            "id": 55312,
+            "nome": "Secretaria Legislativa do Senado Federal",
+            "sigla": "SLSF"
+          },
+          "id": 2226770,
+          "idSituacaoIniciada": 175,
+          "siglaSituacaoIniciada": "AGDESP"
+        }
+      ],
+      "nomeEnteControleAtual": "Secretaria Legislativa do Senado Federal",
+      "numero": 1,
+      "siglaEnteControleAtual": "SLSF",
+      "situacoes": [
+        {
+          "colegiado": {
+            "casa": "SF",
+            "codigo": 1998,
+            "nome": "Plenário do Senado Federal",
+            "sigla": "PLEN"
+          },
+          "descricao": "AGUARDANDO DESPACHO",
+          "enteAdministrativo": {
+            "casa": "SF",
+            "id": 55312,
+            "nome": "Secretaria Legislativa do Senado Federal",
+            "sigla": "SLSF"
+          },
+          "idTipo": 175,
+          "inicio": "2025-02-03",
+          "sigla": "AGDESP"
+        }
+      ]
+    }
+  ],
+  "casaIdentificadora": "SF",
+  "classificacoes": [
+    {
+      "codigo": 33805617,
+      "descricao": "Direito Penal e Penitenciário",
+      "descricaoHierarquia": "Jurídico / Direito Penal e Penitenciário"
+    },
+    {
+      "codigo": 33809378,
+      "descricao": "Idosos",
+      "descricaoHierarquia": "Política Social / Proteção Social / Idosos"
+    }
+  ],
+  "codigoMateria": 167009,
+  "comissaoMpv": "{}",
+  "conteudo": {
+    "ementa": "Altera o Decreto-Lei nº 2.848, de 7 de dezembro de 1940 (Código Penal), para prever o gerontocídio como circunstância qualificadora do crime de homicídio, e a Lei nº 8.072, de 25 de julho de 1990 (Lei dos Crimes Hediondos), para incluir o gerontocídio no rol dos crimes hediondos.",
+    "id": 7596743,
+    "idTipo": 11,
+    "siglaTipo": "NORMA_GERAL",
+    "tipo": "Norma Geral",
+    "tipoNormaIndicada": "LEI"
+  },
+  "dataInicioEfetivo": "2025-02-03",
+  "dataSituacaoAtual": "2025-02-03",
+  "deliberacao": {},
+  "descricaoSigla": "Projeto de Lei",
+  "documento": {
+    "autoria": [
+      {
+        "autor": "Câmara dos Deputados",
+        "casaEnte": "CD",
+        "descricaoTipo": "CAMARA",
+        "ente": "Câmara dos Deputados",
+        "idEnte": 2,
+        "ordem": 1,
+        "outrosAutoresNaoInformados": "Não",
+        "siglaEnte": "CD",
+        "siglaTipo": "CAMARA"
+      }
+    ],
+    "casaLeitura": "SF",
+    "dataApresentacao": "2024-12-27",
+    "dataLeitura": "2025-02-03",
+    "id": 9885611,
+    "indexacao": " ALTERAÇÃO ,  LEI FEDERAL ,  CODIGO PENAL ,  CRIAÇÃO ,  CRIME ,  CRIME HEDIONDO ,  HOMICIDIO ,  PESSOAS ,  PESSOA IDOSA ,  VIOLENCIA DOMESTICA ,  DISCRIMINAÇÃO ,  QUALIFICAÇÃO ,  CIRCUNSTANCIA QUALIFICADORA ,  DEFINIÇÃO ,  PENA .",
+    "resumoAutoria": "Câmara dos Deputados",
+    "siglaTipo": "PROJETO_LEI_ORDINARIA",
+    "tipo": "Projeto de Lei Ordinária",
+    "url": "https://legis.senado.gov.br/sdleg-getter/documento?dm=9885611"
+  },
+  "dthUltimaAtualizacao": "2026-07-14T15:50:50.286000",
+  "id": 8783695,
+  "idProcessoCasaInicial": 8783694,
+  "identificacao": "PL 8/2025",
+  "identificacaoExterna": {},
+  "identificacaoProcessoInicial": "PL 7769/2017",
+  "normaGerada": {},
+  "numero": "8",
+  "objetivo": "Revisora",
+  "outrosNumeros": [
+    {
+      "ano": 2017,
+      "casaIdentificadora": "CD",
+      "enteIdentificador": "Câmara dos Deputados",
+      "externaAoCongresso": "Não",
+      "idOutroProcesso": 8783694,
+      "numero": "07769",
+      "sigla": "PL",
+      "siglaEnteIdentificador": "CD",
+      "tramitando": "Sim"
+    }
+  ],
+  "sigla": "PL",
+  "siglaCasaIniciadora": "CD",
+  "siglaEnteIdentificador": "SF",
+  "siglaSituacaoAtual": "AGDESP",
+  "situacaoAtual": "AGUARDANDO DESPACHO",
+  "tramitando": "Sim",
+  "ultimaInformacaoAtualizada": "EVENTO_LEGISLATIVO"
+}

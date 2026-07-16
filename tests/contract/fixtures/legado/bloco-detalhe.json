@@ -1,0 +1,120 @@
+{
+  "blocos": {
+    "bloco": {
+      "composicaoBloco": {
+        "composicao_bloco": [
+          {
+            "dataAdesao": "20/03/2023",
+            "id": "812",
+            "idBloco": "346",
+            "idComposicaoBloco": "812",
+            "idPartido": "418",
+            "partido": {
+              "dataCriacao": "26/02/2003",
+              "idPartido": "418",
+              "indicadorPartidoMate": "S",
+              "nomePartido": "Progressistas",
+              "siglaPartido": "PP"
+            },
+            "sequenciaOrdemDia": "1"
+          },
+          {
+            "dataAdesao": "20/03/2023",
+            "id": "813",
+            "idBloco": "346",
+            "idComposicaoBloco": "813",
+            "idPartido": "521",
+            "partido": {
+              "dataCriacao": "04/04/2006",
+              "idPartido": "521",
+              "indicadorPartidoMate": "S",
+              "nomePartido": "REPUBLICANOS",
+              "observacao": "Nova denominação do Partido Municipalista Renovador (PMR), a patir de 04.04.2006.",
+              "siglaPartido": "REPUBLICANOS"
+            },
+            "sequenciaOrdemDia": "2"
+          }
+        ]
+      },
+      "dataCriacao": "20/03/2023",
+      "id": "346",
+      "idBloco": "346",
+      "nomeApelidoBloco": "BLALIANÇA",
+      "nomeBloco": "Bloco Parlamentar Aliança",
+      "siglaCasa": "SF",
+      "unidadesLiderancaBloco": {
+        "unidadeLideranca": {
+          "id": "884",
+          "idBloco": "346",
+          "idUnidadeLideranca": "884",
+          "liderancas": {
+            "lideranca": [
+              {
+                "codigoUnidLideranca": "346",
+                "dataDesignacao": "20/03/2023",
+                "dataTermino": "05/03/2024",
+                "id": "15336",
+                "idLideranca": "15336",
+                "idParlamentar": "739",
+                "idUnidadePartidaria": "884",
+                "parlamentar": {
+                  "dataNascimento": "1968-11-21",
+                  "idDeputado": "3042",
+                  "idParlamentar": "739",
+                  "nomeCidadeNatural": "Teresina",
+                  "nomeCompleto": "Ciro Nogueira Lima Filho",
+                  "nomeParlamentar": "Ciro Nogueira",
+                  "sexoParlamentar": "M",
+                  "siglaUfNatural": "PI"
+                },
+                "siglaCasa": "SF",
+                "tipoLideranca": "L",
+                "tipoUnidLideranca": "B"
+              },
+              {
+                "codigoUnidLideranca": "346",
+                "dataDesignacao": "06/03/2024",
+                "dataTermino": "16/02/2025",
+                "id": "16548",
+                "idLideranca": "16548",
+                "idParlamentar": "4811",
+                "idUnidadePartidaria": "884",
+                "parlamentar": {
+                  "dataNascimento": "1959-04-15",
+                  "idDeputado": "151208",
+                  "idParlamentar": "4811",
+                  "nomeCompleto": "Laércio José de Oliveira",
+                  "nomeParlamentar": "Laércio Oliveira",
+                  "sexoParlamentar": "M"
+                },
+                "siglaCasa": "SF",
+                "tipoLideranca": "L",
+                "tipoUnidLideranca": "B"
+              },
+              {
+                "codigoUnidLideranca": "346",
+                "dataDesignacao": "06/03/2024",
+                "dataTermino": "16/02/2025",
+                "id": "16549",
+                "idLideranca": "16549",
+                "idParlamentar": "6335",
+                "idUnidadePartidaria": "884",
+                "numeroOrdemViceLider": "1",
+                "parlamentar": {
+                  "idParlamentar": "6335",
+                  "nomeCompleto": "Damares Regina Alves",
+                  "nomeParlamentar": "Damares Alves",
+                  "sexoParlamentar": "F"
+                },
+                "siglaCasa": "SF",
+                "tipoLideranca": "V",
+                "tipoUnidLideranca": "B"
+              }
+            ]
+          },
+          "sequenciaOrdem": "99"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,89 @@
+[
+  {
+    "dataInclusao": "2026-07-15T18:31:28.000+00:00",
+    "emendas": [
+      {
+        "acaoOrcamentaria": "00T1",
+        "ano": "2023",
+        "autor": "COM. DESENV REGIONAL E TURISMO",
+        "cnpjFavorecido": "51885242000140",
+        "codOrgaoUge": 56000,
+        "codUnidadeOrcamentaria": 56101,
+        "id": 2837,
+        "nomeFavorecido": "MUNICIPIO DE CAMPINAS",
+        "nomeOrgaoUge": "MINISTERIO DAS CIDADES",
+        "nomeUnidadeOrcamentaria": "MINISTERIO DAS CIDADES",
+        "notaEmpenho": "175004000012023NE001557",
+        "numero": "202360110003",
+        "tipo": "RP8"
+      }
+    ],
+    "id": 8185,
+    "nome": "Marcos Pereira",
+    "numeroProtocoloApresentacao": "CD267501373100",
+    "tratamento": "Deputado(a)"
+  },
+  {
+    "dataInclusao": "2026-07-14T19:18:54.000+00:00",
+    "emendas": [
+      {
+        "acaoOrcamentaria": "8581",
+        "ano": "2022",
+        "autor": "RELATOR GERAL",
+        "cnpjFavorecido": "12188745000105",
+        "codOrgaoUge": 36000,
+        "codUnidadeOrcamentaria": 36901,
+        "id": 19670,
+        "nomeFavorecido": "FUNDO MUNICIPAL DE SAUDE DE CAIBATE",
+        "nomeOrgaoUge": "MINISTERIO DA SAUDE",
+        "nomeUnidadeOrcamentaria": "FUNDO NACIONAL DE SAUDE",
+        "notaEmpenho": "257001000012022NE500758",
+        "numero": "202281000293",
+        "tipo": "RP9"
+      }
+    ],
+    "id": 8165,
+    "nome": "Luis Carlos Heinze",
+    "numeroProtocoloApresentacao": "SF262241857490",
+    "tratamento": "Senador(a)"
+  },
+  {
+    "dataInclusao": "2026-07-09T18:13:29.000+00:00",
+    "emendas": [
+      {
+        "acaoOrcamentaria": "20RP",
+        "ano": "2021",
+        "autor": "RELATOR GERAL",
+        "cnpjFavorecido": "45138336000153",
+        "codOrgaoUge": 26298,
+        "codUnidadeOrcamentaria": 26298,
+        "id": 9968,
+        "nomeFavorecido": "MUNICIPIO DE SANTA RITA D'OESTE",
+        "nomeOrgaoUge": "FUNDO NACIONAL DE DESENVOLVIMENTO DA EDUCACAO",
+        "nomeUnidadeOrcamentaria": "FUNDO NACIONAL DE DESENVOLVIMENTO DA EDUCACAO",
+        "notaEmpenho": "153173152532021NE653591",
+        "numero": "202181000791",
+        "tipo": "RP9"
+      },
+      {
+        "acaoOrcamentaria": "20RP",
+        "ano": "2021",
+        "autor": "RELATOR GERAL",
+        "cnpjFavorecido": "45138336000153",
+        "codOrgaoUge": 26298,
+        "codUnidadeOrcamentaria": 26298,
+        "id": 9969,
+        "nomeFavorecido": "MUNICIPIO DE SANTA RITA D'OESTE",
+        "nomeOrgaoUge": "FUNDO NACIONAL DE DESENVOLVIMENTO DA EDUCACAO",
+        "nomeUnidadeOrcamentaria": "FUNDO NACIONAL DE DESENVOLVIMENTO DA EDUCACAO",
+        "notaEmpenho": "153173152532021NE653922",
+        "numero": "202181000791",
+        "tipo": "RP9"
+      }
+    ],
+    "id": 8145,
+    "nome": "Marcos Pereira",
+    "numeroProtocoloApresentacao": "CD261193283500",
+    "tratamento": "Deputado(a)"
+  }
+]

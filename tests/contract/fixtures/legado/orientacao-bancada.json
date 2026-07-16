@@ -1,0 +1,184 @@
+{
+  "votacoes": [
+    {
+      "anoMateria": 2025,
+      "codigoVotacaoSve": 10848,
+      "dataInicioVotacao": "2025-02-19T18:19:28",
+      "dataTerminoVotacao": "2025-02-19T18:49:54",
+      "descricaoMateria": "Emenda nº 1 (Substitutivo) ao Projeto de Lei Complementar nº 22, de 2025, nos termos do parecer",
+      "descricaoSessao": "Sessão Deliberativa Ordinária, às 14 horas",
+      "descricaoVotacao": "Dispõe sobre prazo para liquidação de restos a pagar não processados e dá outras providências.",
+      "dispositivo": "Emenda nº 1 (Substitutivo)",
+      "numeroMateria": 22,
+      "numeroSessao": 1,
+      "orientacoesLideranca": [
+        {
+          "dataHora": "2025-02-19T18:22:56",
+          "partido": "Banc Fem",
+          "voto": "SIM"
+        },
+        {
+          "dataHora": "2025-02-19T18:22:56",
+          "partido": "PP",
+          "voto": "SIM"
+        },
+        {
+          "dataHora": "2025-02-19T18:22:34",
+          "partido": "Oposição",
+          "voto": "SIM"
+        }
+      ],
+      "presidenteSessao": "Davi Alcolumbre",
+      "qtdObstrucoes": 0,
+      "qtdVotosAbstencao": 0,
+      "qtdVotosNao": 1,
+      "qtdVotosSim": 65,
+      "quorumFinal": 69,
+      "quorumInicial": 68,
+      "sequencialVotacao": 4234,
+      "siglaTipoMateria": "PLP",
+      "tipoSessao": "Deliberativa Ordinária",
+      "votosLideranca": [],
+      "votosParlamentar": [
+        {
+          "nomeParlamentar": "Cleitinho",
+          "partido": "Republica",
+          "uf": "MG",
+          "voto": "SIM"
+        },
+        {
+          "nomeParlamentar": "Dra. Eudócia",
+          "partido": "PL",
+          "uf": "AL",
+          "voto": "SIM"
+        },
+        {
+          "nomeParlamentar": "Humberto Costa",
+          "partido": "PT",
+          "uf": "PE",
+          "voto": "SIM"
+        }
+      ]
+    },
+    {
+      "anoMateria": 2024,
+      "codigoVotacaoSve": 10849,
+      "dataInicioVotacao": "2025-03-11T16:53:53",
+      "dataTerminoVotacao": "2025-03-11T17:15:02",
+      "descricaoMateria": "Proposta de Emenda à Constituição nº 18, de 2024, nos termos do parecer (1º Turno)",
+      "descricaoSessao": "Sessão Deliberativa Ordinária, às 14 horas",
+      "descricaoVotacao": "Dá nova redação ao § 4º do art. 225 da Constituição Federal para incluir entre os patrimônios nacionais o Pantanal Sul-Mato-Grossense.",
+      "dispositivo": null,
+      "numeroMateria": 18,
+      "numeroSessao": 4,
+      "orientacoesLideranca": [
+        {
+          "dataHora": "2025-03-11T16:55:29",
+          "partido": "PSB",
+          "voto": "SIM"
+        },
+        {
+          "dataHora": "2025-03-11T16:55:40",
+          "partido": "Republica",
+          "voto": "SIM"
+        },
+        {
+          "dataHora": "2025-03-11T16:56:23",
+          "partido": "PSDB",
+          "voto": "SIM"
+        }
+      ],
+      "presidenteSessao": "Davi Alcolumbre",
+      "qtdObstrucoes": 0,
+      "qtdVotosAbstencao": 0,
+      "qtdVotosNao": 0,
+      "qtdVotosSim": 72,
+      "quorumFinal": 73,
+      "quorumInicial": 62,
+      "sequencialVotacao": 4235,
+      "siglaTipoMateria": "PEC",
+      "tipoSessao": "Deliberativa Ordinária",
+      "votosLideranca": [],
+      "votosParlamentar": [
+        {
+          "nomeParlamentar": "Veneziano Vital do Rêgo",
+          "partido": "MDB",
+          "uf": "PB",
+          "voto": "SIM"
+        },
+        {
+          "nomeParlamentar": "Marcos do Val",
+          "partido": "Podemos",
+          "uf": "ES",
+          "voto": "SIM"
+        },
+        {
+          "nomeParlamentar": "Sérgio Petecão",
+          "partido": "PSD",
+          "uf": "AC",
+          "voto": "SIM"
+        }
+      ]
+    },
+    {
+      "anoMateria": 2024,
+      "codigoVotacaoSve": 10850,
+      "dataInicioVotacao": "2025-03-11T17:15:58",
+      "dataTerminoVotacao": "2025-03-11T17:56:20",
+      "descricaoMateria": "Proposta de Emenda à Constituição nº 18, de 2024 (2º Turno)",
+      "descricaoSessao": "Sessão Deliberativa Ordinária, às 14 horas",
+      "descricaoVotacao": "Dá nova redação ao § 4º do art. 225 da Constituição Federal para incluir entre os patrimônios nacionais o Pantanal Sul-Mato-Grossense.",
+      "dispositivo": null,
+      "numeroMateria": 18,
+      "numeroSessao": 4,
+      "orientacoesLideranca": [
+        {
+          "dataHora": "2025-03-11T17:16:17",
+          "partido": "NOVO",
+          "voto": "SIM"
+        },
+        {
+          "dataHora": "2025-03-11T17:16:19",
+          "partido": "Governo",
+          "voto": "SIM"
+        },
+        {
+          "dataHora": "2025-03-11T17:16:17",
+          "partido": "PP",
+          "voto": "SIM"
+        }
+      ],
+      "presidenteSessao": "Davi Alcolumbre",
+      "qtdObstrucoes": 0,
+      "qtdVotosAbstencao": 0,
+      "qtdVotosNao": 0,
+      "qtdVotosSim": 70,
+      "quorumFinal": 75,
+      "quorumInicial": 73,
+      "sequencialVotacao": 4236,
+      "siglaTipoMateria": "PEC",
+      "tipoSessao": "Deliberativa Ordinária",
+      "votosLideranca": [],
+      "votosParlamentar": [
+        {
+          "nomeParlamentar": "Magno Malta",
+          "partido": "PL",
+          "uf": "ES",
+          "voto": "SIM"
+        },
+        {
+          "nomeParlamentar": "Soraya Thronicke",
+          "partido": "Podemos",
+          "uf": "MS",
+          "voto": "SIM"
+        },
+        {
+          "nomeParlamentar": "Marcelo Castro",
+          "partido": "MDB",
+          "uf": "PI",
+          "voto": "SIM"
+        }
+      ]
+    }
+  ]
+}

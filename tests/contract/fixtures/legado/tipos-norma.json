@@ -1,0 +1,39 @@
+{
+  "ListaTiposDocumento": {
+    "Metadados": {
+      "DataVersaoServico": "2017-02-01",
+      "DescricaoDataSet": "Retorna a lista de Tipos de Norma.",
+      "Versao": "15/07/2026 08:22:52",
+      "VersaoServico": "3"
+    },
+    "TiposDocumento": {
+      "TipoDocumento": [
+        {
+          "Codigo": "18",
+          "CodigoPai": "412",
+          "Descricao": "Ato do Presidente da Câmara dos Deputados",
+          "IRI": "http://www.lexml.gov.br/sigen#AtoDoPresidenteDaCamaraDosDeputados",
+          "Instanciavel": "1",
+          "Sigla": "ACD"
+        },
+        {
+          "Codigo": "36606984",
+          "CodigoPai": "412",
+          "Descricao": "Ato Conjunto da Secretaria-Geral da Mesa do Senado Federal e da Secretaria-Geral da Câmara dos Deputados",
+          "IRI": "http://www.lexml.gov.br/sigen#AtoConjuntoDaSecretariaGeralDaMesaDoSenadoFederalEDaSecretariaGeralDaMesaDaCamaraDosDeputados",
+          "Instanciavel": "1",
+          "Sigla": "ACG"
+        },
+        {
+          "Codigo": "34213542",
+          "CodigoPai": "412",
+          "Descricao": "Ato Conjunto do Presidente do Senado Federal e do Presidente da Câmara dos Deputados",
+          "IRI": "http://www.lexml.gov.br/sigen#AtoConjuntoDoPresidenteDoSenadoFederalEDoPresidenteDaCamaraDosDeputados",
+          "Instanciavel": "1",
+          "Sigla": "ACL"
+        }
+      ]
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaTiposDocumentov3.xsd"
+  }
+}

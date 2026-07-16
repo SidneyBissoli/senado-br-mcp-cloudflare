@@ -1,0 +1,53 @@
+{
+  "ListaLoteEmendas": {
+    "LotesEmendasOrcamento": {
+      "LoteEmendasOrcamento": [
+        {
+          "AnoExecucao": "2024",
+          "AnoMateria": "2023",
+          "CodigoAutorOrcamento": "4290",
+          "DataOperacao": "2023-11-29",
+          "DescricaoTipoPlOrcamento": "Lei Orçamentária Anual",
+          "EmailAutorOrcamento": "dep.abiliobrunini@camara.leg.br",
+          "IndicadorAtivo": "Não",
+          "NomeAutorOrcamento": "Abilio Brunini",
+          "NumeroMateria": "29",
+          "QuantidadeEmendas": "10",
+          "SiglaTipoPlOrcamento": "LOA"
+        },
+        {
+          "AnoExecucao": "2025",
+          "AnoMateria": "2024",
+          "CodigoAutorOrcamento": "4290",
+          "DataOperacao": "2024-12-04",
+          "DescricaoTipoPlOrcamento": "Lei Orçamentária Anual",
+          "EmailAutorOrcamento": "dep.abiliobrunini@camara.leg.br",
+          "IndicadorAtivo": "Não",
+          "NomeAutorOrcamento": "Abilio Brunini",
+          "NumeroMateria": "26",
+          "QuantidadeEmendas": "14",
+          "SiglaTipoPlOrcamento": "LOA"
+        },
+        {
+          "AnoExecucao": "2020",
+          "AnoMateria": "2019",
+          "CodigoAutorOrcamento": "3896",
+          "DataOperacao": "2019-10-24",
+          "DescricaoTipoPlOrcamento": "Lei Orçamentária Anual",
+          "EmailAutorOrcamento": "dep.abouanni@camara.leg.br",
+          "IndicadorAtivo": "Não",
+          "NomeAutorOrcamento": "Abou Anni",
+          "NumeroMateria": "22",
+          "QuantidadeEmendas": "7",
+          "SiglaTipoPlOrcamento": "LOA"
+        }
+      ]
+    },
+    "Metadados": {
+      "DescricaoDataSet": "Lista os lotes de emendas ao orçamento",
+      "Versao": "15/07/2026 08:22:47",
+      "VersaoServico": "2"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaLoteEmendasv2.xsd"
+  }
+}

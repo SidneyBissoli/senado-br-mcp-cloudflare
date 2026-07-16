@@ -1,0 +1,96 @@
+[
+  {
+    "apresentadoNosProcessos": [
+      {
+        "id": 8783695,
+        "identificacao": "PL 8/2025",
+        "papelNoProcesso": null,
+        "tramitando": "Sim"
+      }
+    ],
+    "autores": [
+      {
+        "autor": "Senado Federal",
+        "cargo": null,
+        "casaEnte": "SF",
+        "codigoParlamentar": null,
+        "descricaoTipo": "Senado Federal",
+        "idEnte": 1,
+        "nomeEnte": "Senado Federal",
+        "ordem": 1,
+        "outrosAutoresNaoInformados": "Não",
+        "partido": null,
+        "sexo": null,
+        "siglaCargo": null,
+        "siglaEnte": "SF",
+        "siglaPartido": null,
+        "siglaTipo": "SENADO",
+        "uf": null
+      }
+    ],
+    "autoria": "Senado Federal",
+    "casaEnteRecebedor": "SF",
+    "casaRecebedora": null,
+    "codigoColegiadoRecebedor": null,
+    "dataDocumento": "2025-02-03",
+    "dataRecebimento": "2025-02-03",
+    "descricao": "-",
+    "descricaoTipo": "Avulso inicial da matéria",
+    "id": 9890049,
+    "idEnteRecebedor": 55312,
+    "identificacao": "Avulso inicial da matéria - SF250139066000",
+    "nomeColegiadoRecebedor": null,
+    "nomeEnteRecebedor": "Secretaria Legislativa do Senado Federal",
+    "siglaColegiadoRecebedor": null,
+    "siglaEnteRecebedor": "SLSF",
+    "siglaTipo": "AVULSO_INICIAL",
+    "urlDocumento": "http://legis.senado.leg.br/sdleg-getter/documento?dm=9890049"
+  },
+  {
+    "apresentadoNosProcessos": [
+      {
+        "id": 8783695,
+        "identificacao": "PL 8/2025",
+        "papelNoProcesso": null,
+        "tramitando": "Sim"
+      }
+    ],
+    "autores": [
+      {
+        "autor": "Câmara dos Deputados",
+        "cargo": null,
+        "casaEnte": "CD",
+        "codigoParlamentar": null,
+        "descricaoTipo": "Câmara dos Deputados",
+        "idEnte": 2,
+        "nomeEnte": "Câmara dos Deputados",
+        "ordem": 1,
+        "outrosAutoresNaoInformados": "Não",
+        "partido": null,
+        "sexo": null,
+        "siglaCargo": null,
+        "siglaEnte": "CD",
+        "siglaPartido": null,
+        "siglaTipo": "CAMARA",
+        "uf": null
+      }
+    ],
+    "autoria": "Câmara dos Deputados",
+    "casaEnteRecebedor": "SF",
+    "casaRecebedora": "SF",
+    "codigoColegiadoRecebedor": 1998,
+    "dataDocumento": null,
+    "dataRecebimento": "2024-12-27",
+    "descricao": "Altera o Decreto-Lei nº 2.848, de 7 de dezembro de 1940 (Código Penal), para prever o gerontocídio como circunstância qualificadora do crime de homicídio, e a Lei nº 8.072, de 25 de julho de 1990 (Lei dos Crimes Hediondos), para incluir o gerontocídio no rol dos crimes hediondos.",
+    "descricaoTipo": "Projeto de Lei Ordinária",
+    "id": 9885611,
+    "idEnteRecebedor": 55312,
+    "identificacao": "PL 8/2025",
+    "nomeColegiadoRecebedor": "Plenário do Senado Federal",
+    "nomeEnteRecebedor": "Secretaria Legislativa do Senado Federal",
+    "siglaColegiadoRecebedor": "PLEN",
+    "siglaEnteRecebedor": "SLSF",
+    "siglaTipo": "PROJETO_LEI_ORDINARIA",
+    "urlDocumento": "http://legis.senado.leg.br/sdleg-getter/documento?dm=9885611"
+  }
+]

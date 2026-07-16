@@ -1,0 +1,23 @@
+[
+  {
+    "autoria": "Senador Esperidião Amin (PP/SC)",
+    "casa": "SF",
+    "codigoColegiado": 34,
+    "dataApresentacao": "2024-03-19",
+    "decisoes": null,
+    "descricaoDocumentoEmenda": "Emenda à PEC 4/2023",
+    "id": 9569276,
+    "idCiEmenda": 7562538,
+    "idCiEmendado": 7498069,
+    "idDocumentoEmenda": 9569274,
+    "idProcesso": 8386303,
+    "identificacao": "EMENDA 1 - PEC 4/2023",
+    "nomeColegiado": "Comissão de Constituição, Justiça e Cidadania",
+    "numero": "1",
+    "siglaColegiado": "CCJ",
+    "subemendas": null,
+    "tipo": "EMENDA_PARCIAL",
+    "turnoApresentacao": "NORMAL",
+    "urlDocumentoEmenda": "http://legis.senado.leg.br/sdleg-getter/documento?dm=9569274"
+  }
+]

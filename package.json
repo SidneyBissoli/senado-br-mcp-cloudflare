@@ -23,6 +23,8 @@
     "typecheck": "tsc --noEmit && tsc -p scripts/tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:contract": "vitest run -c vitest.contract.config.ts",
+    "contract:refresh": "tsx scripts/contract/refresh-fixtures.ts",
     "smoke:openai-app": "node scripts/smoke-openai-app.mjs",
     "ingest:ecidadania": "tsx scripts/ingest-ecidadania/index.ts",
     "ingest:ecidadania:eventos": "tsx scripts/ingest-ecidadania/index-eventos.ts",

@@ -1,0 +1,49 @@
+{
+  "ParlamentarcomMaterianaComissao": {
+    "Comissoes": {
+      "Comissao": [
+        {
+          "Comissao": "Comissão de Constituição, Justiça e Cidadania",
+          "Parlamentares": {
+            "Parlamentar": [
+              {
+                "Codigo": "5672",
+                "Foto": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador5672.jpg",
+                "Nome": "Alan Rick",
+                "Quantidade": "5",
+                "SiglaPartido": "REPUBLICANOS",
+                "URL": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/5672",
+                "Uf": "AC"
+              },
+              {
+                "Codigo": "5982",
+                "Foto": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador5982.jpg",
+                "Nome": "Alessandro Vieira",
+                "Quantidade": "62",
+                "SiglaPartido": "MDB",
+                "URL": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/5982",
+                "Uf": "SE"
+              },
+              {
+                "Codigo": "6358",
+                "Foto": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador6358.jpg",
+                "Nome": "Ana Paula Lobato",
+                "Quantidade": "9",
+                "SiglaPartido": "PSB",
+                "URL": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/6358",
+                "Uf": "MA"
+              }
+            ]
+          },
+          "Sigla": "CCJ"
+        }
+      ]
+    },
+    "Metadados": {
+      "DataVersaoServico": "2017-02-01",
+      "Versao": "15/07/2026 23:26:52",
+      "VersaoServico": "5"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ParlamentarcomMaterianaComissaov5.xsd"
+  }
+}

@@ -1,0 +1,381 @@
+{
+  "DiscursosSessao": {
+    "Metadados": {
+      "DataVersaoServico": "2021-06-29",
+      "DescricaoDataSet": "Obtém a lista de Discursos das Sessões que ocorreram dentro do período informado.",
+      "Versao": "15/07/2026 23:26:01",
+      "VersaoServico": "4"
+    },
+    "Sessoes": {
+      "Sessao": [
+        {
+          "CodigoSessao": "452157",
+          "CodigoSessaoLegislativa": "873",
+          "DataSessao": "2025-03-31",
+          "DescricaoSessao": "Sessão Não Deliberativa",
+          "HoraInicio": "14:00:00",
+          "NumeroSessao": "15",
+          "Pronunciamentos": {
+            "Pronunciamento": [
+              {
+                "Casa": "Senado Federal",
+                "CodigoParlamentar": "475",
+                "CodigoPronunciamento": "512673",
+                "Data": "2025-03-31",
+                "FuncaoAutor": "SENADOR",
+                "Indexacao": "DEFESA, IMPORTANCIA, REGULAMENTAÇÃO, REFORMA TRIBUTARIA, DESBUROCRATIZAÇÃO, ECONOMIA, FACILITAÇÃO, EXPORTAÇÃO, BUSCA, MERCADO INTERNACIONAL, COMENTARIO, NECESSIDADE, FISCALIZAÇÃO, POLITICAS PUBLICAS, LEI GERAL, SANEAMENTO, REGISTRO, DIFICULDADE, REGIÃO NORTE, ENFASE, ESTADO DE RONDONIA (RO), EXPOSIÇÃO, REGULARIZAÇÃO FUNDIÁRIA, EXCESSO, BUROCRACIA, CRITICA, POLARIZAÇÃO POLITICA, OBSERVAÇÃO, DEMORA, ATENDIMENTO, SAUDE PUBLICA, CIRURGIA, CONSULTA.",
+                "NomeAutor": "Confúcio Moura",
+                "Partido": "MDB",
+                "Publicacoes": {
+                  "Publicacao": [
+                    {
+                      "DataPublicacao": "2025-04-01",
+                      "FontePublicacao": "Diário do Senado Federal",
+                      "PaginaFinal": "19",
+                      "PaginaInicial": "16",
+                      "SiglaFonte": "DSF",
+                      "TipoPublicacao": "PUB",
+                      "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=01/04/2025&paginaDireta=16"
+                    }
+                  ]
+                },
+                "Resumo": "Exposição sobre a importância da regulamentação da reforma tributária, da fiscalização da execução de políticas públicas, a exemplo da Lei Geral de Saneamento, e da regularização de terras no Brasil. Críticas ao excesso de burocracia da Administração Pública e à polarização política que, segundo S. Exa., compromete o avanço institucional.",
+                "TextoIntegral": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512673",
+                "TextoIntegralTxt": "https://legis.senado.leg.br/dadosabertos/discurso/texto-integral/512673",
+                "TipoAutor": "Senador(a)",
+                "TipoUsoPalavra": {
+                  "Codigo": "4819",
+                  "Descricao": "Discurso",
+                  "IndicadorAtivo": "Sim",
+                  "Sigla": "DIS"
+                },
+                "UF": "RO",
+                "UrlTextoBinario": "https://legis.senado.leg.br/dadosabertos/discurso/texto-binario/512673",
+                "id": "512673"
+              },
+              {
+                "Casa": "Senado Federal",
+                "CodigoParlamentar": "5976",
+                "CodigoPronunciamento": "512672",
+                "Data": "2025-03-31",
+                "FuncaoAutor": "SENADOR",
+                "Indexacao": "CRITICA, SUPREMO TRIBUNAL FEDERAL (STF), ENFASE, MINISTRO, ALEXANDRE DE MORAES, PROCESSO JUDICIAL, INSTRUMENTO, PERSEGUIÇÃO, NATUREZA POLITICA, SEMELHANÇA, DITADURA, REPUDIO, ATUAÇÃO, COMENTARIO, DEPUTADO FEDERAL, MARCEL VAN HATTEM, EX-DEPUTADO, DELTAN DALLAGNOL, SELEÇÃO, DECISÃO JUDICIAL, CONSERVADORISMO, DEFESA, LIBERDADE DE EXPRESSÃO, IMUNIDADE PARLAMENTAR, REGISTRO, DOAÇÃO, SALARIO, ASSOCIAÇÃO CIVIL, FAMILIA, VITIMA, PRESO, DEPREDAÇÃO, JANEIRO.",
+                "NomeAutor": "Eduardo Girão",
+                "Partido": "NOVO",
+                "Publicacoes": {
+                  "Publicacao": [
+                    {
+                      "DataPublicacao": "2025-04-01",
+                      "FontePublicacao": "Diário do Senado Federal",
+                      "PaginaFinal": "15",
+                      "PaginaInicial": "10",
+                      "SiglaFonte": "DSF",
+                      "TipoPublicacao": "PUB",
+                      "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=01/04/2025&paginaDireta=10"
+                    }
+                  ]
+                },
+                "Resumo": "Críticas ao STF pelo suposto uso de processos judiciais como instrumento de pressão política. Defesa da anistia aos presos pelos atos de 8 de janeiro de 2023. Prestação de contas e registro da doação do salário de S. Exa. à Associação dos Familiares e Vítimas do 08 de Janeiro (Asfav).",
+                "TextoIntegral": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512672",
+                "TextoIntegralTxt": "https://legis.senado.leg.br/dadosabertos/discurso/texto-integral/512672",
+                "TipoAutor": "Senador(a)",
+                "TipoUsoPalavra": {
+                  "Codigo": "4819",
+                  "Descricao": "Discurso",
+                  "IndicadorAtivo": "Sim",
+                  "Sigla": "DIS"
+                },
+                "UF": "CE",
+                "UrlTextoBinario": "https://legis.senado.leg.br/dadosabertos/discurso/texto-binario/512672",
+                "id": "512672"
+              },
+              {
+                "Casa": "Senado Federal",
+                "CodigoParlamentar": "825",
+                "CodigoPronunciamento": "512670",
+                "Data": "2025-03-31",
+                "FuncaoAutor": "SENADOR",
+                "Indexacao": "DEFESA, PROPOSTA DE EMENDA A CONSTITUIÇÃO (PEC), ALTERAÇÃO, CONSTITUIÇÃO FEDERAL, TRABALHO, EMPREGO, DIREITOS SOCIAIS, TRABALHADOR, REDUÇÃO, DURAÇÃO, JORNADA DE TRABALHO, HORARIO DE TRABALHO.\nSUGESTÃO, ENCAMINHAMENTO, AUDITOR FISCAL, SENADO, SINDICATO, ASSOCIAÇÃO NACIONAL, MAGISTRADO, PROCURADOR DO TRABALHO, PROPOSIÇÃO LEGISLATIVA, CRIAÇÃO, ESTATUTO, TRABALHO.\nHOMENAGEM, MULHER, PREMIO, BERTHA LUTZ.",
+                "NomeAutor": "Paulo Paim",
+                "Partido": "PT",
+                "Publicacoes": {
+                  "Publicacao": [
+                    {
+                      "DataPublicacao": "2025-04-01",
+                      "FontePublicacao": "Diário do Senado Federal",
+                      "PaginaFinal": "10",
+                      "PaginaInicial": "7",
+                      "SiglaFonte": "DSF",
+                      "TipoPublicacao": "PUB",
+                      "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=01/04/2025&paginaDireta=7"
+                    }
+                  ]
+                },
+                "Resumo": "Defesa da redução da jornada de trabalho sem redução salarial, e registro da tramitação, na CCJ, da PEC 148/2015, da qual S. Exa. é o primeiro signatário. Breve histórico dessa pauta no Brasil e no mundo.",
+                "TextoIntegral": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512670",
+                "TextoIntegralTxt": "https://legis.senado.leg.br/dadosabertos/discurso/texto-integral/512670",
+                "TipoAutor": "Senador(a)",
+                "TipoUsoPalavra": {
+                  "Codigo": "4819",
+                  "Descricao": "Discurso",
+                  "IndicadorAtivo": "Sim",
+                  "Sigla": "DIS"
+                },
+                "UF": "RS",
+                "UrlTextoBinario": "https://legis.senado.leg.br/dadosabertos/discurso/texto-binario/512670",
+                "id": "512670"
+              }
+            ]
+          },
+          "SiglaCasa": "SF",
+          "TipoSessao": "NDL"
+        },
+        {
+          "CodigoSessao": "451475",
+          "CodigoSessaoLegislativa": "873",
+          "DataSessao": "2025-03-27",
+          "DescricaoSessao": "Sessão de Premiações e Condecorações",
+          "HoraInicio": "10:00:00",
+          "NumeroSessao": "14",
+          "Pronunciamentos": {
+            "Pronunciamento": [
+              {
+                "Casa": "Senado Federal",
+                "CodigoParlamentar": "5979",
+                "CodigoPronunciamento": "512570",
+                "Data": "2025-03-27",
+                "FuncaoAutor": "SENADOR",
+                "Indexacao": "ENCERRAMENTO, SESSÃO ESPECIAL, HOMENAGEM, ENTREGA, DIPLOMA, MULHER, CIDADÃO, BERTHA LUTZ, CONTRIBUIÇÃO, LUTA, DIREITO, MINISTERIO DAS MULHERES IGUALDADE RACIAL DA JUVENTUDE E DOS DIREITO HUMANOS, IGUALDADE, GENERO.",
+                "NomeAutor": "Leila Barros",
+                "Partido": "PDT",
+                "Publicacoes": {
+                  "Publicacao": [
+                    {
+                      "DataPublicacao": "2025-03-28",
+                      "FontePublicacao": "Diário do Senado Federal",
+                      "PaginaFinal": "34",
+                      "PaginaInicial": "34",
+                      "SiglaFonte": "DSF",
+                      "TipoPublicacao": "PUB",
+                      "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=28/03/2025&paginaDireta=34"
+                    }
+                  ]
+                },
+                "Resumo": "Encerramento de Sessão Especial destinada a entrega do Diploma Mulher-Cidadã Bertha Lutz, premiação que, instituída pela Resolução nº 2, de 2001, é destinada a agraciar pessoas que no país tenham oferecido contribuição relevante à defesa dos direitos da mulher e das questões de gênero.",
+                "TextoIntegral": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512570",
+                "TextoIntegralTxt": "https://legis.senado.leg.br/dadosabertos/discurso/texto-integral/512570",
+                "TipoAutor": "Senador(a)",
+                "TipoUsoPalavra": {
+                  "Codigo": "4838",
+                  "Descricao": "Não classificado",
+                  "IndicadorAtivo": "Sim",
+                  "Sigla": "NID"
+                },
+                "UF": "DF",
+                "UrlTextoBinario": "https://legis.senado.leg.br/dadosabertos/discurso/texto-binario/512570",
+                "id": "512570"
+              },
+              {
+                "Casa": "Senado Federal",
+                "CodigoParlamentar": "4560",
+                "CodigoPronunciamento": "512569",
+                "Data": "2025-03-27",
+                "FuncaoAutor": "SENADOR",
+                "Indexacao": "SESSÃO ESPECIAL, HOMENAGEM, ENTREGA, DIPLOMA, MULHER, CIDADÃO, BERTHA LUTZ, CONTRIBUIÇÃO, LUTA, DIREITO, MINISTERIO DAS MULHERES IGUALDADE RACIAL DA JUVENTUDE E DOS DIREITO HUMANOS, IGUALDADE, GENERO.",
+                "NomeAutor": "Sérgio Petecão",
+                "Partido": "PSD",
+                "Publicacoes": {
+                  "Publicacao": [
+                    {
+                      "DataPublicacao": "2025-03-28",
+                      "FontePublicacao": "Diário do Senado Federal",
+                      "PaginaFinal": "34",
+                      "PaginaInicial": "33",
+                      "SiglaFonte": "DSF",
+                      "TipoPublicacao": "PUB",
+                      "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=28/03/2025&paginaDireta=33"
+                    }
+                  ]
+                },
+                "Resumo": "Sessão Especial destinada a entrega do Diploma Mulher-Cidadã Bertha Lutz, premiação que, instituída pela Resolução nº 2, de 2001, é destinada a agraciar pessoas que no país tenham oferecido contribuição relevante à defesa dos direitos da mulher e das questões de gênero.",
+                "TextoIntegral": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512569",
+                "TextoIntegralTxt": "https://legis.senado.leg.br/dadosabertos/discurso/texto-integral/512569",
+                "TipoAutor": "Senador(a)",
+                "TipoUsoPalavra": {
+                  "Codigo": "4819",
+                  "Descricao": "Discurso",
+                  "IndicadorAtivo": "Sim",
+                  "Sigla": "DIS"
+                },
+                "UF": "AC",
+                "UrlTextoBinario": "https://legis.senado.leg.br/dadosabertos/discurso/texto-binario/512569",
+                "id": "512569"
+              },
+              {
+                "Casa": "Senado Federal",
+                "CodigoParlamentar": "5906",
+                "CodigoPronunciamento": "512567",
+                "Data": "2025-03-27",
+                "FuncaoAutor": "SENADOR",
+                "Indexacao": "SESSÃO ESPECIAL, HOMENAGEM, ENTREGA, DIPLOMA, MULHER, CIDADÃO, BERTHA LUTZ, CONTRIBUIÇÃO, LUTA, DIREITO, MINISTERIO DAS MULHERES IGUALDADE RACIAL DA JUVENTUDE E DOS DIREITO HUMANOS, IGUALDADE, GENERO.",
+                "NomeAutor": "Dra. Eudócia",
+                "Partido": "PL",
+                "Publicacoes": {
+                  "Publicacao": [
+                    {
+                      "DataPublicacao": "2025-03-28",
+                      "FontePublicacao": "Diário do Senado Federal",
+                      "PaginaFinal": "33",
+                      "PaginaInicial": "32",
+                      "SiglaFonte": "DSF",
+                      "TipoPublicacao": "PUB",
+                      "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=28/03/2025&paginaDireta=32"
+                    }
+                  ]
+                },
+                "Resumo": "Sessão Especial destinada a entrega do Diploma Mulher-Cidadã Bertha Lutz, premiação que, instituída pela Resolução nº 2, de 2001, é destinada a agraciar pessoas que no país tenham oferecido contribuição relevante à defesa dos direitos da mulher e das questões de gênero.",
+                "TextoIntegral": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512567",
+                "TextoIntegralTxt": "https://legis.senado.leg.br/dadosabertos/discurso/texto-integral/512567",
+                "TipoAutor": "Senador(a)",
+                "TipoUsoPalavra": {
+                  "Codigo": "4819",
+                  "Descricao": "Discurso",
+                  "IndicadorAtivo": "Sim",
+                  "Sigla": "DIS"
+                },
+                "UF": "AL",
+                "UrlTextoBinario": "https://legis.senado.leg.br/dadosabertos/discurso/texto-binario/512567",
+                "id": "512567"
+              }
+            ]
+          },
+          "SiglaCasa": "SF",
+          "TipoSessao": "PRE"
+        },
+        {
+          "CodigoSessao": "451285",
+          "CodigoSessaoLegislativa": "873",
+          "DataSessao": "2025-03-26",
+          "DescricaoSessao": "Sessão Solene",
+          "HoraInicio": "09:30:00",
+          "NumeroSessao": "6",
+          "Pronunciamentos": {
+            "Pronunciamento": [
+              {
+                "Casa": "Congresso Nacional",
+                "CodigoParlamentar": "3777",
+                "CodigoPronunciamento": "512668",
+                "Data": "2025-03-26",
+                "FuncaoAutor": "SENADOR",
+                "Indexacao": "ENCERRAMENTO, SESSÃO SOLENE, CONGRESSO NACIONAL, LANÇAMENTO, AGENDA LEGISLATIVA, CONFEDERAÇÃO DA AGRICULTURA E PECUARIA DO BRASIL (CNA), ANO CIVIL, DEBATE, ASSUNTO, RELEVANCIA, ECONOMIA NACIONAL, EXPORTAÇÃO, EQUILIBRIO, BALANÇA COMERCIAL, EMPREGO, RENDA, GARANTIA, SEGURANÇA, SEGURANÇA ALIMENTAR, MUDANÇA CLIMATICA.",
+                "NomeAutor": "Eduardo Gomes",
+                "Partido": "PL",
+                "Publicacoes": {
+                  "Publicacao": [
+                    {
+                      "DataPublicacao": "2025-03-27",
+                      "FontePublicacao": "Diário do Congresso Nacional",
+                      "PaginaFinal": "94",
+                      "PaginaInicial": "93",
+                      "SiglaFonte": "DCN",
+                      "TipoPublicacao": "PUB",
+                      "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=27/03/2025&paginaDireta=93"
+                    }
+                  ]
+                },
+                "Resumo": "Encerramento de Sessão Solene do Congresso Nacional destinada ao lançamento da Agenda Legislativa do Agro CNA 2025, convocada pelo Presidente do Congresso Nacional, em atendimento ao Requerimento do Congresso Nacional nº 3, de 2025.",
+                "TextoIntegral": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512668",
+                "TextoIntegralTxt": "https://legis.senado.leg.br/dadosabertos/discurso/texto-integral/512668",
+                "TipoAutor": "Senador(a)",
+                "TipoUsoPalavra": {
+                  "Codigo": "4838",
+                  "Descricao": "Não classificado",
+                  "IndicadorAtivo": "Sim",
+                  "Sigla": "NID"
+                },
+                "UF": "TO",
+                "UrlTextoBinario": "https://legis.senado.leg.br/dadosabertos/discurso/texto-binario/512668",
+                "id": "512668"
+              },
+              {
+                "Casa": "Congresso Nacional",
+                "CodigoParlamentar": "1186",
+                "CodigoPronunciamento": "512667",
+                "Data": "2025-03-26",
+                "FuncaoAutor": "SENADOR",
+                "Indexacao": "SESSÃO SOLENE, CONGRESSO NACIONAL, LANÇAMENTO, AGENDA LEGISLATIVA, CONFEDERAÇÃO DA AGRICULTURA E PECUARIA DO BRASIL (CNA), ANO CIVIL, DEBATE, ASSUNTO, RELEVANCIA, ECONOMIA NACIONAL, EXPORTAÇÃO, EQUILIBRIO, BALANÇA COMERCIAL, EMPREGO, RENDA, GARANTIA, SEGURANÇA, SEGURANÇA ALIMENTAR, MUDANÇA CLIMATICA.",
+                "NomeAutor": "Luis Carlos Heinze",
+                "Partido": "PP",
+                "Publicacoes": {
+                  "Publicacao": [
+                    {
+                      "DataPublicacao": "2025-03-27",
+                      "FontePublicacao": "Diário do Congresso Nacional",
+                      "PaginaFinal": "93",
+                      "PaginaInicial": "92",
+                      "SiglaFonte": "DCN",
+                      "TipoPublicacao": "PUB",
+                      "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=27/03/2025&paginaDireta=92"
+                    }
+                  ]
+                },
+                "Resumo": "Sessão Solene do Congresso Nacional destinada ao lançamento da Agenda Legislativa do Agro CNA 2025, convocada pelo Presidente do Congresso Nacional, em atendimento ao Requerimento do Congresso Nacional nº 3, de 2025.",
+                "TextoIntegral": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512667",
+                "TextoIntegralTxt": "https://legis.senado.leg.br/dadosabertos/discurso/texto-integral/512667",
+                "TipoAutor": "Senador(a)",
+                "TipoUsoPalavra": {
+                  "Codigo": "4819",
+                  "Descricao": "Discurso",
+                  "IndicadorAtivo": "Sim",
+                  "Sigla": "DIS"
+                },
+                "UF": "RS",
+                "UrlTextoBinario": "https://legis.senado.leg.br/dadosabertos/discurso/texto-binario/512667",
+                "id": "512667"
+              },
+              {
+                "Casa": "Congresso Nacional",
+                "CodigoParlamentar": "5736",
+                "CodigoPronunciamento": "512665",
+                "Data": "2025-03-26",
+                "FuncaoAutor": "SENADOR",
+                "Indexacao": "SESSÃO SOLENE, CONGRESSO NACIONAL, LANÇAMENTO, AGENDA LEGISLATIVA, CONFEDERAÇÃO DA AGRICULTURA E PECUARIA DO BRASIL (CNA), ANO CIVIL, DEBATE, ASSUNTO, RELEVANCIA, ECONOMIA NACIONAL, EXPORTAÇÃO, EQUILIBRIO, BALANÇA COMERCIAL, EMPREGO, RENDA, GARANTIA, SEGURANÇA, SEGURANÇA ALIMENTAR, MUDANÇA CLIMATICA.",
+                "NomeAutor": "Tereza Cristina",
+                "Partido": "PP",
+                "Publicacoes": {
+                  "Publicacao": [
+                    {
+                      "DataPublicacao": "2025-03-27",
+                      "FontePublicacao": "Diário do Congresso Nacional",
+                      "PaginaFinal": "92",
+                      "PaginaInicial": "92",
+                      "SiglaFonte": "DCN",
+                      "TipoPublicacao": "PUB",
+                      "UrlDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=27/03/2025&paginaDireta=92"
+                    }
+                  ]
+                },
+                "Resumo": "Sessão Solene do Congresso Nacional destinada ao lançamento da Agenda Legislativa do Agro CNA 2025, convocada pelo Presidente do Congresso Nacional, em atendimento ao Requerimento do Congresso Nacional nº 3, de 2025.",
+                "TextoIntegral": "https://www25.senado.leg.br/web/atividade/pronunciamentos/-/p/texto/512665",
+                "TextoIntegralTxt": "https://legis.senado.leg.br/dadosabertos/discurso/texto-integral/512665",
+                "TipoAutor": "Senador(a)",
+                "TipoUsoPalavra": {
+                  "Codigo": "4823",
+                  "Descricao": "Pela ordem",
+                  "IndicadorAtivo": "Sim",
+                  "Sigla": "POR"
+                },
+                "UF": "MS",
+                "UrlTextoBinario": "https://legis.senado.leg.br/dadosabertos/discurso/texto-binario/512665",
+                "id": "512665"
+              }
+            ]
+          },
+          "SiglaCasa": "CN",
+          "TipoSessao": "SOL"
+        }
+      ]
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/DiscursosSessaov4.xsd"
+  }
+}

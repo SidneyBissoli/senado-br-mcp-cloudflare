@@ -1,0 +1,162 @@
+{
+  "notasTaquigraficas": {
+    "dadosSessao": {
+      "casa": "SENADO FEDERAL",
+      "codigo": "452175",
+      "dataExtenso": "1º de abril de 2025",
+      "descricao": "Sessão Deliberativa Ordinária",
+      "diaSemana": "terça-feira",
+      "horaExtenso": "14 horas",
+      "legislatura": "57ª LEGISLATURA",
+      "numeroPlenario": "22",
+      "sessaoLegislativa": "3ª SESSÃO LEGISLATIVA ORDINÁRIA",
+      "siglaCasa": "SF",
+      "siglaTipo": "DOR"
+    },
+    "data": "2025-04-01T14:00:00-03:00",
+    "encontroHistorico": "false",
+    "numero": "16",
+    "quartos": [
+      {
+        "codStatusGrupoItem": "3",
+        "codigo": "3556067",
+        "dataFim": "2025-04-01T14:04:00-03:00",
+        "dataInicio": "2025-04-01T14:00:00-03:00",
+        "etapa": "3",
+        "itens": {
+          "codigo": "14452707",
+          "codigoOrador": "1146812",
+          "codigoRegistroFala": "56918",
+          "codigoSessaoOrdia": "452175",
+          "dataInicioFala": "2025-04-01T14:03:36-03:00",
+          "inicioEncontro": "false",
+          "isParagrafoAdicionadoFim": "false",
+          "nomeOrador": "Humberto Costa",
+          "orador": {
+            "codigo": "1146812",
+            "codigoOriginal": "5008",
+            "codigoTipo": "45",
+            "nome": "Humberto Costa",
+            "nomeBloco": "Bloco Parlamentar Pelo Brasil",
+            "nomeTipo": "Senador",
+            "sexo": "M",
+            "siglaPartido": "PT",
+            "siglaUF": "PE",
+            "tipoComposicao": "B"
+          },
+          "papelPalavra": "Presidente",
+          "removerParagrafoInicial": "false",
+          "sequencia": "1",
+          "statusDiscurso": "MOSTRAR",
+          "tipo": "Palavra"
+        },
+        "linkAudio": "https://legis.senado.leg.br/escriba-servicosweb/sessao/audio?d=1&np=22&sc=SF&dt=20250401&hiq=140000",
+        "sequencia": "1",
+        "texto": "O SR. PRESIDENTE (Humberto Costa. Bloco Parlamentar Pelo Brasil/PT - PE. Fala da Presidência.) – Havendo número regimental, declaro aberta a sessão.\nSob a proteção de Deus, iniciamos os nossos trabalhos.\n"
+      },
+      {
+        "codStatusGrupoItem": "3",
+        "codigo": "3556068",
+        "dataFim": "2025-04-01T14:08:00-03:00",
+        "dataInicio": "2025-04-01T14:04:00-03:00",
+        "etapa": "3",
+        "itens": [
+          {
+            "codigo": "14452709",
+            "codigoOrador": "1146812",
+            "codigoRegistroFala": "0",
+            "codigoSessaoOrdia": "452175",
+            "inicioEncontro": "false",
+            "isParagrafoAdicionadoFim": "false",
+            "nomeOrador": "Humberto Costa",
+            "orador": {
+              "codigo": "1146812",
+              "codigoOriginal": "5008",
+              "codigoTipo": "45",
+              "nome": "Humberto Costa",
+              "nomeBloco": "Bloco Parlamentar Pelo Brasil",
+              "nomeTipo": "Senador",
+              "sexo": "M",
+              "siglaPartido": "PT",
+              "siglaUF": "PE",
+              "tipoComposicao": "B"
+            },
+            "papelPalavra": "Presidente",
+            "removerParagrafoInicial": "false",
+            "sequencia": "1",
+            "statusDiscurso": "MOSTRAR",
+            "tipo": "Palavra"
+          },
+          {
+            "codigo": "14452708",
+            "codigoOrador": "1136932",
+            "codigoRegistroFala": "56919",
+            "codigoSessaoOrdia": "452175",
+            "codigoTipoUsoPalavra": "2",
+            "dataInicioFala": "2025-04-01T14:05:09-03:00",
+            "inicioEncontro": "false",
+            "isParagrafoAdicionadoFim": "true",
+            "nomeOrador": "Eduardo Girão",
+            "orador": {
+              "codigo": "1136932",
+              "codigoOriginal": "5976",
+              "codigoTipo": "45",
+              "nome": "Eduardo Girão",
+              "nomeBloco": "Bloco Parlamentar Vanguarda",
+              "nomeTipo": "Senador",
+              "sexo": "M",
+              "siglaPartido": "NOVO",
+              "siglaUF": "CE",
+              "tipoComposicao": "B"
+            },
+            "papelPalavra": "Orador",
+            "removerParagrafoInicial": "false",
+            "sequencia": "2",
+            "statusDiscurso": "MOSTRAR",
+            "tipo": "Palavra",
+            "tipoUsoPalavra": "Para discursar"
+          }
+        ],
+        "linkAudio": "https://legis.senado.leg.br/escriba-servicosweb/sessao/audio?d=1&np=22&sc=SF&dt=20250401&hiq=140400",
+        "sequencia": "2",
+        "texto": "As Senadoras e os Senadores poderão se inscrever para o uso da palavra por meio do aplicativo Senado Digital, por lista de inscrição que se encontra sobre a mesa ou por intermédio dos totens disponibilizados na Casa.\nA presente sessão deliberativa ordinária é destinada à apreciação das seguintes matérias, já disponibilizadas em avulsos eletrônicos e na Ordem do Dia eletrônica de hoje:\n- Proposta de Emenda à Constituição nº 2, de 2016, do Senador Randolfe Rodrigues;\n- Projeto de Lei Complementar nº 201, de 2019, do Senador Alessandro Vieira;\n- Projeto de Lei da Câmara nº 134, de 2017, do Deputado Giuseppe Vecci.\nPassamos aos oradores inscritos, que terão o prazo de 10 minutos para o uso da palavra.\nPela ordem de inscrição, o primeiro inscrito é o Senador Eduardo Girão, do Ceará.\nV. Exa. dispõe de 10 minutos para o pronunciamento.\nO SR. EDUARDO GIRÃO (Bloco Parlamentar Vanguarda/NOVO - CE. Para discursar.) – Paz e bem, querido Senador Humberto Costa, Sras. Senadoras, Srs. Senadores, funcionários desta Casa, assessores, brasileiras e brasileiros que nos acompanham pelo trabalho da equipe da TV Senado, da Rádio Senado, da Agência Senado.\nSr. Presidente, em 2019, quando eu cheguei aqui, junto com muitos colegas, logo no início deste mandato, eu dei entrada no PL 5.504, para disciplinar despesas com publicidade. Atenção: despesas com publicidades realizadas pelo Poder Executivo em todas as esferas do Governo. Além de propor uma drástica redução dos valores, esse projeto regulamenta o seu uso exclusivamente para fins educativos e informativos, de modo a coibir abusos com autopromoção.\nAlgumas das motivações dessa iniciativa foram os gastos escandalosos com publicidade do Governo do Estado do Ceará, que chegou a ultrapassar R$1,2 bilhão – b de bola – em apenas oito anos, no Governo Camilo Santana. Depois, no Governo Elmano, também do PT, há um estrago que está se fazendo com propaganda, jogando dinheiro público na lata do lixo, enquanto nós temos muitas outras prioridades. Isso num estado onde a população sofre com muitos problemas, como a crise aguda e crônica da segurança pública. E eu pedi intervenção! Hoje faz sete dias, uma semana que eu pedi intervenção federal na segurança do Estado do Ceará, Senador Plínio, e até agora o Presidente da República não deu nenhuma resposta. E o povo com medo, explodindo provedores de internet, com cidades inteiras sem internet, porque o crime quer esse pedaço, esse naco de poder, e tem dinheiro envolvido.\nOutra razão é a inexistência de campanhas educativas promovidas por todas as esferas de Governo. Seriam muito bem-vindas campanhas de orientação e prevenção de acidentes de trânsito, de proteção ambiental e contra o uso de drogas – como o Senador Plínio colocou hoje lá, junto com o Marcos Pontes, na CAE – e na defesa da vida desde a concepção, ou seja, campanhas educativas.\nNo Brasil, tanto o Poder Judiciário como o Poder Executivo vêm dando péssimos exemplos com gastança irresponsável enquanto o trabalhador, que sustenta todas essas máquinas públicas e sofre para comprar simples alimentos para o sustento da família, como a questão do ovo, cujo preço escandaloso estamos vendo aí, por exemplo.\nO da picanha, nem se fala, né, Senador Plínio?\n\r\n"
+      },
+      {
+        "codStatusGrupoItem": "3",
+        "codigo": "3556069",
+        "dataFim": "2025-04-01T14:12:00-03:00",
+        "dataInicio": "2025-04-01T14:08:00-03:00",
+        "etapa": "3",
+        "itens": {
+          "codigo": "14452710",
+          "codigoOrador": "1136932",
+          "codigoRegistroFala": "0",
+          "codigoSessaoOrdia": "452175",
+          "inicioEncontro": "false",
+          "isParagrafoAdicionadoFim": "false",
+          "nomeOrador": "Eduardo Girão",
+          "orador": {
+            "codigo": "1136932",
+            "codigoOriginal": "5976",
+            "codigoTipo": "45",
+            "nome": "Eduardo Girão",
+            "nomeBloco": "Bloco Parlamentar Vanguarda",
+            "nomeTipo": "Senador",
+            "sexo": "M",
+            "siglaPartido": "NOVO",
+            "siglaUF": "CE",
+            "tipoComposicao": "B"
+          },
+          "papelPalavra": "Orador",
+          "removerParagrafoInicial": "true",
+          "sequencia": "1",
+          "statusDiscurso": "MOSTRAR",
+          "tipo": "Palavra"
+        },
+        "linkAudio": "https://legis.senado.leg.br/escriba-servicosweb/sessao/audio?d=1&np=22&sc=SF&dt=20250401&hiq=140800",
+        "sequencia": "3",
+        "texto": "Então, dos três Poderes da República, só restou o Legislativo para dar bons exemplos de responsabilidade fiscal, em respeito à população. E, mais do que nunca, cabe ao Senado essa importante iniciativa, isso porque o Senado tem como orçamento, em 2025, o elevado valor de R$5.412.138.000,00 custeando o trabalho de apenas 81 Senadores. Ou seja, cada um de nós custa para a população brasileira mais de R$5 milhões por dia!\nIsso me incomoda muito. Desde o início do mandato, eu venho abrindo mão de vários benefícios de que eu já falei aqui algumas vezes, de algumas benesses que poderiam ser economizadas. E o nosso gabinete já reduziu e devolveu R$11 milhões até agora, de valores que não precisava. Portanto, eu sou completamente contra – eu quero deixar isso claro – porque há rumores de que o Senado vai contratar publicidade, empresa de publicidade, fazer pregão, fazer licitação para investir em propaganda, como faz o Ministério Público. Este é o argumento: o Ministério Público já faz, já faz a Assembleia Legislativa, o Senado tem que fazer. Eu sou contra! Isso é um desrespeito com a população brasileira, quero deixar isso muito claro. Se quer se aproximar da sociedade, vote em pautas que sejam do interesse dela, do povo brasileiro. Aí você se aproxima da sociedade, e não pegando mais dinheiro para colocar na mão, para melhorar a imagem. É o famoso chapéu alheio: \"fazer cortesia com o chapéu alheio\". Não precisa disso.\nSou completamente contra qualquer decisão administrativa que não seja para redução de despesa desta Casa, Sr. Presidente. É inconcebível a possibilidade de contratação de serviço destinado à publicidade. O Senado já dispõe de uma competente – inclusive, muito bem preparados os jornalistas da Casa – estrutura de comunicação, com câmeras modernas, equipamento do que existe de mais tecnológico. Sozinha, a nossa Comunicação Social responde pelo orçamento anual de R$50 milhões e dá conta do recado, com esses R$50 milhões. Não tem que contratar emissora a mais, fora, para melhorar a imagem do Senado, não. Vamos parar com isso!\nO dinheiro não aguenta desaforo, e o povo brasileiro está sofrendo, está sofrendo com a gastança desse Governo irresponsável, e com o STF fazendo licitações milionárias por bobagem. Nós já denunciamos até gravata e lenço, dando de presente, e a gente não pode entrar nessa!\nVamos apenas elencar algumas das atribuições dessa Secretaria que engloba a Agência Senado, que administra a TV e a Rádio Senado: divulgação das atividades do Senado e dos Senadores – eu mesmo dou entrevista sempre à TV Senado, à Rádio Senado e à Agência Senado, não precisa contratar empresa de fora para fazer mais isso; execução da política de comunicação e divulgação institucional da Casa – já é feita pela equipe da Agência Senado, da Comunicação da Casa; gerir os perfis institucionais da Casa – estão sempre publicando coisas, são ágeis; coordenar e gerir a Rede Senado de rádio e TV. Ou seja, já é feito isso aqui, não precisa contratar emissora para isso.\n"
+      }
+    ]
+  }
+}

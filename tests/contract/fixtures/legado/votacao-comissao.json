@@ -1,0 +1,155 @@
+{
+  "VotacoesComissao": {
+    "Metadados": {
+      "DataVersaoServico": "2019-04-17",
+      "Versao": "15/07/2026 23:27:56",
+      "VersaoServico": "1"
+    },
+    "Votacoes": {
+      "Votacao": [
+        {
+          "CodigoColegiado": "34",
+          "CodigoParlamentarPresidente": "3361",
+          "CodigoReuniao": "4097",
+          "CodigoVotacao": "6932",
+          "DataHoraInicioReuniao": "2015-10-21T10:25:00",
+          "DescricaoIdentificacaoMateria": "Projeto de Lei do Senado n° 562, de 2011",
+          "DescricaoVotacao": "PLS 562/2011",
+          "IdentificacaoMateria": "PLS 562/2011",
+          "NomeColegiado": "Comissão de Constituição, Justiça e Cidadania",
+          "NomeParlamentarPresidente": "José Maranhão",
+          "NumeroReuniaoColegiado": "32",
+          "SiglaCasaColegiado": "SF",
+          "SiglaColegiado": "CCJ",
+          "TipoReuniao": "Ordinária",
+          "TotalVotosAbstencao": "0",
+          "TotalVotosNao": "1",
+          "TotalVotosSim": "13",
+          "Votos": {
+            "Voto": [
+              {
+                "CodigoParlamentar": "5006",
+                "NomeParlamentar": "Gleisi Hoffmann",
+                "QualidadeVoto": "S",
+                "SiglaCasaParlamentar": "SF",
+                "SiglaPartidoParlamentar": "PT",
+                "VotoPresidente": "false"
+              },
+              {
+                "CodigoParlamentar": "5008",
+                "NomeParlamentar": "Humberto Costa",
+                "QualidadeVoto": "S",
+                "SiglaCasaParlamentar": "SF",
+                "SiglaPartidoParlamentar": "PT",
+                "VotoPresidente": "false"
+              },
+              {
+                "CodigoParlamentar": "825",
+                "NomeParlamentar": "Paulo Paim",
+                "QualidadeVoto": "S",
+                "SiglaCasaParlamentar": "SF",
+                "SiglaPartidoParlamentar": "PT",
+                "VotoPresidente": "false"
+              }
+            ]
+          }
+        },
+        {
+          "CodigoColegiado": "34",
+          "CodigoParlamentarPresidente": "3361",
+          "CodigoReuniao": "4555",
+          "CodigoVotacao": "8662",
+          "DataHoraInicioReuniao": "2016-03-02T10:15:00",
+          "DescricaoIdentificacaoMateria": "Projeto de Lei do Senado n° 476, de 2011",
+          "DescricaoVotacao": "PLS 476/2011",
+          "IdentificacaoMateria": "PLS 476/2011",
+          "NomeColegiado": "Comissão de Constituição, Justiça e Cidadania",
+          "NomeParlamentarPresidente": "José Maranhão",
+          "NumeroReuniaoColegiado": "3",
+          "SiglaCasaColegiado": "SF",
+          "SiglaColegiado": "CCJ",
+          "TipoReuniao": "Ordinária",
+          "TotalVotosAbstencao": "0",
+          "TotalVotosNao": "0",
+          "TotalVotosSim": "13",
+          "Votos": {
+            "Voto": [
+              {
+                "CodigoParlamentar": "615",
+                "NomeParlamentar": "José Pimentel",
+                "QualidadeVoto": "S",
+                "SiglaCasaParlamentar": "SF",
+                "SiglaPartidoParlamentar": "PT",
+                "VotoPresidente": "false"
+              },
+              {
+                "CodigoParlamentar": "5008",
+                "NomeParlamentar": "Humberto Costa",
+                "QualidadeVoto": "S",
+                "SiglaCasaParlamentar": "SF",
+                "SiglaPartidoParlamentar": "PT",
+                "VotoPresidente": "false"
+              },
+              {
+                "CodigoParlamentar": "3823",
+                "NomeParlamentar": "Benedito de Lira",
+                "QualidadeVoto": "S",
+                "SiglaCasaParlamentar": "SF",
+                "SiglaPartidoParlamentar": "PP",
+                "VotoPresidente": "false"
+              }
+            ]
+          }
+        },
+        {
+          "CodigoColegiado": "34",
+          "CodigoParlamentarPresidente": "615",
+          "CodigoReuniao": "5704",
+          "CodigoVotacao": "13337",
+          "DataHoraInicioReuniao": "2016-12-07T11:18:00",
+          "DescricaoIdentificacaoMateria": "Projeto de Lei do Senado n° 146, de 2007",
+          "DescricaoVotacao": "Substitutivo ao PLS 146/2007",
+          "IdentificacaoMateria": "PLS 146/2007",
+          "NomeColegiado": "Comissão de Constituição, Justiça e Cidadania",
+          "NomeParlamentarPresidente": "José Pimentel",
+          "NumeroReuniaoColegiado": "43",
+          "SiglaCasaColegiado": "SF",
+          "SiglaColegiado": "CCJ",
+          "TipoReuniao": "Ordinária",
+          "TotalVotosAbstencao": "0",
+          "TotalVotosNao": "0",
+          "TotalVotosSim": "17",
+          "Votos": {
+            "Voto": [
+              {
+                "CodigoParlamentar": "3823",
+                "NomeParlamentar": "Benedito de Lira",
+                "QualidadeVoto": "S",
+                "SiglaCasaParlamentar": "SF",
+                "SiglaPartidoParlamentar": "PP",
+                "VotoPresidente": "false"
+              },
+              {
+                "CodigoParlamentar": "5533",
+                "NomeParlamentar": "Lasier Martins",
+                "QualidadeVoto": "S",
+                "SiglaCasaParlamentar": "SF",
+                "SiglaPartidoParlamentar": "PDT",
+                "VotoPresidente": "false"
+              },
+              {
+                "CodigoParlamentar": "825",
+                "NomeParlamentar": "Paulo Paim",
+                "QualidadeVoto": "S",
+                "SiglaCasaParlamentar": "SF",
+                "SiglaPartidoParlamentar": "PT",
+                "VotoPresidente": "false"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/VotacoesComissaov1.xsd"
+  }
+}

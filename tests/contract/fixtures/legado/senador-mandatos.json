@@ -1,0 +1,73 @@
+{
+  "MandatoParlamentar": {
+    "Metadados": {
+      "DataVersaoServico": "2021-09-09",
+      "DescricaoDataSet": "Retorna a relação dos Mandatos do Senador informado no parâmetro.",
+      "Versao": "15/07/2026 23:25:57",
+      "VersaoServico": "5"
+    },
+    "Parlamentar": {
+      "Codigo": "5672",
+      "Mandatos": {
+        "Mandato": [
+          {
+            "CodigoMandato": "596",
+            "DescricaoParticipacao": "Titular",
+            "Exercicios": {
+              "Exercicio": [
+                {
+                  "CodigoExercicio": "3028",
+                  "DataInicio": "2023-02-01"
+                }
+              ]
+            },
+            "Partidos": {
+              "Partido": [
+                {
+                  "CodigoPartido": "521",
+                  "DataFiliacao": "2025-11-12",
+                  "Nome": "REPUBLICANOS",
+                  "Sigla": "REPUBLICANOS"
+                },
+                {
+                  "CodigoPartido": "582",
+                  "DataDesfiliacao": "2025-11-10",
+                  "DataFiliacao": "2022-02-24",
+                  "Nome": "União Brasil",
+                  "Sigla": "UNIÃO"
+                }
+              ]
+            },
+            "PrimeiraLegislaturaDoMandato": {
+              "DataFim": "2027-01-31",
+              "DataInicio": "2023-02-01",
+              "NumeroLegislatura": "57"
+            },
+            "SegundaLegislaturaDoMandato": {
+              "DataFim": "2031-01-31",
+              "DataInicio": "2027-02-01",
+              "NumeroLegislatura": "58"
+            },
+            "Suplentes": {
+              "Suplente": [
+                {
+                  "CodigoParlamentar": "6343",
+                  "DescricaoParticipacao": "1º Suplente",
+                  "NomeParlamentar": "Gemil Junior"
+                },
+                {
+                  "CodigoParlamentar": "6344",
+                  "DescricaoParticipacao": "2º Suplente",
+                  "NomeParlamentar": "Coronel Casagrande"
+                }
+              ]
+            },
+            "UfParlamentar": "AC"
+          }
+        ]
+      },
+      "Nome": "Alan Rick"
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/MandatoParlamentarv5.xsd"
+  }
+}

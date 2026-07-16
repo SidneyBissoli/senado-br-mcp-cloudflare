@@ -1,0 +1,417 @@
+{
+  "AgendaPlenario": {
+    "Metadados": {
+      "DataVersaoServico": "2019-10-15",
+      "DescricaoDataSet": "Retorna a Agenda do mês nos Plenários do Senado Federal e Congresso Nacional (a partir da data informada até o fim do mês.",
+      "Versao": "15/07/2026 23:27:22",
+      "VersaoServico": "2"
+    },
+    "Sessoes": {
+      "Sessao": [
+        {
+          "Casa": "SF",
+          "CodigoSessao": "452175",
+          "CodigoSituacaoSessao": "40",
+          "Data": "2025-04-01",
+          "DescricaoTipoPresenca": "Presencial",
+          "DiaSemana": "terça-feira",
+          "DiaUtil": "01",
+          "Hora": "14:00",
+          "Horario": "14 horas ",
+          "Legislatura": "57",
+          "LocalSessao": "Plenário do Senado Federal",
+          "Materias": {
+            "Materia": [
+              {
+                "AnoMateria": "2016",
+                "Apreciacao": "Terceira sessão de discussão, em primeiro turno",
+                "ApreciacaoPapeleta": "Terceira sessão de discussão, em primeiro turno, da Proposta de Emenda à Constituição nº 2, de 2016, do Senador Randolfe Rodrigues e outros Seanadores, que",
+                "CodigoMateria": "124779",
+                "DescricaoIdentificacaoMateria": "PEC 2/2016",
+                "DescricaoObjetivoProcesso": "Iniciadora",
+                "DescricaoTipoPauta": "Pauta",
+                "Ementa": "Altera o art. 6º da Constituição da República, para incluir, dentre os direitos sociais, o direito ao saneamento básico.",
+                "EmentaPapeleta": "altera o art. 6º da Constituição da República, para incluir, dentre os direitos sociais, o direito ao saneamento básico.",
+                "Identificacao": "PROPOSTA DE EMENDA À CONSTITUIÇÃO Nº 2, DE 2016\n\n",
+                "NomeAutor": "Randolfe Rodrigues",
+                "NumeroMateria": "00002",
+                "Parecer": "Parecer favorável nº 22, de 2022, da Comissão de Constituição, Justiça e Cidadania, Relator: Senador Rogério Carvalho.",
+                "SequenciaOrdem": "1",
+                "SiglaCasaIniciadora": "SF",
+                "SiglaMateria": "PEC",
+                "TipoPauta": "O"
+              },
+              {
+                "AnoMateria": "2025",
+                "Apreciacao": "Votação, em turno único",
+                "ApreciacaoPapeleta": "Votação, em turno único, do Requerimento nº 53, de 2025, do Senador Astronauta Marcos Pontes e outros Senadores, que\n",
+                "CodigoMateria": "167133",
+                "DescricaoIdentificacaoMateria": "RQS 53/2025",
+                "DescricaoTipoPauta": "Extrapauta",
+                "Ementa": "Solicita a realização de Sessão Especial destinada a celebrar o Dia Nacional da Ciência e do Pesquisador Científico.",
+                "EmentaPapeleta": "solicita a realização de Sessão Especial destinada a celebrar o Dia Nacional da Ciência e do Pesquisador Científico.",
+                "Identificacao": "REQUERIMENTO Nº 53, DE 2025\n",
+                "NomeAutor": "Astronauta Marcos Pontes",
+                "NumeroMateria": "00053",
+                "SequenciaOrdem": "1",
+                "SiglaCasaIniciadora": "SF",
+                "SiglaMateria": "RQS",
+                "TipoPauta": "E"
+              },
+              {
+                "AnoMateria": "2019",
+                "Apreciacao": "Discussão, em turno único",
+                "ApreciacaoPapeleta": "Discussão, em turno único, do Projeto de Lei Complementar nº 201, de 2019, do Senador Alessandro Vieira, que",
+                "CodigoMateria": "138472",
+                "DescricaoIdentificacaoMateria": "PLP 201/2019",
+                "DescricaoObjetivoProcesso": "Iniciadora",
+                "DescricaoTipoPauta": "Pauta",
+                "Ementa": "Altera o inciso I do §1º do art. 48 da Lei Complementar nº 101, de 4 de maio de 2000, para garantir a participação popular e a realização de audiências públicas, durante os processos de elaboração e discussão dos planos, lei de diretrizes orçamentárias e orçamentos.",
+                "EmentaPapeleta": "altera o inciso I do §1º do art. 48 da Lei Complementar nº 101, de 4 de maio de 2000, para garantir a participação popular e a realização de audiências públicas, durante os processos de elaboração e discussão dos planos, lei de diretrizes orçamentárias e orçamentos.",
+                "Identificacao": "PROJETO DE LEI COMPLEMENTAR Nº 201, DE 2019\n\n",
+                "NomeAutor": "Alessandro Vieira",
+                "NumeroMateria": "00201",
+                "Parecer": "Parecer nº 23, de 2024, da Comissão de Assuntos Econômicos, Relatora: Senadora Professora Dorinha Seabra, Relator \"ad hoc\": Senador Otto Alencar, favorável ao projeto, nos termos da Emenda nº 1 (Substitutivo).",
+                "SequenciaOrdem": "2",
+                "SiglaCasaIniciadora": "SF",
+                "SiglaMateria": "PLP",
+                "TipoPauta": "O"
+              }
+            ]
+          },
+          "Mes": "Abril",
+          "NumeroSessao": "16ª SESSÃO ",
+          "Oradores": {
+            "TipoOrador": [
+              {
+                "CodigoTipoOrador": "13",
+                "DescricaoTipoOrador": "Oradores Inscritos",
+                "OradorSessao": {
+                  "Orador": [
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "1",
+                      "Parlamentar": "Senador Eduardo Girão"
+                    },
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "2",
+                      "Parlamentar": "Senador Jorge Kajuru"
+                    },
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "3",
+                      "Parlamentar": "Senador Paulo Paim"
+                    }
+                  ]
+                }
+              },
+              {
+                "CodigoTipoOrador": "32",
+                "DescricaoTipoOrador": "Pela Liderança",
+                "OradorSessao": {
+                  "Orador": [
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "1",
+                      "Parlamentar": "Senador Plínio Valério"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "PautaConfirmada": "Sim",
+          "Realizada": {
+            "Status": "Sim"
+          },
+          "SessaoLegislativa": "3",
+          "SituacaoSessao": "Encerrada",
+          "TipoPresenca": "P",
+          "TipoSessao": "SESSÃO DELIBERATIVA ORDINÁRIA "
+        },
+        {
+          "Casa": "SF",
+          "CodigoSessao": "452176",
+          "CodigoSituacaoSessao": "40",
+          "Data": "2025-04-02",
+          "DescricaoTipoPresenca": "Presencial",
+          "DiaSemana": "quarta-feira",
+          "DiaUtil": "02",
+          "Hora": "14:00",
+          "Horario": "14 horas ",
+          "Legislatura": "57",
+          "LocalSessao": "Plenário do Senado Federal",
+          "Materias": {
+            "Materia": [
+              {
+                "AnoMateria": "2016",
+                "Apreciacao": "Quarta sessão de discussão, em primeiro turno",
+                "ApreciacaoPapeleta": "Quarta sessão de discussão, em primeiro turno, da Proposta de Emenda à Constituição nº 2, de 2016, do Senador Randolfe Rodrigues e outros Senadores, que",
+                "CodigoMateria": "124779",
+                "DescricaoIdentificacaoMateria": "PEC 2/2016",
+                "DescricaoObjetivoProcesso": "Iniciadora",
+                "DescricaoTipoPauta": "Pauta",
+                "Ementa": "Altera o art. 6º da Constituição da República, para incluir, dentre os direitos sociais, o direito ao saneamento básico.",
+                "EmentaPapeleta": "altera o art. 6º da Constituição da República, para incluir, dentre os direitos sociais, o direito ao saneamento básico.",
+                "Identificacao": "PROPOSTA DE EMENDA À CONSTITUIÇÃO Nº 2, DE 2016\n\n",
+                "NomeAutor": "Randolfe Rodrigues",
+                "NumeroMateria": "00002",
+                "Parecer": "Parecer favorável nº 22, de 2022, da Comissão de Constituição, Justiça e Cidadania, Relator: Senador Rogério Carvalho.",
+                "SequenciaOrdem": "1",
+                "SiglaCasaIniciadora": "SF",
+                "SiglaMateria": "PEC",
+                "TipoPauta": "O"
+              },
+              {
+                "AnoMateria": "2020",
+                "Apreciacao": "Discussão, em turno único",
+                "ApreciacaoPapeleta": "Discussão, em turno único, do Projeto de Lei Complementar nº 257, de 2020, do Senador Izalci Lucas, que ",
+                "CodigoMateria": "145264",
+                "DescricaoIdentificacaoMateria": "PLP 257/2020",
+                "DescricaoObjetivoProcesso": "Iniciadora",
+                "Ementa": "Altera a Lei Complementar nº 129, de 8 de janeiro de 2009, para ampliar a representação empresarial no Conselho Deliberativo do Desenvolvimento do Centro-Oeste - CONDEL/SUDECO.",
+                "EmentaPapeleta": "altera a Lei Complementar nº 129, de 8 de janeiro de 2009, para ampliar a representação empresarial no Conselho Deliberativo do Desenvolvimento do Centro-Oeste - CONDEL/SUDECO.",
+                "Identificacao": "PROJETO DE LEI COMPLEMENTAR Nº 257, DE 2020\n\n",
+                "NomeAutor": "Izalci Lucas",
+                "NumeroMateria": "00257",
+                "Parecer": "Parecer favorável nº 17, de 2024, da Comissão de Desenvolvimento Regional e Turismo, Relator: Senador Wilder Morais.",
+                "SequenciaOrdem": "1",
+                "SiglaCasaIniciadora": "SF",
+                "SiglaMateria": "PLP",
+                "TipoPauta": "R"
+              },
+              {
+                "AnoMateria": "2025",
+                "Apreciacao": "Votação, em turno único",
+                "ApreciacaoPapeleta": "Votação, em turno único, do Requerimento nº 240, de 2025, do Senador Dr. Hiran e outros Senadores, que \n\n",
+                "CodigoMateria": "167842",
+                "DescricaoIdentificacaoMateria": "RQS 240/2025",
+                "DescricaoTipoPauta": "Extrapauta",
+                "Ementa": "Solicita a realização de Sessão Especial destinada a celebrar os 80 anos do Conselho Federal de Medicina - CFM.",
+                "EmentaPapeleta": "solicita a realização de Sessão Especial destinada a celebrar os 80 anos do Conselho Federal de Medicina - CFM.",
+                "Identificacao": "REQUERIMENTO Nº 240, DE 2025\n",
+                "NomeAutor": "Dr. Hiran",
+                "NumeroMateria": "00240",
+                "SequenciaOrdem": "2",
+                "SiglaCasaIniciadora": "SF",
+                "SiglaMateria": "RQS",
+                "TipoPauta": "E"
+              }
+            ]
+          },
+          "Mes": "Abril",
+          "NumeroSessao": "17ª SESSÃO ",
+          "Oradores": {
+            "TipoOrador": [
+              {
+                "CodigoTipoOrador": "13",
+                "DescricaoTipoOrador": "Oradores Inscritos",
+                "OradorSessao": {
+                  "Orador": [
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "1",
+                      "Parlamentar": "Senador Esperidião Amin"
+                    },
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "2",
+                      "Parlamentar": "Senador Jorge Kajuru"
+                    },
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "3",
+                      "Parlamentar": "Senador Chico Rodrigues"
+                    }
+                  ]
+                }
+              },
+              {
+                "CodigoTipoOrador": "33",
+                "DescricaoTipoOrador": "Comunicação Inadiável",
+                "OradorSessao": {
+                  "Orador": [
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "1",
+                      "Parlamentar": "Senador Humberto Costa"
+                    }
+                  ]
+                }
+              },
+              {
+                "CodigoTipoOrador": "32",
+                "DescricaoTipoOrador": "Pela Liderança",
+                "OradorSessao": {
+                  "Orador": [
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "1",
+                      "Parlamentar": "Senador Jaques Wagner"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "PautaConfirmada": "Sim",
+          "Realizada": {
+            "Status": "Sim"
+          },
+          "SessaoLegislativa": "3",
+          "SituacaoSessao": "Encerrada",
+          "TipoPresenca": "P",
+          "TipoSessao": "SESSÃO DELIBERATIVA ORDINÁRIA "
+        },
+        {
+          "Casa": "SF",
+          "CodigoSessao": "452183",
+          "CodigoSituacaoSessao": "40",
+          "Data": "2025-04-03",
+          "DescricaoTipoPresenca": "Presencial",
+          "DiaSemana": "quinta-feira",
+          "DiaUtil": "03",
+          "Hora": "11:00",
+          "Horario": "11 horas ",
+          "Legislatura": "57",
+          "LocalSessao": "Plenário do Senado Federal",
+          "Materias": {
+            "Materia": [
+              {
+                "AnoMateria": "2023",
+                "Apreciacao": "Discussão, em turno único",
+                "ApreciacaoPapeleta": "Discussão, em turno único, do Projeto de Lei nº 223, de 2023, do Deputado Paulo Teixeira, que\n\n\n",
+                "CodigoMateria": "159782",
+                "DescricaoIdentificacaoMateria": "PL 223/2023",
+                "DescricaoObjetivoProcesso": "Revisora",
+                "DescricaoTipoPauta": "Pauta",
+                "Ementa": "Acrescenta dispositivo à Lei nº 13.105, de 16 de março de 2015 (Código de Processo Civil), para estabelecer que a gratuidade da justiça não compreende a remuneração do conciliador ou mediador pelo trabalho nas audiências que excederem o percentual referido no § 2º do art. 169 do Código de Processo Civil.",
+                "EmentaPapeleta": "acrescenta dispositivo à Lei nº 13.105, de 16 de março de 2015 (Código de Processo Civil), para estabelecer que a gratuidade da justiça não compreende a remuneração do conciliador ou mediador pelo trabalho nas audiências que excederem o percentual referido no § 2º do art. 169 do Código de Processo Civil.",
+                "Identificacao": "PROJETO DE LEI Nº 223, DE 2023\n\n",
+                "NomeAutor": "Paulo Teixeira",
+                "NumeroMateria": "00223",
+                "Parecer": "Parecer nºs: \n- 3, de 2025, da Comissão de Constituição, Justiça e Cidadania, Relator: Senador Cid Gomes, favorável ao projeto e à Emenda nº 1, nos termos da Emenda nº 2 (Substitutivo), que apresenta; e\n- 26, de 2025, de Plenário, Relator: Senador Cid Gomes, pela rejeição da Emenda nº 3.",
+                "SequenciaOrdem": "1",
+                "SiglaCasaIniciadora": "CD",
+                "SiglaMateria": "PL",
+                "TipoPauta": "O"
+              },
+              {
+                "AnoMateria": "2025",
+                "Apreciacao": "Votação, em turno único",
+                "ApreciacaoPapeleta": "Votação, em turno único, do Requerimento nº 239, de 2025, da Senadora Teresa Leitão e outros Senadores, que\n\n",
+                "CodigoMateria": "167841",
+                "DescricaoIdentificacaoMateria": "RQS 239/2025",
+                "DescricaoTipoPauta": "Extrapauta",
+                "Ementa": "Solicita a realização de Sessão Especial destinada a celebrar os 200 anos da Confederação do Equador.",
+                "EmentaPapeleta": "solicita a realização de Sessão Especial destinada a celebrar os 200 anos da Confederação do Equador.",
+                "Identificacao": "REQUERIMENTO Nº 239, DE 2025\n\n",
+                "NomeAutor": "Teresa Leitão",
+                "NumeroMateria": "00239",
+                "SequenciaOrdem": "1",
+                "SiglaCasaIniciadora": "SF",
+                "SiglaMateria": "RQS",
+                "TipoPauta": "E"
+              },
+              {
+                "AnoMateria": "2021",
+                "Apreciacao": "Discussão, em turno único",
+                "ApreciacaoPapeleta": "Discussão, em turno único, do Projeto de Lei nº 610, de 2021, do Deputado Vinicius Carvalho, que",
+                "CodigoMateria": "154327",
+                "DescricaoIdentificacaoMateria": "PL 610/2021",
+                "DescricaoObjetivoProcesso": "Revisora",
+                "DescricaoTipoPauta": "Pauta",
+                "Ementa": "Institui a Campanha Nacional de Incentivo à Doação de Cabelo a Pessoas Carentes em Tratamento de Câncer e Vítimas de Escalpelamento.",
+                "EmentaPapeleta": "institui a Campanha Nacional de Incentivo à Doação de Cabelo a Pessoas Carentes em Tratamento de Câncer e Vítimas de Escalpelamento.",
+                "Identificacao": "PROJETO DE LEI Nº 610, DE 2021\n\n",
+                "NomeAutor": "Vinicius Carvalho",
+                "NumeroMateria": "00610",
+                "Parecer": "Parecer nº 2, de 2025, da Comissão de Assuntos Sociais, Relatora: Senadora Damares Alves, favorável ao projeto, com a Emenda nº 1, de redação, que apresenta.",
+                "SequenciaOrdem": "2",
+                "SiglaCasaIniciadora": "CD",
+                "SiglaMateria": "PL",
+                "TipoPauta": "O"
+              }
+            ]
+          },
+          "Mes": "Abril",
+          "NumeroSessao": "18ª SESSÃO ",
+          "Oradores": {
+            "TipoOrador": [
+              {
+                "CodigoTipoOrador": "13",
+                "DescricaoTipoOrador": "Oradores Inscritos",
+                "OradorSessao": {
+                  "Orador": [
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "1",
+                      "Parlamentar": "Senador Jorge Kajuru"
+                    },
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "2",
+                      "Parlamentar": "Senadora Damares Alves"
+                    },
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "3",
+                      "Parlamentar": "Senador Veneziano Vital do Rêgo"
+                    }
+                  ]
+                }
+              },
+              {
+                "CodigoTipoOrador": "32",
+                "DescricaoTipoOrador": "Pela Liderança",
+                "OradorSessao": {
+                  "Orador": [
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "1",
+                      "Parlamentar": "Senador Marcos Rogério"
+                    }
+                  ]
+                }
+              },
+              {
+                "CodigoTipoOrador": "17",
+                "DescricaoTipoOrador": "(Art. 17, § 1º)",
+                "OradorSessao": {
+                  "Orador": [
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "1",
+                      "Parlamentar": "Senador Paulo Paim"
+                    },
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "2",
+                      "Parlamentar": "Senador Eduardo Girão"
+                    },
+                    {
+                      "IndicadorCancelado": "N",
+                      "Ordem": "3",
+                      "Parlamentar": "Senador Plínio Valério",
+                      "TextoInformacao": "Redistribuído"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "PautaConfirmada": "Sim",
+          "Realizada": {
+            "Status": "Sim"
+          },
+          "SessaoLegislativa": "3",
+          "SituacaoSessao": "Encerrada",
+          "TipoPresenca": "P",
+          "TipoSessao": "SESSÃO DELIBERATIVA EXTRAORDINÁRIA "
+        }
+      ]
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/AgendaPlenariov2.xsd"
+  }
+}

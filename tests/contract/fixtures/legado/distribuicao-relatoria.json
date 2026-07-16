@@ -1,0 +1,68 @@
+{
+  "DistribuicaodeRelatoria": {
+    "Metadados": {
+      "DataVersaoServico": "2017-05-02",
+      "Versao": "15/07/2026 23:27:15",
+      "VersaoServico": "2"
+    },
+    "Totais": {
+      "Parlamentares": [
+        {
+          "CodigoParlamentar": "5748",
+          "Comissao": "Comissão de Constituição, Justiça e Cidadania",
+          "Foto": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador5748.jpg",
+          "Parlamentar": "Senador Veneziano Vital do Rêgo",
+          "Partido": "MDB",
+          "QTD": "17",
+          "Quantidade": "17",
+          "SiglaComissao": "CCJ",
+          "SiglaUnidadeTramitacaoAtual": "CCJ",
+          "URL": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/5748",
+          "Uf": [
+            "PB",
+            "PB"
+          ],
+          "UnidadeTramitacaoAtual": "Comissão de Constituição, Justiça e Cidadania",
+          "versao": "15/07/2026 23:26:54"
+        },
+        {
+          "CodigoParlamentar": "5793",
+          "Comissao": "Comissão de Constituição, Justiça e Cidadania",
+          "Foto": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador5793.jpg",
+          "Parlamentar": "Senador Dr. Hiran",
+          "Partido": "PP",
+          "QTD": "1",
+          "Quantidade": "1",
+          "SiglaComissao": "CCJ",
+          "SiglaUnidadeTramitacaoAtual": "CCJ",
+          "URL": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/5793",
+          "Uf": [
+            "RR",
+            "RR"
+          ],
+          "UnidadeTramitacaoAtual": "Comissão de Constituição, Justiça e Cidadania",
+          "versao": "15/07/2026 23:26:54"
+        },
+        {
+          "CodigoParlamentar": "5411",
+          "Comissao": "Comissão de Constituição, Justiça e Cidadania",
+          "Foto": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador5411.jpg",
+          "Parlamentar": "Senador Weverton",
+          "Partido": "PDT",
+          "QTD": "8",
+          "Quantidade": "8",
+          "SiglaComissao": "CCJ",
+          "SiglaUnidadeTramitacaoAtual": "CCJ",
+          "URL": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/5411",
+          "Uf": [
+            "MA",
+            "MA"
+          ],
+          "UnidadeTramitacaoAtual": "Comissão de Constituição, Justiça e Cidadania",
+          "versao": "15/07/2026 23:26:54"
+        }
+      ]
+    },
+    "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/DistribuicaodeRelatoriav2.xsd"
+  }
+}

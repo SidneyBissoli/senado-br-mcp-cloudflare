@@ -1,0 +1,54 @@
+{
+  "data": [
+    {
+      "parlamentar": {
+        "estado": "AC",
+        "nome": "ALAN RICK",
+        "partido": null
+      },
+      "setor": {
+        "codigo": 0,
+        "endereco": "RUA BOM DESTINO, 90. APTº 102. ISAURA PARENTE, RIO BRANCO, AC. CEP:69918-360",
+        "nome": "Escritório de Apoio nº 1 do Senador Alan Rick",
+        "nomeSetorSuperior": null,
+        "sigla": null,
+        "siglaSetorSuperior": null,
+        "telefone": null
+      }
+    },
+    {
+      "parlamentar": {
+        "estado": "SE",
+        "nome": "ALESSANDRO VIEIRA",
+        "partido": null
+      },
+      "setor": {
+        "codigo": 0,
+        "endereco": "RUA FREI PAULO, 444. SUISSA, ARACAJU, SE. CEP:49052-270",
+        "nome": "Escritório de Apoio nº 01 do Senador Alessandro Vieira",
+        "nomeSetorSuperior": null,
+        "sigla": null,
+        "siglaSetorSuperior": null,
+        "telefone": "(79) 3303-4349"
+      }
+    },
+    {
+      "parlamentar": {
+        "estado": "MA",
+        "nome": "ANA PAULA LOBATO",
+        "partido": null
+      },
+      "setor": {
+        "codigo": 0,
+        "endereco": "RUA DAS SUCUPIRAS, 30. QUADRA 39. RENASCENÇA II, SÃO LUIS, MA. CEP:65075400",
+        "nome": "Escritório de Apoio nº 1 da Senadora Ana Paula Lobato",
+        "nomeSetorSuperior": null,
+        "sigla": null,
+        "siglaSetorSuperior": null,
+        "telefone": null
+      }
+    }
+  ],
+  "msg": "Dados gerados com sucesso",
+  "statusCode": 200
+}

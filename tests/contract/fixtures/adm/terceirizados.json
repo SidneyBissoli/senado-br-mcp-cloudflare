@@ -1,0 +1,44 @@
+[
+  {
+    "codContrato": 8267,
+    "codItem": 42448,
+    "cpf": "968.***.***-04",
+    "empresa": "AGRADA CONSTRUCOES E SERVICOS LTDA (AGRADA CONSTRUCOES)",
+    "id": 42448,
+    "lotacao": {
+      "nome": "SERVIÇO DE CONTROLE DE EQUIPAMENTOS",
+      "sigla": "SECONTE"
+    },
+    "nome": "Adaide José de Souza",
+    "numeroContrato": "20250042",
+    "situacao": "Ativo"
+  },
+  {
+    "codContrato": 7900,
+    "codItem": 41889,
+    "cpf": "646.***.***-49",
+    "empresa": "MAIS SERVICOS CONCEITO LTDA (MAIS SERVICOS CONCEITO)",
+    "id": 41889,
+    "lotacao": {
+      "nome": "MAIS SERVIÇOS LTDA",
+      "sigla": "MAISSERV"
+    },
+    "nome": "Adail Lima da Silva",
+    "numeroContrato": "20240160",
+    "situacao": "Ativo"
+  },
+  {
+    "codContrato": 7837,
+    "codItem": 37140,
+    "cpf": "031.***.***-09",
+    "empresa": "ÁGIL EMPRESA DE VIGILÂNCIA LTDA.",
+    "id": 37140,
+    "lotacao": {
+      "nome": "G I EMPRESA DE SEGURANÇA EIRELI",
+      "sigla": "GI"
+    },
+    "nome": "Adailson Silva Ferreira",
+    "numeroContrato": "20240119",
+    "situacao": "Ativo"
+  }
+]

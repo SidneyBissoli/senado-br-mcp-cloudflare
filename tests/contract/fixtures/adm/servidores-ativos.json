@@ -1,0 +1,89 @@
+[
+  {
+    "ano_admissao": 2019,
+    "cargo": {
+      "nome": "TÉCNICO DE PROCESSO INDUSTRIAL GRÁFICO"
+    },
+    "categoria": {
+      "codigo": "TL",
+      "nome": "TECNICO LEGISLATIVO"
+    },
+    "cedido": {
+      "orgao_destino": null,
+      "orgao_origem": null,
+      "tipo_cessao": null
+    },
+    "especialidade": "TÉCNICO DE PROCESSO INDUSTRIAL GRÁFICO",
+    "funcao": {
+      "codigo": 1040,
+      "nome": "CHEFE DE SERVIÇO"
+    },
+    "lotacao": {
+      "nome": "Serviço de Multimídia",
+      "sigla": "SEMID"
+    },
+    "nome": "ABELARDO ANTONIO MENDES JUNIOR",
+    "padrao": "M27",
+    "sequencial": 3707326,
+    "situacao": "ATIVO",
+    "vinculo": "EFETIVO"
+  },
+  {
+    "ano_admissao": 2025,
+    "cargo": {
+      "nome": "AJUDANTE PARLAMENTAR INTERMEDIÁRIO"
+    },
+    "categoria": {
+      "codigo": "CARGO EM COMISSÃO",
+      "nome": "CARGO EM COMISSÃO"
+    },
+    "cedido": {
+      "orgao_destino": null,
+      "orgao_origem": null,
+      "tipo_cessao": null
+    },
+    "especialidade": "AJUDANTE PARLAMENTAR INTERMEDIÁRIO",
+    "funcao": {
+      "codigo": 95,
+      "nome": "AJUDANTE PARLAMENTAR INTERMEDIÁRIO"
+    },
+    "lotacao": {
+      "nome": "Gabinete do Senador Rogério Carvalho",
+      "sigla": "GSRSANT"
+    },
+    "nome": "ABI CUSTÓDIO DIVINO FILHO",
+    "padrao": null,
+    "sequencial": 3597113,
+    "situacao": "ATIVO",
+    "vinculo": "COMISSIONADO"
+  },
+  {
+    "ano_admissao": 2023,
+    "cargo": {
+      "nome": "AUXILIAR PARLAMENTAR INTERMEDIÁRIO"
+    },
+    "categoria": {
+      "codigo": "CARGO EM COMISSÃO",
+      "nome": "CARGO EM COMISSÃO"
+    },
+    "cedido": {
+      "orgao_destino": null,
+      "orgao_origem": null,
+      "tipo_cessao": null
+    },
+    "especialidade": "AUXILIAR PARLAMENTAR INTERMEDIÁRIO",
+    "funcao": {
+      "codigo": 88,
+      "nome": "AUXILIAR PARLAMENTAR INTERMEDIÁRIO"
+    },
+    "lotacao": {
+      "nome": "Gabinete do Senador Beto Faro",
+      "sigla": "GSBFARO"
+    },
+    "nome": "ABIANCY CARDOSO ROSA SALAME",
+    "padrao": null,
+    "sequencial": 3615200,
+    "situacao": "ATIVO",
+    "vinculo": "COMISSIONADO"
+  }
+]

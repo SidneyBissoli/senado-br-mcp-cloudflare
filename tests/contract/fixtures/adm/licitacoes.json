@@ -1,0 +1,53 @@
+[
+  {
+    "abertura": "2018-03-13",
+    "detalhamentos": [
+      {
+        "criacao": "2018-03-07",
+        "descricao": "Errata da nota de rodapé contida na Tabela 2 - Critérios do processo de desenvolvimento ágil de soluções de software.",
+        "id": 323,
+        "licitacao": {
+          "abertura": "2018-03-13",
+          "detalhamentos": [],
+          "edital": "https://www6g.senado.gov.br/transparencia/licitacoes-e-contratos/licitacoes/241/edital",
+          "id": 241,
+          "modalidade": "Pregão",
+          "numero": "19/2018",
+          "objeto": "Contratação de empresa para a prestação de serviços técnicos de desenvolvimento e manutenção de sistemas de informação para o Senado Federal, baseado nas práticas e princípios das “metodologias ágeis” e do “software craftsmanship”, mediante Ordens de Serviço dimensionadas em Unidade de Serviço Técnico – UST, durante 12 (doze) meses consecutivos.",
+          "orgao_origem": "Senado Federal",
+          "registro_preco": false,
+          "situacao": "HOMOLOGADA"
+        },
+        "link": "https://www6g.senado.gov.br/transparencia/licitacoes-e-contratos/licitacoes/241/detalhamento/323",
+        "tipo": "Comunicado"
+      },
+      {
+        "criacao": "2018-04-03",
+        "descricao": "Termo de Homologação",
+        "id": 35045,
+        "licitacao": {
+          "abertura": "2018-03-13",
+          "detalhamentos": [],
+          "edital": "https://www6g.senado.gov.br/transparencia/licitacoes-e-contratos/licitacoes/241/edital",
+          "id": 241,
+          "modalidade": "Pregão",
+          "numero": "19/2018",
+          "objeto": "Contratação de empresa para a prestação de serviços técnicos de desenvolvimento e manutenção de sistemas de informação para o Senado Federal, baseado nas práticas e princípios das “metodologias ágeis” e do “software craftsmanship”, mediante Ordens de Serviço dimensionadas em Unidade de Serviço Técnico – UST, durante 12 (doze) meses consecutivos.",
+          "orgao_origem": "Senado Federal",
+          "registro_preco": false,
+          "situacao": "HOMOLOGADA"
+        },
+        "link": "https://www6g.senado.gov.br/transparencia/licitacoes-e-contratos/licitacoes/241/detalhamento/35045",
+        "tipo": "Comunicado"
+      }
+    ],
+    "edital": "https://www6g.senado.gov.br/transparencia/licitacoes-e-contratos/licitacoes/241/edital",
+    "id": 241,
+    "modalidade": "Pregão",
+    "numero": "19/2018",
+    "objeto": "Contratação de empresa para a prestação de serviços técnicos de desenvolvimento e manutenção de sistemas de informação para o Senado Federal, baseado nas práticas e princípios das “metodologias ágeis” e do “software craftsmanship”, mediante Ordens de Serviço dimensionadas em Unidade de Serviço Técnico – UST, durante 12 (doze) meses consecutivos.",
+    "orgao_origem": "Senado Federal",
+    "registro_preco": false,
+    "situacao": "HOMOLOGADA"
+  }
+]

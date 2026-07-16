@@ -1,0 +1,69 @@
+[
+  {
+    "horas_extras": [
+      {
+        "dia": "01/02/2025",
+        "quantidade": "07h24",
+        "setor_prestacao": {
+          "nome": "COMISSÕES",
+          "sigla": null
+        }
+      }
+    ],
+    "mes_ano_pagamento": "03/2025",
+    "mes_ano_prestacao": "02/2025",
+    "nome": "ADÔNIS DIAS TARALLO",
+    "sequencial": 3909131,
+    "valorTotal": "2.232,33"
+  },
+  {
+    "horas_extras": [
+      {
+        "dia": "01/02/2025",
+        "quantidade": "09h18",
+        "setor_prestacao": {
+          "nome": "COMISSÕES",
+          "sigla": null
+        }
+      }
+    ],
+    "mes_ano_pagamento": "03/2025",
+    "mes_ano_prestacao": "02/2025",
+    "nome": "ADRIANA ARAÚJO DE OLIVEIRA",
+    "sequencial": 3661865,
+    "valorTotal": "264,17"
+  },
+  {
+    "horas_extras": [
+      {
+        "dia": "13/02/2025",
+        "quantidade": "02h00",
+        "setor_prestacao": {
+          "nome": "Gabinete do Senador Wellington Fagundes",
+          "sigla": "GSWFAGUN"
+        }
+      },
+      {
+        "dia": "17/02/2025",
+        "quantidade": "01h01",
+        "setor_prestacao": {
+          "nome": "Gabinete do Senador Wellington Fagundes",
+          "sigla": "GSWFAGUN"
+        }
+      },
+      {
+        "dia": "05/02/2025",
+        "quantidade": "02h00",
+        "setor_prestacao": {
+          "nome": "Gabinete do Senador Wellington Fagundes",
+          "sigla": "GSWFAGUN"
+        }
+      }
+    ],
+    "mes_ano_pagamento": "03/2025",
+    "mes_ano_prestacao": "02/2025",
+    "nome": "ADRIANA CARLOS TEIXEIRA VENEGAS",
+    "sequencial": 3941132,
+    "valorTotal": "3.805,41"
+  }
+]
