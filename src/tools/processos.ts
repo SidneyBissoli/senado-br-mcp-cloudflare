@@ -200,7 +200,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C1. senado_search_processos
   server.tool(
     "senado_search_processos",
-    "Busca processos legislativos no endpoint v3 `/processo` (parâmetros complementares ao `senado_buscar_materias`). Retorna `{ count, total, aviso?, processos }`, cada item com `id`, `codigoMateria`, `identificacao`, `ementa`, `tipoDocumento`, `dataApresentacao`, `autoria` (compactada: primeiros autores + total), `totalAutores`, `tramitando` (boolean) e `normaGerada`. É obrigatório ao menos um filtro (sigla, número, ano, autor ou período). Limitado a `limite` (padrão 20, máx. 200), com `aviso` ao truncar. Use o `id` retornado em `senado_obter_processo` para detalhes.",
+    "Busca processos legislativos no endpoint v3 `/processo` (parâmetros complementares ao `senado_buscar_materias`). Retorna `{ count, total, aviso?, processos }`, cada item com `id`, `codigoMateria`, `identificacao`, `ementa`, `tipoDocumento`, `dataApresentacao`, `autoria` (compactada: primeiros autores + total), `totalAutores`, `tramitando` (boolean) e `normaGerada`. É obrigatório ao menos um filtro (sigla, número, ano, autor ou período). Limitado a `limite` (padrão 20, máx. 200), com `aviso` ao truncar. Use o `id` retornado em `senado_obter_processo` para detalhes. Ex.: `{ sigla: 'PL', ano: 2025, dataInicioApresentacao: '2025-03-01' }` (datas em YYYYMMDD ou ISO).",
     {
       sigla: z.string().optional().describe("Sigla do tipo de processo (ex: PL, PEC)"),
       numero: z.number().int().optional().describe("Número do processo"),
@@ -292,7 +292,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
       "`relatorias` → relatorias designadas (`idProcesso`, `processo`, `relator`, `partido`, `uf`, `tipoRelator`, `comissao`, `dataDesignacao`, `dataDestituicao`, `motivoEncerramento`; aceita `codigoParlamentar`/`codigoColegiado`/`dataReferencia`); " +
       "`prazos` → prazos regimentais/constitucionais (registros brutos da API; aceita `dataReferencia`). " +
       "Todos aceitam `idProcesso` e/ou `codigoMateria` e período `dataInicio`/`dataFim` (YYYYMMDD ou ISO) — informe pelo menos um filtro. Retorna `{ secao, count, total, aviso?, itens }`, limitado a `limite` (padrão 100, máx. 500). " +
-      "Obtenha o `idProcesso` via `senado_search_processos`; tipos de prazo via `senado_tabelas_processo`.",
+      "Obtenha o `idProcesso` via `senado_search_processos`; tipos de prazo via `senado_tabelas_processo`. Ex.: `{ secao: 'emendas', codigoMateria: 137999 }` ou `{ secao: 'relatorias', codigoParlamentar: 4994, dataReferencia: '2025-06-01' }`.",
     {
       secao: z.enum(["emendas", "relatorias", "prazos"]).describe("Qual aspecto detalhar: emendas, relatorias ou prazos"),
       idProcesso: z.number().int().positive().optional().describe("ID do processo"),
@@ -433,7 +433,7 @@ export function registerProcessosTools(server: McpServer, baseUrl: string) {
   // C7. senado_tabelas_processo (consolidated reference tables)
   server.tool(
     "senado_tabelas_processo",
-    "Consulta tabelas de referência do processo legislativo para resolver códigos/siglas, conforme `tabela`. Domínios de entidade: `siglas` (siglas de proposição), `assuntos`, `classes`, `destinos`, `entes`. Domínios de tipo (código→descrição): `tipos-situacao`, `tipos-decisao`, `tipos-autor`, `tipos-atualizacao`, `tipos-documento`, `tipos-conteudo-documento`, `tipos-prazo`. Retorna `{ tabela, count, total, linhas }` — `count` é o nº após o corte por `limite` e `total` o disponível; `count < total` indica truncagem (aumente `limite`); `count` 0 quando o `filtro` não casa. Cada linha traz código/sigla e descrição (campos conforme a API). Use antes de filtrar em `senado_search_processos`/`senado_processo_detalhe`. Para as tabelas do plenário (tipos de sessão, legislaturas) use `senado_tabelas_plenario`.",
+    "Consulta tabelas de referência do processo legislativo para resolver códigos/siglas, conforme `tabela`. Domínios de entidade: `siglas` (siglas de proposição), `assuntos`, `classes`, `destinos`, `entes`. Domínios de tipo (código→descrição): `tipos-situacao`, `tipos-decisao`, `tipos-autor`, `tipos-atualizacao`, `tipos-documento`, `tipos-conteudo-documento`, `tipos-prazo`. Retorna `{ tabela, count, total, linhas }` — `count` é o nº após o corte por `limite` e `total` o disponível; `count < total` indica truncagem (aumente `limite`); `count` 0 quando o `filtro` não casa. Cada linha traz código/sigla e descrição (campos conforme a API). Use antes de filtrar em `senado_search_processos`/`senado_processo_detalhe`. Para as tabelas do plenário (tipos de sessão, legislaturas) use `senado_tabelas_plenario`. Ex.: `{ tabela: 'tipos-prazo' }` ou `{ tabela: 'siglas', filtro: 'PEC' }`.",
     {
       tabela: z.enum([
         "siglas", "assuntos", "classes", "destinos", "entes",
