@@ -167,8 +167,12 @@ describe("contract: supridos atos de concessao", () => {
     expect(r.distribuicao).toBeTruthy();
     expect(r.top.length).toBeGreaterThan(0);
     expect(Number.isFinite(r.top[0].valor)).toBe(true);
-    // codigo_suprido in the atos fixture exists in the registry fixture -> name resolved.
-    expect(typeof r.top[0].suprido).toBe("string");
-    expect(typeof r.top[0].codigoAtoConcessao).toBe("string");
+    // Both fixtures are independently truncated captures, so a top ato's codigo_suprido may or
+    // may not fall inside the registry slice. Assert the join MECHANIC, not data luck: the name
+    // must match the registry exactly when the code is present, and be null when it is not.
+    for (const t of r.top) {
+      expect(t.codigoAtoConcessao === null || typeof t.codigoAtoConcessao === "string").toBe(true);
+      expect(t.suprido).toBe(nomePorCodigo.get(String(t.codigoInternoSuprido)) ?? null);
+    }
   });
 });

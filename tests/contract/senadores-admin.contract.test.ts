@@ -82,9 +82,11 @@ describe("contract: CEAPS dataset", () => {
     expect(item.codSenador).toBeGreaterThan(0);
     expect(typeof item.tipoDespesa).toBe("string");
     expect(item.tipoDespesa.length).toBeGreaterThan(0);
-    expect(typeof item.fornecedor).toBe("string");
-    expect(typeof item.cnpjCpf).toBe("string");
-    expect(typeof item.detalhamento).toBe("string");
+    // Optional free-text fields: the parser normalizes empty/absent to null, and real rows
+    // (fixtures get refreshed) legitimately come without them — string-or-null is the contract.
+    for (const campo of ["fornecedor", "cnpjCpf", "detalhamento"] as const) {
+      expect(item[campo] === null || typeof item[campo] === "string").toBe(true);
+    }
     expect(typeof item.valor).toBe("number");
   });
 
