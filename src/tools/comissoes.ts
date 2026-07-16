@@ -360,7 +360,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
   // E6. senado_reuniao_comissao
   server.tool(
     "senado_reuniao_comissao",
-    "Detalha uma reunião de comissão pelo `codigoReuniao`. Retorna um objeto com `codigo`, `titulo`, `comissao`, `data`, `hora`, `local`, `situacao`, `realizada`, `secreta`, `presidente`, links `urlPauta`/`urlResultado`/`urlAta` e `partes` (cada parte com `evento` e `itens` apreciados: `identificacao`, `ementa`, `autoria`, `relatoria`, `resultado`, `codigoMateria`). Obtenha o `codigoReuniao` em `senado_agenda_comissoes` ou `senado_reunioes_comissao`.",
+    "Detalha uma reunião de comissão pelo `codigoReuniao`. Retorna um objeto com `codigo`, `titulo`, `comissao`, `data`, `hora`, `local`, `situacao`, `realizada`, `secreta`, `tipoPresenca` (presencial/semipresencial), `presidente`, links `urlPauta`/`urlResultado`/`urlAta` e `partes` (cada parte com `evento` e `itens` apreciados: `identificacao`, `ementa`, `autoria`, `relatoria`, `resultado`, `codigoMateria`). A API NÃO publica lista de presença da reunião (só presidente e eventuais convidados): reconstrua a presença pelos votos nominais (`senado_votacao_comissao`), por quem falou na transcrição (`senado_notas_taquigraficas` com `tipo=reuniao`) ou pela ata oficial (`urlAta`, quando publicada). Obtenha o `codigoReuniao` em `senado_agenda_comissoes` ou `senado_reunioes_comissao`.",
     {
       codigoReuniao: z.number().int().positive().describe("Código da reunião (campo 'codigo' na agenda de comissões)"),
     },
@@ -391,6 +391,7 @@ export function registerComissoesTools(server: McpServer, baseUrl: string) {
           // Upstream sends these as the strings "true"/"false" (some legacy paths use "S").
           realizada: toBool(re.realizada) || re.realizada === "S",
           secreta: toBool(re.secreta) || re.secreta === "S",
+          tipoPresenca: re.tipoPresenca || null,
           presidente: re.presidente?.nome || re.presidente || null,
           urlPauta: re.urlUltimaPautaCheiaPublicada || re.urlUltimaPautaSimplesPublicada || null,
           urlResultado: re.urlUltimoResultadoPublicado || null,
