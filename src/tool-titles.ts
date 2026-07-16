@@ -40,7 +40,7 @@ export const TOOL_TITLES: Record<string, string> = {
   senado_agenda_comissoes: "Agenda das comissões",
   senado_reuniao_comissao: "Detalhar reunião de comissão",
   senado_requerimentos_cpi: "Requerimentos de CPI",
-  senado_distribuicao_materias: "Distribuição de matérias",
+  senado_distribuicao_materias: "Ranking de autoria/relatoria por comissão",
 
   // Plenário
   senado_agenda_plenario: "Agenda do plenário",
