@@ -4,7 +4,7 @@
  * - Concurrency limiting (max in-flight)
  * - Retry with bounded exponential backoff + jitter on 429/503
  * - AbortController timeout (10s total)
- * - Response size guard (2 MB)
+ * - Response size guard (5 MB)
  */
 
 import { globalBucket } from "./token-bucket.js";
