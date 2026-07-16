@@ -11,11 +11,11 @@ import { buildCatalog, catalogToolNames, catalogAreaByName } from "../../evals/c
 import { FIXTURES } from "../../evals/fixtures/queries.js";
 
 describe("catalog extractor", () => {
-  it("collects the full live tool catalog (66 tools)", () => {
+  it("collects the full live tool catalog (67 tools)", () => {
     const catalog = buildCatalog();
-    // The repo currently ships 66 tools (see CLAUDE.md). If this number changes,
+    // The repo currently ships 67 tools (see CLAUDE.md). If this number changes,
     // it should change deliberately — bump it here alongside the tool change.
-    expect(catalog.length).toBe(66);
+    expect(catalog.length).toBe(67);
   });
 
   it("has no duplicate tool names", () => {

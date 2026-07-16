@@ -37,6 +37,7 @@ import { registerContratacoesTools } from "../src/tools/contratacoes.js";
 import { registerServidoresTools } from "../src/tools/servidores.js";
 import { registerSupridosTools } from "../src/tools/supridos.js";
 import { registerOrcamentoSenadoTools } from "../src/tools/orcamento-senado.js";
+import { registerEstruturaTools } from "../src/tools/estrutura.js";
 
 /** A minimal JSON-schema (draft 2020-12 subset) describing a tool's input object. */
 export interface JsonSchema {
@@ -103,6 +104,7 @@ const GROUPS: { area: string; register: (s: CapturingServer) => void }[] = [
   { area: "contratacoes", register: (s) => registerContratacoesTools(s as never, ADM_BASE) },
   { area: "supridos", register: (s) => registerSupridosTools(s as never, ADM_BASE) },
   { area: "orcamento-senado", register: (s) => registerOrcamentoSenadoTools(s as never) },
+  { area: "estrutura", register: (s) => registerEstruturaTools(s as never) },
 ];
 
 // ---------------------------------------------------------------------------
