@@ -2,7 +2,8 @@
  * Upstream fetch wrapper with:
  * - Global rate limiting (token bucket)
  * - Concurrency limiting (max in-flight)
- * - Retry with bounded exponential backoff + jitter on 429/503
+ * - Retry with bounded exponential backoff + jitter on 429/503, honoring the
+ *   upstream Retry-After header when present (gives up early if it exceeds the budget)
  * - AbortController timeout (10s total)
  * - Response size guard (5 MB)
  */
@@ -26,6 +27,35 @@ export class UpstreamError extends Error {
     super(message);
     this.name = "UpstreamError";
   }
+}
+
+/**
+ * Parse an HTTP Retry-After header (RFC 9110 §10.2.3) into milliseconds to wait.
+ * Accepts the delta-seconds form ("5") and the HTTP-date form; returns null when
+ * absent or unparseable, so the caller falls back to its own backoff.
+ */
+export function parseRetryAfterMs(value: string | null, now = Date.now()): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (/^\d+$/.test(trimmed)) {
+    return parseInt(trimmed, 10) * 1000;
+  }
+  const date = Date.parse(trimmed);
+  if (Number.isNaN(date)) return null;
+  return Math.max(0, date - now);
+}
+
+/**
+ * Wait before the next retry attempt: never less than the server's Retry-After
+ * (when sent), never less than the client's own bounded exponential backoff.
+ */
+export function computeRetryWaitMs(
+  attempt: number,
+  retryAfterMs: number | null,
+  jitterMs: number,
+): number {
+  const backoff = Math.min(1000 * Math.pow(2, attempt), 4000);
+  return Math.max(retryAfterMs ?? 0, backoff) + jitterMs;
 }
 
 export interface UpstreamOptions {
@@ -123,11 +153,17 @@ export async function upstreamFetch(
           true,
         );
         if (attempt < MAX_RETRIES) {
+          const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+          const wait = computeRetryWaitMs(attempt, retryAfterMs, Math.random() * 500);
+          // Honoring a Retry-After longer than the remaining budget would just delay
+          // the inevitable timeout — give up now and surface the retryable error.
+          if (wait >= UPSTREAM_TIMEOUT_MS - (Date.now() - startTime)) {
+            logger.warn("upstream_retry_abandoned", { path, attempt, status: response.status, retryAfterMs });
+            break;
+          }
           incr("upstreamRetries");
-          logger.warn("upstream_retry", { path, attempt, status: response.status });
-          const backoff = Math.min(1000 * Math.pow(2, attempt), 4000);
-          const jitter = Math.random() * 500;
-          await sleep(backoff + jitter);
+          logger.warn("upstream_retry", { path, attempt, status: response.status, retryAfterMs });
+          await sleep(wait);
           continue;
         }
         break;

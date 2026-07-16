@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { upstreamFetch, UpstreamError } from "../../src/throttle/upstream.js";
+import {
+  upstreamFetch,
+  UpstreamError,
+  parseRetryAfterMs,
+  computeRetryWaitMs,
+} from "../../src/throttle/upstream.js";
 import * as tokenBucket from "../../src/throttle/token-bucket.js";
 
 // Mock the global fetch
@@ -109,5 +114,59 @@ describe("upstreamFetch", () => {
     const opts = mockFetch.mock.calls[0][1];
     expect(opts.headers.Accept).toBe("application/json");
     expect(opts.headers["User-Agent"]).toContain("senado-br-mcp");
+  });
+
+  it("gives up immediately when Retry-After exceeds the time budget", async () => {
+    mockFetch.mockResolvedValue(jsonResponse({}, 429, { "retry-after": "3600" }));
+    const start = Date.now();
+    await expect(upstreamFetch("/busy")).rejects.toMatchObject({ status: 429, retryable: true });
+    expect(mockFetch).toHaveBeenCalledOnce();
+    expect(Date.now() - start).toBeLessThan(2000);
+  });
+});
+
+describe("parseRetryAfterMs", () => {
+  it("parses the delta-seconds form", () => {
+    expect(parseRetryAfterMs("5")).toBe(5000);
+    expect(parseRetryAfterMs("0")).toBe(0);
+    expect(parseRetryAfterMs(" 12 ")).toBe(12000);
+  });
+
+  it("parses the HTTP-date form relative to now", () => {
+    const now = Date.parse("2026-07-16T12:00:00Z");
+    const inThirty = new Date(now + 30_000).toUTCString();
+    expect(parseRetryAfterMs(inThirty, now)).toBe(30_000);
+  });
+
+  it("clamps past HTTP-dates to zero", () => {
+    const now = Date.parse("2026-07-16T12:00:00Z");
+    const past = new Date(now - 60_000).toUTCString();
+    expect(parseRetryAfterMs(past, now)).toBe(0);
+  });
+
+  it("returns null for absent or unparseable values", () => {
+    expect(parseRetryAfterMs(null)).toBeNull();
+    expect(parseRetryAfterMs("")).toBeNull();
+    expect(parseRetryAfterMs("soon")).toBeNull();
+  });
+});
+
+describe("computeRetryWaitMs", () => {
+  it("uses bounded exponential backoff when there is no Retry-After", () => {
+    expect(computeRetryWaitMs(0, null, 0)).toBe(1000);
+    expect(computeRetryWaitMs(1, null, 0)).toBe(2000);
+    expect(computeRetryWaitMs(5, null, 0)).toBe(4000); // capped
+  });
+
+  it("honors a Retry-After longer than the backoff", () => {
+    expect(computeRetryWaitMs(0, 3000, 0)).toBe(3000);
+  });
+
+  it("never waits less than the backoff even if Retry-After is shorter", () => {
+    expect(computeRetryWaitMs(1, 500, 0)).toBe(2000);
+  });
+
+  it("adds the jitter on top", () => {
+    expect(computeRetryWaitMs(0, 3000, 250)).toBe(3250);
   });
 });
