@@ -3,5 +3,5 @@
   "name": "Dados Abertos Senado BR - MCP",
   "icon": "🏛️",
   "version": "3.3.1",
-  "description": "Independent MCP server for Brazilian Federal Senate open data — 66 tools, 4 prompts and 5 resources across the legislative process, Senate administration and the e-Cidadania portal. Cloudflare Workers, Streamable HTTP, no auth. Not affiliated with or endorsed by the Senate, OpenAI or ChatGPT. Responses in pt-BR. MIT licensed."
+  "description": "Independent MCP server for Brazilian Federal Senate open data — 67 tools, 4 prompts and 5 resources across the legislative process, Senate administration and the e-Cidadania portal. Cloudflare Workers, Streamable HTTP, no auth. Not affiliated with or endorsed by the Senate, OpenAI or ChatGPT. Responses in pt-BR. MIT licensed."
 }

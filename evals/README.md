@@ -1,7 +1,7 @@
 # Eval harness — seleção de tool (Sessão 1 do ROADMAP)
 
 Harness reaproveitável que mede a **acurácia com que um modelo escolhe a tool certa** entre as
-~66 tools do MCP senado-br, dada uma consulta em pt-BR de jornalista/pesquisador.
+~67 tools do MCP senado-br, dada uma consulta em pt-BR de jornalista/pesquisador.
 
 É o *linchpin* da Sessão 1 do ROADMAP CIENTIFICO (planejamento local, `docs/_local/`): o resultado decide se o catálogo precisa de
 refatoração (deferred loading / Code Mode / agrupamento). O item *"rodar evals após mudança de
@@ -12,10 +12,10 @@ tool"* do bloco **Contínuo** depende deste harness ser barato de reexecutar —
 
 | Arquivo | Papel |
 |---|---|
-| `evals/catalog.ts` | **Extrator de catálogo.** Um "fake McpServer" captura cada `server.tool(name, desc, shape, cb)` ao rodar os `registerXTools` de `src/tools/*` — sem rede, sem runtime de Worker. Fonte de verdade das 66 tools (nome, descrição, JSON-schema do input). Também converte os shapes Zod → JSON-schema (sem dependência nova) e monta o array `tools` da Anthropic. |
+| `evals/catalog.ts` | **Extrator de catálogo.** Um "fake McpServer" captura cada `server.tool(name, desc, shape, cb)` ao rodar os `registerXTools` de `src/tools/*` — sem rede, sem runtime de Worker. Fonte de verdade das 67 tools (nome, descrição, JSON-schema do input). Também converte os shapes Zod → JSON-schema (sem dependência nova) e monta o array `tools` da Anthropic. |
 | `evals/fixtures/queries.ts` | **45 consultas pt-BR** (persona jornalista/pesquisador), cada uma com `{ id, query, expectedTools, note }`. Cobre 16 áreas e inclui casos "vizinhos"/ambíguos (ex.: `senado_search_votacoes` vs `senado_obter_votacao`). |
 | `evals/score.ts` | **Núcleo de scoring puro.** top-1 / top-k / por-área + a lógica de gate do ROADMAP. Sem rede, sem modelo — é o que os testes unitários exercitam. |
-| `evals/run.ts` | **Runner com modelo real.** Manda cada query + as 66 tools para a Anthropic Messages API (`tool_choice: any`), registra a tool escolhida, e imprime o relatório agregado + decisão de gate. |
+| `evals/run.ts` | **Runner com modelo real.** Manda cada query + as 67 tools para a Anthropic Messages API (`tool_choice: any`), registra a tool escolhida, e imprime o relatório agregado + decisão de gate. |
 | `tests/evals/fixtures.test.ts` | Valida fixtures contra o catálogo real (pega regressão quando uma tool é renomeada), contagem 30–50, sem ids/queries duplicados, cobertura de áreas. |
 | `tests/evals/score.test.ts` | Correção do scorer e do gate com casos sintéticos de acurácia conhecida. |
 

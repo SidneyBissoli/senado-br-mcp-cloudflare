@@ -4,7 +4,7 @@
  * We never hit the network. Instead we build a *fake* McpServer that only implements
  * `.tool(name, description, zodShape, cb)` and capture every registration call. We then
  * import each `registerXTools` from `src/tools/*` and run them against the fake server,
- * exactly as `src/server.ts` wires them up. The result is the live list of ~66 tools with
+ * exactly as `src/server.ts` wires them up. The result is the live list of ~67 tools with
  * their names, descriptions and a JSON-schema view of their input shape.
  *
  * Why this matters: fixtures (`expectedTools`) are validated against THIS catalog, so when

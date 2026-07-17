@@ -15,7 +15,7 @@ export function buildGuia(): string {
   return `# Senado BR MCP — guia de uso
 
 Servidor MCP de dados abertos do Senado Federal (API legislativa, API administrativa e portal
-e-Cidadania). 66 ferramentas, respostas em pt-BR. Abaixo, por onde começar conforme o objetivo.
+e-Cidadania). 67 ferramentas, respostas em pt-BR. Abaixo, por onde começar conforme o objetivo.
 
 ## Senadores
 - \`senado_listar_senadores\` — lista/busca por nome, UF ou partido (use o filtro \`nome\` quando só tiver o nome).
@@ -132,7 +132,7 @@ export function registerResources(server: McpServer) {
     "senado://catalogo",
     {
       title: "Catálogo de ferramentas",
-      description: "Lista das 66 ferramentas agrupadas por domínio.",
+      description: "Lista das 67 ferramentas agrupadas por domínio.",
       mimeType: "text/markdown",
     },
     (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: buildCatalogo() }] }),

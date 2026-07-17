@@ -159,7 +159,7 @@ export function evaluateGate(top1Accuracy: number): GateResult {
     return {
       decision: "despriorizar-refatoracao",
       accuracy: top1Accuracy,
-      message: `Acurácia top-1 = ${pct}% (>= 90%) mesmo com 66 tools. Recomendação: DESPRIORIZAR refatoração de catálogo; seguir consolidando via enums.`,
+      message: `Acurácia top-1 = ${pct}% (>= 90%) mesmo com 67 tools. Recomendação: DESPRIORIZAR refatoração de catálogo; seguir consolidando via enums.`,
     };
   }
   return {

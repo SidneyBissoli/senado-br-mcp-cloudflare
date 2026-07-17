@@ -1,7 +1,7 @@
 ---
 name: senado-br
 description: >-
-  Pesquisa de dados abertos do Senado Federal do Brasil via o MCP senado-br (66 ferramentas):
+  Pesquisa de dados abertos do Senado Federal do Brasil via o MCP senado-br (67 ferramentas):
   senadores, matérias e projetos de lei, votações nominais, comissões, plenário, discursos, blocos e
   lideranças, legislação federal, vetos, e o portal e-Cidadania (consultas públicas, ideias legislativas,
   eventos), além de dados administrativos — CEAPS (cota parlamentar), contratos, licitações, servidores,
@@ -13,7 +13,7 @@ description: >-
 
 # Senado BR — dados abertos do Senado Federal
 
-Playbook para usar bem o servidor MCP **senado-br**: 66 ferramentas (somente leitura) sobre os dados
+Playbook para usar bem o servidor MCP **senado-br**: 67 ferramentas (somente leitura) sobre os dados
 abertos oficiais do Senado Federal — API legislativa, API administrativa e portal e-Cidadania. Toda
 resposta vem com **proveniência** (fonte oficial + `retrieved_at`), porque o público-alvo são
 jornalistas e pesquisadores: cite a fonte ao reportar números.
@@ -84,5 +84,5 @@ Os mesmos workflows existem como **prompts** do servidor (`senado_gastos_senador
 ## Recursos do próprio servidor (leia se precisar de detalhe)
 
 O servidor expõe **resources** MCP que dispensam adivinhação — prefira-os a inferir:
-`senado://guia` (guia de uso), `senado://catalogo` (catálogo completo das 66 tools), `senado://glossario`
+`senado://guia` (guia de uso), `senado://catalogo` (catálogo completo das 67 tools), `senado://glossario`
 (termos do processo legislativo), `senado://tabelas/tipos-materia` e `senado://tabelas/ufs`.

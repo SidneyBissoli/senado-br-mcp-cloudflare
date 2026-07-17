@@ -10,7 +10,7 @@
  * CEAPS/gastos, comissões, plenário, discursos, legislação, vetos, e-Cidadania, contratos/
  * licitações, servidores, orçamento. Several fixtures are deliberately "neighbor"/ambiguous
  * cases (search vs. obter, votos_materia vs. votacoes_senador, listar vs. acervo) — the
- * hardest part of selecting among 66 tools.
+ * hardest part of selecting among 67 tools.
  *
  * INVARIANT (enforced by tests/evals/fixtures.test.ts): every name in every `expectedTools`
  * must exist in the live catalog (so a tool rename breaks this offline test immediately),

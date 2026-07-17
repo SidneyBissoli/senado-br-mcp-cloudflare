@@ -2,7 +2,7 @@
 
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-1f6feb)
-![Tools](https://img.shields.io/badge/tools-66-2ea44f)
+![Tools](https://img.shields.io/badge/tools-67-2ea44f)
 [![CI](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare/actions/workflows/ci.yml/badge.svg)](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare/actions/workflows/ci.yml)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
 [![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
@@ -16,7 +16,7 @@
 
 Um servidor MCP **público e hospedado** que dá aos assistentes de IA acesso ao vivo e estruturado aos **dados abertos do Senado Federal do Brasil** — **sem instalação, sem conta, sem chave de API**. Aponte o seu cliente MCP para o endpoint hospedado e comece a perguntar sobre senadores, matérias, votações, despesas e muito mais. Roda em Cloudflare Workers via Streamable HTTP.
 
-Expõe **66 ferramentas**, **4 prompts** e **5 recursos** em dois domínios:
+Expõe **67 ferramentas**, **4 prompts** e **5 recursos** em dois domínios:
 
 - **Legislativo** — senadores; matérias e sua tramitação; votações; comissões; sessões plenárias, resultados e vetos presidenciais; orientação de bancada nas votações; discursos e notas taquigráficas; blocos e lideranças; legislação federal; e participação cidadã pelo portal e-Cidadania.
 - **Administrativo** — despesas da cota parlamentar (CEAPS); auxílio-moradia; servidores e remunerações; horas extras; estagiários; contratos e licitações; terceirizados; suprimento de fundos; e execução orçamentária.
@@ -87,7 +87,7 @@ própria instância** — **não** é necessário para usar este servidor públi
 
 Prefere não rotear suas consultas por um servidor de terceiros (ex.: política de uma redação)? O **mesmo
 servidor** também roda como um **processo local stdio** que bate **direto nas APIs oficiais do governo** —
-as mesmas 66 ferramentas, o mesmo envelope de proveniência, sem Cloudflare no caminho. É o canal npm/stdio,
+as mesmas 67 ferramentas, o mesmo envelope de proveniência, sem Cloudflare no caminho. É o canal npm/stdio,
 publicado como [`senado-br-mcp`](https://www.npmjs.com/package/senado-br-mcp).
 
 Aponte um cliente baseado em comando (Claude Desktop/Code, etc.) para o pacote — o npm baixa e executa,
@@ -125,7 +125,7 @@ Os logs vão para o **stderr** — o stdout carrega apenas o fluxo do protocolo 
 
 Este repositório inclui uma [Agent Skill](https://platform.claude.com/docs/en/docs/agents-and-tools/agent-skills/overview)
 do Claude em [`.claude/skills/senado-br/`](.claude/skills/senado-br/SKILL.md) que ensina o Claude **quando**
-recorrer a este servidor e **como** usar bem as 66 ferramentas — um mapa de ferramentas por tema, playbooks de
+recorrer a este servidor e **como** usar bem as 67 ferramentas — um mapa de ferramentas por tema, playbooks de
 pergunta→ferramenta, o contrato de proveniência e os gotchas (datas, a ponte `codigoMateria`, a listagem
 só-abertas do e-Cidadania, paginação). Ela aponta para os recursos `senado://catalogo` / `senado://guia` do
 próprio servidor em vez de duplicá-los.
@@ -670,7 +670,7 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 |------|-------------|
 | `senado_execucao_orcamentaria` | Execução orçamentária desde 2013 (dotação, empenhado/liquidado/pago) e receitas próprias desde 2012 (previsto vs. arrecadado) — agregadas por ano, ação, grupo de despesa, fonte ou origem de receita; `estatisticas=true` devolve a distribuição do conjunto (min/máx/média/mediana/percentis) + ranking top/bottom, ou um ranking de grupos por soma do `campo` via `agruparPor`, com `campo` (padrão pago / arrecadada) e `topN` |
 
-**Total: 66 ferramentas**
+**Total: 67 ferramentas**
 
 ### Prompts (4)
 
@@ -690,7 +690,7 @@ Documentos/tabelas de contexto estáticos (capacidade MCP `resources`), definido
 | URI | Tipo | Conteúdo |
 | --- | --- | --- |
 | `senado://guia` | markdown | Visão geral e qual ferramenta usar por objetivo. |
-| `senado://catalogo` | markdown | As 66 ferramentas agrupadas por domínio. |
+| `senado://catalogo` | markdown | As 67 ferramentas agrupadas por domínio. |
 | `senado://glossario` | markdown | Siglas e termos do Senado (PEC, CEAPS, CCJ, RCN…). |
 | `senado://tabelas/tipos-materia` | json | Tipos de proposição (sigla/nome/descrição). |
 | `senado://tabelas/ufs` | json | As 27 unidades federativas. |
@@ -774,7 +774,7 @@ tests/                    # Testes unitários Vitest espelhando src/ (parsers, c
 ## Conectando clientes MCP
 
 Este é um servidor **remoto** (Streamable HTTP, sem instalação, acesso aberto) — aponte qualquer cliente MCP para
-`https://senado.sidneybissoli.com/mcp`. Além das 66 ferramentas, ele expõe **prompts** (workflows prontos em pt-BR:
+`https://senado.sidneybissoli.com/mcp`. Além das 67 ferramentas, ele expõe **prompts** (workflows prontos em pt-BR:
 `senado_gastos_senador`, `senado_tramitacao_materia`, `senado_votos_senador`,
 `senado_panorama_ecidadania`) e **recursos** (`senado://guia`, `senado://catalogo`,
 `senado://glossario`, `senado://tabelas/tipos-materia`, `senado://tabelas/ufs`).

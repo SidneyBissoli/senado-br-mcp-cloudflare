@@ -4,7 +4,7 @@
  * The Anthropic Connectors Directory review requires a `title` annotation on
  * each tool (alongside `readOnlyHint`). The central shim in `server.ts` injects
  * `annotations.title = TOOL_TITLES[name]` for each tool, so this map must stay
- * in sync with the 66 registered tools — the coverage test in
+ * in sync with the 67 registered tools — the coverage test in
  * `tests/tool-titles.test.ts` fails if a registered tool is missing an entry.
  *
  * Titles are short, user-facing display labels (pt-BR), not descriptions.
