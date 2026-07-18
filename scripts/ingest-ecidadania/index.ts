@@ -23,7 +23,8 @@
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { getText, sleep } from "./http.js";
+import { sleep } from "./http.js";
+import { fetchParsedPage, logPageFailure } from "./page-retry.js";
 import { parseConsultaListingPage, findLastPage, type ListingItem } from "./listing.js";
 import { buildTramitandoSet, deriveStatus } from "./status.js";
 import { ECIDADANIA_BASE, buildConsultaResumo, type ConsultaResumo } from "../../src/scraper/ecidadania.js";
@@ -105,17 +106,22 @@ async function crawlAllPages(): Promise<CrawlResult> {
   const byId = new Map<number, ListingItem>();
   const failedPages: number[] = [];
 
-  const firstHtml = await getText(`${ECIDADANIA_BASE}/pesquisamateria?p=1`);
-  let lastPage = Math.min(findLastPage(firstHtml), MAX_PAGES);
-  for (const it of parseConsultaListingPage(firstHtml)) byId.set(it.codigoMateria, it);
+  // p1 failure stays fatal (propagates to main), but now gets the page-level retry too.
+  const first = await fetchParsedPage(`${ECIDADANIA_BASE}/pesquisamateria?p=1`, parseConsultaListingPage, {
+    allowEmpty: true,
+  });
+  let lastPage = Math.min(findLastPage(first.html), MAX_PAGES);
+  for (const it of first.items) byId.set(it.codigoMateria, it);
 
   for (let p = 2; p <= lastPage; p++) {
     try {
-      const html = await getText(`${ECIDADANIA_BASE}/pesquisamateria?p=${p}`);
-      const parsed = parseConsultaListingPage(html);
-      if (parsed.length === 0) failedPages.push(p); // an empty interior page is a degraded page
+      const { items: parsed } = await fetchParsedPage(
+        `${ECIDADANIA_BASE}/pesquisamateria?p=${p}`,
+        parseConsultaListingPage,
+      );
       for (const it of parsed) byId.set(it.codigoMateria, it);
-    } catch {
+    } catch (e) {
+      logPageFailure("consultas", `p${p}`, e);
       failedPages.push(p);
     }
     await sleep(PAGE_DELAY_MS);

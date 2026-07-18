@@ -16,7 +16,8 @@
 import { writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { getText, sleep } from "./http.js";
+import { sleep } from "./http.js";
+import { fetchParsedPage, logPageFailure, type ParsedPage } from "./page-retry.js";
 import {
   parseIdeiaListingPage,
   findLastPageIdeias,
@@ -57,26 +58,27 @@ async function crawlAllSituacoes(): Promise<CrawlResult> {
     const status = SITUACAO_STATUS[situacao];
     const base = `${ECIDADANIA_BASE}/pesquisaideia?situacao=${situacao}`;
 
-    let firstHtml: string;
+    // p1: a situacao bucket may be legitimately empty, so 0 items is not a failure here.
+    let firstPage: ParsedPage<IdeiaListingItem>;
     try {
-      firstHtml = await getText(`${base}&p=1`);
-    } catch {
+      firstPage = await fetchParsedPage(`${base}&p=1`, parseIdeiaListingPage, { allowEmpty: true });
+    } catch (e) {
+      logPageFailure(ENTIDADE, `s${situacao}:p1`, e);
       failedPages.push(`s${situacao}:p1`);
       continue;
     }
     totalPages++;
-    const lastPage = Math.min(findLastPageIdeias(firstHtml), MAX_PAGES_PER_SITUACAO);
-    for (const it of parseIdeiaListingPage(firstHtml)) {
+    const lastPage = Math.min(findLastPageIdeias(firstPage.html), MAX_PAGES_PER_SITUACAO);
+    for (const it of firstPage.items) {
       if (!byId.has(it.id)) byId.set(it.id, { ...it, status });
     }
 
     for (let p = 2; p <= lastPage; p++) {
       try {
-        const html = await getText(`${base}&p=${p}`);
-        const parsed = parseIdeiaListingPage(html);
-        if (parsed.length === 0) failedPages.push(`s${situacao}:p${p}`); // empty interior page = degraded
+        const { items: parsed } = await fetchParsedPage(`${base}&p=${p}`, parseIdeiaListingPage);
         for (const it of parsed) if (!byId.has(it.id)) byId.set(it.id, { ...it, status });
-      } catch {
+      } catch (e) {
+        logPageFailure(ENTIDADE, `s${situacao}:p${p}`, e);
         failedPages.push(`s${situacao}:p${p}`);
       }
       totalPages++;

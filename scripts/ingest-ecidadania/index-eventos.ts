@@ -22,7 +22,8 @@
 import { writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { getText, sleep } from "./http.js";
+import { sleep } from "./http.js";
+import { fetchParsedPage, logPageFailure } from "./page-retry.js";
 import { parseEventoListingPage, findLastPageEventos, type EventoListingItem } from "./eventos-listing.js";
 import { ECIDADANIA_BASE, buildEventoResumo, buildEventoResumoEnriquecido, type EventoResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
@@ -52,17 +53,18 @@ async function crawlAllPages(now: Date): Promise<CrawlResult> {
   const byId = new Map<number, EventoListingItem>();
   const failedPages: number[] = [];
 
-  const firstHtml = await getText(`${ECIDADANIA_BASE}/principalaudiencia?p=1`);
-  const lastPage = Math.min(findLastPageEventos(firstHtml), MAX_PAGES);
-  for (const it of parseEventoListingPage(firstHtml, now)) byId.set(it.id, it);
+  // p1 failure stays fatal (propagates to main), but now gets the page-level retry too.
+  const parsePage = (html: string) => parseEventoListingPage(html, now);
+  const first = await fetchParsedPage(`${ECIDADANIA_BASE}/principalaudiencia?p=1`, parsePage, { allowEmpty: true });
+  const lastPage = Math.min(findLastPageEventos(first.html), MAX_PAGES);
+  for (const it of first.items) byId.set(it.id, it);
 
   for (let p = 2; p <= lastPage; p++) {
     try {
-      const html = await getText(`${ECIDADANIA_BASE}/principalaudiencia?p=${p}`);
-      const parsed = parseEventoListingPage(html, now);
-      if (parsed.length === 0) failedPages.push(p);
+      const { items: parsed } = await fetchParsedPage(`${ECIDADANIA_BASE}/principalaudiencia?p=${p}`, parsePage);
       for (const it of parsed) byId.set(it.id, it);
-    } catch {
+    } catch (e) {
+      logPageFailure(ENTIDADE, `p${p}`, e);
       failedPages.push(p);
     }
     await sleep(PAGE_DELAY_MS);
