@@ -14,13 +14,16 @@
  * only a run row — never a shrunken corpus. The contentHash is taken over consultaVotoCore (i.e.
  * WITHOUT the CSV vintage stamp) so a weekly stamp bump on frozen votes never churns history.
  *
- * VERIFY mode (INGEST_CONSULTAS_VOTOS_VERIFY=1 / --verify): the recurring run is an INTEGRITY CHECK,
- * not a re-ingest. consultas_votos is a frozen single-vintage acervo (ROADMAP Etapa 2, decisão D1),
- * so the ordinary corpus crawl went daily while this one stays weekly and only verifies. If the CSV
- * hashes identically to the registered vintage, it skips the ~15k upserts (records an 'ok' run row
- * only). If it diverges, the "acervo congelado" premise is falsified — it records an 'anomalo' run
- * row and exits non-zero (the Action failure IS the alert) rather than silently overwriting. Re-
- * ingesting a legitimately new vintage after human review is an explicit --force / INGEST_FORCE.
+ * The scheduled weekly run is a NORMAL re-ingest guarded by the floors above. It originally ran in
+ * VERIFY mode instead, on the premise that the acervo was a frozen single vintage (ROADMAP Etapa 2,
+ * decisão D1) — falsified 2026-07-20 when the Senado republished the CSV as a fresh vintage
+ * (2026-07-19: +43 matérias, 648 updated). Updates are routine, so divergence is no longer an alert.
+ * Since contentHash excludes the vintage stamp, a re-ingest with unchanged votes churns no history.
+ *
+ * VERIFY mode (INGEST_CONSULTAS_VOTOS_VERIFY=1 / --verify) remains as an ON-DEMAND integrity check:
+ * if the CSV hashes identically to the registered vintage it records an 'ok' run row and reapplies
+ * nothing; on any divergence it records 'anomalo' and exits non-zero instead of writing. --force /
+ * INGEST_FORCE bypasses both verify and the catastrophic floor.
  */
 
 import { writeFileSync, readdirSync, unlinkSync } from "node:fs";
@@ -129,8 +132,7 @@ async function main(): Promise<void> {
   const existingHashes = new Map(readExistingMeta(ENTIDADE).map((r) => [r.id, r.content_hash]));
   const { annotated, rowsChanged } = planEntitySync(records, existingHashes);
 
-  // Weekly integrity check: verify the frozen acervo instead of blindly re-ingesting it (see header).
-  // --force bypasses this to perform an explicit, human-approved re-ingest of a new vintage.
+  // On-demand integrity check (no longer scheduled — see header): report divergence without writing.
   if (verify && !force) {
     const integrity = verifyAcervoIntegrity({ rowsScraped: records.length, existingCount: existingHashes.size, rowsChanged });
     if (integrity === "integro") {
@@ -139,10 +141,9 @@ async function main(): Promise<void> {
       process.exit(0);
     }
     const err =
-      `DIVERGÊNCIA no acervo congelado consultas_votos: ${rowsChanged} matéria(s) com hash diferente, ` +
-      `${records.length} no CSV vs ${existingHashes.size} no D1. O CSV Arquimedes é acervo de vintage único ` +
-      `(ROADMAP D1) e não deveria mudar — revisão humana necessária. Se for um novo vintage legítimo, ` +
-      `reingerir com INGEST_FORCE=1.`;
+      `DIVERGÊNCIA no acervo consultas_votos: ${rowsChanged} matéria(s) com hash diferente, ` +
+      `${records.length} no CSV vs ${existingHashes.size} no D1. Modo verify não escreve — ` +
+      `para ingerir o vintage novo, rode sem INGEST_CONSULTAS_VOTOS_VERIFY (ou com INGEST_FORCE=1).`;
     console.error(`[consultas_votos][verify][ALERTA] ${err}`);
     writeRunOnly(now, "anomalo", records.length, err);
     process.exit(1);

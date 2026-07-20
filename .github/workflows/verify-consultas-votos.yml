@@ -1,16 +1,22 @@
-name: Verify consultas_votos acervo
+name: Ingest consultas_votos (semanal)
 
-# WEEKLY integrity check of the frozen consultas_votos acervo (Arquimedes CSV, votos históricos por
-# UF). Split out of the daily corpus ingest (ingest-ecidadania.yml) per ROADMAP Etapa 2: the ordinary
-# corpora went daily to sharpen the first-seen series (decisão D3), but consultas_votos is a single-
-# vintage archive (decisão D1) that can never contribute to first-seen — re-ingesting its ~33 MB CSV
-# daily would be pure waste. Instead this run VERIFIES the acervo weekly.
+# WEEKLY re-ingest of the consultas_votos acervo (Arquimedes CSV, votos históricos por UF).
 #
-# The job downloads + re-hashes the CSV and compares against the vintage registered in D1. If it
-# hashes identically, it records an 'ok' run row and reapplies NOTHING (no ~15k upserts). If it
-# diverges, the "acervo congelado" premise is falsified: it records an 'anomalo' run row and the
-# job FAILS so the Action failure notification alerts for human review — never a silent overwrite.
-# Re-ingesting a legitimately new vintage is an explicit manual `force` dispatch (INGEST_FORCE=1).
+# HISTORY: this workflow started as a weekly INTEGRITY CHECK of a supposedly frozen single-vintage
+# acervo (ROADMAP Etapa 2, decisão D1) — any divergence failed the job for human review, and
+# re-ingesting required a manual `force` dispatch. On 2026-07-20 that premise was falsified: the
+# Senado republished the CSV as a fresh vintage (2026-07-19: +43 matérias, 648 updated — legitimate
+# growth, votes accumulating). Updates are routine, so the scheduled run now re-ingests normally.
+# (The filename keeps the historical `verify-` prefix so the workflow's run history stays attached.)
+#
+# The automatic guards that remain (same model as the daily entity ingests):
+#   - CSV sanity: header present + >0 data rows, else 'erro' run row + exit 1;
+#   - catastrophic floor (classifyRun): fewer matérias than ECIDADANIA_CORPUS_MIN_PCT% (80%) of the
+#     last good run → 'anomalo' run row + exit 1, corpus NEVER overwritten. The Action failure IS
+#     the alert; a legitimate large shrink is re-ingested via an explicit `force` dispatch.
+# Row hashes exclude the CSV vintage stamp (consultaVotoCore), so a re-ingest with unchanged votes
+# writes zero `_history` rows. Verify mode still exists in the script (--verify /
+# INGEST_CONSULTAS_VOTOS_VERIFY=1) as an on-demand integrity check — no longer scheduled.
 #
 # RUNS ON THE SELF-HOSTED RUNNER (label `ecidadania`), like the e-Cidadania entity ingests: as of
 # 2026-07-20 the Senado block on GitHub's cloud (Azure) egress IPs extends to www.senado.gov.br
@@ -24,7 +30,7 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: "Re-ingest a new vintage (override the integrity check and overwrite the acervo)"
+        description: "Override the catastrophic floor (write even a large legitimate shrink)"
         type: boolean
         default: false
 
@@ -33,9 +39,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  verify:
+  ingest:
     runs-on: [self-hosted, ecidadania]
-    # Hang-guard: self-hosted runners have no 6h cap. Download+hash+run-row finishes in minutes.
+    # Hang-guard: self-hosted runners have no 6h cap. Download+parse+load finishes in minutes.
     timeout-minutes: 60
     steps:
       - name: Checkout code
@@ -50,13 +56,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # In verify mode the generate step exits non-zero on divergence (the alert). The apply step below
-      # runs with if: always() so the 'anomalo'/'ok' run row is still recorded in ecidadania_scrape_runs.
-      # A `force` dispatch flips off verify and re-ingests the CSV as a new vintage (human-approved).
-      - name: Verify consultas_votos acervo (generate run/load SQL)
-        id: verify
+      # On a guard failure the generate step writes the 'erro'/'anomalo' run row AND exits 1; the
+      # apply step below runs with if: always() so that run row is still recorded in
+      # ecidadania_scrape_runs — never a silent gap, never an overwritten corpus.
+      - name: Generate consultas_votos corpus load SQL
+        id: generate
         env:
-          INGEST_CONSULTAS_VOTOS_VERIFY: ${{ inputs.force && '0' || '1' }}
           INGEST_FORCE: ${{ inputs.force && '1' || '0' }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           # A D1-scoped API token can't read /memberships for account auto-discovery, so wrangler
@@ -64,7 +69,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run ingest:ecidadania:consultas-votos
 
-      - name: Apply to D1 (records the run row even on a divergence alert)
+      - name: Apply to D1 (records the run row even on a guard failure)
         if: always()
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
