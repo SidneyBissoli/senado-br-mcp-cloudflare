@@ -11,6 +11,12 @@ name: Verify consultas_votos acervo
 # diverges, the "acervo congelado" premise is falsified: it records an 'anomalo' run row and the
 # job FAILS so the Action failure notification alerts for human review — never a silent overwrite.
 # Re-ingesting a legitimately new vintage is an explicit manual `force` dispatch (INGEST_FORCE=1).
+#
+# RUNS ON THE SELF-HOSTED RUNNER (label `ecidadania`), like the e-Cidadania entity ingests: as of
+# 2026-07-20 the Senado block on GitHub's cloud (Azure) egress IPs extends to www.senado.gov.br
+# (the Arquimedes CSV host) — curl: (28) connect timeout from ubuntu-latest, instant 200 from the
+# Hetzner box. Same security rule as the entity stubs: triggers are schedule/workflow_dispatch
+# ONLY — never add a pull_request/pull_request_target trigger (repo is public).
 
 on:
   schedule:
@@ -28,7 +34,9 @@ concurrency:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ecidadania]
+    # Hang-guard: self-hosted runners have no 6h cap. Download+hash+run-row finishes in minutes.
+    timeout-minutes: 60
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
