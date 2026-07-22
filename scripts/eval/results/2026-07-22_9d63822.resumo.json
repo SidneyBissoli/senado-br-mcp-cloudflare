@@ -1,0 +1,23 @@
+{
+  "geradoEm": "2026-07-22T13:45:15.412Z",
+  "shaServidor": "9d63822",
+  "modo": "dry",
+  "mcpUrl": "https://senado.sidneybissoli.com/mcp",
+  "modelos": {
+    "claude-haiku-4-5": {
+      "conversas": 5,
+      "conversasComErroInfra": 0,
+      "usage": {
+        "inputTokens": 1858,
+        "outputTokens": 2764,
+        "cacheCreationInputTokens": 140045,
+        "cacheReadInputTokens": 390690,
+        "requests": 5
+      },
+      "custoTotalUSD": 0.229803,
+      "custoMedioPorConversaUSD": 0.045961
+    }
+  },
+  "custoTotalUSD": 0.229803,
+  "custoMedioPorConversaUSD": 0.045961
+}
