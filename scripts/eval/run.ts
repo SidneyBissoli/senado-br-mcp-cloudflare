@@ -1,0 +1,511 @@
+/**
+ * Golden-battery runner (F2 of docs/_local/spec-bateria-dourada.md).
+ *
+ * Sends each golden question to the Anthropic Messages API with the MCP
+ * connector (beta `mcp-client-2025-11-20`) pointing at the production server,
+ * records the full mcp_tool_use/mcp_tool_result trace, computes the mechanical
+ * metrics M1/M2/M3/M5 (M4 is left blank for a later judge pass) and appends one
+ * NDJSON line per (perguntaId, modelo, run) to
+ * scripts/eval/results/AAAA-MM-DD_<sha>.ndjson.
+ *
+ * Modes:
+ *   npm run eval:dry   5 placeholder-free questions x weak model x 1 run
+ *   npm run eval       all non-pending questions x 2 models x 3 runs
+ *
+ * Requests are strictly serialized (initial rate-limit tier) with exponential
+ * backoff + jitter on 408/429/5xx/529/network errors, honoring Retry-After.
+ * Prompt caching: `cache_control` on the mcp_toolset (caches the MCP tool
+ * definitions — supported per the MCP-connector docs) and on the stable system
+ * block; the volatile date line sits after the last breakpoint.
+ *
+ * No SDK dependency (plain fetch), mirroring evals/run.ts. API key comes from
+ * the ANTHROPIC_API_KEY env var or a repo-root .env file (gitignored).
+ */
+
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { execSync } from "node:child_process";
+
+import { computeM1, computeM2, computeM3, isEmptyOrErrorResult, summarizeResult } from "./metrics.js";
+import { costUSD } from "./pricing.js";
+import type { CallRecord, GoldenQuestion, QuestionsFile, ResultLine, UsageTotals } from "./types.js";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(HERE, "..", "..");
+const RESULTS_DIR = join(HERE, "results");
+const QUESTIONS_PATH = join(HERE, "perguntas.json");
+
+const API_URL = "https://api.anthropic.com/v1/messages";
+const API_VERSION = "2023-06-01";
+const MCP_BETA = "mcp-client-2025-11-20";
+const DEFAULT_MCP_URL = "https://senado.sidneybissoli.com/mcp";
+
+const STRONG_MODEL = "claude-sonnet-4-6";
+const WEAK_MODEL = "claude-haiku-4-5";
+const FULL_RUNS = 3;
+/** Dry-run set fixed by the session prompt: placeholder-free questions, weak model, 1 run. */
+const DRY_IDS = ["A02", "A09", "B01", "B06", "C09"];
+
+const MAX_TOKENS = 4096;
+const MAX_RETRIES = 5;
+const MAX_CONTINUATIONS = 10; // pause_turn resumes per conversation
+const REQUEST_TIMEOUT_MS = 300_000;
+const PAUSE_BETWEEN_CONVERSATIONS_MS = 500;
+
+// ---------------------------------------------------------------------------
+// Environment / setup helpers
+// ---------------------------------------------------------------------------
+
+/** Minimal .env loader (KEY=VALUE lines) — only fills vars not already set. */
+function loadDotEnv(): void {
+  const envPath = join(REPO_ROOT, ".env");
+  if (!existsSync(envPath)) return;
+  for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
+    if (!m || line.trimStart().startsWith("#")) continue;
+    const value = m[2].replace(/^["']|["']$/g, "");
+    if (!(m[1] in process.env)) process.env[m[1]] = value;
+  }
+}
+
+function gitShortSha(): string {
+  return execSync("git rev-parse --short HEAD", { cwd: REPO_ROOT, encoding: "utf8" }).trim();
+}
+
+/** Brasília calendar date (YYYY-MM-DD) — used in the results filename and the system prompt. */
+function brasiliaDate(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+}
+
+function brasiliaWeekday(): string {
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", weekday: "long" }).format(new Date());
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ---------------------------------------------------------------------------
+// Anthropic API plumbing
+// ---------------------------------------------------------------------------
+
+interface ApiContentBlock {
+  type: string;
+  text?: string;
+  id?: string;
+  name?: string;
+  server_name?: string;
+  input?: unknown;
+  tool_use_id?: string;
+  is_error?: boolean;
+  content?: unknown;
+}
+
+interface ApiResponse {
+  content: ApiContentBlock[];
+  stop_reason: string | null;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_creation_input_tokens?: number;
+    cache_read_input_tokens?: number;
+  };
+}
+
+/** Thrown for conditions where the whole batch is doomed (bad key, no credits, bad request). */
+class FatalApiError extends Error {}
+
+/** Thrown when one request kept failing transiently after all retries. */
+class TransientExhaustedError extends Error {}
+
+function classifyStatus(status: number): "retryable" | "fatal" | "other" {
+  if (status === 408 || status === 429 || status >= 500) return "retryable";
+  if (status === 401 || status === 403) return "fatal";
+  if (status === 400) {
+    // A 400 is either a billing wall or a harness bug — both stop the batch.
+    return "fatal";
+  }
+  return "other";
+}
+
+/** One Messages API POST with bounded exponential backoff + jitter, honoring Retry-After. */
+async function postWithRetry(body: unknown, apiKey: string, label: string): Promise<ApiResponse> {
+  let lastMessage = "";
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let res: Response | null = null;
+    let networkError: string | null = null;
+    try {
+      res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": API_VERSION,
+          "anthropic-beta": MCP_BETA,
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      networkError = (e as Error).message || "unknown network error";
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (res?.ok) return (await res.json()) as ApiResponse;
+
+    let retryAfterMs: number | null = null;
+    if (res) {
+      const text = await res.text().catch(() => "");
+      lastMessage = `HTTP ${res.status}: ${text.slice(0, 300)}`;
+      const kind = classifyStatus(res.status);
+      if (kind === "fatal") throw new FatalApiError(`${label}: ${lastMessage}`);
+      if (kind === "other") throw new TransientExhaustedError(`${label}: ${lastMessage}`);
+      const ra = Number(res.headers.get("retry-after"));
+      if (Number.isFinite(ra) && ra > 0) retryAfterMs = ra * 1000;
+    } else {
+      lastMessage = `network: ${networkError}`;
+    }
+
+    if (attempt === MAX_RETRIES) break;
+    const backoff = retryAfterMs ?? Math.min(60_000, 1000 * 2 ** attempt);
+    const jitter = Math.floor(Math.random() * 500);
+    console.error(`    retry ${attempt + 1}/${MAX_RETRIES} in ${backoff + jitter}ms (${lastMessage})`);
+    await sleep(backoff + jitter);
+  }
+  throw new TransientExhaustedError(`${label}: retries exhausted — ${lastMessage}`);
+}
+
+// ---------------------------------------------------------------------------
+// Conversation runner
+// ---------------------------------------------------------------------------
+
+const SYSTEM_STABLE =
+  "Você é um assistente conectado ao servidor MCP senado-br, que expõe dados abertos do " +
+  "Senado Federal do Brasil. Responda à pergunta do usuário em português, usando as " +
+  "ferramentas disponíveis quando necessário. Baseie números e fatos exclusivamente nos " +
+  "resultados das ferramentas; se os dados disponíveis não permitirem responder com " +
+  "precisão, diga isso explicitamente em vez de estimar ou inventar valores.";
+
+interface RequestContext {
+  apiKey: string;
+  mcpUrl: string;
+  mcpToken: string | undefined;
+  dateLine: string;
+}
+
+function buildRequestBody(ctx: RequestContext, model: string, messages: unknown[]): unknown {
+  return {
+    model,
+    max_tokens: MAX_TOKENS,
+    system: [
+      // Stable prefix first, then a cache breakpoint; the volatile date line
+      // comes after it so it never invalidates the cached tools+system prefix.
+      { type: "text", text: SYSTEM_STABLE, cache_control: { type: "ephemeral" } },
+      { type: "text", text: ctx.dateLine },
+    ],
+    mcp_servers: [
+      {
+        type: "url",
+        url: ctx.mcpUrl,
+        name: "senado-br",
+        ...(ctx.mcpToken ? { authorization_token: ctx.mcpToken } : {}),
+      },
+    ],
+    tools: [
+      // Prompt caching applies to MCP tool definitions via cache_control on the
+      // toolset (see the MCP-connector docs, "MCP toolset configuration").
+      { type: "mcp_toolset", mcp_server_name: "senado-br", cache_control: { type: "ephemeral" } },
+    ],
+    messages,
+  };
+}
+
+function extractResultText(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((b) => (b && typeof b === "object" && "text" in b ? String((b as { text: unknown }).text) : ""))
+      .join("\n");
+  }
+  return content == null ? "" : JSON.stringify(content);
+}
+
+interface ConversationOutcome {
+  chamadas: CallRecord[];
+  respostaFinal: string;
+  stopReason: string | null;
+  continuacoes: number;
+  usage: UsageTotals;
+  erroInfra?: string;
+}
+
+/**
+ * Run one full conversation (question x model), following pause_turn
+ * continuations of the server-side MCP tool loop until a terminal stop_reason.
+ */
+async function runConversation(
+  ctx: RequestContext,
+  model: string,
+  question: GoldenQuestion,
+): Promise<ConversationOutcome> {
+  const messages: unknown[] = [{ role: "user", content: question.pergunta }];
+  const chamadas: CallRecord[] = [];
+  const pendingByToolUseId = new Map<string, CallRecord>();
+  const textParts: string[] = [];
+  const usage: UsageTotals = {
+    inputTokens: 0,
+    outputTokens: 0,
+    cacheCreationInputTokens: 0,
+    cacheReadInputTokens: 0,
+    requests: 0,
+  };
+  let stopReason: string | null = null;
+  let continuacoes = 0;
+
+  try {
+    for (;;) {
+      const response = await postWithRetry(
+        buildRequestBody(ctx, model, messages),
+        ctx.apiKey,
+        `${question.id}/${model}`,
+      );
+      usage.requests += 1;
+      usage.inputTokens += response.usage?.input_tokens ?? 0;
+      usage.outputTokens += response.usage?.output_tokens ?? 0;
+      usage.cacheCreationInputTokens += response.usage?.cache_creation_input_tokens ?? 0;
+      usage.cacheReadInputTokens += response.usage?.cache_read_input_tokens ?? 0;
+
+      for (const block of response.content ?? []) {
+        if (block.type === "text" && block.text) {
+          textParts.push(block.text);
+        } else if (block.type === "mcp_tool_use" && block.name) {
+          const call: CallRecord = {
+            tool: block.name,
+            params: block.input ?? {},
+            resultadoResumo: "(sem resultado registrado)",
+            isError: false,
+            vazio: false,
+          };
+          chamadas.push(call);
+          if (block.id) pendingByToolUseId.set(block.id, call);
+        } else if (block.type === "mcp_tool_result" && block.tool_use_id) {
+          const call = pendingByToolUseId.get(block.tool_use_id);
+          if (!call) continue;
+          const text = extractResultText(block.content);
+          call.isError = block.is_error === true;
+          call.vazio = !call.isError && isEmptyOrErrorResult(text, false);
+          call.resultadoResumo = summarizeResult(text, call.isError, call.vazio);
+        }
+      }
+
+      stopReason = response.stop_reason;
+      if (stopReason === "pause_turn" && continuacoes < MAX_CONTINUATIONS) {
+        // Server-side tool loop hit its iteration limit; resend to resume.
+        continuacoes += 1;
+        messages.push({ role: "assistant", content: response.content });
+        continue;
+      }
+      break;
+    }
+  } catch (e) {
+    if (e instanceof FatalApiError) throw e;
+    return {
+      chamadas,
+      respostaFinal: textParts.join("\n").trim(),
+      stopReason,
+      continuacoes,
+      usage,
+      erroInfra: (e as Error).message,
+    };
+  }
+
+  return { chamadas, respostaFinal: textParts.join("\n").trim(), stopReason, continuacoes, usage };
+}
+
+// ---------------------------------------------------------------------------
+// Batch orchestration
+// ---------------------------------------------------------------------------
+
+interface ModelSummary {
+  conversas: number;
+  conversasComErroInfra: number;
+  usage: UsageTotals;
+  custoTotalUSD: number;
+  custoMedioPorConversaUSD: number;
+}
+
+function fmtUsd(v: number): string {
+  return `$${v.toFixed(4)}`;
+}
+
+function fmtMetric(v: 0 | 1 | null): string {
+  return v === null ? "NA" : String(v);
+}
+
+async function main(): Promise<void> {
+  loadDotEnv();
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    console.error(
+      "ANTHROPIC_API_KEY is not set (env var or repo-root .env). The runner calls the paid " +
+        "Anthropic Messages API and cannot proceed without it.",
+    );
+    process.exit(1);
+  }
+
+  const dry = process.argv.includes("--dry");
+  const questionsFile = JSON.parse(readFileSync(QUESTIONS_PATH, "utf8")) as QuestionsFile;
+  const byId = new Map(questionsFile.perguntas.map((q) => [q.id, q]));
+
+  const idsOverride = (process.env.EVAL_IDS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  let questions: GoldenQuestion[];
+  if (idsOverride.length > 0) {
+    questions = idsOverride.map((id) => {
+      const q = byId.get(id);
+      if (!q) throw new Error(`EVAL_IDS: unknown question id ${id}`);
+      return q;
+    });
+  } else if (dry) {
+    questions = DRY_IDS.map((id) => {
+      const q = byId.get(id);
+      if (!q) throw new Error(`dry-run question ${id} missing from perguntas.json`);
+      if (q.pendente) throw new Error(`dry-run question ${id} is marked pendente`);
+      return q;
+    });
+  } else {
+    questions = questionsFile.perguntas.filter((q) => !q.pendente);
+  }
+
+  const models = dry
+    ? [WEAK_MODEL]
+    : (process.env.EVAL_MODELS ?? `${STRONG_MODEL},${WEAK_MODEL}`).split(",").map((s) => s.trim()).filter(Boolean);
+  const runs = dry ? 1 : Math.max(1, parseInt(process.env.EVAL_RUNS ?? "", 10) || FULL_RUNS);
+
+  const sha = gitShortSha();
+  const date = brasiliaDate();
+  const ctx: RequestContext = {
+    apiKey,
+    mcpUrl: process.env.EVAL_MCP_URL ?? DEFAULT_MCP_URL,
+    mcpToken: process.env.SENADO_MCP_TOKEN || undefined,
+    dateLine: `Data de hoje: ${brasiliaWeekday()}, ${date} (fuso horário de Brasília).`,
+  };
+
+  mkdirSync(RESULTS_DIR, { recursive: true });
+  const basePath = join(RESULTS_DIR, `${date}_${sha}`);
+  const ndjsonPath = `${basePath}.ndjson`;
+  const summaryPath = `${basePath}.resumo.json`;
+  if (existsSync(ndjsonPath)) {
+    console.warn(`warning: ${ndjsonPath} already exists — new lines will be APPENDED.`);
+  }
+
+  const skipped = questionsFile.perguntas.filter((q) => q.pendente).map((q) => q.id);
+  console.log(`golden battery ${dry ? "DRY RUN" : "full run"} — sha ${sha}, MCP ${ctx.mcpUrl}`);
+  console.log(
+    `questions: ${questions.length} (pendente skipped: ${skipped.join(", ") || "none"}) · ` +
+      `models: ${models.join(", ")} · runs: ${runs} · serialized requests`,
+  );
+
+  const perModel = new Map<string, ModelSummary>();
+  let firstConversation = true;
+
+  for (const model of models) {
+    const summary: ModelSummary = {
+      conversas: 0,
+      conversasComErroInfra: 0,
+      usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, requests: 0 },
+      custoTotalUSD: 0,
+      custoMedioPorConversaUSD: 0,
+    };
+    perModel.set(model, summary);
+
+    for (const question of questions) {
+      for (let run = 1; run <= runs; run++) {
+        if (!firstConversation) await sleep(PAUSE_BETWEEN_CONVERSATIONS_MS);
+        firstConversation = false;
+
+        const startedAt = Date.now();
+        const outcome = await runConversation(ctx, model, question);
+        const custo = costUSD(model, outcome.usage);
+        const infraFailed = outcome.erroInfra !== undefined;
+
+        const line: ResultLine = {
+          perguntaId: question.id,
+          modelo: model,
+          run,
+          timestamp: new Date().toISOString(),
+          shaServidor: sha,
+          chamadas: outcome.chamadas,
+          m1: infraFailed ? null : computeM1(question, outcome.chamadas),
+          m2: infraFailed ? null : computeM2(question, outcome.chamadas),
+          m3: infraFailed ? null : computeM3(outcome.chamadas),
+          m4: null,
+          m5: outcome.chamadas.length,
+          respostaFinal: outcome.respostaFinal,
+          veredito: "",
+          stopReason: outcome.stopReason,
+          continuacoes: outcome.continuacoes,
+          usage: outcome.usage,
+          custoUSD: Number(custo.toFixed(6)),
+          ...(infraFailed ? { erroInfra: outcome.erroInfra } : {}),
+        };
+        appendFileSync(ndjsonPath, `${JSON.stringify(line)}\n`, "utf8");
+
+        summary.conversas += 1;
+        if (infraFailed) summary.conversasComErroInfra += 1;
+        summary.custoTotalUSD += custo;
+        summary.usage.inputTokens += outcome.usage.inputTokens;
+        summary.usage.outputTokens += outcome.usage.outputTokens;
+        summary.usage.cacheCreationInputTokens += outcome.usage.cacheCreationInputTokens;
+        summary.usage.cacheReadInputTokens += outcome.usage.cacheReadInputTokens;
+        summary.usage.requests += outcome.usage.requests;
+
+        const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
+        console.log(
+          `  ${question.id} [${model}] run ${run} · m1=${fmtMetric(line.m1)} m2=${fmtMetric(line.m2)} ` +
+            `m3=${fmtMetric(line.m3)} m5=${line.m5} · ${secs}s · ${fmtUsd(custo)}` +
+            (infraFailed ? ` · INFRA FAILURE: ${outcome.erroInfra}` : ""),
+        );
+      }
+    }
+    summary.custoMedioPorConversaUSD = summary.conversas > 0 ? summary.custoTotalUSD / summary.conversas : 0;
+  }
+
+  const totalConversas = [...perModel.values()].reduce((a, s) => a + s.conversas, 0);
+  const totalCusto = [...perModel.values()].reduce((a, s) => a + s.custoTotalUSD, 0);
+  const summaryDoc = {
+    geradoEm: new Date().toISOString(),
+    shaServidor: sha,
+    modo: dry ? "dry" : "full",
+    mcpUrl: ctx.mcpUrl,
+    modelos: Object.fromEntries(
+      [...perModel.entries()].map(([model, s]) => [
+        model,
+        { ...s, custoTotalUSD: Number(s.custoTotalUSD.toFixed(6)), custoMedioPorConversaUSD: Number(s.custoMedioPorConversaUSD.toFixed(6)) },
+      ]),
+    ),
+    custoTotalUSD: Number(totalCusto.toFixed(6)),
+    custoMedioPorConversaUSD: Number((totalConversas > 0 ? totalCusto / totalConversas : 0).toFixed(6)),
+  };
+  writeFileSync(summaryPath, `${JSON.stringify(summaryDoc, null, 2)}\n`, "utf8");
+
+  console.log("");
+  console.log(`results: ${ndjsonPath}`);
+  console.log(`cost summary: ${summaryPath}`);
+  for (const [model, s] of perModel) {
+    console.log(
+      `  ${model}: ${s.conversas} conversations · in=${s.usage.inputTokens} ` +
+        `cacheWrite=${s.usage.cacheCreationInputTokens} cacheRead=${s.usage.cacheReadInputTokens} ` +
+        `out=${s.usage.outputTokens} · total ${fmtUsd(s.custoTotalUSD)} · avg/conversation ${fmtUsd(s.custoMedioPorConversaUSD)}`,
+    );
+  }
+  console.log(`  TOTAL: ${totalConversas} conversations · ${fmtUsd(totalCusto)} · avg/conversation ${fmtUsd(totalConversas > 0 ? totalCusto / totalConversas : 0)}`);
+}
+
+main().catch((e) => {
+  console.error(e instanceof FatalApiError ? `FATAL: ${e.message}` : e);
+  process.exit(1);
+});

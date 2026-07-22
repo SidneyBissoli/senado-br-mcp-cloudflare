@@ -17,6 +17,8 @@ scripts/ingest-ecidadania/out.sql
 # Root-anchored (leading slash) so it does NOT match src/dataset/ or tests/dataset/.
 /dataset/
 .dev.vars
+# API keys for the eval harness (scripts/eval) — never commit
+.env
 .secrets/
 reports/
 # docs/ é versionado por padrão (ciência auditável do dataset + doc técnica do MCP).

@@ -1,0 +1,1064 @@
+{
+  "fonte": "docs/_local/spec-bateria-dourada.md (seção 5 — canônica; este JSON é derivado)",
+  "totalPerguntas": 67,
+  "perguntas": [
+    {
+      "id": "A01",
+      "persona": "Assessor de senador",
+      "pergunta": "Qual foi a pauta da última sessão plenária do primeiro semestre?",
+      "esperado": "senado_agenda_plenario (data amanhã em YYYYMMDD)",
+      "classes": [
+        "TMP"
+      ],
+      "nota": "Data relativa",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_agenda_plenario"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "A02",
+      "persona": "Assessor de senador",
+      "pergunta": "Quais comissões se reuniram na primeira semana de junho?",
+      "esperado": "senado_agenda_comissoes",
+      "classes": [
+        "TMP"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_agenda_comissoes"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "A03",
+      "persona": "Assessor de senador",
+      "pergunta": "Quais projetos o senador Rodrigo Pacheco apresentou em 2026?",
+      "esperado": "senado_search_processos ou senado_buscar_materias",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "Par confundível matérias/processos",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_buscar_materias",
+        "senado_search_processos"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "A04",
+      "persona": "Assessor de senador",
+      "pergunta": "Escolha uma PEC qualquer votada neste ano e me diga como o senador Astronauta votou.",
+      "esperado": "senado_votacoes_senador ou senado_votos_materia",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "Dois caminhos válidos",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_votacoes_senador",
+        "senado_votos_materia"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "A05",
+      "persona": "Assessor de senador",
+      "pergunta": "Quais os últimos discursos do senador Paulo Paim?",
+      "esperado": "senado_discursos_senador",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_discursos_senador"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "A06",
+      "persona": "Assessor de senador",
+      "pergunta": "Traga o texto integral do último pronunciamento do senador Davi Alcolumbre",
+      "esperado": "senado_discursos_senador -> senado_discurso_texto",
+      "classes": [
+        "ENC"
+      ],
+      "nota": "codigoPronunciamento encadeado",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_discurso_texto",
+        "senado_discursos_senador"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "A07",
+      "persona": "Assessor de senador",
+      "pergunta": "Há consulta pública aberta sobre inteligência artificial?",
+      "esperado": "senado_ecidadania_listar_consultas",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "Filtro temático",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_ecidadania_listar_consultas"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "A08",
+      "persona": "Assessor de senador",
+      "pergunta": "Escolha um PL qualquer e me diga qual o placar atual de sua consulta pública",
+      "esperado": "listar -> senado_ecidadania_obter_consulta",
+      "classes": [
+        "ENC"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_ecidadania_listar_consultas",
+        "senado_ecidadania_obter_consulta"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "A09",
+      "persona": "Assessor de senador",
+      "pergunta": "Quais vetos presidenciais aguardam apreciação?",
+      "esperado": "senado_vetos",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_vetos"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "A10",
+      "persona": "Assessor de senador",
+      "pergunta": "O que foi deliberado na primeira sessão plenária de maio?",
+      "esperado": "senado_resultado_plenario",
+      "classes": [
+        "TMP"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_resultado_plenario"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "A11",
+      "persona": "Assessor de senador",
+      "pergunta": "Quem são os atuais líderes de governo e oposição?",
+      "esperado": "senado_liderancas",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_liderancas"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "B01",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Qual a remuneração média dos servidores em abril de 2026?",
+      "esperado": "senado_remuneracoes_servidores estatisticas=true",
+      "classes": [
+        "AGG"
+      ],
+      "nota": "Caso fácil de referência",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_remuneracoes_servidores"
+      ],
+      "parametrosEssenciais": {
+        "estatisticas": "true"
+      }
+    },
+    {
+      "id": "B02",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Mediana e percentil 90 da remuneração líquida em maio de 2026",
+      "esperado": "remuneracoes estatisticas=true campo=liquida",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "Escolha de campo",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_remuneracoes_servidores"
+      ],
+      "parametrosEssenciais": {
+        "estatisticas": "true",
+        "campo": "liquida"
+      }
+    },
+    {
+      "id": "B03",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Série mensal do gasto com horas extras em 2025",
+      "esperado": "senado_horas_extras x12",
+      "classes": [
+        "ENC",
+        "AGG"
+      ],
+      "nota": "Hoje exige 12 chamadas; candidata a agregação server-side",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_horas_extras"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "B04",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Ranking de gasto de CEAPS por senador em 2025",
+      "esperado": "senado_ceaps",
+      "classes": [
+        "AGG"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_ceaps"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "B05",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Dotação, empenhado e pago do orçamento do Senado em 2025",
+      "esperado": "senado_execucao_orcamentaria",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_execucao_orcamentaria"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "B06",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Quantos terceirizados atuam no Senado hoje?",
+      "esperado": "senado_terceirizados",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "Confundível com servidores",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_terceirizados"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "B07",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Quantos servidores têm aposentadoria prevista nos próximos 5 anos?",
+      "esperado": "senado_pessoal_tabelas tabela=previsao-aposentadoria",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "Confundível com servidores",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_pessoal_tabelas"
+      ],
+      "parametrosEssenciais": {
+        "tabela": "previsao-aposentadoria"
+      }
+    },
+    {
+      "id": "B08",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Quais parlamentares são os autores mais produtivos?",
+      "esperado": "senado_autores_atuais",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_autores_atuais"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "B09",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Distribuição dos votos da consulta pública sobre a jornada 6x1 por UF",
+      "esperado": "senado_ecidadania_consultas_votos",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "Quebra por UF",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_ecidadania_consultas_votos"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "B10",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Top 20 maiores remunerações brutas de março de 2026",
+      "esperado": "remuneracoes estatisticas=true topN=20",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "topN não-padrão",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_remuneracoes_servidores"
+      ],
+      "parametrosEssenciais": {
+        "estatisticas": "true",
+        "topN": "20"
+      }
+    },
+    {
+      "id": "B11",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Quantos servidores efetivos e quantos comissionados?",
+      "esperado": "senado_servidores situacao=efetivos + comissionados, ou pessoal_tabelas",
+      "classes": [
+        "SEL",
+        "ENC"
+      ],
+      "nota": "Duas chamadas ou tabela agregada",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_pessoal_tabelas",
+        "senado_servidores"
+      ],
+      "parametrosEssenciais": {
+        "situacao": "efetivos"
+      }
+    },
+    {
+      "id": "B12",
+      "persona": "Analista de dados do Senado",
+      "pergunta": "Qual parlamentar concentra mais matérias na CAE?",
+      "esperado": "senado_distribuicao_materias siglaComissao=CAE",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_distribuicao_materias"
+      ],
+      "parametrosEssenciais": {
+        "siglaComissao": "CAE"
+      }
+    },
+    {
+      "id": "C01",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "Qual a remuneração média dos técnicos legislativos em junho de 2026?",
+      "esperado": "Hoje: melhor esforço + declarar que a folha não permite recorte por categoria",
+      "classes": [
+        "LIM",
+        "REC"
+      ],
+      "nota": "Pergunta-origem desta frente. Pós-F4, vira AGG se agregação por categoria for implementada",
+      "pendente": false,
+      "ferramentasEsperadas": [],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "C02",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "Quantos técnicos legislativos ativos há no Senado?",
+      "esperado": "senado_servidores por categoria TL",
+      "classes": [
+        "REC"
+      ],
+      "nota": "Bug conhecido: filtro cargo retorna 0 silencioso",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_servidores"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "C03",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "Quantas pessoas trabalham sob a Diretoria-Geral?",
+      "esperado": "senado_servidores subordinadasA=DGER",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "lotacao=DGER retorna 0; exige parâmetro certo",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_servidores"
+      ],
+      "parametrosEssenciais": {
+        "subordinadasA": "DGER"
+      }
+    },
+    {
+      "id": "C04",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "Quais serviços compõem a SEGRAF?",
+      "esperado": "senado_estrutura_organizacional",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_estrutura_organizacional"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "C05",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "Quantos estagiários ativos há atualmente?",
+      "esperado": "senado_pessoal_tabelas tabela=estagiarios",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_pessoal_tabelas"
+      ],
+      "parametrosEssenciais": {
+        "tabela": "estagiarios"
+      }
+    },
+    {
+      "id": "C06",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "Quem chefia o Serviço de Multimídia (SEMID)?",
+      "esperado": "senado_servidores lotacao=SEMID",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "Identificar função de chefia no retorno",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_servidores"
+      ],
+      "parametrosEssenciais": {
+        "lotacao": "SEMID"
+      }
+    },
+    {
+      "id": "C07",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "Quais notas de empenho recentes existem para a área de TI?",
+      "esperado": "senado_contratacoes_lista tipo empenhos",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_contratacoes_lista"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "C08",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "O Senado mantém contrato vigente com a empresa Nexus?",
+      "esperado": "senado_contratos ou senado_empresas_contratadas",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_contratos",
+        "senado_empresas_contratadas"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "C09",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "Detalhes da licitação 19/2018",
+      "esperado": "senado_licitacoes número exato",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "Formato NN/AAAA",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_licitacoes"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "C10",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "Relação de supridos de 2025",
+      "esperado": "senado_suprimento_fundos",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_suprimento_fundos"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "C11",
+      "persona": "Técnico legislativo (área administrativa)",
+      "pergunta": "Quantos cargos em comissão e funções de confiança existem?",
+      "esperado": "senado_pessoal_tabelas tabela=cargos-funcoes",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_pessoal_tabelas"
+      ],
+      "parametrosEssenciais": {
+        "tabela": "cargos-funcoes"
+      }
+    },
+    {
+      "id": "D01",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Escolha um PL qualquer e me diga em que fase de tramitação ele está.",
+      "esperado": "buscar_materias -> obter_materia ou obter_processo",
+      "classes": [
+        "ENC"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_buscar_materias",
+        "senado_obter_materia",
+        "senado_obter_processo"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "D02",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Escolha um PL qualquer e me diga quem o relata na CCJ.",
+      "esperado": "obter_materia ou processo_detalhe",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_obter_materia",
+        "senado_processo_detalhe"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "D03",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Escolha um PLP qualquer e me diga quais emendas foram apresentadas.",
+      "esperado": "senado_processo_detalhe secao=emendas",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_processo_detalhe"
+      ],
+      "parametrosEssenciais": {
+        "secao": "emendas"
+      }
+    },
+    {
+      "id": "D04",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Escolha uma Lei já promulgada e me retorne o texto dela",
+      "esperado": "senado_buscar_legislacao",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "Armadilha central: NÃO é buscar_materias",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_buscar_legislacao"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "D05",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Escolha uma MPV qualquer e me diga se ela já foi votada em plenário. Se sim, com que resultado?",
+      "esperado": "votos_materia ou search_votacoes",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_search_votacoes",
+        "senado_votos_materia"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "D06",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Como cada bancada orientou na votação de 30/04/2026?",
+      "esperado": "senado_orientacao_bancada",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_orientacao_bancada"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "D07",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Notas taquigráficas da sessão plenária de 26/03/2026.",
+      "esperado": "resultado/encontro_plenario -> notas_taquigraficas",
+      "classes": [
+        "ENC"
+      ],
+      "nota": "Precisa do código da sessão",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_encontro_plenario",
+        "senado_notas_taquigraficas",
+        "senado_resultado_plenario"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "D08",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Reuniões da CCJ previstas para o mês de agosto",
+      "esperado": "senado_reunioes_comissao sigla=CCJ + datas",
+      "classes": [
+        "PAR",
+        "TMP"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_reunioes_comissao"
+      ],
+      "parametrosEssenciais": {
+        "sigla": "CCJ"
+      }
+    },
+    {
+      "id": "D09",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Requerimentos já apresentados na CPI do INSS",
+      "esperado": "senado_requerimentos_cpi",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_requerimentos_cpi"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "D10",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Retorne-me o resultado da apreciação de um veto qualquer?",
+      "esperado": "senado_resultado_veto",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_resultado_veto"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "D11",
+      "persona": "Técnico legislativo (processo legislativo)",
+      "pergunta": "Pauta da CAE da primeira semana de agosto",
+      "esperado": "agenda_comissoes ou reunioes_comissao",
+      "classes": [
+        "SEL",
+        "TMP"
+      ],
+      "nota": "Par confundível",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_agenda_comissoes",
+        "senado_reunioes_comissao"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "E01",
+      "persona": "Jornalista",
+      "pergunta": "Quem foi o servidor mais bem pago do Senado em junho de 2026?",
+      "esperado": "remuneracoes estatisticas=true (top)",
+      "classes": [
+        "AGG"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_remuneracoes_servidores"
+      ],
+      "parametrosEssenciais": {
+        "estatisticas": "true"
+      }
+    },
+    {
+      "id": "E02",
+      "persona": "Jornalista",
+      "pergunta": "Quanto o senador Flávio Bolsonaro gastou de cota parlamentar em 2025, e com o quê?",
+      "esperado": "senado_ceaps",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_ceaps"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "E03",
+      "persona": "Jornalista",
+      "pergunta": "Quais os maiores fornecedores do Senado por valor contratado?",
+      "esperado": "contratos ou empresas_contratadas",
+      "classes": [
+        "AGG"
+      ],
+      "nota": "Candidata a agregação server-side",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_contratos",
+        "senado_empresas_contratadas"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "E04",
+      "persona": "Jornalista",
+      "pergunta": "Quem mais recebeu horas extras em dezembro de 2025?",
+      "esperado": "horas_extras estatisticas=true agruparPor=nome",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_horas_extras"
+      ],
+      "parametrosEssenciais": {
+        "estatisticas": "true",
+        "agruparPor": "nome"
+      }
+    },
+    {
+      "id": "E05",
+      "persona": "Jornalista",
+      "pergunta": "Qual o salário do presidente do Senado?",
+      "esperado": "Nenhuma: senador recebe subsídio, não consta na folha de servidores",
+      "classes": [
+        "LIM"
+      ],
+      "nota": "Gold = explicar a distinção; não retornar servidor homônimo",
+      "pendente": false,
+      "ferramentasEsperadas": [],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "E06",
+      "persona": "Jornalista",
+      "pergunta": "Algum servidor recebeu acima de R$ 100 mil em junho de 2026?",
+      "esperado": "remuneracoes estatisticas=true (top/percentis)",
+      "classes": [
+        "AGG"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_remuneracoes_servidores"
+      ],
+      "parametrosEssenciais": {
+        "estatisticas": "true"
+      }
+    },
+    {
+      "id": "E07",
+      "persona": "Jornalista",
+      "pergunta": "Discursos em plenário sobre aquecimento global no último mês",
+      "esperado": "senado_discursos_plenario com período",
+      "classes": [
+        "PAR",
+        "TMP"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_discursos_plenario"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "E08",
+      "persona": "Jornalista",
+      "pergunta": "Como votaram os senadores de MS em uma matéria qualquer?",
+      "esperado": "votos_materia + recorte por UF",
+      "classes": [
+        "ENC",
+        "AGG"
+      ],
+      "nota": "Recorte por UF hoje é client-side",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_votos_materia"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "E09",
+      "persona": "Jornalista",
+      "pergunta": "Quanto cada senador destinou em emendas ao orçamento de 2026?",
+      "esperado": "senado_orcamento_parlamentar",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_orcamento_parlamentar"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "E10",
+      "persona": "Jornalista",
+      "pergunta": "O quadro de terceirizados cresceu nos últimos anos?",
+      "esperado": "Nenhuma: série histórica indisponível",
+      "classes": [
+        "LIM"
+      ],
+      "nota": "Gold = declarar limitação",
+      "pendente": false,
+      "ferramentasEsperadas": [],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "E11",
+      "persona": "Jornalista",
+      "pergunta": "Quanto o Senado empenhou com a empresa Plansul em 2025?",
+      "esperado": "contratacoes_lista (empenhos) ou contratos",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_contratacoes_lista",
+        "senado_contratos"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F01",
+      "persona": "Cientista político",
+      "pergunta": "Na votação da jornada 6x1, quais partidos votaram contra a própria orientação?",
+      "esperado": "orientacao_bancada + obter_votacao",
+      "classes": [
+        "ENC",
+        "AGG"
+      ],
+      "nota": "Cruzamento orientação x voto",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_obter_votacao",
+        "senado_orientacao_bancada"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F02",
+      "persona": "Cientista político",
+      "pergunta": "Quantas matérias cada partido apresentou em 2026?",
+      "esperado": "Sem agregação por partido no catálogo",
+      "classes": [
+        "LIM"
+      ],
+      "nota": "Gold = declarar ou compor via autores_atuais com ressalva",
+      "pendente": false,
+      "ferramentasEsperadas": [],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F03",
+      "persona": "Cientista político",
+      "pergunta": "Distribuição por UF dos votos de uma consulta pública qualquer",
+      "esperado": "senado_ecidadania_consultas_votos",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_ecidadania_consultas_votos"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F04",
+      "persona": "Cientista político",
+      "pergunta": "Quais ideias legislativas já superaram o apoio necessário para tramitar?",
+      "esperado": "senado_ecidadania_listar_ideias",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_ecidadania_listar_ideias"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F05",
+      "persona": "Cientista político",
+      "pergunta": "Quais temas concentram mais engajamento nas consultas abertas?",
+      "esperado": "senado_ecidadania_consultas_analise",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_ecidadania_consultas_analise"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F06",
+      "persona": "Cientista político",
+      "pergunta": "Composição atual dos blocos parlamentares",
+      "esperado": "senado_listar_blocos",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_listar_blocos"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F07",
+      "persona": "Cientista político",
+      "pergunta": "Todas as votações nominais da senadora Damares Alves em 2025",
+      "esperado": "senado_votacoes_senador",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_votacoes_senador"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F08",
+      "persona": "Cientista político",
+      "pergunta": "Dos vetos apreciados em 2025, quantos foram mantidos e quantos derrubados?",
+      "esperado": "vetos -> resultado_veto (n chamadas)",
+      "classes": [
+        "ENC",
+        "AGG"
+      ],
+      "nota": "Candidata a agregação server-side",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_resultado_veto",
+        "senado_vetos"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F09",
+      "persona": "Cientista político",
+      "pergunta": "Audiências interativas do e-Cidadania realizadas neste semestre",
+      "esperado": "senado_ecidadania_listar_eventos",
+      "classes": [
+        "PAR",
+        "TMP"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_ecidadania_listar_eventos"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F10",
+      "persona": "Cientista político",
+      "pergunta": "Há sabatinas agendadas nas próximas semanas?",
+      "esperado": "ecidadania_listar_eventos ou agenda_comissoes",
+      "classes": [
+        "SEL"
+      ],
+      "nota": "",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_agenda_comissoes",
+        "senado_ecidadania_listar_eventos"
+      ],
+      "parametrosEssenciais": {}
+    },
+    {
+      "id": "F11",
+      "persona": "Cientista político",
+      "pergunta": "Quem preside a CCJ e quais senadores a compõem?",
+      "esperado": "senado_obter_comissao",
+      "classes": [
+        "PAR"
+      ],
+      "nota": "Seção adequada",
+      "pendente": false,
+      "ferramentasEsperadas": [
+        "senado_obter_comissao"
+      ],
+      "parametrosEssenciais": {}
+    }
+  ]
+}
