@@ -180,9 +180,15 @@ describe("contract: /materia/vetos (Vetos.Veto)", () => {
     expect(Array.isArray(vetos)).toBe(true);
     expect(vetos.length).toBeGreaterThan(0);
     const v = vetos[0];
-    for (const k of ["Codigo", "Materia", "MateriaVetada", "Total", "Assunto", "DataSobrestacaoPauta"]) {
+    for (const k of ["Codigo", "Materia", "MateriaVetada", "Total", "Assunto"]) {
       expect(v).toHaveProperty(k);
     }
+    // Optional: DataSobrestacaoPauta is absent on freshly-published vetoes not
+    // yet received by Congress (no DataRecebimentoCongresso either) — the
+    // capture is newest-first, so item 0 can lack it right after a veto lands.
+    const comPrazo = vetos.find((x: any) => "DataSobrestacaoPauta" in x);
+    expect(comPrazo).toBeDefined();
+    expect(typeof comPrazo.DataSobrestacaoPauta).toBe("string");
     for (const k of ["Sigla", "Numero", "Ano", "Ementa", "EmTramitacao"]) {
       expect(v.Materia).toHaveProperty(k);
     }
@@ -203,7 +209,11 @@ describe("contract: /materia/vetos (Vetos.Veto)", () => {
     expect(typeof v.emTramitacao).toBe("boolean");
     // Total: "Sim"/"Nao" maps to total/parcial
     expect(["total", "parcial"]).toContain(v.tipo);
-    expect(typeof v.dataLimiteVotacao).toBe("string");
+    // dataLimiteVotacao is null while DataSobrestacaoPauta is still unset upstream.
+    expect(v.dataLimiteVotacao === null || typeof v.dataLimiteVotacao === "string").toBe(true);
+    const comLimite = vetos.find((x) => x.dataLimiteVotacao !== null);
+    expect(comLimite).toBeDefined();
+    expect(typeof comLimite!.dataLimiteVotacao).toBe("string");
     expect(v.materiaVetada).not.toBeNull();
     expect(typeof v.materiaVetada!.codigo).toBe("number");
     expect(typeof v.materiaVetada!.identificacao).toBe("string");

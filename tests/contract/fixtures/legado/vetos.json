@@ -3,11 +3,63 @@
     "Metadados": {
       "DataVersaoServico": "2018-08-23",
       "DescricaoDataSet": "Lista os vetos posteriores à RCN 1/2013 que estão tramitando",
-      "Versao": "15/07/2026 22:28:15",
+      "Versao": "22/07/2026 08:19:55",
       "VersaoServico": "7"
     },
     "Vetos": {
       "Veto": [
+        {
+          "Assunto": "Estratégia Nacional de Saúde do Complexo Econômico-Industrial da Saúde",
+          "Codigo": "18489",
+          "DataPublicacao": "2026-07-21",
+          "Materia": {
+            "Ano": "2026",
+            "Codigo": "175250",
+            "EmTramitacao": "Sim",
+            "Ementa": "Veto parcial aposto ao Projeto de Lei nº 2.583, de 2020, que “Institui a Estratégia Nacional de Saúde do Complexo Econômico-Industrial da Saúde (Ensceis); e altera a Lei nº 6.360, de 23 de setembro de 1976, a Lei nº 14.133, de 1º de abril de 2021 (Lei de Licitações e Contratos Administrativos), e a Lei nº 8.080, de 19 de setembro de 1990 (Lei Orgânica da Saúde)”.",
+            "NomeCasa": "Congresso Nacional",
+            "Numero": "38",
+            "Sigla": "VET",
+            "SiglaCasa": "CN",
+            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/175250"
+          },
+          "MateriaVetada": {
+            "Ano": "2020",
+            "Codigo": "169609",
+            "DescricaoObjetivoProcesso": "Revisora",
+            "EmTramitacao": "Sim",
+            "Ementa": "Institui a Estratégia Nacional de Saúde do Complexo Econômico-Industrial da Saúde (ENSCEIS); e altera as Leis nºs 6.360, de 23 de setembro de 1976, 14.133, de 1º de abril de 2021 (Lei de Licitações e Contratos Administrativos), e 8.080, de 19 de setembro de 1990 (Lei Orgânica da Saúde).",
+            "NomeCasa": "Congresso Nacional",
+            "NormaGerada": {
+              "AnoNorma": "2026",
+              "CodigoNorma": "43573921",
+              "DataAssinatura": "2026-07-20",
+              "DataPublicacao": "2026-07-21",
+              "DescricaoTipoNorma": "Lei Numerada",
+              "DescricaoVeiculoPublicacao": "[Diário Oficial da União  de 21/07/2026] (p. 1, col. 1)",
+              "NomeNorma": "Lei nº 15.471 de 20/07/2026",
+              "NumeroNorma": "15471",
+              "SiglaTipoNorma": "LEI-n",
+              "SiglaVeiculoPublicacao": "DOU",
+              "UrlNorma": "https://legis.senado.leg.br/norma/43573921"
+            },
+            "Numero": "2583",
+            "Sigla": "PL",
+            "SiglaCasa": "CN",
+            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/169609",
+            "UrlRelatorias": "https://legis.senado.leg.br/dadosabertos/materia/relatorias/169609"
+          },
+          "Mensagem": {
+            "Ano": "2026",
+            "Numero": "611",
+            "Sigla": "MSG",
+            "UrlPlanalto": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2026/Msg/Vep/VEP-611-26.htm"
+          },
+          "QuantidadeDispositivos": "0",
+          "SobrestandoPauta": "Não",
+          "Total": "Não",
+          "UrlDispositivos": "https://www.congressonacional.leg.br/dados/plenario/resultado/veto/materia/175250"
+        },
         {
           "Assunto": "Símbolo Internacional de Acessibilidade",
           "Codigo": "18469",
@@ -115,61 +167,6 @@
           "SobrestandoPauta": "Não",
           "Total": "Não",
           "UrlDispositivos": "https://www.congressonacional.leg.br/dados/plenario/resultado/veto/materia/174934"
-        },
-        {
-          "Assunto": "Direitos de Pessoas com Diabetes Mellitus tipo 1",
-          "Codigo": "18429",
-          "DataPublicacao": "2026-06-29",
-          "DataRecebimentoCongresso": "2026-07-01",
-          "DataSobrestacaoPauta": "2026-08-15",
-          "Materia": {
-            "Ano": "2026",
-            "Codigo": "174916",
-            "EmTramitacao": "Sim",
-            "Ementa": "Veto parcial aposto ao Projeto de Lei nº 5.868, de 2025, que \"Dispõe sobre os direitos de pessoas com diabetes mellitus tipo 1 e sobre ações voltadas à promoção de sua participação plena e efetiva na sociedade em igualdade de condições com as demais pessoas.\".",
-            "NomeCasa": "Congresso Nacional",
-            "Numero": "35",
-            "Sigla": "VET",
-            "SiglaCasa": "CN",
-            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/174916"
-          },
-          "MateriaVetada": {
-            "Ano": "2025",
-            "Codigo": "171659",
-            "DescricaoObjetivoProcesso": "Iniciadora",
-            "EmTramitacao": "Sim",
-            "Ementa": "Dispõe sobre os direitos de pessoas com diabetes mellitus tipo 1 e sobre ações voltadas à promoção de sua participação plena e efetiva na sociedade em igualdade de condições com as demais pessoas.",
-            "NomeCasa": "Congresso Nacional",
-            "NormaGerada": {
-              "AnoNorma": "2026",
-              "CodigoNorma": "43453009",
-              "DataAssinatura": "2026-06-26",
-              "DataPublicacao": "2026-06-29",
-              "DescricaoTipoNorma": "Lei Numerada",
-              "DescricaoVeiculoPublicacao": "[Diário Oficial da União  de 29/06/2026] (p. 1, col. 1)",
-              "NomeNorma": "Lei nº 15.439 de 26/06/2026",
-              "NumeroNorma": "15439",
-              "Observacao": "Quanto à vigência desta Lei, vide o art. 10.",
-              "SiglaTipoNorma": "LEI-n",
-              "SiglaVeiculoPublicacao": "DOU",
-              "UrlNorma": "https://legis.senado.leg.br/norma/43453009"
-            },
-            "Numero": "5868",
-            "Sigla": "PL",
-            "SiglaCasa": "CN",
-            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/171659",
-            "UrlRelatorias": "https://legis.senado.leg.br/dadosabertos/materia/relatorias/171659"
-          },
-          "Mensagem": {
-            "Ano": "2026",
-            "Numero": "550",
-            "Sigla": "MSG",
-            "UrlPlanalto": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2026/Msg/Vep/VEP-550-26.htm"
-          },
-          "QuantidadeDispositivos": "1",
-          "SobrestandoPauta": "Não",
-          "Total": "Não",
-          "UrlDispositivos": "https://www.congressonacional.leg.br/dados/plenario/resultado/veto/materia/174916"
         }
       ]
     },
