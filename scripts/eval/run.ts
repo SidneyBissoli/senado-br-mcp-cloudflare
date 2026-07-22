@@ -1,25 +1,29 @@
 /**
- * Golden-battery runner (F2 of docs/_local/spec-bateria-dourada.md).
+ * Golden-battery runner (F2/F3 of docs/_local/spec-bateria-dourada.md).
  *
  * Sends each golden question to the Anthropic Messages API with the MCP
  * connector (beta `mcp-client-2025-11-20`) pointing at the production server,
  * records the full mcp_tool_use/mcp_tool_result trace, computes the mechanical
- * metrics M1/M2/M3/M5 (M4 is left blank for a later judge pass) and appends one
- * NDJSON line per (perguntaId, modelo, run) to
+ * metrics M1/M2/M3/M5 (M4 is left blank for `npm run eval:judge`) and appends
+ * one NDJSON line per (perguntaId, modelo, run) to
  * scripts/eval/results/AAAA-MM-DD_<sha>.ndjson.
  *
  * Modes:
  *   npm run eval:dry   5 placeholder-free questions x weak model x 1 run
  *   npm run eval       all non-pending questions x 2 models x 3 runs
  *
- * Requests are strictly serialized (initial rate-limit tier) with exponential
- * backoff + jitter on 408/429/5xx/529/network errors, honoring Retry-After.
- * Prompt caching: `cache_control` on the mcp_toolset (caches the MCP tool
- * definitions — supported per the MCP-connector docs) and on the stable system
- * block; the volatile date line sits after the last breakpoint.
+ * Resume: when the day's NDJSON already exists, (perguntaId, modelo, run)
+ * combinations already recorded WITHOUT an infra failure are skipped, so an
+ * interrupted battery continues where it stopped instead of re-paying finished
+ * conversations. Infra-failed combos are re-run (a fresh line is appended;
+ * judge/report keep the LAST line per combo).
  *
- * No SDK dependency (plain fetch), mirroring evals/run.ts. API key comes from
- * the ANTHROPIC_API_KEY env var or a repo-root .env file (gitignored).
+ * Requests are strictly serialized (initial rate-limit tier); retry/backoff
+ * lives in api.ts. Prompt caching: `cache_control` on the mcp_toolset (caches
+ * the MCP tool definitions — supported per the MCP-connector docs) and on the
+ * stable system block; the volatile date line sits after the last breakpoint.
+ *
+ * API key comes from ANTHROPIC_API_KEY (env var or repo-root .env, gitignored).
  */
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -27,8 +31,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 
+import { FatalApiError, loadDotEnv, postMessages } from "./api.js";
 import { computeM1, computeM2, computeM3, isEmptyOrErrorResult, summarizeResult } from "./metrics.js";
-import { costUSD } from "./pricing.js";
+import { costUSD, STRONG_MODEL, WEAK_MODEL } from "./pricing.js";
+import { dedupeLines, loadLines } from "./results-io.js";
 import type { CallRecord, GoldenQuestion, QuestionsFile, ResultLine, UsageTotals } from "./types.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -36,38 +42,16 @@ const REPO_ROOT = join(HERE, "..", "..");
 const RESULTS_DIR = join(HERE, "results");
 const QUESTIONS_PATH = join(HERE, "perguntas.json");
 
-const API_URL = "https://api.anthropic.com/v1/messages";
-const API_VERSION = "2023-06-01";
 const MCP_BETA = "mcp-client-2025-11-20";
 const DEFAULT_MCP_URL = "https://senado.sidneybissoli.com/mcp";
 
-const STRONG_MODEL = "claude-sonnet-4-6";
-const WEAK_MODEL = "claude-haiku-4-5";
 const FULL_RUNS = 3;
 /** Dry-run set fixed by the session prompt: placeholder-free questions, weak model, 1 run. */
 const DRY_IDS = ["A02", "A09", "B01", "B06", "C09"];
 
 const MAX_TOKENS = 4096;
-const MAX_RETRIES = 5;
 const MAX_CONTINUATIONS = 10; // pause_turn resumes per conversation
-const REQUEST_TIMEOUT_MS = 300_000;
 const PAUSE_BETWEEN_CONVERSATIONS_MS = 500;
-
-// ---------------------------------------------------------------------------
-// Environment / setup helpers
-// ---------------------------------------------------------------------------
-
-/** Minimal .env loader (KEY=VALUE lines) — only fills vars not already set. */
-function loadDotEnv(): void {
-  const envPath = join(REPO_ROOT, ".env");
-  if (!existsSync(envPath)) return;
-  for (const line of readFileSync(envPath, "utf8").split(/\r?\n/)) {
-    const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/);
-    if (!m || line.trimStart().startsWith("#")) continue;
-    const value = m[2].replace(/^["']|["']$/g, "");
-    if (!(m[1] in process.env)) process.env[m[1]] = value;
-  }
-}
 
 function gitShortSha(): string {
   return execSync("git rev-parse --short HEAD", { cwd: REPO_ROOT, encoding: "utf8" }).trim();
@@ -84,99 +68,6 @@ function brasiliaWeekday(): string {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// ---------------------------------------------------------------------------
-// Anthropic API plumbing
-// ---------------------------------------------------------------------------
-
-interface ApiContentBlock {
-  type: string;
-  text?: string;
-  id?: string;
-  name?: string;
-  server_name?: string;
-  input?: unknown;
-  tool_use_id?: string;
-  is_error?: boolean;
-  content?: unknown;
-}
-
-interface ApiResponse {
-  content: ApiContentBlock[];
-  stop_reason: string | null;
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-    cache_creation_input_tokens?: number;
-    cache_read_input_tokens?: number;
-  };
-}
-
-/** Thrown for conditions where the whole batch is doomed (bad key, no credits, bad request). */
-class FatalApiError extends Error {}
-
-/** Thrown when one request kept failing transiently after all retries. */
-class TransientExhaustedError extends Error {}
-
-function classifyStatus(status: number): "retryable" | "fatal" | "other" {
-  if (status === 408 || status === 429 || status >= 500) return "retryable";
-  if (status === 401 || status === 403) return "fatal";
-  if (status === 400) {
-    // A 400 is either a billing wall or a harness bug — both stop the batch.
-    return "fatal";
-  }
-  return "other";
-}
-
-/** One Messages API POST with bounded exponential backoff + jitter, honoring Retry-After. */
-async function postWithRetry(body: unknown, apiKey: string, label: string): Promise<ApiResponse> {
-  let lastMessage = "";
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    let res: Response | null = null;
-    let networkError: string | null = null;
-    try {
-      res = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": API_VERSION,
-          "anthropic-beta": MCP_BETA,
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-    } catch (e) {
-      networkError = (e as Error).message || "unknown network error";
-    } finally {
-      clearTimeout(timer);
-    }
-
-    if (res?.ok) return (await res.json()) as ApiResponse;
-
-    let retryAfterMs: number | null = null;
-    if (res) {
-      const text = await res.text().catch(() => "");
-      lastMessage = `HTTP ${res.status}: ${text.slice(0, 300)}`;
-      const kind = classifyStatus(res.status);
-      if (kind === "fatal") throw new FatalApiError(`${label}: ${lastMessage}`);
-      if (kind === "other") throw new TransientExhaustedError(`${label}: ${lastMessage}`);
-      const ra = Number(res.headers.get("retry-after"));
-      if (Number.isFinite(ra) && ra > 0) retryAfterMs = ra * 1000;
-    } else {
-      lastMessage = `network: ${networkError}`;
-    }
-
-    if (attempt === MAX_RETRIES) break;
-    const backoff = retryAfterMs ?? Math.min(60_000, 1000 * 2 ** attempt);
-    const jitter = Math.floor(Math.random() * 500);
-    console.error(`    retry ${attempt + 1}/${MAX_RETRIES} in ${backoff + jitter}ms (${lastMessage})`);
-    await sleep(backoff + jitter);
-  }
-  throw new TransientExhaustedError(`${label}: retries exhausted — ${lastMessage}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -268,10 +159,11 @@ async function runConversation(
 
   try {
     for (;;) {
-      const response = await postWithRetry(
+      const response = await postMessages(
         buildRequestBody(ctx, model, messages),
         ctx.apiKey,
         `${question.id}/${model}`,
+        { betas: [MCP_BETA] },
       );
       usage.requests += 1;
       usage.inputTokens += response.usage?.input_tokens ?? 0;
@@ -346,8 +238,26 @@ function fmtMetric(v: 0 | 1 | null): string {
   return v === null ? "NA" : String(v);
 }
 
+/** Combos already recorded WITHOUT infra failure in the day's NDJSON (resume mode). */
+function loadCompletedCombos(ndjsonPath: string): Set<string> {
+  const done = new Set<string>();
+  if (!existsSync(ndjsonPath)) return done;
+  for (const raw of readFileSync(ndjsonPath, "utf8").split(/\r?\n/)) {
+    if (!raw.trim()) continue;
+    try {
+      const line = JSON.parse(raw) as ResultLine;
+      const key = `${line.perguntaId}|${line.modelo}|${line.run}`;
+      if (line.erroInfra === undefined) done.add(key);
+      else done.delete(key); // a later failed re-run reopens the combo
+    } catch {
+      // tolerate a torn trailing line from an interrupted process
+    }
+  }
+  return done;
+}
+
 async function main(): Promise<void> {
-  loadDotEnv();
+  loadDotEnv(REPO_ROOT);
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     console.error(
@@ -398,7 +308,10 @@ async function main(): Promise<void> {
   const basePath = join(RESULTS_DIR, `${date}_${sha}`);
   const ndjsonPath = `${basePath}.ndjson`;
   const summaryPath = `${basePath}.resumo.json`;
-  if (existsSync(ndjsonPath)) {
+  const completed = loadCompletedCombos(ndjsonPath);
+  if (completed.size > 0) {
+    console.log(`resume mode: ${completed.size} completed (perguntaId, modelo, run) combos will be skipped.`);
+  } else if (existsSync(ndjsonPath)) {
     console.warn(`warning: ${ndjsonPath} already exists — new lines will be APPENDED.`);
   }
 
@@ -409,21 +322,16 @@ async function main(): Promise<void> {
       `models: ${models.join(", ")} · runs: ${runs} · serialized requests`,
   );
 
-  const perModel = new Map<string, ModelSummary>();
   let firstConversation = true;
+  let resumedSkips = 0;
 
   for (const model of models) {
-    const summary: ModelSummary = {
-      conversas: 0,
-      conversasComErroInfra: 0,
-      usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, requests: 0 },
-      custoTotalUSD: 0,
-      custoMedioPorConversaUSD: 0,
-    };
-    perModel.set(model, summary);
-
     for (const question of questions) {
       for (let run = 1; run <= runs; run++) {
+        if (completed.has(`${question.id}|${model}|${run}`)) {
+          resumedSkips += 1;
+          continue;
+        }
         if (!firstConversation) await sleep(PAUSE_BETWEEN_CONVERSATIONS_MS);
         firstConversation = false;
 
@@ -454,15 +362,6 @@ async function main(): Promise<void> {
         };
         appendFileSync(ndjsonPath, `${JSON.stringify(line)}\n`, "utf8");
 
-        summary.conversas += 1;
-        if (infraFailed) summary.conversasComErroInfra += 1;
-        summary.custoTotalUSD += custo;
-        summary.usage.inputTokens += outcome.usage.inputTokens;
-        summary.usage.outputTokens += outcome.usage.outputTokens;
-        summary.usage.cacheCreationInputTokens += outcome.usage.cacheCreationInputTokens;
-        summary.usage.cacheReadInputTokens += outcome.usage.cacheReadInputTokens;
-        summary.usage.requests += outcome.usage.requests;
-
         const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
         console.log(
           `  ${question.id} [${model}] run ${run} · m1=${fmtMetric(line.m1)} m2=${fmtMetric(line.m2)} ` +
@@ -471,31 +370,72 @@ async function main(): Promise<void> {
         );
       }
     }
-    summary.custoMedioPorConversaUSD = summary.conversas > 0 ? summary.custoTotalUSD / summary.conversas : 0;
   }
 
-  const totalConversas = [...perModel.values()].reduce((a, s) => a + s.conversas, 0);
-  const totalCusto = [...perModel.values()].reduce((a, s) => a + s.custoTotalUSD, 0);
+  if (resumedSkips > 0) console.log(`resume mode: skipped ${resumedSkips} already-completed conversations.`);
+
+  // The cost summary is derived from the FULL NDJSON (deduped, last line per
+  // combo), not from this session's counters — so a resumed battery keeps a
+  // consistent cumulative record and never clobbers earlier sessions. The
+  // `julgamento` block written by eval:judge is preserved.
+  const allLines = dedupeLines(loadLines<ResultLine>(ndjsonPath));
+  const fileSummaries = new Map<string, ModelSummary>();
+  for (const line of allLines) {
+    let s = fileSummaries.get(line.modelo);
+    if (!s) {
+      s = {
+        conversas: 0,
+        conversasComErroInfra: 0,
+        usage: { inputTokens: 0, outputTokens: 0, cacheCreationInputTokens: 0, cacheReadInputTokens: 0, requests: 0 },
+        custoTotalUSD: 0,
+        custoMedioPorConversaUSD: 0,
+      };
+      fileSummaries.set(line.modelo, s);
+    }
+    s.conversas += 1;
+    if (line.erroInfra !== undefined) s.conversasComErroInfra += 1;
+    s.custoTotalUSD += line.custoUSD;
+    s.usage.inputTokens += line.usage.inputTokens;
+    s.usage.outputTokens += line.usage.outputTokens;
+    s.usage.cacheCreationInputTokens += line.usage.cacheCreationInputTokens;
+    s.usage.cacheReadInputTokens += line.usage.cacheReadInputTokens;
+    s.usage.requests += line.usage.requests;
+  }
+  for (const s of fileSummaries.values()) {
+    s.custoMedioPorConversaUSD = s.conversas > 0 ? s.custoTotalUSD / s.conversas : 0;
+  }
+
+  const totalConversas = [...fileSummaries.values()].reduce((a, s) => a + s.conversas, 0);
+  const totalCusto = [...fileSummaries.values()].reduce((a, s) => a + s.custoTotalUSD, 0);
+  const previous = existsSync(summaryPath)
+    ? (JSON.parse(readFileSync(summaryPath, "utf8")) as { julgamento?: { custoTotalUSD?: number } })
+    : {};
   const summaryDoc = {
     geradoEm: new Date().toISOString(),
     shaServidor: sha,
     modo: dry ? "dry" : "full",
     mcpUrl: ctx.mcpUrl,
     modelos: Object.fromEntries(
-      [...perModel.entries()].map(([model, s]) => [
+      [...fileSummaries.entries()].map(([model, s]) => [
         model,
         { ...s, custoTotalUSD: Number(s.custoTotalUSD.toFixed(6)), custoMedioPorConversaUSD: Number(s.custoMedioPorConversaUSD.toFixed(6)) },
       ]),
     ),
     custoTotalUSD: Number(totalCusto.toFixed(6)),
     custoMedioPorConversaUSD: Number((totalConversas > 0 ? totalCusto / totalConversas : 0).toFixed(6)),
+    ...(previous.julgamento
+      ? {
+          julgamento: previous.julgamento,
+          custoTotalComJulgamentoUSD: Number((totalCusto + (previous.julgamento.custoTotalUSD ?? 0)).toFixed(6)),
+        }
+      : {}),
   };
   writeFileSync(summaryPath, `${JSON.stringify(summaryDoc, null, 2)}\n`, "utf8");
 
   console.log("");
   console.log(`results: ${ndjsonPath}`);
-  console.log(`cost summary: ${summaryPath}`);
-  for (const [model, s] of perModel) {
+  console.log(`cost summary (cumulative over the file): ${summaryPath}`);
+  for (const [model, s] of fileSummaries) {
     console.log(
       `  ${model}: ${s.conversas} conversations · in=${s.usage.inputTokens} ` +
         `cacheWrite=${s.usage.cacheCreationInputTokens} cacheRead=${s.usage.cacheReadInputTokens} ` +

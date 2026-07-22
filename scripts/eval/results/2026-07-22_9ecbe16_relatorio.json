@@ -1,0 +1,203 @@
+{
+  "geradoEm": "2026-07-22T16:19:23.783Z",
+  "fonte": "C:/Users/SIDNEY/OneDrive/programacao/mcp/senado-br-mcp-cloudflare/scripts/eval/results/2026-07-22_9ecbe16_julgado.ndjson",
+  "shaServidor": "9ecbe16",
+  "linhas": 5,
+  "modelos": [
+    "claude-haiku-4-5"
+  ],
+  "porModelo": [
+    {
+      "modelo": "claude-haiku-4-5",
+      "n": 5,
+      "m1": 1,
+      "m1N": 5,
+      "m2": 1,
+      "m2N": 1,
+      "m3": 1,
+      "m3N": 1,
+      "m4": 1,
+      "m4N": 5,
+      "m5Media": 2.2
+    }
+  ],
+  "porClasse": [
+    {
+      "classe": "SEL",
+      "modelo": "claude-haiku-4-5",
+      "n": 2,
+      "m1": 1,
+      "m1N": 2,
+      "m2": null,
+      "m2N": 0,
+      "m3": null,
+      "m3N": 0,
+      "m4": 1,
+      "m4N": 2,
+      "m5Media": 1
+    },
+    {
+      "classe": "PAR",
+      "modelo": "claude-haiku-4-5",
+      "n": 1,
+      "m1": 1,
+      "m1N": 1,
+      "m2": null,
+      "m2N": 0,
+      "m3": null,
+      "m3N": 0,
+      "m4": 1,
+      "m4N": 1,
+      "m5Media": 1
+    },
+    {
+      "classe": "AGG",
+      "modelo": "claude-haiku-4-5",
+      "n": 1,
+      "m1": 1,
+      "m1N": 1,
+      "m2": 1,
+      "m2N": 1,
+      "m3": null,
+      "m3N": 0,
+      "m4": 1,
+      "m4N": 1,
+      "m5Media": 1
+    },
+    {
+      "classe": "TMP",
+      "modelo": "claude-haiku-4-5",
+      "n": 1,
+      "m1": 1,
+      "m1N": 1,
+      "m2": null,
+      "m2N": 0,
+      "m3": 1,
+      "m3N": 1,
+      "m4": 1,
+      "m4N": 1,
+      "m5Media": 7
+    }
+  ],
+  "porFerramenta": [
+    {
+      "ferramenta": "senado_agenda_comissoes",
+      "modelo": "claude-haiku-4-5",
+      "n": 1,
+      "m1": 1,
+      "m1N": 1,
+      "m2": null,
+      "m2N": 0,
+      "m3": 1,
+      "m3N": 1,
+      "m4": 1,
+      "m4N": 1,
+      "m5Media": 7
+    },
+    {
+      "ferramenta": "senado_licitacoes",
+      "modelo": "claude-haiku-4-5",
+      "n": 1,
+      "m1": 1,
+      "m1N": 1,
+      "m2": null,
+      "m2N": 0,
+      "m3": null,
+      "m3N": 0,
+      "m4": 1,
+      "m4N": 1,
+      "m5Media": 1
+    },
+    {
+      "ferramenta": "senado_remuneracoes_servidores",
+      "modelo": "claude-haiku-4-5",
+      "n": 1,
+      "m1": 1,
+      "m1N": 1,
+      "m2": 1,
+      "m2N": 1,
+      "m3": null,
+      "m3N": 0,
+      "m4": 1,
+      "m4N": 1,
+      "m5Media": 1
+    },
+    {
+      "ferramenta": "senado_terceirizados",
+      "modelo": "claude-haiku-4-5",
+      "n": 1,
+      "m1": 1,
+      "m1N": 1,
+      "m2": null,
+      "m2N": 0,
+      "m3": null,
+      "m3N": 0,
+      "m4": 1,
+      "m4N": 1,
+      "m5Media": 1
+    },
+    {
+      "ferramenta": "senado_vetos",
+      "modelo": "claude-haiku-4-5",
+      "n": 1,
+      "m1": 1,
+      "m1N": 1,
+      "m2": null,
+      "m2N": 0,
+      "m3": null,
+      "m3N": 0,
+      "m4": 1,
+      "m4N": 1,
+      "m5Media": 1
+    }
+  ],
+  "fragilidadePorFerramenta": [
+    {
+      "ferramenta": "senado_agenda_comissoes",
+      "m4Forte": null,
+      "m4Fraco": 1,
+      "indice": null,
+      "nForte": 0,
+      "nFraco": 1
+    },
+    {
+      "ferramenta": "senado_licitacoes",
+      "m4Forte": null,
+      "m4Fraco": 1,
+      "indice": null,
+      "nForte": 0,
+      "nFraco": 1
+    },
+    {
+      "ferramenta": "senado_remuneracoes_servidores",
+      "m4Forte": null,
+      "m4Fraco": 1,
+      "indice": null,
+      "nForte": 0,
+      "nFraco": 1
+    },
+    {
+      "ferramenta": "senado_terceirizados",
+      "m4Forte": null,
+      "m4Fraco": 1,
+      "indice": null,
+      "nForte": 0,
+      "nFraco": 1
+    },
+    {
+      "ferramenta": "senado_vetos",
+      "m4Forte": null,
+      "m4Fraco": 1,
+      "indice": null,
+      "nForte": 0,
+      "nFraco": 1
+    }
+  ],
+  "r1": {
+    "naoEncLinhas": 5,
+    "comAteDuasChamadas": 4,
+    "ofensores": [
+      "A02 (claude-haiku-4-5, m5=7)"
+    ]
+  }
+}

@@ -28,6 +28,8 @@
     "eval:questions": "tsx scripts/eval/generate-perguntas.ts",
     "eval:dry": "tsx scripts/eval/run.ts --dry",
     "eval": "tsx scripts/eval/run.ts",
+    "eval:judge": "tsx scripts/eval/judge.ts",
+    "eval:report": "tsx scripts/eval/report.ts",
     "smoke:openai-app": "node scripts/smoke-openai-app.mjs",
     "ingest:ecidadania": "tsx scripts/ingest-ecidadania/index.ts",
     "ingest:ecidadania:eventos": "tsx scripts/ingest-ecidadania/index-eventos.ts",

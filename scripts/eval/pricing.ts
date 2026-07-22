@@ -10,6 +10,10 @@
 
 import type { UsageTotals } from "./types.js";
 
+/** Battery models (spec section 3.4). The judge also runs on the strong model. */
+export const STRONG_MODEL = "claude-sonnet-4-6";
+export const WEAK_MODEL = "claude-haiku-4-5";
+
 export interface ModelPricing {
   inputPerMTok: number;
   outputPerMTok: number;

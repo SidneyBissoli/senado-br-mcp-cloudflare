@@ -1,0 +1,41 @@
+{
+  "geradoEm": "2026-07-22T16:18:57.818Z",
+  "shaServidor": "9ecbe16",
+  "modo": "dry",
+  "mcpUrl": "https://senado.sidneybissoli.com/mcp",
+  "modelos": {
+    "claude-haiku-4-5": {
+      "conversas": 5,
+      "conversasComErroInfra": 0,
+      "usage": {
+        "inputTokens": 1858,
+        "outputTokens": 2967,
+        "cacheCreationInputTokens": 140052,
+        "cacheReadInputTokens": 390690,
+        "requests": 5
+      },
+      "custoTotalUSD": 0.230826,
+      "custoMedioPorConversaUSD": 0.046165
+    }
+  },
+  "custoTotalUSD": 0.230826,
+  "custoMedioPorConversaUSD": 0.046165,
+  "julgamento": {
+    "geradoEm": "2026-07-22T16:19:21.852Z",
+    "modelo": "claude-sonnet-4-6",
+    "itens": 5,
+    "itensGabaritoDinamico": 2,
+    "itensLlmJudge": 3,
+    "amostraManual": 1,
+    "usage": {
+      "inputTokens": 6488,
+      "outputTokens": 418,
+      "cacheCreationInputTokens": 0,
+      "cacheReadInputTokens": 0,
+      "requests": 3
+    },
+    "custoTotalUSD": 0.025734,
+    "custoMedioPorItemUSD": 0.008578
+  },
+  "custoTotalComJulgamentoUSD": 0.25656
+}

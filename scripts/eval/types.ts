@@ -76,8 +76,8 @@ export interface ResultLine {
   m2: 0 | 1 | null;
   /** M3 — recovery after an empty/error result (null = NA, nothing to recover from). */
   m3: 0 | 1 | null;
-  /** M4 — final-answer correctness. Always null here; filled by a later judge pass. */
-  m4: null;
+  /** M4 — final-answer correctness. The runner always writes null; eval:judge fills it. */
+  m4: 0 | 1 | null;
   /** M5 — number of tool calls until the answer. */
   m5: number;
   respostaFinal: string;
@@ -91,4 +91,41 @@ export interface ResultLine {
   custoUSD: number;
   /** Present only when the conversation never completed (infra failure). */
   erroInfra?: string;
+}
+
+// ---------------------------------------------------------------------------
+// M4 judgment (eval:judge)
+// ---------------------------------------------------------------------------
+
+/** One reference value fetched live from the MCP for the dynamic answer key. */
+export interface GabaritoValor {
+  rotulo: string;
+  tipo: "numero" | "texto";
+  valor: number | string;
+  /** Whether the model's final answer contained this value (mechanical match). */
+  encontradoNaResposta: boolean;
+}
+
+/** Dynamic answer key attached to a judged line (spec 3.4: fetched at judgment time). */
+export interface GabaritoRef {
+  ferramenta: string;
+  params: Record<string, unknown>;
+  valores: GabaritoValor[];
+  obtidoEm: string;
+}
+
+export type JulgadoPor =
+  | "gabarito-dinamico"
+  /** Rubric-based LLM judge (claude-sonnet-4-6, temperature 0). */
+  | "llm-judge"
+  /** Reference call failed/unavailable — fell back to the LLM judge. */
+  | "llm-judge-fallback-gabarito"
+  /** Conversation never completed (erroInfra) — nothing to judge; m4 stays null. */
+  | "nao-julgado-erro-infra";
+
+/** A ResultLine after eval:judge: m4/veredito filled + judgment provenance. */
+export interface JudgedLine extends ResultLine {
+  julgadoPor: JulgadoPor;
+  julgadoEm: string;
+  gabarito?: GabaritoRef;
 }

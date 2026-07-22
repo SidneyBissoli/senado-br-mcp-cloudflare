@@ -6,14 +6,15 @@
       "id": "A01",
       "persona": "Assessor de senador",
       "pergunta": "Qual foi a pauta da última sessão plenária do primeiro semestre?",
-      "esperado": "senado_agenda_plenario (data amanhã em YYYYMMDD)",
+      "esperado": "senado_agenda_plenario ou senado_resultado_plenario (descobrir a última data útil de junho)",
       "classes": [
         "TMP"
       ],
-      "nota": "Data relativa",
+      "nota": "Exige descoberta de data, não conversão",
       "pendente": false,
       "ferramentasEsperadas": [
-        "senado_agenda_plenario"
+        "senado_agenda_plenario",
+        "senado_resultado_plenario"
       ],
       "parametrosEssenciais": {}
     },
@@ -21,7 +22,7 @@
       "id": "A02",
       "persona": "Assessor de senador",
       "pergunta": "Quais comissões se reuniram na primeira semana de junho?",
-      "esperado": "senado_agenda_comissoes",
+      "esperado": "senado_agenda_comissoes (intervalo 20260601-20260605)",
       "classes": [
         "TMP"
       ],
@@ -51,12 +52,12 @@
     {
       "id": "A04",
       "persona": "Assessor de senador",
-      "pergunta": "Escolha uma PEC qualquer votada neste ano e me diga como o senador Astronauta votou.",
+      "pergunta": "Como o senador Astronauta Marcos Pontes votou no PLP 73/2025?",
       "esperado": "senado_votacoes_senador ou senado_votos_materia",
       "classes": [
         "SEL"
       ],
-      "nota": "Dois caminhos válidos",
+      "nota": "Votação de 16/06/2026 confirmada (51 sim, 17 não); voto ou ausência são gabaritos válidos",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_votacoes_senador",
@@ -82,12 +83,12 @@
     {
       "id": "A06",
       "persona": "Assessor de senador",
-      "pergunta": "Traga o texto integral do último pronunciamento do senador Davi Alcolumbre",
+      "pergunta": "Traga o texto integral do último pronunciamento do senador Paulo Paim",
       "esperado": "senado_discursos_senador -> senado_discurso_texto",
       "classes": [
         "ENC"
       ],
-      "nota": "codigoPronunciamento encadeado",
+      "nota": "codigoPronunciamento encadeado; Paim tem produção contínua de discursos",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_discurso_texto",
@@ -113,12 +114,12 @@
     {
       "id": "A08",
       "persona": "Assessor de senador",
-      "pergunta": "Escolha um PL qualquer e me diga qual o placar atual de sua consulta pública",
+      "pergunta": "Qual o placar atual da consulta pública do PL 5064/2023 (anistia aos atos de 8 de janeiro)?",
       "esperado": "listar -> senado_ecidadania_obter_consulta",
       "classes": [
         "ENC"
       ],
-      "nota": "",
+      "nota": "Consulta verificada: 1,72 milhão de votos",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_ecidadania_listar_consultas",
@@ -149,7 +150,7 @@
       "classes": [
         "TMP"
       ],
-      "nota": "",
+      "nota": "Exige descoberta da data",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_resultado_plenario"
@@ -275,7 +276,7 @@
       "classes": [
         "SEL"
       ],
-      "nota": "Confundível com servidores",
+      "nota": "Recorte de 5 anos pode exigir leitura da tabela completa",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_pessoal_tabelas"
@@ -302,12 +303,12 @@
     {
       "id": "B09",
       "persona": "Analista de dados do Senado",
-      "pergunta": "Distribuição dos votos da consulta pública sobre a jornada 6x1 por UF",
+      "pergunta": "Distribuição por UF dos votos da consulta pública do voto impresso (SUG 9/2018)",
       "esperado": "senado_ecidadania_consultas_votos",
       "classes": [
         "PAR"
       ],
-      "nota": "Quebra por UF",
+      "nota": "Acervo verificado: 3,2 milhões de votos com quebra completa por UF",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_ecidadania_consultas_votos"
@@ -486,7 +487,7 @@
       "classes": [
         "SEL"
       ],
-      "nota": "",
+      "nota": "Verificada: NEXUS PESQUISA E INTELIGÊNCIA DE DADOS, 2 contratos",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_contratos",
@@ -544,45 +545,48 @@
     {
       "id": "D01",
       "persona": "Técnico legislativo (processo legislativo)",
-      "pergunta": "Escolha um PL qualquer e me diga em que fase de tramitação ele está.",
-      "esperado": "buscar_materias -> obter_materia ou obter_processo",
+      "pergunta": "Em que fase de tramitação está o PL 5008/2023 (cigarros eletrônicos)?",
+      "esperado": "buscar_materias/search_processos -> obter_materia ou obter_processo",
       "classes": [
         "ENC"
       ],
-      "nota": "",
+      "nota": "Verificado: em tramitação (id 8566420)",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_buscar_materias",
         "senado_obter_materia",
-        "senado_obter_processo"
+        "senado_obter_processo",
+        "senado_search_processos"
       ],
       "parametrosEssenciais": {}
     },
     {
       "id": "D02",
       "persona": "Técnico legislativo (processo legislativo)",
-      "pergunta": "Escolha um PL qualquer e me diga quem o relata na CCJ.",
-      "esperado": "obter_materia ou processo_detalhe",
+      "pergunta": "Quem relata o PL 5008/2023 na CAE?",
+      "esperado": "obter_materia ou processo_detalhe secao=relatorias",
       "classes": [
         "PAR"
       ],
-      "nota": "",
+      "nota": "Verificado: Eduardo Gomes (PL/TO), designado em 25/10/2023",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_obter_materia",
         "senado_processo_detalhe"
       ],
-      "parametrosEssenciais": {}
+      "parametrosEssenciais": {
+        "secao": "relatorias"
+      }
     },
     {
       "id": "D03",
       "persona": "Técnico legislativo (processo legislativo)",
-      "pergunta": "Escolha um PLP qualquer e me diga quais emendas foram apresentadas.",
+      "pergunta": "Quais emendas foram apresentadas ao PLP 68/2024 (regulamentação da reforma tributária)?",
       "esperado": "senado_processo_detalhe secao=emendas",
       "classes": [
         "PAR"
       ],
-      "nota": "",
+      "nota": "Verificado: 2.239 emendas - também exercita paginação/payload (R5)",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_processo_detalhe"
@@ -594,30 +598,32 @@
     {
       "id": "D04",
       "persona": "Técnico legislativo (processo legislativo)",
-      "pergunta": "Escolha uma Lei já promulgada e me retorne o texto dela",
-      "esperado": "senado_buscar_legislacao",
+      "pergunta": "Retorne o texto da Lei 14.133/2021 (Lei de Licitações)",
+      "esperado": "senado_buscar_legislacao -> senado_obter_legislacao",
       "classes": [
         "SEL"
       ],
-      "nota": "Armadilha central: NÃO é buscar_materias",
+      "nota": "Armadilha central: NÃO é buscar_materias. Norma verificada (código 33382036)",
       "pendente": false,
       "ferramentasEsperadas": [
-        "senado_buscar_legislacao"
+        "senado_buscar_legislacao",
+        "senado_obter_legislacao"
       ],
       "parametrosEssenciais": {}
     },
     {
       "id": "D05",
       "persona": "Técnico legislativo (processo legislativo)",
-      "pergunta": "Escolha uma MPV qualquer e me diga se ela já foi votada em plenário. Se sim, com que resultado?",
-      "esperado": "votos_materia ou search_votacoes",
+      "pergunta": "A MPV 1291/2025 já foi votada em plenário? Com que resultado?",
+      "esperado": "votos_materia ou search_processos/obter_processo",
       "classes": [
         "SEL"
       ],
-      "nota": "",
+      "nota": "Verificado: deliberada em 01/07/2025, convertida na Lei 15.164/2025",
       "pendente": false,
       "ferramentasEsperadas": [
-        "senado_search_votacoes",
+        "senado_obter_processo",
+        "senado_search_processos",
         "senado_votos_materia"
       ],
       "parametrosEssenciais": {}
@@ -625,12 +631,12 @@
     {
       "id": "D06",
       "persona": "Técnico legislativo (processo legislativo)",
-      "pergunta": "Como cada bancada orientou na votação de 30/04/2026?",
+      "pergunta": "Como cada bancada orientou na votação de 16/06/2026?",
       "esperado": "senado_orientacao_bancada",
       "classes": [
         "SEL"
       ],
-      "nota": "",
+      "nota": "Verificado: PLP 73/2025, 51 sim x 17 não, orientação registrada. 30/04/2026 NÃO teve votações",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_orientacao_bancada"
@@ -640,12 +646,12 @@
     {
       "id": "D07",
       "persona": "Técnico legislativo (processo legislativo)",
-      "pergunta": "Notas taquigráficas da sessão plenária de 26/03/2026.",
-      "esperado": "resultado/encontro_plenario -> notas_taquigraficas",
+      "pergunta": "Notas taquigráficas da sessão plenária de 16/06/2026",
+      "esperado": "resultado_plenario/encontro_plenario -> notas_taquigraficas",
       "classes": [
         "ENC"
       ],
-      "nota": "Precisa do código da sessão",
+      "nota": "Sessão deliberativa confirmada. 26/03/2026 NÃO teve sessão",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_encontro_plenario",
@@ -657,13 +663,13 @@
     {
       "id": "D08",
       "persona": "Técnico legislativo (processo legislativo)",
-      "pergunta": "Reuniões da CCJ previstas para o mês de agosto",
+      "pergunta": "Reuniões da CCJ realizadas na primeira quinzena de julho de 2026",
       "esperado": "senado_reunioes_comissao sigla=CCJ + datas",
       "classes": [
         "PAR",
         "TMP"
       ],
-      "nota": "",
+      "nota": "Período passado: gabarito estável (agenda futura seria instável)",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_reunioes_comissao"
@@ -676,42 +682,47 @@
       "id": "D09",
       "persona": "Técnico legislativo (processo legislativo)",
       "pergunta": "Requerimentos já apresentados na CPI do INSS",
-      "esperado": "senado_requerimentos_cpi",
+      "esperado": "senado_listar_comissoes tipo=cpi -> senado_requerimentos_cpi",
       "classes": [
-        "SEL"
+        "LIM",
+        "REC"
       ],
-      "nota": "",
+      "nota": "Endpoint upstream documentadamente responde vazio para CPIs ativas; comissão é mista (CPMI). Gold = tentar e reportar a limitação sem inventar",
       "pendente": false,
       "ferramentasEsperadas": [
+        "senado_listar_comissoes",
         "senado_requerimentos_cpi"
       ],
-      "parametrosEssenciais": {}
+      "parametrosEssenciais": {
+        "tipo": "cpi"
+      }
     },
     {
       "id": "D10",
       "persona": "Técnico legislativo (processo legislativo)",
-      "pergunta": "Retorne-me o resultado da apreciação de um veto qualquer?",
-      "esperado": "senado_resultado_veto",
+      "pergunta": "Qual foi o resultado da apreciação do VET 49/2024?",
+      "esperado": "senado_vetos -> senado_resultado_veto",
       "classes": [
         "PAR"
       ],
-      "nota": "",
+      "nota": "Verificado: apreciado em 17/06/2025, veto mantido em todos os dispositivos",
       "pendente": false,
       "ferramentasEsperadas": [
-        "senado_resultado_veto"
+        "senado_resultado_veto",
+        "senado_vetos"
       ],
       "parametrosEssenciais": {}
     },
     {
       "id": "D11",
       "persona": "Técnico legislativo (processo legislativo)",
-      "pergunta": "Pauta da CAE da primeira semana de agosto",
+      "pergunta": "Pauta da CAE da primeira semana de julho de 2026",
       "esperado": "agenda_comissoes ou reunioes_comissao",
       "classes": [
         "SEL",
         "TMP"
       ],
-      "nota": "Par confundível",
+      "nota": "Par confundível; período passado para gabarito estável",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_agenda_comissoes",
@@ -834,15 +845,16 @@
     {
       "id": "E08",
       "persona": "Jornalista",
-      "pergunta": "Como votaram os senadores de MS em uma matéria qualquer?",
-      "esperado": "votos_materia + recorte por UF",
+      "pergunta": "Como votaram os senadores de MS no PLP 73/2025?",
+      "esperado": "votos_materia/obter_votacao + recorte por UF",
       "classes": [
         "ENC",
         "AGG"
       ],
-      "nota": "Recorte por UF hoje é client-side",
+      "nota": "Recorte por UF hoje é client-side; votação de 16/06/2026 confirmada",
       "pendente": false,
       "ferramentasEsperadas": [
+        "senado_obter_votacao",
         "senado_votos_materia"
       ],
       "parametrosEssenciais": {}
@@ -883,7 +895,7 @@
       "classes": [
         "SEL"
       ],
-      "nota": "",
+      "nota": "Verificada: PLANSUL PLANEJAMENTO E CONSULTORIA, 25 contratos incl. 2026",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_contratacoes_lista",
@@ -894,13 +906,13 @@
     {
       "id": "F01",
       "persona": "Cientista político",
-      "pergunta": "Na votação da jornada 6x1, quais partidos votaram contra a própria orientação?",
+      "pergunta": "Na votação do PLP 73/2025 em 16/06/2026, quais partidos votaram contra a própria orientação?",
       "esperado": "orientacao_bancada + obter_votacao",
       "classes": [
         "ENC",
         "AGG"
       ],
-      "nota": "Cruzamento orientação x voto",
+      "nota": "Cruzamento orientação x voto; votação e orientação (PL=SIM) verificadas. Substituiu a \"jornada 6x1\", que não teve votação no Senado",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_obter_votacao",
@@ -924,12 +936,12 @@
     {
       "id": "F03",
       "persona": "Cientista político",
-      "pergunta": "Distribuição por UF dos votos de uma consulta pública qualquer",
+      "pergunta": "Distribuição por UF dos votos da consulta pública sobre o fim do auxílio-moradia (SUG 30/2017)",
       "esperado": "senado_ecidadania_consultas_votos",
       "classes": [
         "PAR"
       ],
-      "nota": "",
+      "nota": "Acervo verificado: 1,98 milhão de votos com quebra por UF",
       "pendente": false,
       "ferramentasEsperadas": [
         "senado_ecidadania_consultas_votos"
