@@ -1,12 +1,12 @@
 // GERADO por scripts/ingest-estrutura/index.ts — NÃO edite à mão.
 // Snapshot da árvore organizacional do Senado (portal institucional), até o nível de serviço.
-// Extraído em 2026-07-10T18:23:18.678Z. Rode `npm run ingest:estrutura` para atualizar.
+// Extraído em 2026-08-01T08:10:35.063Z. Rode `npm run ingest:estrutura` para atualizar.
 import type { EstruturaSnapshot } from "../estrutura/tipos.js";
 
 export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
-  "extraidoEm": "2026-07-10T18:23:18.678Z",
+  "extraidoEm": "2026-08-01T08:10:35.063Z",
   "fonteUrl": "https://www12.senado.leg.br/institucional/estrutura/orgaosenado",
-  "total": 821,
+  "total": 824,
   "orgaos": [
     {
       "cod": -2072346465,
@@ -2514,7 +2514,7 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "cod": 9887,
       "sigla": null,
       "nome": "Serviço de Elaboração de Estimativa de Custos",
-      "codSuperior": 9774
+      "codSuperior": 9061
     },
     {
       "cod": 9890,
@@ -4933,6 +4933,24 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "sigla": null,
       "nome": "Escritório de Apoio Nº 01 do Senador Hermes Klann",
       "codSuperior": 10847
+    },
+    {
+      "cod": 10857,
+      "sigla": null,
+      "nome": "Serviço de Engenharia de Manutenção Civil",
+      "codSuperior": 10742
+    },
+    {
+      "cod": 10858,
+      "sigla": null,
+      "nome": "Coordenação de Controle Social e Transparência Ativa",
+      "codSuperior": 8852
+    },
+    {
+      "cod": 10859,
+      "sigla": null,
+      "nome": "Coordenação do Observatório da Mulher Contra a Violência",
+      "codSuperior": 8852
     }
   ]
 };
