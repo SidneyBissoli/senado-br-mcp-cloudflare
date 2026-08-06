@@ -1,5 +1,7 @@
 # Senado Brasil MCP Server
 
+[![MCP Queen operational grade](https://mcpqueen.com/badge/io.github.SidneyBissoli/senado-br-mcp-cloudflare.svg)](https://mcpqueen.com/s/io.github.SidneyBissoli/senado-br-mcp-cloudflare)
+
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-1f6feb)
 ![Tools](https://img.shields.io/badge/tools-67-2ea44f)
