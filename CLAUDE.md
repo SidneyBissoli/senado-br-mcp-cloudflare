@@ -48,7 +48,7 @@ return resultWithProvenance(shapedData, prov);
 // in catch: return errorFrom(e, "Mensagem de fallback");
 ```
 
-`provenanceFor`/`resultWithProvenance` (`src/utils/provenance.ts`) attach the source/URL/`retrieved_at` envelope (mirrored into `_meta`, humanized footer in Brasília time) — all 20 tool modules use it; plain `toolResult` is only for outputs with no upstream fetch.
+`provenanceFor`/`resultWithProvenance` (`src/utils/provenance.ts`) attach the provenance envelope (mirrored into `_meta`, humanized footer in Brasília time) — all 20 tool modules use it; plain `toolResult` is only for outputs with no upstream fetch. Since v3.5.0 the module is a pt-BR adapter over `@sbissoli/mcp-provenance` (portfolio contract v1.0): it still accepts the historical input names (`dataset_id`, `reference_period`) but emits the contract's `concise` projection (`data_vintage`, explicit nulls, fixed footer wording) — don't reshape the emitted block by hand; change the package/contract instead.
 
 - `cachedFetch` (`src/cache/manager.ts`): L0 in-memory Map (per isolate) → L1 Cloudflare Cache API (synthetic GET URLs keyed by SHA-256 of tool+params, since POST isn't cacheable) → upstream. Cache failures degrade gracefully to the fetcher. TTL categories (`CACHE_STATIC`, `CACHE_SEMI_STATIC`, `CACHE_DYNAMIC`, `CACHE_ON_DEMAND`) are in `src/types.ts`. Caching happens at the tool level, never at the transport level.
 - `upstreamFetch` (`src/throttle/upstream.ts`): **always appends `.json` to the path**, sorts query params, enforces global token bucket + max 6 concurrent + 10s total time budget, retries 429/503 and network errors with backoff+jitter, 5 MB response guard. Throws `UpstreamError` with a `retryable` flag that `errorFrom` propagates into the tool error payload.

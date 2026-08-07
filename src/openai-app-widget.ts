@@ -381,7 +381,7 @@ export const OPENAI_APP_WIDGET_HTML = String.raw`<!doctype html>
         box.appendChild(title);
         if (source?.source_url || urls[0]) box.appendChild(el("span", null, source?.source_url || urls[0]));
         if (source?.retrieved_at) box.appendChild(el("span", null, "Extraido em " + source.retrieved_at));
-        if (source?.reference_period) box.appendChild(el("span", null, "Competencia " + source.reference_period));
+        if (source?.data_vintage) box.appendChild(el("span", null, "Dados de " + source.data_vintage));
         parent.appendChild(box);
       }
 

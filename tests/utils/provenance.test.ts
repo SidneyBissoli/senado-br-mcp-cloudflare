@@ -1,13 +1,22 @@
+/**
+ * Tests for the provenance adapter over `@sbissoli/mcp-provenance` (contract v1.0,
+ * release 3.5.0). What is asserted here is the SENADO-facing behavior: the historical
+ * input names (`dataset_id`, `reference_period`) map into the canonical model, the
+ * emitted block is the fixed 6-key `concise` projection, timestamps are Brasília
+ * (-03:00), and the three emission channels keep their roles. The contract itself
+ * (schema validation, determinism, footer wording) is tested in the package.
+ */
+
 import { describe, it, expect } from "vitest";
 import {
-  ProvenanceSchema,
-  FieldSourceSchema,
   SOURCES,
   ECIDADANIA_BASE_URL,
   buildProvenance,
   provenanceFor,
   provenanceEcidadania,
+  provenanceArquimedesVotos,
   provenanceFooter,
+  provenanceContext,
   withFieldSources,
   resultWithProvenance,
   toBrasiliaIso,
@@ -18,109 +27,59 @@ import {
 
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
 
-describe("ProvenanceSchema", () => {
-  it("accepts a complete level-1 envelope", () => {
-    const ok = ProvenanceSchema.safeParse({
-      source: "Senado Federal",
-      source_url: "https://legis.senado.leg.br/dadosabertos/votacao",
-      dataset_id: "codigoSessao=123",
-      reference_period: "2024-03-15",
-      retrieved_at: "2026-06-22T12:00:00.000Z",
-      citation: "Fonte: Senado Federal.",
-      license: "Dados Abertos.",
-    });
-    expect(ok.success).toBe(true);
-  });
+const BASE = { source: "s", source_url: "u", citation: "a", license: "l" };
 
-  it("requires source, source_url, retrieved_at and citation (the non-empty level-1 core)", () => {
-    for (const field of ["source", "source_url", "retrieved_at", "citation"]) {
-      const base: Record<string, string> = {
-        source: "s",
-        source_url: "u",
-        retrieved_at: "t",
-        citation: "a",
-      };
-      delete base[field];
-      expect(ProvenanceSchema.safeParse(base).success, `missing ${field}`).toBe(false);
-    }
-  });
-
-  it("rejects empty strings on required fields", () => {
-    expect(
-      ProvenanceSchema.safeParse({ source: "", source_url: "u", retrieved_at: "t", citation: "a" })
-        .success,
-    ).toBe(false);
-  });
-
-  it("accepts an optional field_sources array (field-level granularity)", () => {
-    const ok = ProvenanceSchema.safeParse({
-      source: "s",
-      source_url: "u",
-      retrieved_at: "t",
-      citation: "a",
-      field_sources: [{ fields: ["ementa"], source_url: "u2", retrieved_at: "t2" }],
-    });
-    expect(ok.success).toBe(true);
-  });
-});
-
-describe("FieldSourceSchema", () => {
-  it("requires at least one field name and a source_url", () => {
-    expect(FieldSourceSchema.safeParse({ fields: [], source_url: "u" }).success).toBe(false);
-    expect(FieldSourceSchema.safeParse({ fields: ["x"], source_url: "" }).success).toBe(false);
-    expect(FieldSourceSchema.safeParse({ fields: ["x"], source_url: "u" }).success).toBe(true);
-  });
-});
-
-describe("buildProvenance", () => {
+describe("buildProvenance (canonical v1.0 from historical input names)", () => {
   it("defaults retrieved_at to an ISO-8601 timestamp in Brasília time", () => {
-    const p = buildProvenance({ source: "s", source_url: "u", citation: "a" });
+    const p = buildProvenance(BASE);
     expect(p.retrieved_at).toMatch(ISO_RE);
     expect(p.retrieved_at).toMatch(/-03:00$/);
   });
 
   it("preserves the INSTANT of an explicit retrieved_at, re-expressed in Brasília time (P34/P39/P42-P45)", () => {
-    const p = buildProvenance({
-      source: "s",
-      source_url: "u",
-      citation: "a",
-      retrieved_at: "2020-01-01T00:00:00.000Z",
-    });
+    const p = buildProvenance({ ...BASE, retrieved_at: "2020-01-01T00:00:00.000Z" });
     // Mesmo instante: meia-noite UTC = 21h do dia anterior em Brasília.
     expect(p.retrieved_at).toBe("2019-12-31T21:00:00-03:00");
     expect(new Date(p.retrieved_at).getTime()).toBe(new Date("2020-01-01T00:00:00.000Z").getTime());
   });
 
   it("is idempotent for a retrieved_at already in Brasília time", () => {
-    const p = buildProvenance({
-      source: "s",
-      source_url: "u",
-      citation: "a",
-      retrieved_at: "2026-07-14T21:23:45-03:00",
-    });
+    const p = buildProvenance({ ...BASE, retrieved_at: "2026-07-14T21:23:45-03:00" });
     expect(p.retrieved_at).toBe("2026-07-14T21:23:45-03:00");
   });
 
   it("leaves date-only vintages and unparseable strings untouched", () => {
-    const dateOnly = buildProvenance({ source: "s", source_url: "u", citation: "a", retrieved_at: "2026-06-28" });
-    expect(dateOnly.retrieved_at).toBe("2026-06-28");
-    const weird = buildProvenance({ source: "s", source_url: "u", citation: "a", retrieved_at: "vintage-x" });
-    expect(weird.retrieved_at).toBe("vintage-x");
+    expect(buildProvenance({ ...BASE, retrieved_at: "2026-06-28" }).retrieved_at).toBe("2026-06-28");
+    expect(buildProvenance({ ...BASE, retrieved_at: "vintage-x" }).retrieved_at).toBe("vintage-x");
   });
 
-  it("normalizes field_sources retrieved_at to Brasília time too", () => {
+  it("maps dataset_id/reference_period to the canonical dataset.id/data_vintage", () => {
+    const p = buildProvenance({ ...BASE, dataset_id: "codigoSessao=1", reference_period: "2024-03-15" });
+    expect(p.dataset.id).toBe("codigoSessao=1");
+    expect(p.data_vintage).toBe("2024-03-15");
+    expect(p.contract_version).toBe("1.0");
+    expect(p.source.name).toBe("s");
+    expect(p.license.name).toBe("l");
+  });
+
+  it("maps field_sources (incl. reference_period → data_vintage) and normalizes their retrieved_at", () => {
     const p = buildProvenance({
-      source: "s",
-      source_url: "u",
-      citation: "a",
-      field_sources: [{ fields: ["ementa"], source_url: "u2", retrieved_at: "2026-01-01T01:00:00.000Z" }],
+      ...BASE,
+      field_sources: [
+        { fields: ["ementa"], source_url: "u2", reference_period: "2024", retrieved_at: "2026-01-01T01:00:00.000Z" },
+      ],
     });
-    expect(p.field_sources?.[0].retrieved_at).toBe("2025-12-31T22:00:00-03:00");
+    expect(p.field_sources?.[0]).toEqual({
+      fields: ["ementa"],
+      source_url: "u2",
+      dataset_id: null,
+      data_vintage: "2024",
+      retrieved_at: "2025-12-31T22:00:00-03:00",
+    });
   });
 
-  it("throws on an invalid envelope (missing citation)", () => {
-    // @ts-expect-error intentionally incomplete
-    expect(() => buildProvenance({ source: "s", source_url: "u" })).toThrow();
+  it("throws on an invalid envelope (empty citation)", () => {
+    expect(() => buildProvenance({ ...BASE, citation: "" })).toThrow();
   });
 });
 
@@ -149,11 +108,11 @@ describe("provenanceFor", () => {
     const p = provenanceFor("SENADO_LEGIS", "https://legis.senado.leg.br/dadosabertos", "/votacao", {
       dataset_id: "codigoSessao=1",
     });
-    expect(p.source).toBe(SOURCES.SENADO_LEGIS.source);
+    expect(p.source.name).toBe(SOURCES.SENADO_LEGIS.source);
     expect(p.citation).toBe(SOURCES.SENADO_LEGIS.citation);
-    expect(p.license).toBe(SOURCES.SENADO_LEGIS.license);
+    expect(p.license.name).toBe(SOURCES.SENADO_LEGIS.license);
     expect(p.source_url).toBe("https://legis.senado.leg.br/dadosabertos/votacao");
-    expect(p.dataset_id).toBe("codigoSessao=1");
+    expect(p.dataset.id).toBe("codigoSessao=1");
   });
 
   it("does not double the slash when baseUrl has a trailing slash", () => {
@@ -168,11 +127,8 @@ describe("provenanceFor", () => {
       "/bi-arqs/Arquimedes/Financeiro/DespesaSenadoDadosAbertos.json",
       { reference_period: "2024", retrieved_at: "2026-01-01T00:00:00.000Z" },
     );
-    expect(p.source).toBe(SOURCES.SENADO_ORCAMENTO_EXEC.source);
-    expect(p.source_url).toBe(
-      "https://www.senado.gov.br/bi-arqs/Arquimedes/Financeiro/DespesaSenadoDadosAbertos.json",
-    );
-    expect(p.reference_period).toBe("2024");
+    expect(p.source.name).toBe(SOURCES.SENADO_ORCAMENTO_EXEC.source);
+    expect(p.data_vintage).toBe("2024");
   });
 
   it("threads field_sources through into the envelope", () => {
@@ -184,12 +140,12 @@ describe("provenanceFor", () => {
   });
 });
 
-describe("provenanceEcidadania", () => {
+describe("provenanceEcidadania / provenanceArquimedesVotos", () => {
   it("prepends the portal base for a section path", () => {
     const p = provenanceEcidadania("/principalmateria", { dataset_id: "consultas" });
-    expect(p.source).toBe(SOURCES.ECIDADANIA.source);
+    expect(p.source.name).toBe(SOURCES.ECIDADANIA.source);
     expect(p.source_url).toBe(`${ECIDADANIA_BASE_URL}/principalmateria`);
-    expect(p.dataset_id).toBe("consultas");
+    expect(p.dataset.id).toBe("consultas");
   });
 
   it("uses a full item URL as-is (level-3 canonical item provenance)", () => {
@@ -198,10 +154,18 @@ describe("provenanceEcidadania", () => {
     expect(p.source_url).toBe(url);
     expect(p.retrieved_at).toBe("2026-01-02T00:04:05-03:00");
   });
+
+  it("pins the Arquimedes CSV as source_url and consultas_votos as dataset", () => {
+    const p = provenanceArquimedesVotos({ reference_period: "2026-07-01" });
+    expect(p.source.name).toBe(SOURCES.ECIDADANIA_ARQUIMEDES.source);
+    expect(p.source_url).toContain("bi-arqs/Arquimedes/ecidadania");
+    expect(p.dataset.id).toBe("consultas_votos");
+    expect(p.data_vintage).toBe("2026-07-01");
+  });
 });
 
 describe("withFieldSources", () => {
-  it("attaches validated field_sources and is a no-op for an empty list", () => {
+  it("attaches mapped field_sources and is a no-op for an empty list", () => {
     const base = provenanceFor("SENADO_LEGIS", "https://x", "/processo/1");
     expect(withFieldSources(base, [])).toBe(base);
     const enriched = withFieldSources(base, [
@@ -209,51 +173,65 @@ describe("withFieldSources", () => {
     ]);
     expect(enriched.field_sources).toHaveLength(1);
     expect(enriched.field_sources?.[0].source_url).toBe("https://x/processo/relatoria");
+    expect(enriched.field_sources?.[0].retrieved_at).toBe("2025-12-31T21:00:00-03:00");
   });
 
   it("throws on an invalid field source", () => {
     const base = provenanceFor("SENADO_LEGIS", "https://x", "/processo/1");
-    // @ts-expect-error fields is required and non-empty
-    expect(() => withFieldSources(base, [{ source_url: "u" }])).toThrow();
+    expect(() => withFieldSources(base, [{ fields: [], source_url: "u" }])).toThrow();
   });
 });
 
-describe("provenanceFooter", () => {
-  it("renders a compact source line with the period when present", () => {
+describe("provenanceFooter (contract v1.0 wording)", () => {
+  it("renders source line, license line and the reader notice", () => {
     const footer = provenanceFooter(
       buildProvenance({
         source: "Senado Federal",
         source_url: "https://x/votacao",
         citation: "a",
+        license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
         reference_period: "2024",
         retrieved_at: "2026-06-22T12:00:00.000Z",
       }),
     );
     expect(footer).toContain("Fonte: Senado Federal");
     expect(footer).toContain("https://x/votacao");
+    expect(footer).toContain("dados de 2024");
     // 12:00 UTC = 09:00 em Brasília, humanizado com o rótulo explícito do fuso.
     expect(footer).toContain("extraído em 22/06/2026 às 09:00 (horário de Brasília)");
-    expect(footer).toContain("competência 2024");
+    expect(footer).toContain("Licença: Dados Abertos do Senado Federal");
+    expect(footer).toContain("A referência completa desta informação pode ser solicitada nesta própria conversa.");
   });
 });
 
-describe("resultWithProvenance", () => {
-  it("puts provenance in structuredContent and the compact footer, NOT in the text JSON", () => {
+describe("resultWithProvenance (three channels, concise projection)", () => {
+  it("emits the fixed 6-key concise block in structuredContent, with explicit nulls", () => {
     const prov = provenanceFor("SENADO_LEGIS", "https://x", "/votacao");
     const res = resultWithProvenance({ count: 2, votacoes: [] }, prov);
-
-    // structuredContent carries the full envelope (Opção 2 — parseable channel).
-    expect(res.structuredContent.provenance).toEqual(prov);
     expect(res.structuredContent).toMatchObject({ count: 2 });
-    expect(res.content).toHaveLength(2);
+    expect(Object.keys(res.structuredContent.provenance as Record<string, unknown>)).toEqual([
+      "source",
+      "source_url",
+      "data_vintage",
+      "retrieved_at",
+      "citation",
+      "license",
+    ]);
+    expect(res.structuredContent.provenance).toMatchObject({
+      source: SOURCES.SENADO_LEGIS.source,
+      source_url: "https://x/votacao",
+      data_vintage: null,
+      citation: SOURCES.SENADO_LEGIS.citation,
+      license: SOURCES.SENADO_LEGIS.license,
+    });
+  });
 
-    // The text JSON block holds only the data — provenance must NOT be duplicated here
-    // (the Δ-token optimization). The compact footer (Opção 1) carries the source for
-    // text-only clients.
+  it("keeps provenance out of the text JSON (Δ-token optimization) and appends the footer", () => {
+    const prov = provenanceFor("SENADO_LEGIS", "https://x", "/votacao");
+    const res = resultWithProvenance({ count: 2, votacoes: [] }, prov);
+    expect(res.content).toHaveLength(2);
     const textJson = JSON.parse(res.content[0].text);
     expect(textJson).toEqual({ count: 2, votacoes: [] });
-    expect(textJson.provenance).toBeUndefined();
-    expect(textJson.attribution).toBeUndefined();
     expect(res.content[1].text).toContain("Fonte:");
     expect(res.content[1].text).toContain(prov.source_url);
   });
@@ -274,32 +252,29 @@ describe("resultWithProvenance", () => {
     ]);
   });
 
-  it("attribution is just the single source_url when there are no field_sources", () => {
-    const prov = provenanceFor("SENADO_LEGIS", "https://x", "/votacao");
+  it("mirrors the same concise block + attribution into result-level `_meta` under namespaced keys", () => {
+    const prov = provenanceFor("SENADO_LEGIS", "https://x", "/processo/1", {
+      field_sources: [{ fields: ["ementa"], source_url: "https://x/processo" }],
+    });
     const res = resultWithProvenance({ ok: true }, prov);
-    expect(res.structuredContent.attribution).toEqual(["https://x/votacao"]);
+    expect(res._meta[PROVENANCE_META_KEY]).toEqual(res.structuredContent.provenance);
+    expect(res._meta[ATTRIBUTION_META_KEY]).toEqual(res.structuredContent.attribution);
+    expect(PROVENANCE_META_KEY).toBe("com.sidneybissoli.senado/provenance");
+    expect(ATTRIBUTION_META_KEY).toBe("com.sidneybissoli.senado/attribution");
   });
 
   it("produces structuredContent that passes the permissive global outputSchema", () => {
     // The server registers tools with z.object({}).passthrough(); a merged object validates.
     const prov = provenanceFor("ECIDADANIA", "https://www12.senado.leg.br/ecidadania", "/consultas");
     const res = resultWithProvenance({ ok: true }, prov);
-    expect(res.structuredContent).toMatchObject({ ok: true, provenance: { source: prov.source } });
+    expect(res.structuredContent).toMatchObject({ ok: true, provenance: { source: prov.source.name } });
   });
+});
 
-  it("mirrors provenance + attribution into result-level `_meta` under namespaced keys", () => {
-    const prov = provenanceFor("SENADO_LEGIS", "https://x", "/processo/1", {
-      field_sources: [{ fields: ["ementa"], source_url: "https://x/processo" }],
-    });
-    const res = resultWithProvenance({ ok: true }, prov);
-
-    // The out-of-band mirror carries the SAME envelope, not a reshaped copy.
-    expect(res._meta[PROVENANCE_META_KEY]).toEqual(prov);
-    expect(res._meta[ATTRIBUTION_META_KEY]).toEqual(res.structuredContent.attribution);
-    expect(res._meta[ATTRIBUTION_META_KEY]).toEqual(["https://x/processo/1", "https://x/processo"]);
-
-    // Keys are namespaced away from the reserved MCP / openai namespaces.
-    expect(PROVENANCE_META_KEY).not.toMatch(/^(mcp|modelcontextprotocol\.io|openai)\b/);
-    expect(ATTRIBUTION_META_KEY).not.toMatch(/^(mcp|modelcontextprotocol\.io|openai)\b/);
+describe("provenanceContext configuration", () => {
+  it("is pt-BR, Brasília fixed offset, concise by default", () => {
+    expect(provenanceContext.locale.id).toBe("pt-BR");
+    expect(provenanceContext.timezone).toEqual({ offset: "-03:00", label: "horário de Brasília" });
+    expect(provenanceContext.defaultMode).toBe("concise");
   });
 });
