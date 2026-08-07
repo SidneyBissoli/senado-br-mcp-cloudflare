@@ -17,7 +17,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { catalogToolNames } from "../../evals/catalog.js";
+import { CATALOG } from "../../evals/catalog.js";
 import type { GoldenQuestion, QuestionsFile } from "./types.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -138,7 +138,7 @@ export function buildQuestions(markdown: string, known: Set<string>): GoldenQues
 
 function main(): void {
   const markdown = readFileSync(SPEC_PATH, "utf8");
-  const known = catalogToolNames();
+  const known = CATALOG.toolNames;
   const perguntas = buildQuestions(markdown, known);
   if (perguntas.length === 0) {
     throw new Error(`no question rows parsed from ${SPEC_PATH} — spec format changed?`);

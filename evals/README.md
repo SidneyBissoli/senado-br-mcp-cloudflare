@@ -8,16 +8,21 @@ refatoração (deferred loading / Code Mode / agrupamento). O item *"rodar evals
 tool"* do bloco **Contínuo** depende deste harness ser barato de reexecutar — por isso o núcleo
 (catálogo + fixtures + scorer) roda **offline em `npm test`**, sem rede e sem modelo.
 
+O motor do harness (extrator de catálogo, validação de fixtures, scorer, gate, retry e
+runner) vive no pacote **`@sbissoli/mcp-evals`** (monorepo `mcp-br-commons`, adoção da
+Fase 1); este diretório guarda só o que é específico do senado.
+
 ## Arquivos
 
 | Arquivo | Papel |
 |---|---|
-| `evals/catalog.ts` | **Extrator de catálogo.** Um "fake McpServer" captura cada `server.tool(name, desc, shape, cb)` ao rodar os `registerXTools` de `src/tools/*` — sem rede, sem runtime de Worker. Fonte de verdade das 67 tools (nome, descrição, JSON-schema do input). Também converte os shapes Zod → JSON-schema (sem dependência nova) e monta o array `tools` da Anthropic. |
-| `evals/fixtures/queries.ts` | **45 consultas pt-BR** (persona jornalista/pesquisador), cada uma com `{ id, query, expectedTools, note }`. Cobre 16 áreas e inclui casos "vizinhos"/ambíguos (ex.: `senado_search_votacoes` vs `senado_obter_votacao`). |
-| `evals/score.ts` | **Núcleo de scoring puro.** top-1 / top-k / por-área + a lógica de gate do ROADMAP. Sem rede, sem modelo — é o que os testes unitários exercitam. |
-| `evals/run.ts` | **Runner com modelo real.** Manda cada query + as 67 tools para a Anthropic Messages API (`tool_choice: any`), registra a tool escolhida, e imprime o relatório agregado + decisão de gate. |
-| `tests/evals/fixtures.test.ts` | Valida fixtures contra o catálogo real (pega regressão quando uma tool é renomeada), contagem 30–50, sem ids/queries duplicados, cobertura de áreas. |
-| `tests/evals/score.test.ts` | Correção do scorer e do gate com casos sintéticos de acurácia conhecida. |
+| `evals/catalog.ts` | **GROUPS do senado** (um por grupo de `src/server.ts` — grupo faltando encolhe o eval em silêncio) → `CATALOG = buildCatalog(GROUPS)` do pacote. Fonte de verdade das 67 tools (nome, descrição, JSON-schema do input). |
+| `evals/fixtures/queries.ts` | **47 consultas pt-BR** (persona jornalista/pesquisador), cada uma com `{ id, query, expectedTools, note }`. Cobre 16 áreas e inclui casos "vizinhos"/ambíguos (ex.: `senado_search_votacoes` vs `senado_obter_votacao`). |
+| `evals/run.ts` | **Runner com modelo real** — `runEval({ catalog, fixtures, systemPrompt })` do pacote: manda cada query + as 67 tools para a Anthropic Messages API (`tool_choice: any`), registra a tool escolhida, e imprime o relatório agregado + decisão de gate. |
+| `tests/evals/fixtures.test.ts` | Testes específicos do senado (contagem exata de 67 tools, prefixo `senado_`, spot-checks de schema) + `validateFixtures` do pacote (contagem 30–50, ids/queries únicos, tools existentes, >= 12 áreas). |
+
+O scorer, o gate, o retry e o runner são testados no próprio pacote (61 testes offline,
+incluindo compatibilidade byte-a-byte das mensagens de gate com o harness original).
 
 ## Como rodar
 
@@ -47,7 +52,8 @@ Variáveis opcionais:
 
 ## Lógica de gate (ROADMAP — Sessão 1)
 
-A partir da **acurácia top-1** (`evals/score.ts → evaluateGate`):
+A partir da **acurácia top-1** (`evaluateGate` do pacote, com `toolCount` preenchido do
+catálogo pelo runner):
 
 | Acurácia top-1 | Decisão | Recomendação |
 |---|---|---|
