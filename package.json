@@ -44,10 +44,12 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
+    "@sbissoli/mcp-stats": "file:../mcp-br-commons/packages/mcp-stats",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250214.0",
+    "@sbissoli/mcp-evals": "file:../mcp-br-commons/packages/mcp-evals",
     "@types/node": "^25.9.3",
     "agents": "^0.5.0",
     "exceljs": "^4.4.0",
