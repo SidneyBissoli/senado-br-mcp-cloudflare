@@ -17,13 +17,9 @@
  * 30 <= count <= 50, no duplicate ids, no duplicate queries.
  */
 
-export interface EvalFixture {
-  id: string;
-  query: string;
-  /** Acceptable first-call tools. A prediction is correct if it is in this set. */
-  expectedTools: string[];
-  note: string;
-}
+import type { EvalFixture } from "@sbissoli/mcp-evals";
+
+export type { EvalFixture };
 
 export const FIXTURES: EvalFixture[] = [
   // --- senadores ---------------------------------------------------------
