@@ -99,7 +99,7 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
         },
         _meta: toolMetaForProfile(toolProfile),
       },
-      instrumentTool(name, profiledCallback as never, analytics) as never,
+      instrumentTool(name, profiledCallback as never, analytics, options.requestTag) as never,
     );
   };
 

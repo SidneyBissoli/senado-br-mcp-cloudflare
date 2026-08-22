@@ -15,8 +15,16 @@
  * there is nothing to await and no need for ctx.waitUntil — a try/catch is the
  * correct and sufficient guard.
  *
- * Privacy: only the tool name, a coarse ok/error status, and cache-outcome counts are
- * recorded. No user query content, tool parameters, or PII ever reach Analytics Engine.
+ * Privacy: only the tool name, a coarse ok/error status, cache-outcome counts, and
+ * aggregable request context (country, AS organization, owner's self-use marker) are
+ * recorded. No user query content, tool parameters, IP, or PII ever reach Analytics
+ * Engine.
+ *
+ * Request context (blobs 4–6): hosted AI-platform connectors egress from the
+ * platform's own servers (e.g. Anthropic in the US), so country/AS is the only way
+ * to tell that traffic apart in aggregate — and the owner's own use through such a
+ * connector is only identifiable via the secret header his MCP clients send
+ * (SELF_HEADER, value = the SELF_MARKER Wrangler secret).
  */
 
 // Loosely typed to match the group modules' `server.tool(name, desc, shape, cb)`
@@ -27,10 +35,31 @@ type ToolCallback = (...args: unknown[]) => Promise<unknown> | unknown;
 import { incr, incrTool } from "./metrics.js";
 import { callCache, cacheClass, type CallCacheStats } from "./observability/call-context.js";
 
+/** Header the owner's MCP clients send (value = the SELF_MARKER secret). */
+export const SELF_HEADER = "x-mcp-self";
+
+/** Per-request context, computed once in the Worker's fetch handler. */
+export interface RequestTag {
+  self: boolean;
+  country: string;
+  asOrg: string;
+}
+
+/** Extracts country/AS from request.cf and matches the self-use secret header. */
+export function tagRequest(request: Request, selfSecret?: string): RequestTag {
+  const cf = (request as { cf?: IncomingRequestCfProperties }).cf;
+  return {
+    self: !!selfSecret && request.headers.get(SELF_HEADER) === selfSecret,
+    country: typeof cf?.country === "string" ? cf.country : "",
+    asOrg: typeof cf?.asOrganization === "string" ? cf.asOrganization : "",
+  };
+}
+
 export function instrumentTool(
   name: string,
   cb: ToolCallback,
   analytics?: AnalyticsEngineDataset,
+  tag?: RequestTag,
 ): ToolCallback {
   return async (...args: unknown[]) => {
     incr("toolCalls");
@@ -48,7 +77,7 @@ export function instrumentTool(
       isError = true;
       throw e;
     } finally {
-      recordToolCall(name, isError, stats, analytics);
+      recordToolCall(name, isError, stats, analytics, tag);
     }
   };
 }
@@ -58,6 +87,7 @@ function recordToolCall(
   isError: boolean,
   stats: CallCacheStats,
   analytics?: AnalyticsEngineDataset,
+  tag?: RequestTag,
 ): void {
   incrTool(name, isError);
   if (!analytics) return;
@@ -66,8 +96,17 @@ function recordToolCall(
       // Low-cardinality index → cheap GROUP BY in SQL. The tool name only.
       indexes: [name],
       // blob1 = tool name (for GROUP BY without relying on the index), blob2 = outcome,
-      // blob3 = cache class of the call (cached | live | partial | none).
-      blobs: [name, isError ? "error" : "ok", cacheClass(stats)],
+      // blob3 = cache class of the call (cached | live | partial | none),
+      // blob4 = "self" when the owner's secret header matched, blob5 = country,
+      // blob6 = AS organization (request.cf) — same positions in every portfolio MCP.
+      blobs: [
+        name,
+        isError ? "error" : "ok",
+        cacheClass(stats),
+        tag?.self ? "self" : "",
+        tag?.country ?? "",
+        tag?.asOrg ?? "",
+      ],
       // double1 = error flag (error rate via avg); double2 = upstream fetches in the call;
       // double3 = how many were cache hits (fetch-level cache-hit ratio via sum/sum).
       doubles: [isError ? 1 : 0, stats.fetches, stats.hits],

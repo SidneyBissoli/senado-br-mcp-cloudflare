@@ -11,6 +11,7 @@ import { buildStatus } from "./status.js";
 import type { Env } from "./types.js";
 import { logger } from "./utils/logger.js";
 import { incr, getMetrics } from "./metrics.js";
+import { tagRequest } from "./instrument.js";
 import { ICON_JPEG_BASE64 } from "./icon.js";
 import { refreshEcidadania } from "./scraper/pipeline.js";
 import { handlerRouteForPath, toolProfileForRoute } from "./app-surface.js";
@@ -108,7 +109,9 @@ export default {
     // e-Cidadania detail write-through (fire-and-forget via ctx.waitUntil).
     const toolProfile = toolProfileForRoute(url.pathname);
     const route = handlerRouteForPath(url.pathname, toolProfile);
-    const server = createServer(env, ctx, { toolProfile });
+    // Per-request context (self marker, country, AS) for the per-tool telemetry.
+    const requestTag = tagRequest(request, env.SELF_MARKER);
+    const server = createServer(env, ctx, { toolProfile, requestTag });
 
     const handler = createMcpHandler(server, {
       route,

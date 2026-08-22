@@ -10,6 +10,8 @@ export type SenadoToolProfile = "full" | "openai-app";
 
 export interface CreateServerOptions {
   toolProfile?: SenadoToolProfile;
+  /** Per-request context (self marker, country, AS) written to Analytics Engine. */
+  requestTag?: import("./instrument.js").RequestTag;
 }
 
 export const SERVER_INSTRUCTIONS = [

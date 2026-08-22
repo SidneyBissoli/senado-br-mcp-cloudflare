@@ -8,6 +8,12 @@ export interface Env {
   // Tool-call telemetry (per-tool selection counts). Optional so local dev and
   // tests run without the binding; recordToolCall() degrades to a no-op when absent.
   SENADO_ANALYTICS?: AnalyticsEngineDataset;
+  /**
+   * Secret for the owner's self-use marker (`wrangler secret put SELF_MARKER`):
+   * requests carrying the x-mcp-self header with this value get blob4="self" in
+   * the per-tool telemetry. Absent = no request is ever marked.
+   */
+  SELF_MARKER?: string;
   // e-Cidadania sovereign dataset (P2). Optional so tests/local dev run without it;
   // tools fall back to live scraping when the binding or data is absent.
   ECIDADANIA_DB?: D1Database;

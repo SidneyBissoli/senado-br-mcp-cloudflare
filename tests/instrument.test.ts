@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { instrumentTool } from "../src/instrument.js";
+import { instrumentTool, tagRequest, SELF_HEADER, type RequestTag } from "../src/instrument.js";
 import { getMetrics, _resetMetrics } from "../src/metrics.js";
 import { recordFetch } from "../src/observability/call-context.js";
 
@@ -15,6 +15,29 @@ function fakeAnalytics() {
     } as unknown as AnalyticsEngineDataset,
   };
 }
+
+describe("tagRequest", () => {
+  const makeRequest = (headers: Record<string, string> = {}, cf?: Record<string, unknown>) => {
+    const req = new Request("https://example.com/mcp", { headers });
+    if (cf) Object.defineProperty(req, "cf", { value: cf });
+    return req;
+  };
+
+  it("extracts country and AS organization from request.cf", () => {
+    const tag = tagRequest(makeRequest({}, { country: "BR", asOrganization: "Claro NXT" }));
+    expect(tag).toEqual({ self: false, country: "BR", asOrg: "Claro NXT" });
+  });
+
+  it("marks self only when the header matches the secret", () => {
+    expect(tagRequest(makeRequest({ [SELF_HEADER]: "s3cr3t" }), "s3cr3t").self).toBe(true);
+    expect(tagRequest(makeRequest({ [SELF_HEADER]: "wrong" }), "s3cr3t").self).toBe(false);
+    expect(tagRequest(makeRequest({ [SELF_HEADER]: "anything" })).self).toBe(false);
+  });
+
+  it("without request.cf (local dev), country and AS are empty", () => {
+    expect(tagRequest(makeRequest())).toEqual({ self: false, country: "", asOrg: "" });
+  });
+});
 
 describe("instrumentTool", () => {
   beforeEach(() => {
@@ -33,7 +56,7 @@ describe("instrumentTool", () => {
     expect(ae.points).toHaveLength(1);
     expect(ae.points[0].indexes).toEqual(["senado_obter_senador"]);
     // No cache fetches in this callback → cacheClass "none", zero fetch/hit counts.
-    expect(ae.points[0].blobs).toEqual(["senado_obter_senador", "ok", "none"]);
+    expect(ae.points[0].blobs).toEqual(["senado_obter_senador", "ok", "none", "", "", ""]);
     expect(ae.points[0].doubles).toEqual([0, 0, 0]);
   });
 
@@ -44,7 +67,7 @@ describe("instrumentTool", () => {
     await wrapped({});
 
     expect(getMetrics().perTool.senado_ceaps).toEqual({ calls: 1, errors: 1 });
-    expect(ae.points[0].blobs).toEqual(["senado_ceaps", "error", "none"]);
+    expect(ae.points[0].blobs).toEqual(["senado_ceaps", "error", "none", "", "", ""]);
     expect(ae.points[0].doubles).toEqual([1, 0, 0]);
   });
 
@@ -57,7 +80,7 @@ describe("instrumentTool", () => {
 
     await expect(wrapped({})).rejects.toThrow("upstream down");
     expect(getMetrics().perTool.senado_vetos).toEqual({ calls: 1, errors: 1 });
-    expect(ae.points[0].blobs).toEqual(["senado_vetos", "error", "none"]);
+    expect(ae.points[0].blobs).toEqual(["senado_vetos", "error", "none", "", "", ""]);
   });
 
   it("works without an analytics binding (in-memory only)", async () => {
@@ -93,7 +116,7 @@ describe("instrumentTool", () => {
 
     await wrapped({});
 
-    expect(ae.points[0].blobs).toEqual(["senado_obter_materia", "ok", "partial"]);
+    expect(ae.points[0].blobs).toEqual(["senado_obter_materia", "ok", "partial", "", "", ""]);
     expect(ae.points[0].doubles).toEqual([0, 3, 2]); // [errorFlag, fetches, hits]
   });
 
@@ -111,9 +134,9 @@ describe("instrumentTool", () => {
     await cached({});
     await live({});
 
-    expect(ae.points[0].blobs).toEqual(["senado_obter_votacao", "ok", "cached"]);
+    expect(ae.points[0].blobs).toEqual(["senado_obter_votacao", "ok", "cached", "", "", ""]);
     expect(ae.points[0].doubles).toEqual([0, 1, 1]);
-    expect(ae.points[1].blobs).toEqual(["senado_search_processos", "ok", "live"]);
+    expect(ae.points[1].blobs).toEqual(["senado_search_processos", "ok", "live", "", "", ""]);
     expect(ae.points[1].doubles).toEqual([0, 1, 0]);
   });
 
@@ -130,6 +153,16 @@ describe("instrumentTool", () => {
     // Each call sees a fresh store — 1 fetch each, not accumulated.
     expect(ae.points[0].doubles).toEqual([0, 1, 0]);
     expect(ae.points[1].doubles).toEqual([0, 1, 0]);
+  });
+
+  it("writes the request tag into blobs 4-6 (self marker, country, AS org)", async () => {
+    const ae = fakeAnalytics();
+    const tag: RequestTag = { self: true, country: "US", asOrg: "Anthropic" };
+    const wrapped = instrumentTool("senado_obter_senador", async () => ({ ok: true }), ae.dataset, tag);
+
+    await wrapped({});
+
+    expect(ae.points[0].blobs).toEqual(["senado_obter_senador", "ok", "none", "self", "US", "Anthropic"]);
   });
 
   it("accumulates calls across invocations of the same tool", async () => {
