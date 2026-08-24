@@ -13,7 +13,7 @@
     "mes_ano_pagamento": "03/2025",
     "mes_ano_prestacao": "02/2025",
     "nome": "ADÔNIS DIAS TARALLO",
-    "sequencial": 3909131,
+    "sequencial": 3919102,
     "valorTotal": "2.232,33"
   },
   {
@@ -30,13 +30,13 @@
     "mes_ano_pagamento": "03/2025",
     "mes_ano_prestacao": "02/2025",
     "nome": "ADRIANA ARAÚJO DE OLIVEIRA",
-    "sequencial": 3661865,
+    "sequencial": 3672549,
     "valorTotal": "264,17"
   },
   {
     "horas_extras": [
       {
-        "dia": "13/02/2025",
+        "dia": "06/02/2025",
         "quantidade": "02h00",
         "setor_prestacao": {
           "nome": "Gabinete do Senador Wellington Fagundes",
@@ -44,15 +44,15 @@
         }
       },
       {
-        "dia": "17/02/2025",
-        "quantidade": "01h01",
+        "dia": "28/02/2025",
+        "quantidade": "02h00",
         "setor_prestacao": {
           "nome": "Gabinete do Senador Wellington Fagundes",
           "sigla": "GSWFAGUN"
         }
       },
       {
-        "dia": "05/02/2025",
+        "dia": "07/02/2025",
         "quantidade": "02h00",
         "setor_prestacao": {
           "nome": "Gabinete do Senador Wellington Fagundes",
@@ -63,7 +63,7 @@
     "mes_ano_pagamento": "03/2025",
     "mes_ano_prestacao": "02/2025",
     "nome": "ADRIANA CARLOS TEIXEIRA VENEGAS",
-    "sequencial": 3941132,
+    "sequencial": 3952533,
     "valorTotal": "3.805,41"
   }
 ]

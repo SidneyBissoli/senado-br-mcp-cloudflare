@@ -3,170 +3,145 @@
     "Metadados": {
       "DataVersaoServico": "2018-08-23",
       "DescricaoDataSet": "Lista os vetos posteriores à RCN 1/2013 que estão tramitando",
-      "Versao": "22/07/2026 08:19:55",
+      "Versao": "21/08/2026 22:19:57",
       "VersaoServico": "7"
     },
     "Vetos": {
       "Veto": [
         {
-          "Assunto": "Estratégia Nacional de Saúde do Complexo Econômico-Industrial da Saúde",
-          "Codigo": "18489",
-          "DataPublicacao": "2026-07-21",
+          "Assunto": "Valor mínimo para frete",
+          "Codigo": "18589",
+          "DataPublicacao": "2026-08-06",
+          "DataRecebimentoCongresso": "2026-08-07",
+          "DataSobrestacaoPauta": "2026-09-06",
           "Materia": {
             "Ano": "2026",
-            "Codigo": "175250",
+            "Codigo": "175359",
             "EmTramitacao": "Sim",
-            "Ementa": "Veto parcial aposto ao Projeto de Lei nº 2.583, de 2020, que “Institui a Estratégia Nacional de Saúde do Complexo Econômico-Industrial da Saúde (Ensceis); e altera a Lei nº 6.360, de 23 de setembro de 1976, a Lei nº 14.133, de 1º de abril de 2021 (Lei de Licitações e Contratos Administrativos), e a Lei nº 8.080, de 19 de setembro de 1990 (Lei Orgânica da Saúde)”.",
+            "Ementa": "Veto parcial aposto ao Projeto de Lei de Conversão (CN) nº 6 de 2026 (oriundo da Medida Provisória nº 1.343 de 2026), que \"Altera a Lei nº 13.703, de 8 de agosto de 2018, para dispor sobre a obrigatoriedade de cadastramento da operação de transporte e a geração do Código Identificador da Operação de Transporte (CIOT) e sobre medidas administrativas para o cumprimento da Política Nacional de Pisos Mínimos do Transporte Rodoviário de Cargas, a Lei nº 10.666, de 8 de maio de 2003, a Lei nº 11.442, de 5 de janeiro de 2007, a Lei nº 13.103, de 2 de março de 2015, e a Lei nº 9.503, de 23 de setembro de 1997 (Código de Trânsito Brasileiro); e dá outras providências.\".",
             "NomeCasa": "Congresso Nacional",
-            "Numero": "38",
+            "Numero": "43",
             "Sigla": "VET",
             "SiglaCasa": "CN",
-            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/175250"
+            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/175359"
           },
           "MateriaVetada": {
-            "Ano": "2020",
-            "Codigo": "169609",
-            "DescricaoObjetivoProcesso": "Revisora",
+            "Ano": "2026",
+            "Codigo": "173212",
             "EmTramitacao": "Sim",
-            "Ementa": "Institui a Estratégia Nacional de Saúde do Complexo Econômico-Industrial da Saúde (ENSCEIS); e altera as Leis nºs 6.360, de 23 de setembro de 1976, 14.133, de 1º de abril de 2021 (Lei de Licitações e Contratos Administrativos), e 8.080, de 19 de setembro de 1990 (Lei Orgânica da Saúde).",
+            "Ementa": "Altera a Lei nº 13.703, de 8 de agosto de 2018, para criar a obrigatoriedade de cadastramento da operação de transporte e a geração do Código Identificador da Operação de Transporte - CIOT, e para dispor sobre medidas administrativas para o cumprimento da Política Nacional de Pisos Mínimos do Transporte Rodoviário de Cargas.",
             "NomeCasa": "Congresso Nacional",
             "NormaGerada": {
               "AnoNorma": "2026",
-              "CodigoNorma": "43573921",
-              "DataAssinatura": "2026-07-20",
-              "DataPublicacao": "2026-07-21",
+              "CodigoNorma": "43632992",
+              "DataAssinatura": "2026-08-05",
+              "DataPublicacao": "2026-08-06",
               "DescricaoTipoNorma": "Lei Numerada",
-              "DescricaoVeiculoPublicacao": "[Diário Oficial da União  de 21/07/2026] (p. 1, col. 1)",
-              "NomeNorma": "Lei nº 15.471 de 20/07/2026",
-              "NumeroNorma": "15471",
+              "DescricaoVeiculoPublicacao": "[Diário Oficial da União  de 06/08/2026] (p. 1, col. 1)",
+              "NomeNorma": "Lei nº 15.485 de 05/08/2026",
+              "NumeroNorma": "15485",
               "SiglaTipoNorma": "LEI-n",
               "SiglaVeiculoPublicacao": "DOU",
-              "UrlNorma": "https://legis.senado.leg.br/norma/43573921"
+              "UrlNorma": "https://legis.senado.leg.br/norma/43632992"
             },
-            "Numero": "2583",
-            "Sigla": "PL",
+            "Numero": "1343",
+            "Sigla": "MPV",
             "SiglaCasa": "CN",
-            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/169609",
-            "UrlRelatorias": "https://legis.senado.leg.br/dadosabertos/materia/relatorias/169609"
+            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/173212",
+            "UrlRelatorias": "https://legis.senado.leg.br/dadosabertos/materia/relatorias/173212"
           },
           "Mensagem": {
             "Ano": "2026",
-            "Numero": "611",
+            "Numero": "665",
             "Sigla": "MSG",
-            "UrlPlanalto": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2026/Msg/Vep/VEP-611-26.htm"
+            "UrlPlanalto": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2026/msg/vep/vep-665-26.htm"
           },
-          "QuantidadeDispositivos": "0",
+          "QuantidadeDispositivos": "42",
           "SobrestandoPauta": "Não",
           "Total": "Não",
-          "UrlDispositivos": "https://www.congressonacional.leg.br/dados/plenario/resultado/veto/materia/175250"
+          "UrlDispositivos": "https://www.congressonacional.leg.br/dados/plenario/resultado/veto/materia/175359"
         },
         {
-          "Assunto": "Símbolo Internacional de Acessibilidade",
-          "Codigo": "18469",
-          "DataPublicacao": "2026-07-08",
-          "DataRecebimentoCongresso": "2026-07-08",
-          "DataSobrestacaoPauta": "2026-08-23",
+          "Assunto": "Criação da Universidade Federal da Fronteira Norte (Unifron)",
+          "Codigo": "18569",
+          "DataPublicacao": "2026-07-31",
+          "DataRecebimentoCongresso": "2026-07-31",
+          "DataSobrestacaoPauta": "2026-08-30",
           "Materia": {
             "Ano": "2026",
-            "Codigo": "175009",
+            "Codigo": "175322",
             "EmTramitacao": "Sim",
-            "Ementa": "Veto parcial aposto ao Projeto de Lei nº 2.199, de 2022 (Projeto de Lei nº 7750, de 2017, na Câmara dos Deputados), que “Altera a Lei nº 7.405, de 12 de novembro de 1985, para estabelecer a utilização do Símbolo Internacional de Acessibilidade”.",
+            "Ementa": "Veto total aposto ao Projeto de Lei nº 3.455, de 2023, que \"Dispõe sobre a criação da Universidade Federal da Fronteira Norte (Unifron), no Município de Oiapoque, no Estado do Amapá.\"",
             "NomeCasa": "Congresso Nacional",
-            "Numero": "37",
+            "Numero": "42",
             "Sigla": "VET",
             "SiglaCasa": "CN",
-            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/175009"
-          },
-          "MateriaVetada": {
-            "Ano": "2022",
-            "Codigo": "154345",
-            "DescricaoObjetivoProcesso": "Revisora",
-            "EmTramitacao": "Sim",
-            "Ementa": "Estabelece a utilização do Símbolo Internacional de Acessibilidade; altera a Lei nº 7.405, de 12 de novembro de 1985; e dá outras providências.",
-            "NomeCasa": "Congresso Nacional",
-            "NormaGerada": {
-              "AnoNorma": "2026",
-              "CodigoNorma": "43502628",
-              "DataAssinatura": "2026-07-07",
-              "DataPublicacao": "2026-07-08",
-              "DescricaoTipoNorma": "Lei Numerada",
-              "DescricaoVeiculoPublicacao": "[Diário Oficial da União  de 08/07/2026] (p. 1, col. 1)",
-              "NomeNorma": "Lei nº 15.459 de 07/07/2026",
-              "NumeroNorma": "15459",
-              "SiglaTipoNorma": "LEI-n",
-              "SiglaVeiculoPublicacao": "DOU",
-              "UrlNorma": "https://legis.senado.leg.br/norma/43502628"
-            },
-            "Numero": "2199",
-            "Sigla": "PL",
-            "SiglaCasa": "CN",
-            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/154345",
-            "UrlRelatorias": "https://legis.senado.leg.br/dadosabertos/materia/relatorias/154345"
-          },
-          "Mensagem": {
-            "Ano": "2026",
-            "Numero": "586",
-            "Sigla": "MSG",
-            "UrlPlanalto": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2026/msg/vep/vep-586-26.htm"
-          },
-          "QuantidadeDispositivos": "2",
-          "SobrestandoPauta": "Não",
-          "Total": "Não",
-          "UrlDispositivos": "https://www.congressonacional.leg.br/dados/plenario/resultado/veto/materia/175009"
-        },
-        {
-          "Assunto": "Trabalho em Condição Análoga à de Escravo",
-          "Codigo": "18449",
-          "DataPublicacao": "2026-07-02",
-          "DataRecebimentoCongresso": "2026-07-03",
-          "DataSobrestacaoPauta": "2026-08-18",
-          "Materia": {
-            "Ano": "2026",
-            "Codigo": "174934",
-            "EmTramitacao": "Sim",
-            "Ementa": "Veto parcial aposto ao Projeto de Lei nº 5.760, de 2023, que \"Estabelece medidas de proteção e acolhimento de trabalhadoras e trabalhadores resgatados de condição análoga à de escravo; vincula o poder público e os empregadores à obrigação de efetivar a proteção de trabalhadores no ambiente doméstico; e altera o Decreto-Lei nº 2.848, de 7 de dezembro de 1940 (Código Penal), as Leis nºs 7.998, de 11 de janeiro de 1990, 10.593, de 6 de dezembro de 2002, e 11.340, de 7 de agosto de 2006 (Lei Maria da Penha), e a Lei Complementar nº 150, de 1º de junho de 2015, para incluir disposições referentes ao combate ao trabalho em condição análoga à de escravo.\".",
-            "NomeCasa": "Congresso Nacional",
-            "Numero": "36",
-            "Sigla": "VET",
-            "SiglaCasa": "CN",
-            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/174934"
+            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/175322"
           },
           "MateriaVetada": {
             "Ano": "2023",
-            "Codigo": "166703",
-            "DescricaoObjetivoProcesso": "Revisora",
+            "Codigo": "158643",
+            "DescricaoObjetivoProcesso": "Iniciadora",
             "EmTramitacao": "Sim",
-            "Ementa": "Estabelece medidas de proteção e acolhimento de trabalhadoras e trabalhadores resgatados de condição análoga à de escravo; vincula o poder público e os empregadores à obrigação de efetivar a proteção de trabalhadores no ambiente doméstico; e altera o Decreto-Lei nº 2.848, de 7 de dezembro de 1940 (Código Penal), as Leis nºs 7.998, de 11 de janeiro de 1990, 10.593, de 6 de dezembro de 2002, e 11.340, de 7 de agosto de 2006 (Lei Maria da Penha), e a Lei Complementar nº 150, de 1º de junho de 2015, para incluir disposições referentes ao combate ao trabalho em condição análoga à de escravo.",
+            "Ementa": "Dispõe sobre a transformação do campus de Oiapoque da Universidade Federal do Amapá em Universidade Federal da Fronteira Norte (UNIFRON).",
             "NomeCasa": "Congresso Nacional",
-            "NormaGerada": {
-              "AnoNorma": "2026",
-              "CodigoNorma": "43476361",
-              "DataAssinatura": "2026-07-01",
-              "DataPublicacao": "2026-07-02",
-              "DescricaoTipoNorma": "Lei Numerada",
-              "DescricaoVeiculoPublicacao": "[Diário Oficial da União  de 02/07/2026] (p. 1, col. 2)",
-              "NomeNorma": "Lei nº 15.455 de 01/07/2026",
-              "NumeroNorma": "15455",
-              "SiglaTipoNorma": "LEI-n",
-              "SiglaVeiculoPublicacao": "DOU",
-              "UrlNorma": "https://legis.senado.leg.br/norma/43476361"
-            },
-            "Numero": "5760",
+            "Numero": "3455",
             "Sigla": "PL",
             "SiglaCasa": "CN",
-            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/166703",
-            "UrlRelatorias": "https://legis.senado.leg.br/dadosabertos/materia/relatorias/166703"
+            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/158643",
+            "UrlRelatorias": "https://legis.senado.leg.br/dadosabertos/materia/relatorias/158643"
           },
           "Mensagem": {
             "Ano": "2026",
-            "Numero": "579",
+            "Numero": "640",
             "Sigla": "MSG",
-            "UrlPlanalto": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2026/Msg/Vep/VEP-579-26.htm"
+            "UrlPlanalto": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2026/msg/vet/vet-640-26.htm"
           },
-          "QuantidadeDispositivos": "1",
+          "QuantidadeDispositivos": "0",
           "SobrestandoPauta": "Não",
-          "Total": "Não",
-          "UrlDispositivos": "https://www.congressonacional.leg.br/dados/plenario/resultado/veto/materia/174934"
+          "Total": "Sim",
+          "UrlDispositivos": "https://www.congressonacional.leg.br/dados/plenario/resultado/veto/materia/175322"
+        },
+        {
+          "Assunto": "Transformação do CEFET-MG e do CEFET-RJ em Universidades Tecnológicas Federais",
+          "Codigo": "18549",
+          "DataPublicacao": "2026-07-31",
+          "DataRecebimentoCongresso": "2026-07-31",
+          "DataSobrestacaoPauta": "2026-08-30",
+          "Materia": {
+            "Ano": "2026",
+            "Codigo": "175320",
+            "EmTramitacao": "Sim",
+            "Ementa": "Veto total aposto ao Projeto de Lei nº 5.102, de 2023, que \"Dispõe sobre a transformação do Centro Federal de Educação Tecnológica de Minas Gerais e do Centro Federal de Educação Tecnológica Celso Suckow da Fonseca, no Rio de Janeiro, em Universidade Tecnológica Federal de Minas Gerais (UTFMG) e em Universidade Tecnológica Federal do Rio de Janeiro (UTFRJ).\".",
+            "NomeCasa": "Congresso Nacional",
+            "Numero": "41",
+            "Sigla": "VET",
+            "SiglaCasa": "CN",
+            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/175320"
+          },
+          "MateriaVetada": {
+            "Ano": "2023",
+            "Codigo": "172476",
+            "DescricaoObjetivoProcesso": "Revisora",
+            "EmTramitacao": "Sim",
+            "Ementa": "Dispõe sobre a transformação do Centro Federal de Educação Tecnológica de Minas Gerais e do Centro Federal de Educação Tecnológica Celso Suckow da Fonseca, no Rio de Janeiro, em Universidade Tecnológica Federal de Minas Gerais (UTFMG) e em Universidade Tecnológica Federal do Rio de Janeiro (UTFRJ).",
+            "NomeCasa": "Congresso Nacional",
+            "Numero": "5102",
+            "Sigla": "PL",
+            "SiglaCasa": "CN",
+            "UrlMovimentacoes": "https://legis.senado.leg.br/dadosabertos/materia/movimentacoes/172476",
+            "UrlRelatorias": "https://legis.senado.leg.br/dadosabertos/materia/relatorias/172476"
+          },
+          "Mensagem": {
+            "Ano": "2026",
+            "Numero": "639",
+            "Sigla": "MSG",
+            "UrlPlanalto": "https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2026/msg/vet/vet-639-26.htm"
+          },
+          "QuantidadeDispositivos": "0",
+          "SobrestandoPauta": "Não",
+          "Total": "Sim",
+          "UrlDispositivos": "https://www.congressonacional.leg.br/dados/plenario/resultado/veto/materia/175320"
         }
       ]
     },

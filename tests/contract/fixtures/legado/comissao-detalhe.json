@@ -188,12 +188,12 @@
                       "TipoVaga": "Suplente"
                     },
                     {
-                      "CodigoParlamentar": "5976",
-                      "NomeParlamentar": "Senador Eduardo Girão",
+                      "CodigoParlamentar": "5974",
+                      "NomeParlamentar": "Senador Sargento Reginauro",
                       "NumeroOrdem": "2",
-                      "ObservacaoParlamentar": "2,60,61",
+                      "ObservacaoParlamentar": "2,60,61,64",
                       "OrigemParlamentar": "Senado",
-                      "Partido": "NOVO",
+                      "Partido": "PSDB",
                       "ProprietarioVaga": "Bloco Parlamentar Vanguarda",
                       "Ramais": "6677 / 6679",
                       "SiglaUf": "CE",
@@ -263,7 +263,7 @@
       ]
     },
     "Metadados": {
-      "Versao": "15/07/2026 23:26:17",
+      "Versao": "23/08/2026 21:33:33",
       "VersaoServico": "3"
     },
     "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/cn/ComissoesCongressoNacionalv3.xsd"

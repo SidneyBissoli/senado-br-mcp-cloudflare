@@ -2,17 +2,7 @@
   {
     "codigoAtoConcessao": "00012024",
     "data": "2024-01-03",
-    "dataProcessamento": "2026-07-14 10:00:03",
-    "descricao": "Material de Consumo",
-    "numero": "2024NE000059",
-    "rubrica": "339030",
-    "valorConcedido": 3000,
-    "valorExecutado": 2713.67
-  },
-  {
-    "codigoAtoConcessao": "00012024",
-    "data": "2024-01-03",
-    "dataProcessamento": "2026-07-14 10:00:03",
+    "dataProcessamento": "2026-08-22 10:00:04",
     "descricao": "Passagens e Despesas com Locomoção",
     "numero": "2024NE000061",
     "rubrica": "339033",
@@ -22,7 +12,17 @@
   {
     "codigoAtoConcessao": "00012024",
     "data": "2024-01-03",
-    "dataProcessamento": "2026-07-14 10:00:03",
+    "dataProcessamento": "2026-08-22 10:00:04",
+    "descricao": "Material de Consumo",
+    "numero": "2024NE000059",
+    "rubrica": "339030",
+    "valorConcedido": 3000,
+    "valorExecutado": 2713.67
+  },
+  {
+    "codigoAtoConcessao": "00012024",
+    "data": "2024-01-03",
+    "dataProcessamento": "2026-08-22 10:00:04",
     "descricao": "Serviços de Terceiros de Pessoa Jurídica",
     "numero": "2024NE000060",
     "rubrica": "339039",

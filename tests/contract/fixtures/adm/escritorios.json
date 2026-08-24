@@ -8,7 +8,7 @@
       },
       "setor": {
         "codigo": 0,
-        "endereco": "RUA BOM DESTINO, 90. APTº 102. ISAURA PARENTE, RIO BRANCO, AC. CEP:69918-360",
+        "endereco": "RIO BRANCO.",
         "nome": "Escritório de Apoio nº 1 do Senador Alan Rick",
         "nomeSetorSuperior": null,
         "sigla": null,
@@ -34,14 +34,14 @@
     },
     {
       "parlamentar": {
-        "estado": "MA",
-        "nome": "ANA PAULA LOBATO",
+        "estado": "BA",
+        "nome": "ANGELO CORONEL",
         "partido": null
       },
       "setor": {
         "codigo": 0,
-        "endereco": "RUA DAS SUCUPIRAS, 30. QUADRA 39. RENASCENÇA II, SÃO LUIS, MA. CEP:65075400",
-        "nome": "Escritório de Apoio nº 1 da Senadora Ana Paula Lobato",
+        "endereco": "ALAMEDA DAS FRAMBOESAS, 349. CAMINHO DAS ÁRVORES, SALVADOR, BA. CEP:41820-450",
+        "nome": "Escritório de Apoio nº 01 do Senador Angelo Coronel",
         "nomeSetorSuperior": null,
         "sigla": null,
         "siglaSetorSuperior": null,

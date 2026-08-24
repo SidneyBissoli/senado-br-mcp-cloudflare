@@ -3,7 +3,7 @@
     {
       "acao_codigo": "00PW",
       "acao_nome": "CONTRIBUICOES REGULARES A ENTIDADES OU ORGANISMOS NACIONAIS",
-      "data_carga_base": "14/07/26",
+      "data_carga_base": "22/08/26",
       "exercício_financeiro_lan_ef": 2026,
       "fonte_codigo": 0,
       "fonte_nome": "RECURSOS PRIMARIOS DE LIVRE APLICACAO",
@@ -15,16 +15,16 @@
       "plano_orcamentario_nome": "CONTRIBUICAO A ASSOCIACAO BRASILEIRA DAS ESCOLAS DO LEGISLATIVO E DE CONTAS - ABEL",
       "resultado_lei_codigo": 2,
       "resultado_lei_nome": "PRIMARIO DISCRICIONARIO",
-      "valor_dotacao_atualizada": "10800,00",
+      "valor_dotacao_atualizada": "11000,00",
       "valor_dotacao_inicial": "10800,00",
-      "valor_liquidado": "0,00",
-      "valor_pago": "0,00",
-      "valor_total_empenhado": "0,00"
+      "valor_liquidado": "11000,00",
+      "valor_pago": "11000,00",
+      "valor_total_empenhado": "11000,00"
     },
     {
       "acao_codigo": "00PW",
       "acao_nome": "CONTRIBUICOES REGULARES A ENTIDADES OU ORGANISMOS NACIONAIS",
-      "data_carga_base": "14/07/26",
+      "data_carga_base": "22/08/26",
       "exercício_financeiro_lan_ef": 2026,
       "fonte_codigo": 0,
       "fonte_nome": "RECURSOS PRIMARIOS DE LIVRE APLICACAO",
@@ -45,7 +45,7 @@
     {
       "acao_codigo": "00PW",
       "acao_nome": "CONTRIBUICOES REGULARES A ENTIDADES OU ORGANISMOS NACIONAIS",
-      "data_carga_base": "14/07/26",
+      "data_carga_base": "22/08/26",
       "exercício_financeiro_lan_ef": 2026,
       "fonte_codigo": 0,
       "fonte_nome": "RECURSOS PRIMARIOS DE LIVRE APLICACAO",
@@ -57,7 +57,7 @@
       "plano_orcamentario_nome": "CONTRIBUICAO A ASSOCIACAO BRASILEIRA DE TELEVISOES E RADIOS LEGISLATIVAS - ASTRAL",
       "resultado_lei_codigo": 2,
       "resultado_lei_nome": "PRIMARIO DISCRICIONARIO",
-      "valor_dotacao_atualizada": "24000,00",
+      "valor_dotacao_atualizada": "23800,00",
       "valor_dotacao_inicial": "24000,00",
       "valor_liquidado": "20850,00",
       "valor_pago": "20850,00",

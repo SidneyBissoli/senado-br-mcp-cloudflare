@@ -3,211 +3,145 @@
     "atosConcessao": [
       {
         "ano": 2024,
-        "codigoAtoConcessao": "00772024",
-        "codigo_suprido": "4095",
-        "data": "2024-06-19",
-        "dataAplicacao": "2024-09-17",
-        "dataComprovacao": "2024-10-02",
-        "dataProcessamento": "2026-07-14 10:00:03",
-        "dataPublicacaoBASF": "2024-06-26",
+        "codigoAtoConcessao": "01652024",
+        "codigo_suprido": "80860",
+        "data": "2024-10-03",
+        "dataAplicacao": "2024-12-19",
+        "dataComprovacao": "2024-12-20",
+        "dataProcessamento": "2026-08-22 10:00:03",
+        "dataPublicacaoBASF": "2024-10-10",
         "elementoDespesa": [],
         "empenhos": [
           {
-            "codigoAtoConcessao": "00772024",
-            "data": "2024-06-20",
-            "dataProcessamento": "2026-07-14 10:00:03",
+            "codigoAtoConcessao": "01652024",
+            "data": "2024-10-04",
+            "dataProcessamento": "2026-08-22 10:00:04",
+            "descricao": "Passagens e Despesas com Locomoção",
+            "numero": "2024NE002956",
+            "rubrica": "339033",
+            "valorConcedido": 16500,
+            "valorExecutado": 2350
+          },
+          {
+            "codigoAtoConcessao": "01652024",
+            "data": "2024-10-04",
+            "dataProcessamento": "2026-08-22 10:00:04",
             "descricao": "Serviços de Terceiros de Pessoa Jurídica",
-            "numero": "2024NE002259",
+            "numero": "2024NE002955",
             "rubrica": "339039",
             "valorConcedido": 1000,
-            "valorExecutado": 0
+            "valorExecutado": 125
           },
           {
-            "codigoAtoConcessao": "00772024",
-            "data": "2024-06-20",
-            "dataProcessamento": "2026-07-14 10:00:03",
+            "codigoAtoConcessao": "01652024",
+            "data": "2024-10-04",
+            "dataProcessamento": "2026-08-22 10:00:04",
             "descricao": "Material de Consumo",
-            "numero": "2024NE002258",
+            "numero": "2024NE002954",
             "rubrica": "339030",
-            "valorConcedido": 2000,
-            "valorExecutado": 0
-          },
-          {
-            "codigoAtoConcessao": "00772024",
-            "data": "2024-06-20",
-            "dataProcessamento": "2026-07-14 10:00:03",
-            "descricao": "Passagens e Despesas com Locomoção",
-            "numero": "2024NE002260",
-            "rubrica": "339033",
-            "valorConcedido": 11000,
-            "valorExecutado": 0
+            "valorConcedido": 2500,
+            "valorExecutado": 125.83
           }
         ],
-        "matriculaSolicitante": "52131",
+        "matriculaSolicitante": "413486",
         "movimentacoes": null,
-        "numeroProcesso": 200011624202481,
-        "prazoAplicacao": 90,
-        "prazoComprovacao": 15,
-        "regimeEspecial": true,
-        "transacoes": null,
-        "valorTotalElementosDespesa": 14000,
-        "valorTotalEmpenhos": 14000,
-        "valorTotalMovimentacoes": 0,
-        "valorTotalTransacoes": 0
-      }
-    ],
-    "codigo": "4095",
-    "nome": "Luiz Henrique de Faria Leite",
-    "orgao": {
-      "arvore": null,
-      "codigo": 9931,
-      "nome": "SERVIÇO DE PROTEÇÃO PRESIDENCIAL",
-      "sigla": "SEPPRES"
-    }
-  },
-  {
-    "atosConcessao": [
-      {
-        "ano": 2024,
-        "codigoAtoConcessao": "01322024",
-        "codigo_suprido": "29817",
-        "data": "2024-08-28",
-        "dataAplicacao": "2024-11-26",
-        "dataComprovacao": "2024-12-11",
-        "dataProcessamento": "2026-07-14 10:00:03",
-        "dataPublicacaoBASF": "2024-09-04",
-        "elementoDespesa": [],
-        "empenhos": [
-          {
-            "codigoAtoConcessao": "01322024",
-            "data": "2024-08-29",
-            "dataProcessamento": "2026-07-14 10:00:03",
-            "descricao": "Passagens e Despesas com Locomoção",
-            "numero": "2024NE002678",
-            "rubrica": "339033",
-            "valorConcedido": 11000,
-            "valorExecutado": 9600
-          },
-          {
-            "codigoAtoConcessao": "01322024",
-            "data": "2024-08-29",
-            "dataProcessamento": "2026-07-14 10:00:03",
-            "descricao": "Serviços de Terceiros de Pessoa Jurídica",
-            "numero": "2024NE002677",
-            "rubrica": "339039",
-            "valorConcedido": 700,
-            "valorExecutado": 470
-          },
-          {
-            "codigoAtoConcessao": "01322024",
-            "data": "2024-08-29",
-            "dataProcessamento": "2026-07-14 10:00:03",
-            "descricao": "Material de Consumo",
-            "numero": "2024NE002676",
-            "rubrica": "339030",
-            "valorConcedido": 2300,
-            "valorExecutado": 2132.26
-          }
-        ],
-        "matriculaSolicitante": "257105",
-        "movimentacoes": null,
-        "numeroProcesso": 200015591202449,
-        "prazoAplicacao": 90,
-        "prazoComprovacao": 15,
+        "numeroProcesso": 200017877202469,
+        "prazoAplicacao": 77,
+        "prazoComprovacao": 1,
         "regimeEspecial": true,
         "transacoes": [
           {
-            "codigoAtoConcessao": "01322024",
-            "data": "2024-09-12",
-            "dataProcessamento": "2026-07-14",
-            "fornecedor": "Golden Green Auto Posto Ltda",
-            "id": 40793,
-            "inscricao": "02373202000104",
-            "numero": "317416",
+            "codigoAtoConcessao": "01652024",
+            "data": "2024-11-18",
+            "dataProcessamento": "2026-08-22",
+            "fornecedor": "FACILITA RENT CAR",
+            "id": 41823,
+            "inscricao": "26488378000170",
+            "numero": "1811/2024",
             "objetos": [
               {
-                "descricaoObjeto": "Combustível para veículo.",
-                "descricaoSubtipoDespesa": "Combustíveis e lubrificantes automotivos",
-                "descricaoTipoDespesa": "Material de Consumo",
-                "id": 38926,
-                "quantidade": 35,
-                "rubrica": "33903001",
-                "valorTotal": 236.63,
-                "valorUnitario": 6.69
+                "descricaoObjeto": "Locação de veículo.",
+                "descricaoSubtipoDespesa": "Locação de meios de transporte",
+                "descricaoTipoDespesa": "Passagens e Despesas com Locomoção",
+                "id": 40030,
+                "quantidade": 5,
+                "rubrica": "33903303",
+                "valorTotal": 2350,
+                "valorUnitario": 470
               }
             ],
-            "rubricas": "33903001",
-            "tipo": "NOTA_FISCAL",
+            "rubricas": "33903303",
+            "tipo": "RECIBO",
             "tipoInscricao": "Pessoa jurídica",
             "tipoInscricaoTemp": "PESSOA_JURIDICA",
-            "valor": 236.63
+            "valor": 2350
           },
           {
-            "codigoAtoConcessao": "01322024",
-            "data": "2024-09-12",
-            "dataProcessamento": "2026-07-14",
-            "fornecedor": "Golden Green Auto Posto Ltda",
-            "id": 40861,
-            "inscricao": "02373202000104",
-            "numero": "317416",
+            "codigoAtoConcessao": "01652024",
+            "data": "2024-12-09",
+            "dataProcessamento": "2026-08-22",
+            "fornecedor": "JR PARK ESTACIONAMENTO LTDA",
+            "id": 42123,
+            "inscricao": "49120812000160",
+            "numero": "578",
             "objetos": [
               {
-                "descricaoObjeto": "Combustível para veículo.",
-                "descricaoSubtipoDespesa": "Combustíveis e lubrificantes automotivos",
-                "descricaoTipoDespesa": "Material de Consumo",
-                "id": 38994,
-                "quantidade": 22,
-                "rubrica": "33903001",
-                "valorTotal": 173.17,
-                "valorUnitario": 7.79
+                "descricaoObjeto": "Diária de Estacionamento.",
+                "descricaoSubtipoDespesa": "serviços de estacionamento de veículos",
+                "descricaoTipoDespesa": "Serviços de Terceiros de Pessoa Jurídica",
+                "id": 40345,
+                "quantidade": 5,
+                "rubrica": "33903918",
+                "valorTotal": 125,
+                "valorUnitario": 25
               }
             ],
-            "rubricas": "33903001",
+            "rubricas": "33903918",
             "tipo": "NOTA_FISCAL",
             "tipoInscricao": "Pessoa jurídica",
             "tipoInscricaoTemp": "PESSOA_JURIDICA",
-            "valor": 173.17
+            "valor": 125
           },
           {
-            "codigoAtoConcessao": "01322024",
-            "data": "2024-09-14",
-            "dataProcessamento": "2026-07-14",
-            "fornecedor": "Posto Paraíso",
-            "id": 40873,
-            "inscricao": "29673905000173",
-            "numero": "5505",
+            "codigoAtoConcessao": "01652024",
+            "data": "2024-12-09",
+            "dataProcessamento": "2026-08-22",
+            "fornecedor": "POSTO BOA VISTA LTDA",
+            "id": 42124,
+            "inscricao": "77488005000997",
+            "numero": "84962",
             "objetos": [
               {
-                "descricaoObjeto": "Combustível para veículo.",
+                "descricaoObjeto": "gasolina comum.",
                 "descricaoSubtipoDespesa": "Combustíveis e lubrificantes automotivos",
                 "descricaoTipoDespesa": "Material de Consumo",
-                "id": 39006,
-                "quantidade": 49,
+                "id": 40346,
+                "quantidade": 1,
                 "rubrica": "33903001",
-                "valorTotal": 295.32,
-                "valorUnitario": 6.09
+                "valorTotal": 125.83,
+                "valorUnitario": 125.83
               }
             ],
             "rubricas": "33903001",
-            "tipo": "NOTA_FISCAL",
+            "tipo": "RECIBO",
             "tipoInscricao": "Pessoa jurídica",
             "tipoInscricaoTemp": "PESSOA_JURIDICA",
-            "valor": 295.32
+            "valor": 125.83
           }
         ],
-        "valorTotalElementosDespesa": 14000,
-        "valorTotalEmpenhos": 14000,
+        "valorTotalElementosDespesa": 20000,
+        "valorTotalEmpenhos": 20000,
         "valorTotalMovimentacoes": 0,
-        "valorTotalTransacoes": 12202.26
+        "valorTotalTransacoes": 2600.83
       }
     ],
-    "codigo": "29817",
-    "nome": "Jeferson Rocha dos Santos Júnior",
+    "codigo": "80860",
+    "nome": "Danilo Chinaglia Martins",
     "orgao": {
       "arvore": null,
-      "codigo": 10557,
-      "nome": "SERVIÇO DE PROTEÇÃO DE SENADORES E SERVIDORES",
-      "sigla": "SEPROSS"
+      "codigo": 9932,
+      "nome": "SERVIÇO DE PROTEÇÃO DE DIGNITÁRIOS",
+      "sigla": "SEPDIGN"
     }
   },
   {
@@ -219,29 +153,29 @@
         "data": "2024-01-16",
         "dataAplicacao": "2024-04-15",
         "dataComprovacao": "2024-04-30",
-        "dataProcessamento": "2026-07-14 10:00:03",
+        "dataProcessamento": "2026-08-22 10:00:03",
         "dataPublicacaoBASF": "2024-01-22",
         "elementoDespesa": [],
         "empenhos": [
           {
             "codigoAtoConcessao": "00192024",
             "data": "2024-01-17",
-            "dataProcessamento": "2026-07-14 10:00:03",
-            "descricao": "Serviços de Terceiros de Pessoa Jurídica",
-            "numero": "2024NE000553",
-            "rubrica": "339039",
-            "valorConcedido": 6000,
-            "valorExecutado": 0
-          },
-          {
-            "codigoAtoConcessao": "00192024",
-            "data": "2024-01-17",
-            "dataProcessamento": "2026-07-14 10:00:03",
+            "dataProcessamento": "2026-08-22 10:00:04",
             "descricao": "Material de Consumo",
             "numero": "2024NE000552",
             "rubrica": "339030",
             "valorConcedido": 6000,
             "valorExecutado": 3864.92
+          },
+          {
+            "codigoAtoConcessao": "00192024",
+            "data": "2024-01-17",
+            "dataProcessamento": "2026-08-22 10:00:04",
+            "descricao": "Serviços de Terceiros de Pessoa Jurídica",
+            "numero": "2024NE000553",
+            "rubrica": "339039",
+            "valorConcedido": 6000,
+            "valorExecutado": 0
           }
         ],
         "matriculaSolicitante": "38043",
@@ -254,7 +188,7 @@
           {
             "codigoAtoConcessao": "00192024",
             "data": "2024-01-26",
-            "dataProcessamento": "2026-07-14",
+            "dataProcessamento": "2026-08-22",
             "fornecedor": "Bokobras Embalagens IND COM LTDA.",
             "id": 36101,
             "inscricao": "03009846000180",
@@ -280,7 +214,7 @@
           {
             "codigoAtoConcessao": "00192024",
             "data": "2024-02-07",
-            "dataProcessamento": "2026-07-14",
+            "dataProcessamento": "2026-08-22",
             "fornecedor": "ROLAPEL ROLAMENTOS LTDA",
             "id": 36741,
             "inscricao": "01086472000171",
@@ -326,7 +260,7 @@
           {
             "codigoAtoConcessao": "00192024",
             "data": "2024-03-08",
-            "dataProcessamento": "2026-07-14",
+            "dataProcessamento": "2026-08-22",
             "fornecedor": "HU INFINITO COMPONENTES ELETRONICOS LTDA",
             "id": 37006,
             "inscricao": "14855232000136",
@@ -373,6 +307,191 @@
       "codigo": 10588,
       "nome": "COORDENAÇÃO DE ACABAMENTO E EXPEDIÇÃO",
       "sigla": "COAEXP"
+    }
+  },
+  {
+    "atosConcessao": [
+      {
+        "ano": 2024,
+        "codigoAtoConcessao": "01222024",
+        "codigo_suprido": "2035",
+        "data": "2024-07-12",
+        "dataAplicacao": "2024-10-10",
+        "dataComprovacao": "2024-10-25",
+        "dataProcessamento": "2026-08-22 10:00:03",
+        "dataPublicacaoBASF": "2024-07-19",
+        "elementoDespesa": [],
+        "empenhos": [
+          {
+            "codigoAtoConcessao": "01222024",
+            "data": "2024-07-15",
+            "dataProcessamento": "2026-08-22 10:00:04",
+            "descricao": "Passagens e Despesas com Locomoção",
+            "numero": "2024NE002455",
+            "rubrica": "339033",
+            "valorConcedido": 5203.44,
+            "valorExecutado": 5203.44
+          },
+          {
+            "codigoAtoConcessao": "01222024",
+            "data": "2024-07-15",
+            "dataProcessamento": "2026-08-22 10:00:04",
+            "descricao": "Serviços de Terceiros de Pessoa Jurídica",
+            "numero": "2024NE002454",
+            "rubrica": "339039",
+            "valorConcedido": 2000,
+            "valorExecutado": 317
+          },
+          {
+            "codigoAtoConcessao": "01222024",
+            "data": "2024-07-15",
+            "dataProcessamento": "2026-08-22 10:00:04",
+            "descricao": "Material de Consumo",
+            "numero": "2024NE002453",
+            "rubrica": "339030",
+            "valorConcedido": 2000,
+            "valorExecutado": 1242.46
+          }
+        ],
+        "matriculaSolicitante": "52398",
+        "movimentacoes": null,
+        "numeroProcesso": 200013159202413,
+        "prazoAplicacao": 90,
+        "prazoComprovacao": 15,
+        "regimeEspecial": true,
+        "transacoes": [
+          {
+            "codigoAtoConcessao": "01222024",
+            "data": "2024-08-14",
+            "dataProcessamento": "2026-08-22",
+            "fornecedor": "Carmoov florianopolis/sc - rm",
+            "id": 40372,
+            "inscricao": "24410699000479",
+            "numero": "6659/1",
+            "objetos": [
+              {
+                "descricaoObjeto": "Locação de veículos.",
+                "descricaoSubtipoDespesa": "Locação de meios de transporte",
+                "descricaoTipoDespesa": "Passagens e Despesas com Locomoção",
+                "id": 39506,
+                "quantidade": 2,
+                "rubrica": "33903303",
+                "valorTotal": 1274.28,
+                "valorUnitario": 637.14
+              },
+              {
+                "descricaoObjeto": "PEDÁGIOS",
+                "descricaoSubtipoDespesa": "Pedágios",
+                "descricaoTipoDespesa": "Passagens e Despesas com Locomoção",
+                "id": 39525,
+                "quantidade": 1,
+                "rubrica": "33903308",
+                "valorTotal": 29,
+                "valorUnitario": 29
+              },
+              {
+                "descricaoObjeto": "Lavagem do veículo",
+                "descricaoSubtipoDespesa": "Manutenção e conservação de veículos",
+                "descricaoTipoDespesa": "Serviços de Terceiros de Pessoa Jurídica",
+                "id": 39526,
+                "quantidade": 1,
+                "rubrica": "33903919",
+                "valorTotal": 39,
+                "valorUnitario": 39
+              }
+            ],
+            "rubricas": "33903303, 33903308, 33903919",
+            "tipo": "RECIBO",
+            "tipoInscricao": "Pessoa jurídica",
+            "tipoInscricaoTemp": "PESSOA_JURIDICA",
+            "valor": 1342.28
+          },
+          {
+            "codigoAtoConcessao": "01222024",
+            "data": "2024-08-16",
+            "dataProcessamento": "2026-08-22",
+            "fornecedor": "AKZ Comercio varejista de combustiveis ltda",
+            "id": 40374,
+            "inscricao": "14051535000104",
+            "numero": "000038923",
+            "objetos": [
+              {
+                "descricaoObjeto": "Combustível para veículo.",
+                "descricaoSubtipoDespesa": "Combustíveis e lubrificantes automotivos",
+                "descricaoTipoDespesa": "Material de Consumo",
+                "id": 39508,
+                "quantidade": 33,
+                "rubrica": "33903001",
+                "valorTotal": 166.08,
+                "valorUnitario": 4.99
+              }
+            ],
+            "rubricas": "33903001",
+            "tipo": "NOTA_FISCAL",
+            "tipoInscricao": "Pessoa jurídica",
+            "tipoInscricaoTemp": "PESSOA_JURIDICA",
+            "valor": 166.08
+          },
+          {
+            "codigoAtoConcessao": "01222024",
+            "data": "2024-10-09",
+            "dataProcessamento": "2026-08-22",
+            "fornecedor": "Carmoov florianopolis/sc - rm",
+            "id": 41272,
+            "inscricao": "24410699000479",
+            "numero": "7119/1",
+            "objetos": [
+              {
+                "descricaoObjeto": "Combustível para veículo.",
+                "descricaoSubtipoDespesa": "Combustíveis e lubrificantes automotivos",
+                "descricaoTipoDespesa": "Material de Consumo",
+                "id": 39532,
+                "quantidade": 21,
+                "rubrica": "33903001",
+                "valorTotal": 199.71,
+                "valorUnitario": 9.51
+              },
+              {
+                "descricaoObjeto": "Lavagem do veículo",
+                "descricaoSubtipoDespesa": "Manutenção e conservação de veículos",
+                "descricaoTipoDespesa": "Serviços de Terceiros de Pessoa Jurídica",
+                "id": 39533,
+                "quantidade": 1,
+                "rubrica": "33903919",
+                "valorTotal": 39,
+                "valorUnitario": 39
+              },
+              {
+                "descricaoObjeto": "PEDÁGIOS",
+                "descricaoSubtipoDespesa": "Pedágios",
+                "descricaoTipoDespesa": "Passagens e Despesas com Locomoção",
+                "id": 39534,
+                "quantidade": 1,
+                "rubrica": "33903308",
+                "valorTotal": 29,
+                "valorUnitario": 29
+              }
+            ],
+            "rubricas": "33903001, 33903303, 33903308, 33903919",
+            "tipo": "RECIBO",
+            "tipoInscricao": "Pessoa jurídica",
+            "tipoInscricaoTemp": "PESSOA_JURIDICA",
+            "valor": 767.87
+          }
+        ],
+        "valorTotalElementosDespesa": 10000,
+        "valorTotalEmpenhos": 10000,
+        "valorTotalMovimentacoes": 0,
+        "valorTotalTransacoes": 6762.9
+      }
+    ],
+    "codigo": "2035",
+    "nome": "Everaldo Bosco Rosa Moreira",
+    "orgao": {
+      "arvore": null,
+      "codigo": 9934,
+      "nome": "SERVIÇO DE SUPORTE TÉCNICO",
+      "sigla": "SESTEC"
     }
   }
 ]

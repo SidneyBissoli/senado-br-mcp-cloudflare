@@ -77,8 +77,9 @@ describe("contract: /processo/{id} detail feeds materias' parseProcessoDetalhe",
       expect(det, `key "${k}" missing from /processo/{id}`).toHaveProperty(k);
     }
     expect(det.documento.dataApresentacao).toMatch(ISO_DATE);
-    // autoriaIniciativa[0] gives autor/tipoAutor
-    const autoria = det.autoriaIniciativa;
+    // 2026-08: o upstream moveu a autoria do topo (autoriaIniciativa) para
+    // documento.autoria — mesmo shape interno; o parser lê as duas
+    const autoria = det.documento?.autoria ?? det.autoriaIniciativa;
     expect(Array.isArray(autoria)).toBe(true);
     expect(autoria.length).toBeGreaterThan(0);
     expect(typeof autoria[0].autor).toBe("string");

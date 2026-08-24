@@ -3,17 +3,17 @@
     "Metadados": {
       "DataVersaoServico": "2021-09-09",
       "DescricaoDataSet": "Retorna a relação das Profissões do Senador informado no parâmetro.",
-      "Versao": "15/07/2026 23:26:00",
+      "Versao": "23/08/2026 21:33:29",
       "VersaoServico": "1"
     },
     "Parlamentar": {
-      "Codigo": "6358",
-      "Nome": "Ana Paula Lobato",
+      "Codigo": "739",
+      "Nome": "Ciro Nogueira",
       "Profissoes": {
         "Profissao": [
           {
-            "IndicadorAtividadePrincipal": "Sim",
-            "NomeProfissao": "Enfermeiro(a)"
+            "IndicadorAtividadePrincipal": "Não",
+            "NomeProfissao": "Empresário"
           }
         ]
       }

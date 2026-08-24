@@ -3,7 +3,7 @@
     "Metadados": {
       "DataVersaoServico": "2020-08-07",
       "DescricaoDataSet": "Agenda das Reuniões das Comissões no período informado.",
-      "Versao": "15/07/2026 23:29:14",
+      "Versao": "23/08/2026 21:33:34",
       "VersaoServico": "2"
     },
     "reunioes": {
@@ -719,422 +719,6 @@
           }
         },
         {
-          "codigo": "13526",
-          "codigoSituacao": "6",
-          "colegiadoCriador": {
-            "codigo": "40",
-            "codigoTipo": "21",
-            "descricaoTipo": "Comissão Permanente",
-            "nome": "Comissão de Assuntos Sociais",
-            "sigla": "CAS",
-            "siglaCasa": "SF"
-          },
-          "colegiados": {
-            "codigo": "40",
-            "codigoTipoColegiado": "21",
-            "composicaoPublica": "true",
-            "isSubcomissao": "false",
-            "nome": "Comissão de Assuntos Sociais",
-            "nomeTipoColegiado": "Comissão Permanente",
-            "numeroReuniao": "12",
-            "publicoPortal": "true",
-            "sigla": "CAS",
-            "siglaCasa": "SF"
-          },
-          "confirmada": "false",
-          "continuacaoCancelada": "false",
-          "dataInicio": "2025-05-08T10:00:00.000",
-          "dataInicioFormatadaComObsHorario": "08/05/2025 às 10h",
-          "dataReuniao": [
-            {
-              "codigo": "64846",
-              "codigoSituacao": "6",
-              "dataEvento": "2025-05-08T12:28:00.000",
-              "descricaoSituacao": "Realizada",
-              "realizada": "true"
-            },
-            {
-              "codigo": "64840",
-              "codigoSituacao": "3",
-              "dataEvento": "2025-05-08T10:05:00.000",
-              "descricaoSituacao": "Aberta",
-              "realizada": "false"
-            },
-            {
-              "codigo": "64797",
-              "codigoSituacao": "1",
-              "dataEvento": "2025-05-08T10:00:00.000",
-              "descricaoSituacao": "Agendada",
-              "realizada": "false"
-            }
-          ],
-          "descricao": "12ª, Extraordinária",
-          "foiAgendadaAposTerSidoSuspensa": "false",
-          "idUltimaPublicacaoPautaSimples": "241a3a7d-e96c-4059-ac95-5bcbc5556927",
-          "idUltimaPublicacaoResultado": "0c1a8e0b-f215-4226-ac01-a9ef0a1bdd2e",
-          "isExibirNoPortal": "true",
-          "linkECidadania": "https://www12.senado.leg.br/ecidadania/visualizacaoaudiencia?id=33622",
-          "local": "Anexo II, Ala Senador Nilo Coelho, Plenário nº 6",
-          "numReuniaoConjunta": "12",
-          "partes": {
-            "codigo": "17446",
-            "codigoTipo": "1",
-            "descricaoTipo": "Audiência Pública Interativa",
-            "evento": {
-              "codigo": "9432",
-              "convidados": [
-                {
-                  "cargo": "Coordenador-Geral da Política Nacional de Prevenção e Controle do Câncer do Ministério da Saúde",
-                  "codigo": "38811",
-                  "codigoSituacao": "2",
-                  "isDepoentePresente": "false",
-                  "isPorVideoConferencia": "false",
-                  "nome": "José Barreto Campello Cavalheira",
-                  "ordem": "1",
-                  "sexo": "M"
-                },
-                {
-                  "cargo": "Representante da Diretoria de Desenvolvimento Setorial da Agência Nacional de Saúde Suplementar - ANS",
-                  "codigo": "38812",
-                  "codigoSituacao": "4",
-                  "isDepoentePresente": "false",
-                  "isPorVideoConferencia": "false",
-                  "nome": "Ana Paula Silva Cavalcante",
-                  "ordem": "2",
-                  "sexo": "F"
-                },
-                {
-                  "cargo": "Representante da Diretoria de Normas e Habilitação dos Produtos da Agência Nacional de Saúde Suplementar - ANS",
-                  "codigo": "38813",
-                  "codigoSituacao": "4",
-                  "isDepoentePresente": "false",
-                  "isPorVideoConferencia": "false",
-                  "nome": "Rafael Pedreira Vinhas",
-                  "ordem": "3",
-                  "sexo": "M"
-                }
-              ],
-              "domasRelacionados": [
-                {
-                  "descricaoFinalidade": "Solicitação de realização de Audiência Pública Interativa",
-                  "doma": {
-                    "ano": "2025",
-                    "autoria": "Senador Nelsinho Trad (PSD/MS)",
-                    "autorias": {
-                      "descricaoTipo": "Senador",
-                      "isAutoriaComOutros": "false",
-                      "nome": "Nelsinho Trad",
-                      "ordem": "1",
-                      "parlamentar": {
-                        "cargo": "Senador",
-                        "casa": "SF",
-                        "codigo": "5985",
-                        "data": "2025-03-06T00:00:00.000",
-                        "isDeputado": "false",
-                        "isSenador": "true",
-                        "nome": "Nelson Trad Filho",
-                        "nomeComCargo": "Senador Nelsinho Trad",
-                        "nomeComCargoResumido": "Sen. Nelsinho Trad",
-                        "nomeParlamentar": "Nelsinho Trad",
-                        "partido": "Partido Social Democrático",
-                        "sexo": "M",
-                        "siglaPartido": "PSD",
-                        "ufPartido": "MS",
-                        "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5985.jpg",
-                        "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5985"
-                      },
-                      "siglaTipo": "SENADOR",
-                      "tratamento": "Senador"
-                    },
-                    "codigoMateria": "167443",
-                    "complementar": "false",
-                    "consolidacao": "false",
-                    "dataApresentacao": "2025-03-06T13:29:58.000",
-                    "descricaoTipoDoma": "Requerimento",
-                    "ementa": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, a realização de audiência pública, com o objetivo de debater as recentes decisões da Agência Nacional de Saúde Suplementar (ANS), que têm gerado grande repercussão e preocupação na sociedade brasileira. O objetivo desta audiência é esclarecer as medidas adotadas pela agência e discutir eventuais impactos sobre os usuários de planos de saúde.",
-                    "idConteudoInformacional": "7600330",
-                    "idDoma": "9909668",
-                    "idProcesso": "8799035",
-                    "idTipoDoma": "87",
-                    "identificacao": "REQ 4/2025 - CAS",
-                    "identificacaoPorExtenso": "Requerimento da Comissão de Assuntos Sociais n° 4, de 2025",
-                    "identificado": "true",
-                    "numero": "00004",
-                    "numeroSedol": "SF253205298910",
-                    "proposicao": "true",
-                    "sigla": "REQ",
-                    "siglaPorExtenso": "Requerimento",
-                    "siglaTipoDoma": "REQUERIMENTO",
-                    "textos": [
-                      {
-                        "codigoColegiado": "40",
-                        "conteudoInformacional": "REQ 4/2025 - CAS",
-                        "dataAtualizacao": "2025-03-06",
-                        "descricao": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, a realização de audiência pública, com o objetivo de debater as recentes decisões da Agência Nacional de Saúde Suplementar (ANS), que têm gerado grande repercussão e preocupação na sociedade brasileira. O objetivo desta audiência é esclarecer as medidas adotadas pela agência e discutir eventuais impactos sobre os usuários de planos de saúde.",
-                        "descricaoTipoDoma": "Requerimento",
-                        "idDoma": "9909668",
-                        "idProcesso": "8799035",
-                        "identificacao": "Requerimento",
-                        "siglaTipoDoma": "REQUERIMENTO",
-                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9909668"
-                      },
-                      {
-                        "codigoColegiado": "40",
-                        "dataAtualizacao": "2025-03-12",
-                        "descricao": "Listagem ou relatório descritivo-Lista de Presença da reunião da 2ª Reunião CAS",
-                        "descricaoTipoDoma": "Listagem ou relatório descritivo",
-                        "idDoma": "9912406",
-                        "identificacao": "Listagem ou relatório descritivo",
-                        "siglaTipoDoma": "LISTAGEM_RELATORIO",
-                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9912406"
-                      },
-                      {
-                        "codigoColegiado": "40",
-                        "conteudoInformacional": "REQ 16/2025 - CAS",
-                        "dataAtualizacao": "2025-04-08",
-                        "descricao": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, que na Audiência Pública objeto do REQ 4/2025 - CAS sejam incluídos os convidados que especifica.",
-                        "descricaoTipoDoma": "Requerimento",
-                        "idDoma": "9930096",
-                        "idProcesso": "8813888",
-                        "identificacao": "Requerimento",
-                        "siglaTipoDoma": "REQUERIMENTO",
-                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9930096"
-                      }
-                    ]
-                  },
-                  "finalidade": "C",
-                  "ordem": "1"
-                },
-                {
-                  "descricaoFinalidade": "Solicitação de realização de Audiência Pública Interativa",
-                  "doma": {
-                    "ano": "2025",
-                    "autoria": "Senador Nelsinho Trad (PSD/MS), Senadora Damares Alves (REPUBLICANOS/DF)",
-                    "autorias": [
-                      {
-                        "descricaoTipo": "Senador",
-                        "isAutoriaComOutros": "true",
-                        "nome": "Nelsinho Trad",
-                        "ordem": "1",
-                        "parlamentar": {
-                          "cargo": "Senador",
-                          "casa": "SF",
-                          "codigo": "5985",
-                          "data": "2025-04-08T00:00:00.000",
-                          "isDeputado": "false",
-                          "isSenador": "true",
-                          "nome": "Nelson Trad Filho",
-                          "nomeComCargo": "Senador Nelsinho Trad",
-                          "nomeComCargoResumido": "Sen. Nelsinho Trad",
-                          "nomeParlamentar": "Nelsinho Trad",
-                          "partido": "Partido Social Democrático",
-                          "sexo": "M",
-                          "siglaPartido": "PSD",
-                          "ufPartido": "MS",
-                          "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5985.jpg",
-                          "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5985"
-                        },
-                        "siglaTipo": "SENADOR",
-                        "tratamento": "Senador"
-                      },
-                      {
-                        "descricaoTipo": "Senador",
-                        "isAutoriaComOutros": "true",
-                        "nome": "Damares Alves",
-                        "ordem": "2",
-                        "parlamentar": {
-                          "cargo": "Senadora",
-                          "casa": "SF",
-                          "codigo": "6335",
-                          "data": "2025-04-08T00:00:00.000",
-                          "isDeputado": "false",
-                          "isSenador": "true",
-                          "liderancas": {
-                            "nomeUnidadeLideranca": "Liderança da Minoria",
-                            "titulo": "Vice-líder do Congresso Nacional"
-                          },
-                          "nome": "Damares Regina Alves",
-                          "nomeComCargo": "Senadora Damares Alves",
-                          "nomeComCargoResumido": "Sen. Damares Alves",
-                          "nomeParlamentar": "Damares Alves",
-                          "partido": "REPUBLICANOS",
-                          "sexo": "F",
-                          "siglaPartido": "REPUBLICANOS",
-                          "ufPartido": "DF",
-                          "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador6335.jpg",
-                          "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/6335"
-                        },
-                        "siglaTipo": "SENADOR",
-                        "tratamento": "Senadora"
-                      }
-                    ],
-                    "codigoMateria": "168004",
-                    "complementar": "false",
-                    "consolidacao": "false",
-                    "dataApresentacao": "2025-04-08T11:31:43.000",
-                    "descricaoTipoDoma": "Requerimento",
-                    "ementa": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, que na Audiência Pública objeto do REQ 4/2025 - CAS sejam incluídos os convidados que especifica.",
-                    "idConteudoInformacional": "7603917",
-                    "idDoma": "9930096",
-                    "idProcesso": "8813888",
-                    "idTipoDoma": "87",
-                    "identificacao": "REQ 16/2025 - CAS",
-                    "identificacaoPorExtenso": "Requerimento da Comissão de Assuntos Sociais n° 16, de 2025",
-                    "identificado": "true",
-                    "numero": "00016",
-                    "numeroSedol": "SF257806646306",
-                    "proposicao": "true",
-                    "sigla": "REQ",
-                    "siglaPorExtenso": "Requerimento",
-                    "siglaTipoDoma": "REQUERIMENTO",
-                    "textos": [
-                      {
-                        "codigoColegiado": "40",
-                        "conteudoInformacional": "REQ 16/2025 - CAS",
-                        "dataAtualizacao": "2025-04-08",
-                        "descricao": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, que na Audiência Pública objeto do REQ 4/2025 - CAS sejam incluídos os convidados que especifica.",
-                        "descricaoTipoDoma": "Requerimento",
-                        "idDoma": "9930096",
-                        "idProcesso": "8813888",
-                        "identificacao": "Requerimento",
-                        "siglaTipoDoma": "REQUERIMENTO",
-                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9930096"
-                      },
-                      {
-                        "codigoColegiado": "40",
-                        "dataAtualizacao": "2025-04-23",
-                        "descricao": "Listagem ou relatório descritivo-Lista de Presença da reunião da 9ª Reunião CAS",
-                        "descricaoTipoDoma": "Listagem ou relatório descritivo",
-                        "idDoma": "9938361",
-                        "identificacao": "Listagem ou relatório descritivo",
-                        "siglaTipoDoma": "LISTAGEM_RELATORIO",
-                        "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9938361"
-                      }
-                    ]
-                  },
-                  "finalidade": "C",
-                  "ordem": "2"
-                }
-              ],
-              "finalidade": "Debater as recentes decisões da Agência Nacional de Saúde Suplementar que têm gerado grande repercussão e preocupação na sociedade brasileira, esclarecer as medidas adotadas pela agência e discutir eventuais impactos sobre os usuários de planos de saúde.",
-              "isPublicado": "true",
-              "isRealizado": "true",
-              "observacoes": "A reunião será interativa, transmitida ao vivo e aberta à participação dos interessados por meio do portal e-cidadania, na internet, em senado.leg.br/ecidadania ou pelo telefone da ouvidoria 0800 061 22 11.",
-              "participantes": [
-                {
-                  "apresentacoes": {
-                    "descricao": "Apresentação",
-                    "idEcmSenado": "32454f54-2b26-4b77-aab2-4bef7febfa9b",
-                    "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/32454f54-2b26-4b77-aab2-4bef7febfa9b",
-                    "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    "nome": "Apresentação Ana Paula ANS.pptx"
-                  },
-                  "cargo": "Representante da Diretoria de Desenvolvimento Setorial da Agência Nacional de Saúde Suplementar - ANS",
-                  "codigo": "30509",
-                  "codigoConvidado": "38812",
-                  "isDepoentePresente": "false",
-                  "isPorVideoConferencia": "false",
-                  "nome": "Ana Paula Silva Cavalcante",
-                  "ordem": "1",
-                  "sexo": "F"
-                },
-                {
-                  "apresentacoes": {
-                    "descricao": "Apresentação",
-                    "idEcmSenado": "3e6a32c1-0e50-405c-922a-405bb6d9ee89",
-                    "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/3e6a32c1-0e50-405c-922a-405bb6d9ee89",
-                    "mimeType": "application/pdf",
-                    "nome": "Apresentação Rafael ANS.pdf"
-                  },
-                  "cargo": "Representante da Diretoria de Normas e Habilitação dos Produtos da Agência Nacional de Saúde Suplementar - ANS",
-                  "codigo": "30510",
-                  "codigoConvidado": "38813",
-                  "isDepoentePresente": "false",
-                  "isPorVideoConferencia": "false",
-                  "nome": "Rafael Pedreira Vinhas",
-                  "ordem": "2",
-                  "sexo": "M"
-                },
-                {
-                  "apresentacoes": {
-                    "descricao": "Apresentação",
-                    "idEcmSenado": "4f09f1a7-b440-4075-a7da-988f7e3484d4",
-                    "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/4f09f1a7-b440-4075-a7da-988f7e3484d4",
-                    "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    "nome": "José Barreto - MS Confere^ncia de Lideranc¸as em Sau´de da Mulher_atualizado.pptx"
-                  },
-                  "cargo": "Coordenador-Geral da Política Nacional de Prevenção e Controle do Câncer do Ministério da Saúde",
-                  "codigo": "30511",
-                  "codigoConvidado": "38811",
-                  "isDepoentePresente": "false",
-                  "isPorVideoConferencia": "false",
-                  "nome": "José Barreto Campello Carvalheira",
-                  "ordem": "3",
-                  "sexo": "M"
-                }
-              ],
-              "resultadoObservacoes": "A reunião foi interativa, transmitida ao vivo e aberta à participação dos interessados por meio do portal e-cidadania, na internet, em senado.leg.br/ecidadania ou pelo telefone da Ouvidoria 0800 061 22 11.",
-              "resultadoTexto": "Realizada."
-            },
-            "isDeliberativa": "false",
-            "nome": "Audiência Pública Interativa",
-            "sequencial": "1",
-            "sequencialFormatado": "1ª PARTE"
-          },
-          "permitePresencaApp": "false",
-          "permiteVotacaoSemPresencaFisica": "false",
-          "possuiVotacaoSecreta": "false",
-          "presidente": {
-            "cargo": "Senador",
-            "casa": "SF",
-            "codigo": "5985",
-            "data": "2025-05-08T00:00:00.000",
-            "isDeputado": "false",
-            "isSenador": "true",
-            "nome": "Nelson Trad Filho",
-            "nomeComCargo": "Senador Nelsinho Trad",
-            "nomeComCargoResumido": "Sen. Nelsinho Trad",
-            "nomeParlamentar": "Nelsinho Trad",
-            "partido": "Partido Social Democrático",
-            "sexo": "M",
-            "siglaPartido": "PSD",
-            "ufPartido": "MS",
-            "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5985.jpg",
-            "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5985"
-          },
-          "realizada": "true",
-          "secreta": "false",
-          "sessaoLegislativa": {
-            "codigo": "873",
-            "descricao": "57a. Legislatura (2025) - 3a. Sessão Legislativa Ordinária",
-            "fim": "2025-12-22",
-            "inicio": "2025-02-03",
-            "numero": "3",
-            "numeroLegislatura": "57"
-          },
-          "situacao": "Realizada",
-          "status": "Realizada",
-          "tipo": {
-            "codigo": "2",
-            "descricao": "Extraordinária",
-            "sigla": "EXT"
-          },
-          "tipoPresenca": "Presencial",
-          "titulo": "12ª Reunião Extraordinária",
-          "urlUltimaAtaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/8b365344-85d1-4f52-bd19-46adf18f8425?rendition_principal",
-          "urlUltimaAtaPublicadaDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=03/06/2025&paginaDireta=189&indSuplemento=sim&codSuplemento=A",
-          "urlUltimaPautaCheiaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/dde84f60-eb3d-4715-b257-0eb9635c455b",
-          "urlUltimaPautaSimplesPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/241a3a7d-e96c-4059-ac95-5bcbc5556927",
-          "urlUltimoResultadoPublicado": "https://legis.senado.leg.br/sdleg-getter/documento/download/0c1a8e0b-f215-4226-ac01-a9ef0a1bdd2e",
-          "versao": "2026-03-19T02:05:29.152",
-          "videos": {
-            "codigo": "6763",
-            "dataHoraReuniao": "2025-05-08T10:00:00.000",
-            "ordem": "1",
-            "url": "https://www.youtube.com/watch?v=CpTlB4a_eR4"
-          }
-        },
-        {
           "codigo": "13449",
           "codigoSituacao": "2",
           "colegiadoCriador": {
@@ -1636,6 +1220,327 @@
           "urlUltimaPautaCheiaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/863465ec-0169-4dfe-bc86-b5e781182525",
           "urlUltimaPautaSimplesPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/85e09f23-fea2-4f9c-85b7-32db731c5b39",
           "versao": "2026-03-19T02:06:01.839"
+        },
+        {
+          "codigo": "13496",
+          "codigoSituacao": "6",
+          "colegiadoCriador": {
+            "codigo": "834",
+            "codigoTipo": "21",
+            "descricaoTipo": "Comissão Permanente",
+            "nome": "Comissão de Direitos Humanos e Legislação Participativa",
+            "sigla": "CDH",
+            "siglaCasa": "SF"
+          },
+          "colegiados": {
+            "codigo": "834",
+            "codigoTipoColegiado": "21",
+            "composicaoPublica": "true",
+            "isSubcomissao": "false",
+            "nome": "Comissão de Direitos Humanos e Legislação Participativa",
+            "nomeTipoColegiado": "Comissão Permanente",
+            "numeroReuniao": "21",
+            "publicoPortal": "true",
+            "sigla": "CDH",
+            "siglaCasa": "SF"
+          },
+          "confirmada": "false",
+          "continuacaoCancelada": "false",
+          "dataInicio": "2025-05-08T10:00:00.000",
+          "dataInicioFormatadaComObsHorario": "08/05/2025 às 10h",
+          "dataReuniao": [
+            {
+              "codigo": "64844",
+              "codigoSituacao": "6",
+              "dataEvento": "2025-05-08T11:48:00.000",
+              "descricaoSituacao": "Realizada",
+              "realizada": "true"
+            },
+            {
+              "codigo": "64841",
+              "codigoSituacao": "3",
+              "dataEvento": "2025-05-08T10:14:00.000",
+              "descricaoSituacao": "Aberta",
+              "realizada": "false"
+            },
+            {
+              "codigo": "64714",
+              "codigoSituacao": "1",
+              "dataEvento": "2025-05-08T10:00:00.000",
+              "descricaoSituacao": "Agendada",
+              "realizada": "false"
+            }
+          ],
+          "descricao": "21ª, Extraordinária",
+          "foiAgendadaAposTerSidoSuspensa": "false",
+          "idUltimaPublicacaoPautaSimples": "b631a21a-0b65-4bb5-9c56-79bc20ce55a0",
+          "idUltimaPublicacaoResultado": "a7e9582d-8704-4c0a-a322-1af2210d477f",
+          "isExibirNoPortal": "true",
+          "linkECidadania": "https://www12.senado.leg.br/ecidadania/visualizacaoaudiencia?id=33700",
+          "local": "Anexo II, Ala Senador Nilo Coelho, Plenário nº 2",
+          "numReuniaoConjunta": "21",
+          "partes": {
+            "codigo": "17413",
+            "codigoTipo": "1",
+            "descricaoTipo": "Audiência Pública Interativa",
+            "evento": {
+              "codigo": "9419",
+              "convidados": [
+                {
+                  "cargo": "Artista brasileira, conhecida por seu trabalho na interseção entre arte, alimentação e sustentabilidade",
+                  "codigo": "38791",
+                  "codigoSituacao": "2",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Tainá Guedes",
+                  "ordem": "1",
+                  "sexo": "F"
+                },
+                {
+                  "cargo": "Assessora Técnica do Ministério do Trabalho e Emprego",
+                  "codigo": "38790",
+                  "codigoSituacao": "2",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Eloá Nascimento dos Santos",
+                  "ordem": "2",
+                  "sexo": "F"
+                },
+                {
+                  "cargo": "Coordenadora-Geral da Secretária Nacional de Autonomia Econômica e Política de Cuidados do Ministério das Mulheres",
+                  "codigo": "38793",
+                  "codigoSituacao": "4",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Letícia Resende",
+                  "ordem": "3",
+                  "sexo": "F"
+                }
+              ],
+              "domasRelacionados": {
+                "descricaoFinalidade": "Solicitação de realização de Audiência Pública Interativa",
+                "doma": {
+                  "ano": "2025",
+                  "autoria": "Senadora Mara Gabrilli (PSD/SP) e outros.",
+                  "autorias": [
+                    {
+                      "descricaoTipo": "Senador",
+                      "isAutoriaComOutros": "true",
+                      "nome": "Mara Gabrilli",
+                      "ordem": "1",
+                      "parlamentar": {
+                        "cargo": "Senadora",
+                        "casa": "SF",
+                        "codigo": "5376",
+                        "codigoDeputado": "160565",
+                        "data": "2025-04-16T00:00:00.000",
+                        "isDeputado": "false",
+                        "isSenador": "true",
+                        "nome": "Mara Cristina Gabrilli",
+                        "nomeComCargo": "Senadora Mara Gabrilli",
+                        "nomeComCargoResumido": "Sen. Mara Gabrilli",
+                        "nomeParlamentar": "Mara Gabrilli",
+                        "partido": "Partido Social Democrático",
+                        "sexo": "F",
+                        "siglaPartido": "PSD",
+                        "ufPartido": "SP",
+                        "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5376.jpg",
+                        "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5376"
+                      },
+                      "siglaTipo": "SENADOR",
+                      "tratamento": "Senadora"
+                    },
+                    {
+                      "descricaoTipo": "Senador",
+                      "isAutoriaComOutros": "true",
+                      "nome": "Damares Alves",
+                      "ordem": "2",
+                      "parlamentar": {
+                        "cargo": "Senadora",
+                        "casa": "SF",
+                        "codigo": "6335",
+                        "data": "2025-04-16T00:00:00.000",
+                        "isDeputado": "false",
+                        "isSenador": "true",
+                        "liderancas": {
+                          "nomeUnidadeLideranca": "Liderança da Minoria",
+                          "titulo": "Vice-líder do Congresso Nacional"
+                        },
+                        "nome": "Damares Regina Alves",
+                        "nomeComCargo": "Senadora Damares Alves",
+                        "nomeComCargoResumido": "Sen. Damares Alves",
+                        "nomeParlamentar": "Damares Alves",
+                        "partido": "REPUBLICANOS",
+                        "sexo": "F",
+                        "siglaPartido": "REPUBLICANOS",
+                        "ufPartido": "DF",
+                        "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador6335.jpg",
+                        "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/6335"
+                      },
+                      "siglaTipo": "SENADOR",
+                      "tratamento": "Senadora"
+                    }
+                  ],
+                  "codigoMateria": "168132",
+                  "complementar": "false",
+                  "consolidacao": "false",
+                  "dataApresentacao": "2025-04-16T16:51:32.000",
+                  "descricaoTipoDoma": "Requerimento",
+                  "ementa": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, a realização de audiência pública, com o objetivo de discutir sobre o trabalho invisível da mulher na sociedade.",
+                  "idConteudoInformacional": "7605153",
+                  "idDoma": "9936181",
+                  "idProcesso": "8818814",
+                  "idTipoDoma": "87",
+                  "identificacao": "REQ 36/2025 - CDH",
+                  "identificacaoPorExtenso": "Requerimento da Comissão de Direitos Humanos e Legislação Participativa n° 36, de 2025",
+                  "identificado": "true",
+                  "numero": "00036",
+                  "numeroSedol": "SF252716511156",
+                  "proposicao": "true",
+                  "sigla": "REQ",
+                  "siglaPorExtenso": "Requerimento",
+                  "siglaTipoDoma": "REQUERIMENTO",
+                  "textos": [
+                    {
+                      "codigoColegiado": "834",
+                      "conteudoInformacional": "REQ 36/2025 - CDH",
+                      "dataAtualizacao": "2025-04-16",
+                      "descricao": "Requer, nos termos do art. 58, § 2º, II, da Constituição Federal e do art. 93, II, do Regimento Interno do Senado Federal, a realização de audiência pública, com o objetivo de discutir sobre o trabalho invisível da mulher na sociedade.",
+                      "descricaoTipoDoma": "Requerimento",
+                      "idDoma": "9936181",
+                      "idProcesso": "8818814",
+                      "identificacao": "Requerimento",
+                      "siglaTipoDoma": "REQUERIMENTO",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9936181"
+                    },
+                    {
+                      "codigoColegiado": "834",
+                      "dataAtualizacao": "2025-04-23",
+                      "descricao": "Listagem ou relatório descritivo-Lista de Presença da reunião da 13ª Reunião CDH",
+                      "descricaoTipoDoma": "Listagem ou relatório descritivo",
+                      "idDoma": "9938747",
+                      "identificacao": "Listagem ou relatório descritivo",
+                      "siglaTipoDoma": "LISTAGEM_RELATORIO",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9938747"
+                    },
+                    {
+                      "codigoColegiado": "834",
+                      "dataAtualizacao": "2025-08-26",
+                      "descricao": "OF - AP - 117-2025 CDH - Convite para participação em audiência pública",
+                      "descricaoTipoDoma": "Ofício",
+                      "idDoma": "9940417",
+                      "identificacao": "Ofício",
+                      "siglaTipoDoma": "OFICIO",
+                      "urlDownload": "https://legis.senado.leg.br/sdleg-getter/documento?dm=9940417"
+                    }
+                  ]
+                },
+                "finalidade": "C",
+                "ordem": "1"
+              },
+              "finalidade": "\"Discutir sobre o trabalho invisível da mulher na sociedade\".",
+              "isPublicado": "true",
+              "isRealizado": "true",
+              "observacoes": "A reunião será interativa, transmitida ao vivo e aberta à participação dos interessados por meio do portal e-cidadania, na internet, em senado.leg.br/ecidadania ou pelo telefone da ouvidoria 0800 061 22 11.",
+              "participantes": [
+                {
+                  "apresentacoes": {
+                    "descricao": "Apresentação",
+                    "idEcmSenado": "e5457dfa-7037-463d-847a-5605171bc77c",
+                    "linkDownload": "https://legis.senado.leg.br/sdleg-getter/documento/download/e5457dfa-7037-463d-847a-5605171bc77c",
+                    "mimeType": "application/pdf",
+                    "nome": "Taina Guedes 2 - Trabalho da mulher - 080525.pdf"
+                  },
+                  "cargo": "Artista brasileira, conhecida por seu trabalho na interseção entre arte, alimentação e sustentabilidade",
+                  "codigo": "30518",
+                  "codigoConvidado": "38791",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Tainá Guedes",
+                  "ordem": "1",
+                  "sexo": "F"
+                },
+                {
+                  "cargo": "Assessora Técnica do Ministério do Trabalho e Emprego",
+                  "codigo": "30519",
+                  "codigoConvidado": "38790",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Eloá Nascimento dos Santos",
+                  "ordem": "2",
+                  "sexo": "F"
+                },
+                {
+                  "cargo": "Coordenadora-Geral da Secretária Nacional de Autonomia Econômica e Política de Cuidados do Ministério das Mulheres",
+                  "codigo": "30520",
+                  "codigoConvidado": "38793",
+                  "isDepoentePresente": "false",
+                  "isPorVideoConferencia": "false",
+                  "nome": "Letícia Resende",
+                  "ordem": "3",
+                  "sexo": "F"
+                }
+              ],
+              "resultadoTexto": "Audiência pública realizada."
+            },
+            "isDeliberativa": "false",
+            "nome": "Audiência Pública Interativa",
+            "sequencial": "1",
+            "sequencialFormatado": "1ª PARTE"
+          },
+          "permitePresencaApp": "false",
+          "permiteVotacaoSemPresencaFisica": "false",
+          "possuiVotacaoSecreta": "false",
+          "presidente": {
+            "cargo": "Senadora",
+            "casa": "SF",
+            "codigo": "5376",
+            "codigoDeputado": "160565",
+            "data": "2025-05-08T00:00:00.000",
+            "isDeputado": "false",
+            "isSenador": "true",
+            "nome": "Mara Cristina Gabrilli",
+            "nomeComCargo": "Senadora Mara Gabrilli",
+            "nomeComCargoResumido": "Sen. Mara Gabrilli",
+            "nomeParlamentar": "Mara Gabrilli",
+            "partido": "Partido Social Democrático",
+            "sexo": "F",
+            "siglaPartido": "PSD",
+            "ufPartido": "SP",
+            "urlFoto": "https://www.senado.gov.br/senadores/img/fotos-oficiais/senador5376.jpg",
+            "urlPagina": "https://www25.senado.leg.br/web/senadores/senador/-/perfil/5376"
+          },
+          "realizada": "true",
+          "secreta": "false",
+          "sessaoLegislativa": {
+            "codigo": "873",
+            "descricao": "57a. Legislatura (2025) - 3a. Sessão Legislativa Ordinária",
+            "fim": "2025-12-22",
+            "inicio": "2025-02-03",
+            "numero": "3",
+            "numeroLegislatura": "57"
+          },
+          "situacao": "Realizada",
+          "status": "Realizada",
+          "tipo": {
+            "codigo": "2",
+            "descricao": "Extraordinária",
+            "sigla": "EXT"
+          },
+          "tipoPresenca": "Presencial",
+          "titulo": "21ª Reunião Extraordinária",
+          "urlUltimaAtaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/6035634e-a4cc-46f7-b146-fa2d4e686da3?rendition_principal",
+          "urlUltimaAtaPublicadaDiario": "http://legis.senado.leg.br/diarios/BuscaDiario?tipDiario=1&datDiario=04/11/2025&paginaDireta=1286&indSuplemento=sim&codSuplemento=A",
+          "urlUltimaPautaCheiaPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/6bc0cda5-bfc5-4020-90da-f2f7cbadd14f",
+          "urlUltimaPautaSimplesPublicada": "https://legis.senado.leg.br/sdleg-getter/documento/download/b631a21a-0b65-4bb5-9c56-79bc20ce55a0",
+          "urlUltimoResultadoPublicado": "https://legis.senado.leg.br/sdleg-getter/documento/download/a7e9582d-8704-4c0a-a322-1af2210d477f",
+          "versao": "2026-03-19T02:05:41.739",
+          "videos": {
+            "codigo": "6767",
+            "dataHoraReuniao": "2025-05-08T10:00:00.000",
+            "ordem": "1",
+            "url": "https://www.youtube.com/watch?v=PdUAbKXGK9Y"
+          }
         }
       ]
     }

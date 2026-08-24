@@ -93,7 +93,7 @@
     "Metadados": {
       "DataVersaoServico": "2017-02-01",
       "DescricaoDataSet": "Obtém a Lista e a Composição dos Blocos Parlamentares no Senado Federal.",
-      "Versao": "15/07/2026 08:22:42",
+      "Versao": "21/08/2026 14:20:16",
       "VersaoServico": "4"
     },
     "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/ListaBlocoParlamentarv4.xsd"

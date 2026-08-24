@@ -47,9 +47,13 @@ describe("contract: /plenario/agenda (AgendaPlenario)", () => {
     const materias = s.Materias.Materia;
     expect(Array.isArray(materias)).toBe(true);
     const m = materias[0];
-    for (const k of ["DescricaoIdentificacaoMateria", "Ementa", "NomeAutor", "SiglaMateria"]) {
+    for (const k of ["DescricaoIdentificacaoMateria", "Ementa", "SiglaMateria"]) {
       expect(m).toHaveProperty(k);
     }
+    // 2026-08: o upstream REMOVEU NomeAutor da agenda (nenhuma matéria o traz
+    // mais); o mapper já era tolerante (autor: m.NomeAutor || null) e passa a
+    // publicar autor=null. Se o campo voltar, segue sendo string.
+    if ("NomeAutor" in m) expect(typeof m.NomeAutor).toBe("string");
     // Optional: Parecer only exists on matters already reported on.
     if ("Parecer" in m) expect(typeof m.Parecer).toBe("string");
   });

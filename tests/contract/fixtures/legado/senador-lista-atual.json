@@ -3,7 +3,7 @@
     "Metadados": {
       "DataVersaoServico": "2020-07-15",
       "DescricaoDataSet": "Lista dos Parlamentares que estão atualmente em Exercício. Informações atuais sobre o Parlamentar.",
-      "Versao": "15/07/2026 23:20:22",
+      "Versao": "23/08/2026 21:26:11",
       "VersaoServico": "4"
     },
     "Parlamentares": {
@@ -154,77 +154,75 @@
         {
           "IdentificacaoParlamentar": {
             "Bloco": {
-              "CodigoBloco": "335",
-              "DataCriacao": "2023-02-01",
-              "NomeApelido": "BLPRD",
-              "NomeBloco": "Bloco Parlamentar da Resistência Democrática"
+              "CodigoBloco": "346",
+              "DataCriacao": "2023-03-20",
+              "NomeApelido": "BLALIANÇA",
+              "NomeBloco": "Bloco Parlamentar Aliança"
             },
-            "CodigoParlamentar": "6358",
-            "CodigoPublicoNaLegAtual": "920",
-            "EmailParlamentar": "sen.anapaulalobato@senado.leg.br",
-            "FormaTratamento": "Senadora ",
+            "CodigoParlamentar": "5967",
+            "CodigoPublicoNaLegAtual": "832",
+            "EmailParlamentar": "sen.angelocoronel@senado.leg.br",
+            "FormaTratamento": "Senador ",
             "MembroLideranca": "Não",
-            "MembroMesa": "Sim",
-            "NomeCompletoParlamentar": "Ana Paula Dias Lobato Nova Alves",
-            "NomeParlamentar": "Ana Paula Lobato",
-            "SexoParlamentar": "Feminino",
-            "SiglaPartidoParlamentar": "PSB",
+            "MembroMesa": "Não",
+            "NomeCompletoParlamentar": "Angelo Mario Coronel de Azevedo Martins",
+            "NomeParlamentar": "Angelo Coronel",
+            "SexoParlamentar": "Masculino",
+            "SiglaPartidoParlamentar": "REPUBLICANOS",
             "Telefones": {
               "Telefone": [
                 {
                   "IndicadorFax": "Não",
-                  "NumeroTelefone": "33032967",
+                  "NumeroTelefone": "33036103",
                   "OrdemPublicacao": "1"
+                },
+                {
+                  "IndicadorFax": "Não",
+                  "NumeroTelefone": "33036105",
+                  "OrdemPublicacao": "3"
                 }
               ]
             },
-            "UfParlamentar": "MA",
-            "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador6358.jpg",
-            "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/6358"
+            "UfParlamentar": "BA",
+            "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador5967.jpg",
+            "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/5967"
           },
           "Mandato": {
-            "CodigoMandato": "602",
-            "DescricaoParticipacao": "1º Suplente",
+            "CodigoMandato": "554",
+            "DescricaoParticipacao": "Titular",
             "Exercicios": {
               "Exercicio": [
                 {
-                  "CodigoExercicio": "3057",
-                  "DataInicio": "2024-02-21"
-                },
-                {
-                  "CodigoExercicio": "3038",
-                  "DataFim": "2024-01-31",
-                  "DataInicio": "2023-02-02",
-                  "DescricaoCausaAfastamento": "Retorno do titular",
-                  "SiglaCausaAfastamento": "RET"
+                  "CodigoExercicio": "2889",
+                  "DataInicio": "2019-02-01"
                 }
               ]
             },
             "PrimeiraLegislaturaDoMandato": {
+              "DataFim": "2023-01-31",
+              "DataInicio": "2019-02-01",
+              "NumeroLegislatura": "56"
+            },
+            "SegundaLegislaturaDoMandato": {
               "DataFim": "2027-01-31",
               "DataInicio": "2023-02-01",
               "NumeroLegislatura": "57"
             },
-            "SegundaLegislaturaDoMandato": {
-              "DataFim": "2031-01-31",
-              "DataInicio": "2027-02-01",
-              "NumeroLegislatura": "58"
-            },
             "Suplentes": {
               "Suplente": [
                 {
-                  "CodigoParlamentar": "6359",
+                  "CodigoParlamentar": "5837",
+                  "DescricaoParticipacao": "1º Suplente",
+                  "NomeParlamentar": "Davidson Magalhães"
+                },
+                {
+                  "CodigoParlamentar": "5056",
                   "DescricaoParticipacao": "2º Suplente",
-                  "NomeParlamentar": "Lourdinha"
+                  "NomeParlamentar": "Silvia Nascimento Cardoso dos Santos Cerqueira"
                 }
               ]
             },
-            "Titular": {
-              "CodigoParlamentar": "4605",
-              "DescricaoParticipacao": "Titular",
-              "NomeParlamentar": "Flávio Dino"
-            },
-            "UfParlamentar": "MA"
+            "UfParlamentar": "BA"
           }
         }
       ]

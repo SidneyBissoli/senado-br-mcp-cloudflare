@@ -3,11 +3,23 @@
     "Metadados": {
       "DataVersaoServico": "2017-02-01",
       "DescricaoDataSet": "Obtém a lista de Legislação Federal com base nos parâmetros informados.",
-      "Versao": "15/07/2026 23:27:28",
+      "Versao": "23/08/2026 21:33:46",
       "VersaoServico": "3"
     },
     "documentos": {
       "documento": [
+        {
+          "anoassinatura": "2024",
+          "apelido": "LEI-15081-2024-12-30",
+          "dataassinatura": "30/12/2024",
+          "descricao": "Lei Numerada",
+          "ementa": "Altera a Lei nº 11.977, de 7 de julho de 2009, que dispõe sobre o Programa Minha Casa, Minha Vida (PMCMV), para assegurar o apoio técnico e financeiro às iniciativas de regularização fundiária de assentamentos urbanos.",
+          "id": "40035193",
+          "norma": "LEI-15081-2024-12-30",
+          "normaNome": "Lei nº 15.081 de 30/12/2024",
+          "numero": "15081",
+          "tipo": "LEI-n"
+        },
         {
           "anoassinatura": "2024",
           "apelido": "LEI-15082-2024-12-30",
@@ -30,18 +42,6 @@
           "norma": "LEI-15080-2024-12-30",
           "normaNome": "Lei nº 15.080 de 30/12/2024",
           "numero": "15080",
-          "tipo": "LEI-n"
-        },
-        {
-          "anoassinatura": "2024",
-          "apelido": "LEI-15081-2024-12-30",
-          "dataassinatura": "30/12/2024",
-          "descricao": "Lei Numerada",
-          "ementa": "Altera a Lei nº 11.977, de 7 de julho de 2009, que dispõe sobre o Programa Minha Casa, Minha Vida (PMCMV), para assegurar o apoio técnico e financeiro às iniciativas de regularização fundiária de assentamentos urbanos.",
-          "id": "40035193",
-          "norma": "LEI-15081-2024-12-30",
-          "normaNome": "Lei nº 15.081 de 30/12/2024",
-          "numero": "15081",
           "tipo": "LEI-n"
         }
       ]

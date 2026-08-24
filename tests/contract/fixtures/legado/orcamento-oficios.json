@@ -1,89 +1,104 @@
 [
   {
-    "dataInclusao": "2026-07-15T18:31:28.000+00:00",
+    "dataInclusao": "2026-08-21T15:27:50.000+00:00",
     "emendas": [
       {
-        "acaoOrcamentaria": "00T1",
+        "acaoOrcamentaria": "2E89",
+        "ano": "2022",
+        "autor": "COM. MISTA, PLAN.ORC.E FISCALIZACAO",
+        "cnpjFavorecido": "11756180000152",
+        "codOrgaoUge": 36000,
+        "codUnidadeOrcamentaria": 36901,
+        "id": 182,
+        "nomeFavorecido": "FUNDO MUNICIPAL DE SAUDE",
+        "nomeOrgaoUge": "MINISTERIO DA SAUDE",
+        "nomeUnidadeOrcamentaria": "FUNDO NACIONAL DE SAUDE",
+        "notaEmpenho": "257001000012022NE507842",
+        "numero": "202260000004",
+        "tipo": "RP8"
+      },
+      {
+        "acaoOrcamentaria": "2E89",
+        "ano": "2022",
+        "autor": "COM. MISTA, PLAN.ORC.E FISCALIZACAO",
+        "cnpjFavorecido": "11730899000114",
+        "codOrgaoUge": 36000,
+        "codUnidadeOrcamentaria": 36901,
+        "id": 185,
+        "nomeFavorecido": "FUNDO MUNICIPAL DE SAUDE - CHAPADA DOS GUIMARAES",
+        "nomeOrgaoUge": "MINISTERIO DA SAUDE",
+        "nomeUnidadeOrcamentaria": "FUNDO NACIONAL DE SAUDE",
+        "notaEmpenho": "257001000012022NE507843",
+        "numero": "202260000004",
+        "tipo": "RP8"
+      },
+      {
+        "acaoOrcamentaria": "1211",
         "ano": "2023",
-        "autor": "COM. DESENV REGIONAL E TURISMO",
-        "cnpjFavorecido": "51885242000140",
-        "codOrgaoUge": 56000,
-        "codUnidadeOrcamentaria": 56101,
-        "id": 2837,
-        "nomeFavorecido": "MUNICIPIO DE CAMPINAS",
-        "nomeOrgaoUge": "MINISTERIO DAS CIDADES",
-        "nomeUnidadeOrcamentaria": "MINISTERIO DAS CIDADES",
-        "notaEmpenho": "175004000012023NE001557",
-        "numero": "202360110003",
+        "autor": "COM. RELACOES EXT E DEFESA NACIONAL",
+        "cnpjFavorecido": "03507415000144",
+        "codOrgaoUge": 52000,
+        "codUnidadeOrcamentaria": 52101,
+        "id": 455,
+        "nomeFavorecido": "ESTADO DE MATO GROSSO",
+        "nomeOrgaoUge": "MINISTERIO DA DEFESA",
+        "nomeUnidadeOrcamentaria": "MINISTERIO DA DEFESA",
+        "notaEmpenho": "110594000012023NE000275",
+        "numero": "202360020005",
         "tipo": "RP8"
       }
     ],
-    "id": 8185,
-    "nome": "Marcos Pereira",
-    "numeroProtocoloApresentacao": "CD267501373100",
-    "tratamento": "Deputado(a)"
-  },
-  {
-    "dataInclusao": "2026-07-14T19:18:54.000+00:00",
-    "emendas": [
-      {
-        "acaoOrcamentaria": "8581",
-        "ano": "2022",
-        "autor": "RELATOR GERAL",
-        "cnpjFavorecido": "12188745000105",
-        "codOrgaoUge": 36000,
-        "codUnidadeOrcamentaria": 36901,
-        "id": 19670,
-        "nomeFavorecido": "FUNDO MUNICIPAL DE SAUDE DE CAIBATE",
-        "nomeOrgaoUge": "MINISTERIO DA SAUDE",
-        "nomeUnidadeOrcamentaria": "FUNDO NACIONAL DE SAUDE",
-        "notaEmpenho": "257001000012022NE500758",
-        "numero": "202281000293",
-        "tipo": "RP9"
-      }
-    ],
-    "id": 8165,
-    "nome": "Luis Carlos Heinze",
-    "numeroProtocoloApresentacao": "SF262241857490",
+    "id": 8545,
+    "nome": "Wellington Fagundes",
+    "numeroProtocoloApresentacao": "SF269431927803",
     "tratamento": "Senador(a)"
   },
   {
-    "dataInclusao": "2026-07-09T18:13:29.000+00:00",
+    "dataInclusao": "2026-08-18T21:39:56.000+00:00",
     "emendas": [
       {
-        "acaoOrcamentaria": "20RP",
+        "acaoOrcamentaria": "7K66",
         "ano": "2021",
         "autor": "RELATOR GERAL",
-        "cnpjFavorecido": "45138336000153",
-        "codOrgaoUge": 26298,
-        "codUnidadeOrcamentaria": 26298,
-        "id": 9968,
-        "nomeFavorecido": "MUNICIPIO DE SANTA RITA D'OESTE",
-        "nomeOrgaoUge": "FUNDO NACIONAL DE DESENVOLVIMENTO DA EDUCACAO",
-        "nomeUnidadeOrcamentaria": "FUNDO NACIONAL DE DESENVOLVIMENTO DA EDUCACAO",
-        "notaEmpenho": "153173152532021NE653591",
-        "numero": "202181000791",
-        "tipo": "RP9"
-      },
-      {
-        "acaoOrcamentaria": "20RP",
-        "ano": "2021",
-        "autor": "RELATOR GERAL",
-        "cnpjFavorecido": "45138336000153",
-        "codOrgaoUge": 26298,
-        "codUnidadeOrcamentaria": 26298,
-        "id": 9969,
-        "nomeFavorecido": "MUNICIPIO DE SANTA RITA D'OESTE",
-        "nomeOrgaoUge": "FUNDO NACIONAL DE DESENVOLVIMENTO DA EDUCACAO",
-        "nomeUnidadeOrcamentaria": "FUNDO NACIONAL DE DESENVOLVIMENTO DA EDUCACAO",
-        "notaEmpenho": "153173152532021NE653922",
-        "numero": "202181000791",
+        "cnpjFavorecido": "01609942000134",
+        "codOrgaoUge": 53000,
+        "codUnidadeOrcamentaria": 53101,
+        "id": 17545,
+        "nomeFavorecido": "MUNICIPIO DE URUANA DE MINAS",
+        "nomeOrgaoUge": "MINIST. DA INTEGR. E DO DESENVOLV. REGIONAL",
+        "nomeUnidadeOrcamentaria": "MIN. DA INTEGR. E DO DESENVOLVIMENTO REGIONAL",
+        "notaEmpenho": "530020000012021NE800721",
+        "numero": "202181000739",
         "tipo": "RP9"
       }
     ],
-    "id": 8145,
-    "nome": "Marcos Pereira",
-    "numeroProtocoloApresentacao": "CD261193283500",
+    "id": 8525,
+    "nome": "Carlos Viana",
+    "numeroProtocoloApresentacao": "SF261407537020",
+    "tratamento": "Senador(a)"
+  },
+  {
+    "dataInclusao": "2026-08-12T15:37:02.000+00:00",
+    "emendas": [
+      {
+        "acaoOrcamentaria": "00SX",
+        "ano": "2023",
+        "autor": "COM. DESENV REGIONAL E TURISMO",
+        "cnpjFavorecido": "13133982000131",
+        "codOrgaoUge": 53000,
+        "codUnidadeOrcamentaria": 53101,
+        "id": 5011,
+        "nomeFavorecido": "CONSORCIO CONDESCOM - CONSORCIO INTERMUNICIPAL PARA O D",
+        "nomeOrgaoUge": "MINIST. DA INTEGR. E DO DESENVOLV. REGIONAL",
+        "nomeUnidadeOrcamentaria": "MIN. DA INTEGR. E DO DESENVOLVIMENTO REGIONAL",
+        "notaEmpenho": "530023000012023NE000404",
+        "numero": "202360110002",
+        "tipo": "RP8"
+      }
+    ],
+    "id": 8505,
+    "nome": "Luisa Canziani",
+    "numeroProtocoloApresentacao": "CD267848058100",
     "tratamento": "Deputado(a)"
   }
 ]

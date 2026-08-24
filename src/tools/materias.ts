@@ -50,7 +50,11 @@ export function parseProcessoResumo(p: any) {
 /** Parse a /processo/{id} detail response (does not include ementa — that comes from search). */
 export function parseProcessoDetalhe(det: any) {
   const autuacoes = ensureArray(det.autuacoes);
-  const autorPrincipal = ensureArray(det.autoriaIniciativa)[0];
+  // 2026-08: o upstream moveu a autoria do topo (autoriaIniciativa) para
+  // documento.autoria (mesmo shape interno). Lemos as duas — detectado pelo
+  // contrato noturno (contract-tests.yml) via monitor do portfólio.
+  const autorPrincipal =
+    ensureArray(det.documento?.autoria)[0] ?? ensureArray(det.autoriaIniciativa)[0];
   const deliberacao = det.deliberacao && Object.keys(det.deliberacao).length > 0 ? {
     data: det.deliberacao.data || null,
     tipo: det.deliberacao.tipoDeliberacao || det.deliberacao.siglaTipo || null,

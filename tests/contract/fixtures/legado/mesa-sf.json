@@ -52,7 +52,7 @@
     "Metadados": {
       "DataVersaoServico": "2021-10-25",
       "DescricaoDataSet": "Obtém a Composição dos integrantes da Mesa Diretora do Senado Federal.",
-      "Versao": "15/07/2026 08:23:13",
+      "Versao": "21/08/2026 14:20:29",
       "VersaoServico": "2"
     },
     "noNamespaceSchemaLocation": "https://legis.senado.leg.br/dadosabertos/dados/MesaSenadov2.xsd"

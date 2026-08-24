@@ -1,24 +1,5 @@
 {
   "ano": 2025,
-  "autoriaIniciativa": [
-    {
-      "autor": "Gilberto Nascimento",
-      "cargo": "Deputado Federal",
-      "casaEnte": "CD",
-      "codigoParlamentar": 3760,
-      "descricaoTipo": "DEPUTADO",
-      "ente": "Câmara dos Deputados",
-      "idEnte": 2,
-      "ordem": 1,
-      "outrosAutoresNaoInformados": "Não",
-      "partido": "Partido Social Cristão",
-      "sexo": "M",
-      "siglaCargo": "DEPUTADO",
-      "siglaEnte": "CD",
-      "siglaPartido": "PSC",
-      "siglaTipo": "DEPUTADO"
-    }
-  ],
   "autuacoes": [
     {
       "descricao": "Autuação Principal",

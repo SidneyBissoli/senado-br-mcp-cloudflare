@@ -3,11 +3,71 @@
     "Metadados": {
       "DataVersaoServico": "2021-09-09",
       "DescricaoDataSet": "Lista dos Senadores atualmente afastados (Fora de Exercício).",
-      "Versao": "15/07/2026 22:18:42",
+      "Versao": "21/08/2026 22:18:41",
       "VersaoServico": "4"
     },
     "Parlamentares": {
       "Parlamentar": [
+        {
+          "IdentificacaoParlamentar": {
+            "CodigoParlamentar": "6358",
+            "EmailParlamentar": "sen.anapaulalobato@senado.leg.br",
+            "FormaTratamento": "Senadora",
+            "NomeCompletoParlamentar": "Ana Paula Dias Lobato Nova Alves",
+            "NomeParlamentar": "Ana Paula Lobato",
+            "SexoParlamentar": "Feminino",
+            "SiglaPartidoParlamentar": "PSB",
+            "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador6358.jpg",
+            "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/6358"
+          },
+          "Mandato": {
+            "CodigoMandato": "602",
+            "DescricaoParticipacao": "1º Suplente",
+            "Exercicios": {
+              "Exercicio": [
+                {
+                  "CodigoExercicio": "3057",
+                  "DataFim": "2026-07-30",
+                  "DataInicio": "2024-02-21",
+                  "DescricaoCausaAfastamento": "Licença com convocação de suplente (superior a 120 dias)",
+                  "SiglaCausaAfastamento": "LCS"
+                },
+                {
+                  "CodigoExercicio": "3038",
+                  "DataFim": "2024-01-31",
+                  "DataInicio": "2023-02-02",
+                  "DescricaoCausaAfastamento": "Retorno do titular",
+                  "SiglaCausaAfastamento": "RET"
+                }
+              ]
+            },
+            "PrimeiraLegislaturaDoMandato": {
+              "DataFim": "2027-01-31",
+              "DataInicio": "2023-02-01",
+              "NumeroLegislatura": "57"
+            },
+            "SegundaLegislaturaDoMandato": {
+              "DataFim": "2031-01-31",
+              "DataInicio": "2027-02-01",
+              "NumeroLegislatura": "58"
+            },
+            "Suplentes": {
+              "Suplente": [
+                {
+                  "CodigoParlamentar": "6359",
+                  "DescricaoParticipacao": "2º Suplente",
+                  "NomeParlamentar": "Lourdinha Pereira"
+                }
+              ]
+            },
+            "Titular": {
+              "CodigoParlamentar": "4605",
+              "DescricaoParticipacao": "Titular",
+              "NomeParlamentar": "Flávio Dino"
+            },
+            "UfParlamentar": "MA"
+          }
+        },
         {
           "IdentificacaoParlamentar": {
             "CodigoParlamentar": "6366",
@@ -112,73 +172,6 @@
               ]
             },
             "UfParlamentar": "RJ"
-          }
-        },
-        {
-          "IdentificacaoParlamentar": {
-            "CodigoParlamentar": "6350",
-            "EmailParlamentar": "sen.augustabrito@senado.leg.br",
-            "FormaTratamento": "Senadora",
-            "NomeCompletoParlamentar": "Augusta Brito de Paula",
-            "NomeParlamentar": "Augusta Brito",
-            "SexoParlamentar": "Feminino",
-            "SiglaPartidoParlamentar": "PT",
-            "UrlFotoParlamentar": "http://www.senado.leg.br/senadores/img/fotos-oficiais/senador6350.jpg",
-            "UrlPaginaParlamentar": "http://www25.senado.leg.br/web/senadores/senador/-/perfil/6350"
-          },
-          "Mandato": {
-            "CodigoMandato": "598",
-            "DescricaoParticipacao": "1º Suplente",
-            "Exercicios": {
-              "Exercicio": [
-                {
-                  "CodigoExercicio": "3087",
-                  "DataFim": "2026-04-02",
-                  "DataInicio": "2025-02-04",
-                  "DescricaoCausaAfastamento": "Retorno do titular",
-                  "SiglaCausaAfastamento": "RET"
-                },
-                {
-                  "CodigoExercicio": "3066",
-                  "DataFim": "2025-02-01",
-                  "DataInicio": "2024-07-31",
-                  "DescricaoCausaAfastamento": "Retorno do titular",
-                  "SiglaCausaAfastamento": "RET"
-                },
-                {
-                  "CodigoExercicio": "3052",
-                  "DataFim": "2024-03-31",
-                  "DataInicio": "2023-12-14",
-                  "DescricaoCausaAfastamento": "Licença com convocação de suplente (superior a 120 dias)",
-                  "SiglaCausaAfastamento": "LCS"
-                }
-              ]
-            },
-            "PrimeiraLegislaturaDoMandato": {
-              "DataFim": "2027-01-31",
-              "DataInicio": "2023-02-01",
-              "NumeroLegislatura": "57"
-            },
-            "SegundaLegislaturaDoMandato": {
-              "DataFim": "2031-01-31",
-              "DataInicio": "2027-02-01",
-              "NumeroLegislatura": "58"
-            },
-            "Suplentes": {
-              "Suplente": [
-                {
-                  "CodigoParlamentar": "6351",
-                  "DescricaoParticipacao": "2º Suplente",
-                  "NomeParlamentar": "Janaína Farias"
-                }
-              ]
-            },
-            "Titular": {
-              "CodigoParlamentar": "6336",
-              "DescricaoParticipacao": "Titular",
-              "NomeParlamentar": "Camilo Santana"
-            },
-            "UfParlamentar": "CE"
           }
         }
       ]
