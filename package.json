@@ -5,6 +5,10 @@
   "license": "MIT",
   "type": "module",
   "mcpName": "io.github.SidneyBissoli/senado-br-mcp-cloudflare",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SidneyBissoli/senado-br-mcp-cloudflare.git"
+  },
   "bin": {
     "senado-br-mcp": "./dist/cli.js"
   },
