@@ -1,0 +1,138 @@
+name: Publish to npm and MCP Registry
+
+# Substitui o antigo publish-mcp.yml, que publicava SÓ no registro oficial.
+#
+# Por que mudou (2026-08-27). O registro verifica a propriedade do pacote
+# buscando-o no npm NA VERSÃO DECLARADA em server.json. Como nenhum workflow
+# deste repositório publicava no npm, as tags v3.4.4 e v3.5.0 falharam com:
+#
+#   registry validation failed for package 0 (senado-br-mcp): NPM package
+#   'senado-br-mcp' exists, but version '3.5.0' was not found (status: 404).
+#   ... publish version '3.5.0' before registering it
+#
+# O passo dependente era automático e o pré-requisito era manual — ordem
+# invertida. Cinco versões (3.4.1 a 3.4.4 e 3.5.0) ficaram para trás sem que
+# ninguém notasse, porque Action vermelha em push de tag não avisa.
+#
+# A sequência agora é npm -> espera o npm expor a versão -> registro, no molde
+# já usado em ibge-br-mcp, bcb-br-mcp e medical-terminologies-mcp.
+#
+# PRÉ-REQUISITO: o segredo NPM_TOKEN precisa existir no repositório
+# (Settings > Secrets and variables > Actions, ou `gh secret set NPM_TOKEN`).
+# Sem ele o passo de npm falha — de propósito, e ruidosamente, em vez de
+# deixar o registro falhar depois por uma causa que parece outra.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - name: Verify package contents
+        run: npm pack --dry-run
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    # id-token: write é exigido por `npm publish --provenance`: o Actions emite
+    # um token OIDC que o npm usa para assinar a atestação SLSA declarando que
+    # o pacote saiu deste repositório, neste commit.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+      - run: npm ci
+      - run: npm run build
+
+      # As duas versões precisam bater ANTES de publicar qualquer coisa. Se
+      # divergirem, o npm receberia uma versão e o registro anunciaria outra —
+      # e o erro só apareceria no fim, com cara de problema do registro.
+      # A checagem compara os arquivos entre si: não há número escrito aqui.
+      - name: Conferir package.json x server.json
+        run: |
+          PKG=$(node -p "require('./package.json').version")
+          SRV=$(node -p "require('./server.json').version")
+          SRVPKG=$(node -p "require('./server.json').packages[0].version")
+          echo "package.json=$PKG server.json=$SRV server.json/packages[0]=$SRVPKG"
+          if [ "$PKG" != "$SRV" ] || [ "$PKG" != "$SRVPKG" ]; then
+            echo "::error::versoes divergentes — rode 'npm version' (scripts/sync-version.mjs sincroniza server.json)"
+            exit 1
+          fi
+
+      # `npm publish` não é idempotente: repetir dá EPUBLISHCONFLICT. Pular
+      # quando a versão já está lá deixa o workflow re-executável, que é o que
+      # permite destravar uma tag que falhou sem inventar uma versão nova.
+      - name: Publicar no npm
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          NAME=$(node -p "require('./package.json').name")
+          if [ "$(npm view $NAME@$VERSION version 2>/dev/null || true)" = "$VERSION" ]; then
+            echo "npm ja tem $NAME@$VERSION — pulando publish"
+          else
+            npm publish --access public --provenance
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-registry:
+    needs: publish-npm
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # OIDC prova a propriedade do namespace io.github.SidneyBissoli
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      # O npm leva alguns segundos para expor uma versão recém-publicada. Sem
+      # esta espera, o registro consultaria cedo demais e devolveria o MESMO 404
+      # do bug original — falha idêntica, causa completamente diferente.
+      - name: Esperar o npm expor a versão
+        run: |
+          VERSION=$(node -p "require('./server.json').packages[0].version")
+          NAME=$(node -p "require('./server.json').packages[0].identifier")
+          for i in $(seq 1 10); do
+            if [ "$(npm view $NAME@$VERSION version 2>/dev/null || true)" = "$VERSION" ]; then
+              echo "npm confirmou $NAME@$VERSION"
+              exit 0
+            fi
+            echo "tentativa $i: $NAME@$VERSION ainda nao visivel; aguardando 10s"
+            sleep 10
+          done
+          echo "::error::$NAME@$VERSION nao ficou visivel no npm apos 100s"
+          exit 1
+
+      - name: Instalar mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher --help > /dev/null
+      - name: Validar server.json
+        run: ./mcp-publisher validate
+      - name: Autenticar no registro (GitHub OIDC)
+        run: ./mcp-publisher login github-oidc
+      - name: Publicar no registro
+        run: ./mcp-publisher publish
