@@ -20,10 +20,17 @@ name: Publish to npm and MCP Registry
 # package.json e do server.json em tempo de execução — não há literal a
 # fossilizar quando um deles mudar.
 #
-# PRÉ-REQUISITO: o segredo NPM_TOKEN precisa existir no repositório
-# (`gh secret set NPM_TOKEN`). Sem ele o passo do npm falha — de propósito e
-# ruidosamente, em vez de deixar o registro falhar depois por uma causa que
-# parece outra.
+# AUTENTICAÇÃO NO NPM — preferir TRUSTED PUBLISHING, não token.
+# Com o trusted publisher configurado em npmjs.com (Package settings > Trusted
+# Publisher > GitHub Actions, apontando para este repositório e para o arquivo
+# `publish.yml`), o npm autentica por OIDC com credencial de vida curta: não há
+# segredo para criar, colar, distribuir, girar nem vazar, e não há data de
+# expiração para esquecer. A permissão `id-token: write` abaixo é o que habilita
+# isso — a mesma que a proveniência já exigia.
+# O `NODE_AUTH_TOKEN` continua no passo de publicação como FALLBACK: o npm
+# detecta o ambiente OIDC sozinho e só cai no token quando ele não existe.
+# Assim o workflow funciona nos dois mundos, e a migração pode ser feita um
+# pacote por vez, sem janela quebrada.
 
 on:
   push:
@@ -38,7 +45,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
       - run: npm ci
@@ -52,9 +59,9 @@ jobs:
   publish-npm:
     needs: build
     runs-on: ubuntu-latest
-    # id-token: write é exigido por `npm publish --provenance`: o Actions emite
-    # um token OIDC que o npm usa para assinar a atestação SLSA declarando que
-    # o pacote saiu deste repositório, neste commit.
+    # id-token: write é o que habilita o TRUSTED PUBLISHING: o Actions emite um
+    # token OIDC de vida curta que o npm aceita no lugar de credencial guardada,
+    # e é dele que sai a atestação SLSA de proveniência, automaticamente.
     permissions:
       contents: read
       id-token: write
@@ -63,11 +70,19 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
       - run: npm ci
       - run: npm run build --if-present
+
+      # O trusted publishing exige npm >= 11.5.1, e qual npm vem embutido muda a
+      # cada release do Node. Instalar explicitamente tira a dependência dessa
+      # coincidência — e o log registra a versão que de fato publicou.
+      - name: npm recente o bastante para trusted publishing
+        run: |
+          npm install -g npm@latest
+          echo "npm $(npm --version) / node $(node --version)"
 
       # Falha CEDO e explicando. `npm publish` num pacote private recusa com uma
       # mensagem que não diz o que fazer; e versões divergentes fariam o npm
@@ -102,7 +117,10 @@ jobs:
           if [ "$(npm view "$NAME@$VERSION" version 2>/dev/null || true)" = "$VERSION" ]; then
             echo "npm ja tem $NAME@$VERSION — pulando publish"
           else
-            npm publish --access public --provenance
+            # sem --provenance: com trusted publishing a atestação sai
+            # automaticamente, e a documentação pede `npm publish` sem flags
+            # extras. --access public segue necessário na PRIMEIRA publicação.
+            npm publish --access public
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -133,7 +151,7 @@ jobs:
         if: steps.check.outputs.found == 'true'
         uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "22"
           registry-url: "https://registry.npmjs.org"
 
       - name: Conferir mcpName no package.json
