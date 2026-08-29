@@ -6,6 +6,19 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.5.1]
+
+### Added
+- **`icons` declared in `server.json`.** The server already served a 512×512 icon
+  at `/icon.jpg` and already advertised it in the MCP handshake (`serverInfo.icons`,
+  `src/server.ts`), but the registry manifest never declared it — and the registry
+  is what directories snapshot. The mcpindex.ai Quality Score awards 5 completeness
+  points for a declared icon, so the server sat at 95/100 while owning a perfectly
+  good icon. Same URL as `serverInfo`, so the two cannot drift; hosted on the
+  server's own domain, which is what the MCP schema recommends over a third-party
+  host. A published version is immutable in the MCP Registry, so metadata only
+  reaches it through a release.
+
 ## [3.5.0]
 
 ### Changed
