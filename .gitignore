@@ -46,3 +46,10 @@ naming.png
 # credencial do MCP Registry: publicar a partir desta pasta cria o arquivo,
 # e ele daria a qualquer um o direito de publicar no catalogo como voce
 .mcpregistry_registry_token
+
+# Roadmap tecnico: planejamento interno, nao vai para repo publico. Mesma
+# convencao dos irmaos — ibge-br-mcp (.gitignore: ROADMAP.md) e
+# medical-terminologies-mcp (PROGRESS.md), e do docs/promotion-roadmap.md do
+# bcb-br-mcp. O painel do portfolio-monitor le o arquivo LOCAL e renderiza o
+# HTML fora do repositorio do produto.
+ROADMAP.md
