@@ -47,21 +47,21 @@
     "release:zenodo": "tsx scripts/build-dataset/zenodo-publish.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@sbissoli/mcp-provenance": "^0.1.0",
     "@sbissoli/mcp-stats": "^0.1.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250214.0",
+    "@cloudflare/workers-types": "^4.20260702.1",
     "@sbissoli/mcp-evals": "^0.1.0",
     "@types/node": "^26.4.0",
-    "agents": "^0.5.0",
+    "agents": "^0.22.0",
     "exceljs": "^4.4.0",
     "tsx": "^4.19.2",
     "typescript": "^7.0.2",
     "vitest": "^4.1.9",
-    "wrangler": "^4.105.0"
+    "wrangler": "^4.127.1"
   },
   "overrides": {
     "fast-uri": "^4.0.0",
