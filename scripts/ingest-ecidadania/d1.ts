@@ -30,8 +30,8 @@ function queryD1<T = Record<string, unknown>>(sql: string, attempts = 2): T[] {
       return first?.results ?? [];
     } catch (e) {
       lastErr = e;
-      const stderr = (e as { stderr?: Buffer | string }).stderr;
-      if (stderr) (e as Error).message += `\nwrangler stderr: ${stderr.toString().slice(0, 1000)}`;
+      const stderr = (e as { stderr?: Uint8Array | string }).stderr;
+      if (stderr) (e as Error).message += `\nwrangler stderr: ${(typeof stderr === "string" ? stderr : new TextDecoder().decode(stderr)).slice(0, 1000)}`;
     }
   }
   throw lastErr;

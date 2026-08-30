@@ -50,10 +50,10 @@ let tmpCounter = 0;
 /**
  * One curl request. Writes the body to a temp file (`-o`) and prints the HTTP status (`-w`) to stdout,
  * so a binary/large body (the 33 MB Arquimedes CSV) never goes through the stdout buffer. Returns the
- * status + body Buffer. A curl NON-ZERO exit (connect/TLS/timeout — no HTTP response) throws a
+ * status + body em bytes. A curl NON-ZERO exit (connect/TLS/timeout — no HTTP response) throws a
  * retryable HttpError; an HTTP response is classified by the caller.
  */
-async function curlOnce(url: string, opts: GetOpts): Promise<{ code: number; body: Buffer }> {
+async function curlOnce(url: string, opts: GetOpts): Promise<{ code: number; body: Uint8Array }> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const tmp = join(tmpdir(), `ingest-${process.pid}-${tmpCounter++}.tmp`);
   const args = [
@@ -94,8 +94,8 @@ async function curlOnce(url: string, opts: GetOpts): Promise<{ code: number; bod
   }
 }
 
-/** curl with retry/backoff. Returns the body Buffer on the final successful attempt. */
-async function fetchWithRetry(url: string, opts: GetOpts): Promise<Buffer> {
+/** curl with retry/backoff. Returns the body bytes on the final successful attempt. */
+async function fetchWithRetry(url: string, opts: GetOpts): Promise<Uint8Array> {
   const retries = opts.retries ?? DEFAULT_RETRIES;
   let lastErr: unknown;
 
@@ -125,7 +125,11 @@ export async function getText(url: string, opts: GetOpts = {}): Promise<string> 
   const body = await fetchWithRetry(url, { accept: "text/html", ...opts });
   // Some Senate feeds (the Arquimedes CSV) are served as application/octet-stream but encoded in
   // windows-1252; decode explicitly when the caller knows the charset — otherwise accents get mangled.
-  const text = opts.charset ? new TextDecoder(opts.charset).decode(body) : body.toString("utf8");
+  // `ignoreBOM: true` no ramo utf-8 preserva o comportamento de `Buffer.toString("utf8")`, que
+  // NÃO remove BOM. O ramo com charset explícito segue removendo, como sempre removeu.
+  const text = opts.charset
+    ? new TextDecoder(opts.charset).decode(body)
+    : new TextDecoder("utf-8", { fatal: false, ignoreBOM: true }).decode(body);
   if (!opts.allowEmpty && !text.trim()) throw new HttpError(`Empty response body for ${url}`);
   return text;
 }

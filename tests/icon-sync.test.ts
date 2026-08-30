@@ -28,11 +28,18 @@ import { describe, expect, it } from "vitest";
 import { ICON_JPEG_BASE64 } from "../src/icon.js";
 
 const raiz = join(__dirname, "..");
-const bytesDoIcone = (): Buffer => Buffer.from(ICON_JPEG_BASE64, "base64");
+// Sem `Buffer`: o @cloudflare/workers-types 5 declara `const Buffer: any`, que sequestra o do
+// @types/node em todo arquivo que enxergue os dois — o tipo vira `any` em silêncio. `atob` e
+// aritmética de bytes existem nos dois runtimes e não dependem de quem ganha o global.
+const bytesDoIcone = (): Uint8Array =>
+  Uint8Array.from(atob(ICON_JPEG_BASE64), (c) => c.charCodeAt(0));
+
+/** Leitura big-endian de 16 bits — o que `Buffer.readUInt16BE` fazia. */
+const u16 = (buf: Uint8Array, i: number): number => (buf[i]! << 8) | buf[i + 1]!;
 
 /** Dimensions read from the JPEG SOF marker — no image dependency. */
-function dimensoesJpeg(buf: Buffer): { largura: number; altura: number } {
-  if (buf.readUInt16BE(0) !== 0xffd8) throw new Error("not a JPEG");
+function dimensoesJpeg(buf: Uint8Array): { largura: number; altura: number } {
+  if (u16(buf, 0) !== 0xffd8) throw new Error("not a JPEG");
   let i = 2;
   while (i < buf.length) {
     if (buf[i] !== 0xff) {
@@ -42,13 +49,13 @@ function dimensoesJpeg(buf: Buffer): { largura: number; altura: number } {
     const marcador = buf[i + 1]!;
     // SOF0..SOF15, minus the markers that are not frame headers.
     if (marcador >= 0xc0 && marcador <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marcador)) {
-      return { altura: buf.readUInt16BE(i + 5), largura: buf.readUInt16BE(i + 7) };
+      return { altura: u16(buf, i + 5), largura: u16(buf, i + 7) };
     }
     if (marcador === 0xd8 || marcador === 0xd9 || (marcador >= 0xd0 && marcador <= 0xd7)) {
       i += 2;
       continue;
     }
-    i += 2 + buf.readUInt16BE(i + 2);
+    i += 2 + u16(buf, i + 2);
   }
   throw new Error("SOF marker not found");
 }

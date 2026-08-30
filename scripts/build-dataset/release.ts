@@ -54,7 +54,7 @@ function digestFile(path: string, countLines: boolean): Promise<{ sha256: string
     let newlines = 0;
     let lastByte = -1;
     const stream = createReadStream(path);
-    stream.on("data", (chunk: Buffer) => {
+    stream.on("data", (chunk: Uint8Array) => {
       hash.update(chunk);
       bytes += chunk.length;
       if (countLines) {
