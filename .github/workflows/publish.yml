@@ -41,9 +41,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Set up Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "npm"
@@ -66,9 +66,9 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Set up Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "npm"
@@ -144,7 +144,7 @@ jobs:
       id-token: write # OIDC prova a propriedade do namespace io.github.<owner>
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Sem server.json não há o que registrar. O passo não FALHA: pacote que
       # ainda não declarou identidade no registro é um estado legítimo, e
@@ -161,7 +161,7 @@ jobs:
 
       - name: Set up Node
         if: steps.check.outputs.found == 'true'
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"

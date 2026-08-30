@@ -53,12 +53,12 @@ jobs:
       INGEST_FORCE: ${{ inputs.force && '1' || '0' }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         # Default clean:true (git clean -ffdx) wipes stale out*.sql from a prior run on the
         # persistent self-hosted workspace, so the apply steps never re-load last run's SQL.
 
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "npm"

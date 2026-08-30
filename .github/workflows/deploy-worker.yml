@@ -65,7 +65,7 @@ jobs:
           fi
 
       - if: steps.cf.outputs.ok == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # NODE 22, NÃO o piso do projeto. `engines.node` é ">=20" e o ci.yml roda a
       # matriz 20+22, mas o wrangler 4.x recusa Node < 22 ("Wrangler requires at
@@ -73,7 +73,7 @@ jobs:
       # que o ingest-estrutura.yml — a outra pipeline que deploya este Worker —
       # já usa. Medido: com 20.x este job falhou em 29/08/2026.
       - if: steps.cf.outputs.ok == 'true'
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "npm"
