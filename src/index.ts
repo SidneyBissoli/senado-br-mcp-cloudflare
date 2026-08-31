@@ -18,6 +18,7 @@ import { refreshEcidadania } from "./scraper/pipeline.js";
 import { handlerRouteForPath, toolProfileForRoute } from "./app-surface.js";
 import { legalResponseForPath } from "./legal.js";
 import { landingResponseForPath } from "./landing.js";
+import { discoveryResponseForPath } from "./discovery.js";
 import { openAiAppsChallengeResponseForPath } from "./openai-domain-verification.js";
 
 /** Decoded once per isolate — server logo bytes referenced by serverInfo.icons. */
@@ -31,6 +32,12 @@ export default {
 
     // Landing page at the root — public. This is the URL advertised in the outgoing
     // User-Agent, so it must resolve to something human-readable (identification + contact).
+    // robots.txt, sitemap.xml e a chave do IndexNow vêm ANTES da auth: um
+    // rastreador não tem credencial, e robots.txt atrás de Bearer é o mesmo que
+    // não ter robots.txt.
+    const descoberta = discoveryResponseForPath(url.pathname);
+    if (descoberta) return descoberta;
+
     const landingResponse = landingResponseForPath(url.pathname);
     if (landingResponse) {
       return landingResponse;

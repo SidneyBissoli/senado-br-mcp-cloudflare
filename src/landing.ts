@@ -10,7 +10,7 @@ import { VERSION, USER_AGENT } from "./version.js";
 
 const GITHUB_URL = "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare";
 const NPM_URL = "https://www.npmjs.com/package/senado-br-mcp";
-const SITE_URL = "https://senado.sidneybissoli.com";
+export const SITE_URL = "https://senado.sidneybissoli.com";
 const PAGE_TITLE = "Dados Abertos Senado BR MCP";
 
 /**
