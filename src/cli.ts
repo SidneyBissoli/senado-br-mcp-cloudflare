@@ -15,7 +15,7 @@
  * touches `agents/mcp`. It only depends on `createServer` + the stdio transport.
  */
 
-import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import { serveStdio, StdioServerTransport } from "@modelcontextprotocol/server/stdio";
 import { unknownCursorError } from "./pagination.js";
 import { createServer } from "./server.js";
 import type { Env } from "./types.js";
@@ -31,15 +31,21 @@ const env = {
 
 async function main(): Promise<void> {
   // No `ctx` → e-Cidadania detail write-through is a no-op (fire-and-forget skipped).
-  const server = createServer(env);
-
-  // O transporte é construído aqui para que o guarda de cursor possa se
-  // pendurar nele. Cursor de paginação inválido -> -32602, o MESMO guarda que o
-  // Worker aplica no POST (ver src/pagination.ts). Substitui `onmessage` em vez
-  // de somar um ouvinte: só quem está NO lugar do `onmessage` pode interromper
-  // a entrega ao SDK, e é a interrupção que produz a recusa.
+  // `serveStdio`, e não `server.connect(transport)` direto: ele serve a
+  // abertura MODERNA e a de 2025 no mesmo processo. Conectar o transporte na
+  // mão atende só o ciclo legado, e o mcpscore conta a prontidão para a spec
+  // 2026-07-28 dentro da nota principal — medido em 30/08/2026: 127/144 com
+  // `connect` direto contra 146/148 nos irmãos que usam `serveStdio`, sem UMA
+  // falha de diferença. Eram 17 pontos de regras que sequer eram avaliadas.
+  //
+  // O transporte é construído aqui, e não deixado a cargo do `serveStdio`, para
+  // que o guarda de cursor possa se pendurar nele. Cursor de paginação inválido
+  // -> -32602, o MESMO guarda que o Worker aplica no POST (src/pagination.ts).
+  // Substitui `onmessage` em vez de somar um ouvinte: só quem está NO lugar do
+  // `onmessage` pode interromper a entrega ao SDK, e é a interrupção que produz
+  // a recusa.
   const transport = new StdioServerTransport();
-  await server.connect(transport);
+  serveStdio(() => createServer(env), { transport });
 
   const entregaAoServidor = transport.onmessage;
   transport.onmessage = (message) => {
