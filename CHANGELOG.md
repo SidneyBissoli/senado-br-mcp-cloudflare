@@ -6,6 +6,61 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-08-30
+
+Migra para o **MCP SDK v2** (`@modelcontextprotocol/server` 2.0.0) e fecha os
+achados de conformidade. Produção de **114/122 (93,4%) para 173/173 = 100%**.
+
+O NÚMERO ANTIGO MEDIA UM UNIVERSO MENOR, e é isso que a migração revelou: o
+denominador foi de 122 para 173. Na v1 o ciclo 2026-07-28 não existe, então o
+auditor pulava dezenas de regras — a nota de 93,4% escondia que o servidor não
+falava a versão corrente.
+
+Nada muda para quem usa: as mesmas 67 tools, os mesmos schemas, o mesmo
+comportamento. O pacote é só binário (`npx senado-br-mcp`), sem API exportada.
+
+### Changed
+
+- **SDK v2.** O que tornou a migração contida foi o shim: os 20 módulos de grupo
+  nunca chamaram o SDK direto, chamam `server.tool()` instalado por
+  `createServer`. Trocar imports foi mecânico em 27 arquivos; o trabalho real foi
+  declarar o tipo do que os módulos consomem (`src/tool-host.ts`) — até então
+  diziam receber `McpServer` e chamavam um método que a v1 expunha e a v2 não.
+  De quebra, o `params` de 65 callbacks deixou de ser `any` implícito.
+- `createMcpHandler` passa a receber FÁBRICA e não instância (a v2 exige um
+  `McpServer` novo por request).
+- **O bundle do Worker caiu de 3794 para 1803 KiB** — o SDK v1 não é mais
+  empacotado.
+- TypeScript 7.0.2, `zod` 4.5.4, `agents` 0.5 -> 0.22, `wrangler` 4.127,
+  `@cloudflare/workers-types` v5 e `@sbissoli/mcp-stats` 0.2.0.
+
+### Added
+
+- `title` no `serverInfo` do handshake, e `server/discover` anunciando todas as
+  revisões atendidas.
+- Cursor de paginação inválido recusado com JSON-RPC `-32602` nos quatro
+  endpoints de lista, nas duas bordas por onde a mensagem entra.
+
+### Fixed
+
+- `cli.ts` conectava o transporte à mão (`server.connect`), o que atende só o
+  ciclo legado. Com `serveStdio` o stdio foi de 127/144 para 146/148 — **sem uma
+  falha de diferença nos dois casos**: eram 19 pontos de regras que sequer
+  chegavam a ser avaliadas.
+- O `websiteUrl` do handshake apontava para o repositório enquanto o manifesto
+  apontava para o domínio próprio, que é quem serve o ícone.
+- O stderr do wrangler em `d1.ts` e `d1-read.ts` usava `toString()`, que num
+  `Uint8Array` devolveria "104,101,..." em vez do texto — mensagem de erro
+  ilegível sem ninguém notar.
+
+### CI
+
+- Catraca do `mcpscore` em 98 (stdio) e 100 (produção).
+- O `output-contract` deixou de pinar a string do dialeto de JSON Schema: a v2
+  emite `2020-12` onde a v1 emitia `draft-07`, e o teste reprovava uma troca de
+  biblioteca como se fosse regressão. Agora guarda a FORMA e exige só que o
+  `$schema` exista.
+
 ## [3.5.1]
 
 ### Added
