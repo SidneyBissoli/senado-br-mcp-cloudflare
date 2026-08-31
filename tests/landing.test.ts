@@ -74,9 +74,11 @@ describe("landing page — superfície de descoberta", () => {
 
   it("publica dados estruturados válidos", async () => {
     const html = await corpo("/");
-    const m = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s);
-    expect(m, "landing sem bloco JSON-LD").not.toBeNull();
-    const dados = JSON.parse(m![1]) as Record<string, unknown>;
+    // `?.[1]` e nao `m![1]`: com noUncheckedIndexedAccess o grupo capturado e
+    // `string | undefined`, e o `tsc` do CI reprova o nao-nulo direto.
+    const bruto = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s)?.[1];
+    expect(bruto, "landing sem bloco JSON-LD").toBeTruthy();
+    const dados = JSON.parse(bruto as string) as Record<string, unknown>;
     expect(dados["@type"]).toBe("SoftwareApplication");
     expect(dados.url).toBe("https://senado.sidneybissoli.com");
     expect(dados.inLanguage).toBe("pt-BR");
