@@ -9,13 +9,20 @@ export const TERMS_URL = `${SITE_ORIGIN}/terms`;
 const UPDATED_AT = "2026-06-28";
 export const CONTACT_EMAIL = "sbissoli76@gmail.com";
 
-export function htmlPage(title: string, body: string, lang = "en"): string {
+/**
+ * Shell HTML das páginas públicas. `head` é injetado apenas por quem tem o que
+ * declarar: a LANDING passa aí a `meta description`, o canonical, os og: e o
+ * JSON-LD. Privacidade e Termos não passam nada — são páginas de obrigação,
+ * não superfície de produto, e não disputam a busca com a landing.
+ */
+export function htmlPage(title: string, body: string, lang = "en", head = ""): string {
   return `<!doctype html>
 <html lang="${lang}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
+${head}
   <style>
     :root { color-scheme: light dark; }
     body {
@@ -32,6 +39,7 @@ export function htmlPage(title: string, body: string, lang = "en"): string {
     p, li { font-size: 1rem; }
     a { color: LinkText; }
     .muted { color: color-mix(in srgb, CanvasText 72%, Canvas 28%); }
+    .lead { font-size: 1.1rem; }
   </style>
 </head>
 <body>

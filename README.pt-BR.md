@@ -58,7 +58,7 @@ continuam chamando os mesmos handlers e retornando o mesmo envelope de provenien
 anunciada fica mais estreita. Qualquer listagem de ChatGPT App deve apresentar isto como um app
 independente de pesquisa em dados abertos, nao como conector oficial do Senado, da OpenAI ou do ChatGPT.
 
-Para ChatGPT Apps, essas 25 ferramentas tambem anunciam um template UI compartilhado do MCP Apps em
+Para ChatGPT Apps, essas 27 ferramentas tambem anunciam um template UI compartilhado do MCP Apps em
 `ui://senado-br-mcp/openai-app-dashboard-v2.html`. O widget e autocontido e renderiza o
 `structuredContent` retornado como painel compacto com metricas, registros principais e fonte/proveniencia,
 sem adicionar outra ferramenta de dados visivel ao modelo.
@@ -138,7 +138,7 @@ O Claude Code a descobre automaticamente ao trabalhar neste repositório. Para u
 
 - **Runtime:** Cloudflare Workers (ESM)
 - **Transporte:** Streamable HTTP (spec MCP 2025-03-26) via `createMcpHandler` de `agents/mcp`
-- **Protocolo:** MCP sobre JSON-RPC — `/mcp` serve o catalogo publico completo; `/mcp/openai-app-v2` expoe um perfil curado de 25 ferramentas mais um widget MCP Apps compartilhado para revisao/submissao como app OpenAI (`/mcp/openai-app` permanece como alias legado)
+- **Protocolo:** MCP sobre JSON-RPC — `/mcp` serve o catalogo publico completo; `/mcp/openai-app-v2` expoe um perfil curado de 27 ferramentas mais um widget MCP Apps compartilhado para revisao/submissao como app OpenAI (`/mcp/openai-app` permanece como alias legado)
 - **SDK:** `@modelcontextprotocol/sdk` 1.26.0+ (instâncias de McpServer por requisição)
 - **Validação:** schemas Zod para todas as entradas das ferramentas
 - **Cache:** 2 camadas (L0 memória + L1 Cache API) com chaveamento SHA-256
@@ -507,6 +507,37 @@ Campos do bloco `concise` (por resposta — uma ferramenta, uma fonte): `source`
 
 A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`legis.senado.leg.br`), **Dados Abertos Administrativo** (`adm.senado.gov.br`), **Execução Orçamentária** (feed Arquimedes/Financeiro em `senado.gov.br`) e **Portal e-Cidadania** (`www12.senado.leg.br/ecidadania`). Nas listas do e-Cidadania (lidas do D1) o `retrieved_at` é o `lastScrapedAt` do corpus — a idade real do dado; nos detalhes (raspados ao vivo) é o instante da chamada, com a URL canônica do item. A fidelidade do `retrieved_at` vem da camada de cache (`cachedFetchWithMeta`), que persiste o timestamp junto ao valor.
 
+## Conjunto de dados citável (participação no e-Cidadania)
+
+Além do servidor ao vivo, este projeto publica um **conjunto de dados congelado, versionado e citável** da camada de participação do e-Cidadania (consultas públicas, ideias legislativas, eventos interativos + seus comentários, votos históricos por estado) — a camada que o pacote R `congressbr` nunca cobriu. Cada valor carrega um envelope de procedência por campo (`{ value, sourceEndpoint, sourceField, retrievedAt, license, schemaVersion }`); a licença dos dados (Dados Abertos do Senado Federal) é mantida **separada** da licença do código (MIT).
+
+- **Como citar** — [`CITATION.cff`](CITATION.cff) (conjunto de dados; cite o DOI da versão do snapshot que você usou, e o DOI de conceito para o conjunto através das versões).
+- **O que vai em cada release** — [`CHANGELOG-dataset.md`](CHANGELOG-dataset.md) (cumulativo, só acrescenta; amarra cada release ao seu `schemaVersion`).
+- **Dicionário de variáveis e procedência de campo** — [`docs/dataset-dictionary.md`](docs/dataset-dictionary.md) (gerado de `src/dataset/schema.ts`, a fonte única de verdade).
+- **Licença dos dados** — [`LICENSE-DATA.md`](LICENSE-DATA.md).
+- **Como cortar uma release** (congelar → checksums → GitHub Release → DOI no Zenodo) — [`docs/release-runbook.md`](docs/release-runbook.md); a maquinaria está em `src/dataset/`, `scripts/build-dataset/` e `.github/workflows/release-dataset.yml`.
+
+### Inventário — schema v2 (`schemaVersion` `2.0.0`)
+
+Cada release entrega um recurso NDJSON por entidade (um `HarmonizedRecord` por linha: identidade + um envelope de procedência por campo), mais um manifesto `datapackage.json` e uma cópia do dicionário. Cinco recursos:
+
+| Recurso (`*.ndjson`) | Grão | Variáveis principais | Fonte(s) |
+|---|---|---|---|
+| `consultas` | 1 consulta pública (matéria) | `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentual*`, **`autoria`ⁿ**, **`relator`ⁿ**, `status`, `url`, `firstSeenAt` | listagem `pesquisamateria` + **detalhe** (`visualizacaomateria`)ⁿ + `/processo?tramitando=S` para o status |
+| `ideias` | 1 ideia legislativa (~113,7 mil) | `titulo`, `apoios`, `status`, **`dataPublicacao`ⁿ**, **`autorUf`ⁿ**, **`descricao`ⁿ**, **`plConvertido`ⁿ**, `url`, `firstSeenAt` | listagem `pesquisaideia` + **detalhe** (`visualizacaoideia`) por um backfill retomávelⁿ |
+| `eventos` | 1 evento interativo (audiência) | `titulo`, **`data`ᶜ**, **`hora`ᶜ**, `comissao`, **`comissaoNomeCompleto`ⁿ**, **`local`ⁿ**, **`descricao`ⁿ**, **`pauta`ⁿ**, **`convidados`ⁿ**, **`videoUrl`ⁿ**, **`comentarios`ᶜ**, `status`, `url`, `firstSeenAt` | listagem `principalaudiencia` + **detalhe** (`visualizacaoaudiencia`)ⁿ + **fragmento AJAX de comentários**ᶜ |
+| **`eventos_comentarios`ⁿ** | 1 comentário (nível de comentário) | `eventoId`, `comentarioId`, `uf`, `texto`, `data`, `hora`, `momentoVideoUrl`, `convidadoAssociado` | fragmento AJAX `ajaxcolecaocomentarioaudiencia?audienciaId=` |
+| `consultas_votos` | 1 matéria (acervo histórico) | `materia`, `ementa`, `autoria`, `votosSim`/`votosNao`/`totalVotos`, `votosPorUf`, `status`, `url`, `referencePeriod` | CSV do Arquimedes `Proposições-com-votos.csv` (reingerido semanalmente) |
+
+**ⁿ = novo ou reaberto na v2 · ᶜ = fonte corrigida para a canônica na v2.** O que a v2 (`2.0.0`) mudou — a ingestão saiu de **só listagem** para **listagem + detalhe (+ comentários por AJAX nos eventos)**:
+
+- **Eventos corrigidos e enriquecidos.** `data`/`hora` agora vêm da página de detalhe (a canônica — o [estudo A3](docs/estudo-a3-reconciliacao-eventos.md) achou a listagem divergente em 57% dos casos no `hora`), mais seis campos novos de detalhe (`comissaoNomeCompleto`, `local`, `descricao`, `pauta`, `convidados`, `videoUrl`). `comentarios` passou a ser a **contagem canônica do AJAX** (a contagem da listagem era `0` espúrio em 82% dos eventos, capturando só ~6,7% do engajamento).
+- **Recurso novo em nível de comentário**, `eventos_comentarios` — uma linha por comentário de audiência, o sinal de participação que ninguém mais publica versionado.
+- **Campos que só existem no detalhe foram reabertos** para `ideias` (`dataPublicacao`, `autorUf`, `descricao`, `plConvertido`) e `consultas` (`autoria`, `relator`) — antes sempre `null` por decisão de projeto.
+- **Postura de privacidade pela origem do dado.** Conteúdo de cidadão (comentários de audiência, autores de ideia) guarda **apenas a UF — nunca o nome**, descartado já no parser; agente público (autoria/relatoria de consulta, convidados de evento) guarda o nome (público pela função). O racional campo a campo está em `docs/schema-v2-inventario.md` (alvo aprovado).
+
+O NDJSON congelado **não** é commitado (é construído sob demanda a partir do corpus soberano no D1); uma release marcada `dataset-v*` anexa o tarball + `SHA256SUMS` + `release.json` e os arquiva no Zenodo.
+
 ## Inventário de ferramentas
 
 ### Grupo H — Referência/Metadados (1 ferramenta)
@@ -669,6 +700,14 @@ A cobertura abrange as quatro fontes upstream: **Dados Abertos Legislativo** (`l
 | Ferramenta | Descrição |
 |------|-------------|
 | `senado_execucao_orcamentaria` | Execução orçamentária desde 2013 (dotação, empenhado/liquidado/pago) e receitas próprias desde 2012 (previsto vs. arrecadado) — agregadas por ano, ação, grupo de despesa, fonte ou origem de receita; `estatisticas=true` devolve a distribuição do conjunto (min/máx/média/mediana/percentis) + ranking top/bottom, ou um ranking de grupos por soma do `campo` via `agruparPor`, com `campo` (padrão pago / arrecadada) e `topN` |
+
+### Grupo T — Estrutura Organizacional (1 ferramenta)
+
+Lê um retrato embutido da árvore organizacional do Senado (varrida do portal institucional até o nível de serviço por `npm run ingest:estrutura`), porque a API de dados abertos só publica unidades até Secretaria e nunca liga uma unidade-folha ao pai dela. Unidades que o portal lista apenas por nome, sem página própria (os núcleos da CONLEG/CONORF), são capturadas como nós sintéticos a partir da listagem indentada da página. Órgãos do Congresso onde o cadastro de servidores registra lotações (CMO, CPCMS, CMMC) vêm de um complemento curado (`src/estrutura/complemento-cn.ts`, fonte pública: congressonacional.leg.br) sob uma raiz **Congresso Nacional** (`CN`) separada — nunca sob a árvore do Senado, de modo que `subordinadasA: "DGER"` os exclui e `subordinadasA: "CN"` os conta. Servidores registrados sob as pseudo-unidades situacionais "Servidores Afastados/em Trânsito - SF" são reportados à parte, como `afastadosOuEmTransito`, por `senado_servidores`.
+
+| Ferramenta | Descrição |
+|------|-------------|
+| `senado_estrutura_organizacional` | Organograma resolvido para uma `unidade` (sigla como `DGER` ou nome): devolve o `caminho` (ancestrais) e todas as unidades subordinadas (`subordinadas[]` — secretarias, coordenações, serviços, núcleos — com `nivel`). Faz par com o filtro `subordinadasA` de `senado_servidores`, que conta/lista todos os servidores sob uma diretoria inteira (o servidor fica num serviço-folha, então filtrar `lotacao` pela sigla do pai devolve 0). |
 
 **Total: 67 ferramentas**
 
