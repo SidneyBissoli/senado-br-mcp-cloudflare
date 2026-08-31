@@ -4,7 +4,7 @@
  * senado_mesa (enum `casa`: senado | congresso)
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -130,7 +130,7 @@ export function parseMembroMesa(m: any) {
   };
 }
 
-export function registerComposicaoTools(server: McpServer, baseUrl: string) {
+export function registerComposicaoTools(server: SenadoToolHost, baseUrl: string) {
   // J1. senado_listar_blocos
   server.tool(
     "senado_listar_blocos",

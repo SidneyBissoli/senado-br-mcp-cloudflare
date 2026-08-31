@@ -6,7 +6,7 @@
  * with concession acts, commitments, movements and card transactions.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch } from "../throttle/adm.js";
@@ -221,7 +221,7 @@ export async function nomesSupridos(ano: number, admBaseUrl: string): Promise<Ma
   return map;
 }
 
-export function registerSupridosTools(server: McpServer, admBaseUrl: string) {
+export function registerSupridosTools(server: SenadoToolHost, admBaseUrl: string) {
   // R1. senado_suprimento_fundos
   server.tool(
     "senado_suprimento_fundos",

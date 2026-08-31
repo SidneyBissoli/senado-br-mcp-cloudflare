@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import {
   OPENAI_APP_WIDGET_DOMAIN,
   OPENAI_APP_WIDGET_URI,

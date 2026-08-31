@@ -3,7 +3,7 @@
  * Registers all tools from each group module.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { registerReferenciaTools } from "./tools/referencia.js";
 import { registerSenadoresTools } from "./tools/senadores.js";
@@ -39,6 +39,8 @@ import {
 import { registerOpenAiAppWidget } from "./openai-app-widget.js";
 import { titleForTool } from "./tool-titles.js";
 import type { Env } from "./types.js";
+import type { SenadoToolHost } from "./tool-host.js";
+import { announceServedVersions } from "./discover.js";
 
 type ToolCallback = (...args: unknown[]) => Promise<unknown> | unknown;
 
@@ -48,7 +50,13 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
     {
       name: "senado-br-mcp",
       version: VERSION,
-      websiteUrl: "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
+      // `title` no serverInfo do handshake: existia no `server.json` — o que os
+      // diretórios leem — mas não no que o cliente recebe ao conectar, e o
+      // mcpscore mede o handshake (`server_title_present`).
+      title: "Dados Abertos Senado BR MCP",
+      // O DOMÍNIO PRÓPRIO, não o repositório: é o que o `server.json` declara e
+      // é quem serve o ícone logo abaixo. O par estava desalinhado.
+      websiteUrl: "https://senado.sidneybissoli.com",
       icons: [
         {
           src: "https://senado.sidneybissoli.com/icon.jpg",
@@ -70,7 +78,12 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
   const outputSchema = z.object({}).passthrough();
   const registerTool = server.registerTool.bind(server);
   const analytics = env.SENADO_ANALYTICS;
-  (server as { tool: unknown }).tool = (
+  // O shim é instalado sobre a instância e o resultado é NOMEADO: os módulos de
+  // grupo recebem `host`, não `server`. Até a migração v2 eles declaravam
+  // `McpServer` e chamavam `.tool()` — método que a v1 expunha e a v2 não —, uma
+  // imprecisão que o tipo antigo tolerava. Ver src/tool-host.ts.
+  const host = server as unknown as SenadoToolHost;
+  (host as { tool: unknown }).tool = (
     name: string,
     description: string,
     shape: Record<string, unknown>,
@@ -107,64 +120,64 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
   const admBaseUrl = env.SENADO_ADM_BASE_URL || "https://adm.senado.gov.br/adm-dadosabertos";
 
   // Group H — Reference/metadata (1 tool — enum `tabela`)
-  registerReferenciaTools(server, baseUrl);
+  registerReferenciaTools(host, baseUrl);
 
   // Group A — Senators (5 tools)
-  registerSenadoresTools(server, baseUrl);
+  registerSenadoresTools(host, baseUrl);
 
   // Group B — Bills (2 tools; votos_materia is registered in Group D)
-  registerMateriasTools(server, baseUrl);
+  registerMateriasTools(host, baseUrl);
 
   // Group D — Votes (3 tools)
-  registerVotacoesTools(server, baseUrl);
+  registerVotacoesTools(host, baseUrl);
 
   // Group E — Committees (7 tools)
-  registerComissoesTools(server, baseUrl);
+  registerComissoesTools(host, baseUrl);
 
   // Group F — Plenary (7 tools)
-  registerPlenarioTools(server, baseUrl);
+  registerPlenarioTools(host, baseUrl);
 
   // Group C — Processes (5 tools)
-  registerProcessosTools(server, baseUrl);
+  registerProcessosTools(host, baseUrl);
 
   // Group G — e-Cidadania (9 tools) — reads from D1 (env) and write-through detail (ctx)
-  registerECidadaniaTools(server, baseUrl, env, ctx);
+  registerECidadaniaTools(host, baseUrl, env, ctx);
 
   // Group I — Speeches (3 tools)
-  registerDiscursosTools(server, baseUrl);
+  registerDiscursosTools(host, baseUrl);
 
   // Group J — Blocs & Leadership (4 tools)
-  registerComposicaoTools(server, baseUrl);
+  registerComposicaoTools(host, baseUrl);
 
   // Group K — Budget (1 tool — enum `tipo`)
-  registerOrcamentoTools(server, baseUrl);
+  registerOrcamentoTools(host, baseUrl);
 
   // Group L — Federal Law (2 tools)
-  registerLegislacaoTools(server, baseUrl);
+  registerLegislacaoTools(host, baseUrl);
 
   // Group M — Committee Voting (1 tool — enum `por`)
-  registerVotacaoComissaoTools(server, baseUrl);
+  registerVotacaoComissaoTools(host, baseUrl);
 
   // Group N — Taquigrafia (2 tools)
-  registerTaquigrafiaTools(server, baseUrl);
+  registerTaquigrafiaTools(host, baseUrl);
 
   // Group O — Senadores/Administrativo (2 tools)
-  registerSenadoresAdminTools(server, admBaseUrl);
+  registerSenadoresAdminTools(host, admBaseUrl);
 
   // Group P — Servidores / Gestão de Pessoas (4 tools)
-  registerServidoresTools(server, admBaseUrl);
+  registerServidoresTools(host, admBaseUrl);
 
   // Group Q — Contratações (6 tools)
-  registerContratacoesTools(server, admBaseUrl);
+  registerContratacoesTools(host, admBaseUrl);
 
   // Group R — Suprimento de Fundos (1 tool)
-  registerSupridosTools(server, admBaseUrl);
+  registerSupridosTools(host, admBaseUrl);
 
   // Group S — Orçamento do Senado (1 tool)
-  registerOrcamentoSenadoTools(server);
+  registerOrcamentoSenadoTools(host);
 
   // Group T — Estrutura Organizacional (1 tool — árvore de órgãos, snapshot bundlado)
-  registerEstruturaTools(server);
+  registerEstruturaTools(host);
 
   // MCP prompts (4 reusable pt-BR workflow templates) and resources (5 static
   // context docs/tables) — advertised as the `prompts` and `resources` capabilities.
@@ -174,5 +187,8 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
     registerOpenAiAppWidget(server);
   }
 
+  // `server/discover` anuncia TODAS as revisões atendidas, não só as modernas
+  // que o SDK filtra — ver src/discover.ts.
+  announceServedVersions(server);
   return server;
 }

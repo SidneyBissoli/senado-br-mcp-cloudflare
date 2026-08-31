@@ -4,7 +4,8 @@
  * Per-request McpServer instance (SDK 1.26.0+ requirement).
  */
 
-import { createMcpHandler } from "agents/mcp";
+import { createMcpHandler } from "agents/mcp/server";
+import { unknownCursorError } from "./pagination.js";
 import { checkAuth } from "./auth.js";
 import { createServer } from "./server.js";
 import { buildStatus } from "./status.js";
@@ -111,9 +112,21 @@ export default {
     const route = handlerRouteForPath(url.pathname, toolProfile);
     // Per-request context (self marker, country, AS) for the per-tool telemetry.
     const requestTag = tagRequest(request, env.SELF_MARKER);
-    const server = createServer(env, ctx, { toolProfile, requestTag });
+    // FÁBRICA, não instância. O SDK v2 exige um `McpServer` novo por request e
+    // o `createMcpHandler` da `agents` 0.20+ recebe a função que o constrói —
+    // era `createMcpHandler(server, …)` na v1. É também o que os cinco irmãos
+    // do portfólio já fazem.
+    // Cópia do corpo tirada ANTES do handler consumir o stream — é dela que o
+    // guarda de cursor decide.
+    const corpoMcp =
+      request.method === "POST"
+        ? await request
+            .clone()
+            .json()
+            .catch(() => undefined)
+        : undefined;
 
-    const handler = createMcpHandler(server, {
+    const handler = createMcpHandler(() => createServer(env, ctx, { toolProfile, requestTag }), {
       route,
       corsOptions: {
         origin: env.ALLOWED_ORIGIN || "*",
@@ -123,7 +136,28 @@ export default {
       },
     });
 
-    const response = await handler(request, env, ctx);
+    // Cursor de paginação inválido -> JSON-RPC -32602 (ver src/pagination.ts).
+    // DEPOIS do handler: quem valida Host e Origin é o `createMcpHandler`, e um
+    // guarda antes dele responderia -32602 a uma requisição que a checagem de
+    // segurança ia recusar com 403.
+    const doHandler = await handler(request, env, ctx);
+    const recusaDeCursor =
+      doHandler.status === 200 && corpoMcp !== undefined ? unknownCursorError(corpoMcp) : undefined;
+
+    let response = doHandler;
+    if (recusaDeCursor) {
+      incr("invalidCursor");
+      void doHandler.body?.cancel();
+      // 200 com erro JSON-RPC no corpo: a falha é de protocolo, não de HTTP.
+      const corsOrigin = doHandler.headers.get("Access-Control-Allow-Origin");
+      response = new Response(JSON.stringify(recusaDeCursor), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          ...(corsOrigin ? { "Access-Control-Allow-Origin": corsOrigin } : {}),
+        },
+      });
+    }
     const ms = Date.now() - start;
     logger.info("request", { method: request.method, path: url.pathname, status: response.status, ms });
     return response;

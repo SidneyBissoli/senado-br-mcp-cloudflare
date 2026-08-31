@@ -8,7 +8,7 @@
  * except /autor/lista/atual which still returns a legacy PascalCase wrapper.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -196,7 +196,7 @@ export function parseProcessoDetalhe(p: any) {
   };
 }
 
-export function registerProcessosTools(server: McpServer, baseUrl: string) {
+export function registerProcessosTools(server: SenadoToolHost, baseUrl: string) {
   // C1. senado_search_processos
   server.tool(
     "senado_search_processos",

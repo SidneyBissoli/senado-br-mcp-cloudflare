@@ -5,7 +5,7 @@
  * tipos-norma, tipos-uso-palavra). Mirrors the senado_tabelas_processo / _plenario pattern.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -107,7 +107,7 @@ const TABELAS = [
   "tipos-uso-palavra",
 ] as const;
 
-export function registerReferenciaTools(server: McpServer, baseUrl: string) {
+export function registerReferenciaTools(server: SenadoToolHost, baseUrl: string) {
   // H1. senado_tabelas_referencia (consolida tipos-materia, partidos, ufs,
   // legislatura-atual, tipos-norma e tipos-uso-palavra sob o parâmetro `tabela`).
   server.tool(

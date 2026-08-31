@@ -8,7 +8,7 @@
  * camelCase orientacaoBancada endpoint.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -158,7 +158,7 @@ export function parseVeto(v: any) {
   };
 }
 
-export function registerPlenarioTools(server: McpServer, baseUrl: string) {
+export function registerPlenarioTools(server: SenadoToolHost, baseUrl: string) {
   // F1. senado_agenda_plenario
   server.tool(
     "senado_agenda_plenario",

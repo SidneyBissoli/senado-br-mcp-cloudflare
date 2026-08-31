@@ -7,7 +7,7 @@
  * Responses are flat snake_case JSON arrays.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
@@ -94,7 +94,7 @@ export function ordenarEPaginar<T>(lista: T[], ordem: "asc" | "desc", offset: nu
   return ordenada.slice(offset, offset + limite);
 }
 
-export function registerContratacoesTools(server: McpServer, admBaseUrl: string) {
+export function registerContratacoesTools(server: SenadoToolHost, admBaseUrl: string) {
   // Q1. senado_contratos
   server.tool(
     "senado_contratos",

@@ -3,7 +3,7 @@
  * senado_votacao_comissao (enum `por`: comissao | senador | materia)
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -59,7 +59,7 @@ export function filtrarPorData<T extends { data: string | null }>(itens: T[], di
   });
 }
 
-export function registerVotacaoComissaoTools(server: McpServer, baseUrl: string) {
+export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: string) {
   // M1. senado_votacao_comissao (por: comissao | senador | materia)
   server.tool(
     "senado_votacao_comissao",

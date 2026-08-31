@@ -8,7 +8,7 @@
  * summary mode and exposes the full text in paginated blocks ("quartos").
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -78,7 +78,7 @@ export function parseVideoUnidade(v: any) {
   };
 }
 
-export function registerTaquigrafiaTools(server: McpServer, baseUrl: string) {
+export function registerTaquigrafiaTools(server: SenadoToolHost, baseUrl: string) {
   // N1. senado_notas_taquigraficas
   server.tool(
     "senado_notas_taquigraficas",

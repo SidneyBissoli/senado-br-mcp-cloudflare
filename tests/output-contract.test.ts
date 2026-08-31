@@ -27,16 +27,26 @@
  */
 
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client } from "@modelcontextprotocol/client";
+import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { createServer } from "../src/server.js";
 import { toolResult, toolError } from "../src/utils/validation.js";
 
-/** O schema que as 67 tools publicam, byte a byte, como chega ao cliente. */
+/**
+ * O schema que as 67 tools publicam, como chega ao cliente — menos o `$schema`.
+ *
+ * O DIALETO NÃO É PINADO, e a razão foi medida: na migração para o SDK v2
+ * (30/08/2026) o emissor passou de `draft-07` para `2020-12` sem que nada
+ * nosso mudasse. Quem escolhe o dialeto é o SDK; pinar a string fazia este
+ * teste reprovar uma troca de biblioteca como se fosse regressão do servidor.
+ * O que o teste guarda é a FORMA — objeto aberto, sem propriedade nenhuma —,
+ * que é o que torna a conformidade de saída automática. O `$schema` é conferido
+ * à parte: tem de existir e ser um dialeto de JSON Schema, não um valor
+ * específico.
+ */
 const SCHEMA_PERMISSIVO = {
   type: "object",
   properties: {},
-  $schema: "http://json-schema.org/draft-07/schema#",
   additionalProperties: {},
 };
 
@@ -66,7 +76,11 @@ describe("outputSchema anunciado", () => {
   it("é UM único schema permissivo, idêntico em todas — nenhuma tool pode violá-lo com um objeto", () => {
     const distintos = new Set(tools.map((t) => JSON.stringify(t.outputSchema)));
     expect(distintos.size, `schemas distintos: ${[...distintos].join(" | ")}`).toBe(1);
-    expect(tools[0]!.outputSchema).toEqual(SCHEMA_PERMISSIVO);
+    const { $schema, ...forma } = tools[0]!.outputSchema as Record<string, unknown> & {
+      $schema?: string;
+    };
+    expect(forma).toEqual(SCHEMA_PERMISSIVO);
+    expect($schema, "sumiu o $schema do outputSchema publicado").toMatch(/json-schema\.org/);
   });
 
   it("não declara campo obrigatório nem fecha o objeto — é o que torna a conformidade automática", () => {

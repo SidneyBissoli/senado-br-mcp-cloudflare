@@ -7,7 +7,7 @@
  * (janela por ano/mês via dataInicio/dataFim) e votacoes_recentes (parâmetro `dias`).
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -94,7 +94,7 @@ export function parseVotacaoItem(v: any, includeVotos = false) {
   return result;
 }
 
-export function registerVotacoesTools(server: McpServer, baseUrl: string) {
+export function registerVotacoesTools(server: SenadoToolHost, baseUrl: string) {
   // D3. senado_obter_votacao
   server.tool(
     "senado_obter_votacao",

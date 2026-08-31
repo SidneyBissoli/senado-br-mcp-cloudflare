@@ -4,7 +4,7 @@
  * (a tabela de tipos de norma migrou para senado_tabelas_referencia em referencia.ts)
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -55,7 +55,7 @@ export function parseLegislacaoDetalhe(doc: any) {
   };
 }
 
-export function registerLegislacaoTools(server: McpServer, baseUrl: string) {
+export function registerLegislacaoTools(server: SenadoToolHost, baseUrl: string) {
   // L1. senado_buscar_legislacao
   server.tool(
     "senado_buscar_legislacao",

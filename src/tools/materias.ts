@@ -9,7 +9,7 @@
  * is still the primary input (v3 accepts it as a bridge parameter).
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -152,7 +152,7 @@ async function resolveProcesso(
   return { item, fetchedAt };
 }
 
-export function registerMateriasTools(server: McpServer, baseUrl: string) {
+export function registerMateriasTools(server: SenadoToolHost, baseUrl: string) {
   // B1. senado_buscar_materias
   server.tool(
     "senado_buscar_materias",

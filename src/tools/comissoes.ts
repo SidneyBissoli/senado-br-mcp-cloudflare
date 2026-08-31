@@ -12,7 +12,7 @@
  *   /comissao/agenda/{dataInicio}/{dataFim} — agenda for date range
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -107,7 +107,7 @@ export async function resolveComissaoCodigo(sigla: string, baseUrl: string): Pro
   return match ? parseInt(match.Codigo || "0") : null;
 }
 
-export function registerComissoesTools(server: McpServer, baseUrl: string) {
+export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) {
   // E1. senado_listar_comissoes
   server.tool(
     "senado_listar_comissoes",

@@ -8,7 +8,7 @@
  * and filters/aggregates in the Worker — never returning the raw dump.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
@@ -145,7 +145,7 @@ export function estatisticasCeaps(
   };
 }
 
-export function registerSenadoresAdminTools(server: McpServer, admBaseUrl: string) {
+export function registerSenadoresAdminTools(server: SenadoToolHost, admBaseUrl: string) {
   // O1. senado_ceaps
   server.tool(
     "senado_ceaps",

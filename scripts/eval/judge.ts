@@ -24,8 +24,9 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+// Na v2 o transporte HTTP sai do ENTRY principal; na v1 vinha de
+// `@modelcontextprotocol/sdk/client/streamableHttp.js`.
+import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 
 import { loadDotEnv, postMessages } from "./api.js";
 import { extractNumbers, numberMatches, REFERENCE_SPECS, textMatches, type ReferenceSpec } from "./gabarito.js";

@@ -7,7 +7,7 @@
  * via registerResources(server). Content builders are exported for tests.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { TIPOS_MATERIA, UFS } from "./tools/referencia.js";
 
 /** Overview guide: what the server does and which tool group to reach for. */

@@ -10,7 +10,7 @@
  * normalized to numbers; aggregation happens in-Worker.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -209,7 +209,7 @@ export function estatisticasExecucao(
   };
 }
 
-export function registerOrcamentoSenadoTools(server: McpServer) {
+export function registerOrcamentoSenadoTools(server: SenadoToolHost) {
   // S1. senado_execucao_orcamentaria
   server.tool(
     "senado_execucao_orcamentaria",

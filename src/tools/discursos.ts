@@ -5,7 +5,7 @@
  * (a tabela de tipos de uso da palavra migrou para senado_tabelas_referencia em referencia.ts)
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -81,7 +81,7 @@ export function parseDiscursoPlenario(p: any) {
   };
 }
 
-export function registerDiscursosTools(server: McpServer, baseUrl: string) {
+export function registerDiscursosTools(server: SenadoToolHost, baseUrl: string) {
   // I1. senado_discursos_senador (tipo: discursos | apartes)
   server.tool(
     "senado_discursos_senador",

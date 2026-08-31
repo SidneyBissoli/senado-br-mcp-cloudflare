@@ -3,7 +3,7 @@
  * senado_orcamento_parlamentar (enum `tipo`: emendas | oficios)
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -65,7 +65,7 @@ export function parseOficio(o: any, ano?: number, incluirEmendas = false) {
   return base;
 }
 
-export function registerOrcamentoTools(server: McpServer, baseUrl: string) {
+export function registerOrcamentoTools(server: SenadoToolHost, baseUrl: string) {
   // K1. senado_orcamento_parlamentar (tipo: emendas | oficios)
   server.tool(
     "senado_orcamento_parlamentar",

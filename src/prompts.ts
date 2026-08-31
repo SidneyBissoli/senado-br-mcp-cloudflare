@@ -6,7 +6,7 @@
  * are exported as pure functions so tests can target them without a transport.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
 /** Workflow: despesas CEAPS de um senador num ano. */

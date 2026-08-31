@@ -11,7 +11,7 @@
  * `senado_servidores`.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { toolError, errorFrom } from "../utils/validation.js";
 import { buildProvenance, resultWithProvenance, SOURCES } from "../utils/provenance.js";
@@ -49,7 +49,7 @@ export function provenanceEstrutura() {
 /** Forma pública de um órgão (nunca expõe o código interno). */
 const formaOrgao = (o: { sigla: string | null; nome: string }) => ({ sigla: o.sigla, nome: o.nome });
 
-export function registerEstruturaTools(server: McpServer) {
+export function registerEstruturaTools(server: SenadoToolHost) {
   // T1. senado_estrutura_organizacional
   server.tool(
     "senado_estrutura_organizacional",

@@ -10,7 +10,7 @@
  * nos respectivos listar_*.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { toolError } from "../utils/validation.js";
@@ -94,7 +94,7 @@ export function buildConsultaDetalheResult(r: Record<string, unknown>): Record<s
 // Tool registration
 // ══════════════════════════════════════════════════════════════════════════
 
-export function registerECidadaniaTools(server: McpServer, _baseUrl: string, env: Env, ctx?: ExecutionContext) {
+export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string, env: Env, ctx?: ExecutionContext) {
   const db = env.ECIDADANIA_DB;
   // All three e-Cidadania entities are now weekly full corpora, not 2h highlight sets, so they get a
   // much larger staleness window —

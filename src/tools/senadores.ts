@@ -7,7 +7,7 @@
  * senado_senadores_afastados
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
@@ -171,7 +171,7 @@ export function matchesNome(s: { nome: string; nomeCompleto: string }, nome: str
   return normalizeText(s.nomeCompleto).includes(alvo) || normalizeText(s.nome).includes(alvo);
 }
 
-export function registerSenadoresTools(server: McpServer, baseUrl: string) {
+export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) {
   // A1. senado_listar_senadores (filtro `nome` substitui a antiga busca por nome)
   server.tool(
     "senado_listar_senadores",

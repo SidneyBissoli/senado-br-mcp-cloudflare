@@ -4,6 +4,8 @@ const counters = {
   requests: 0,
   errors: 0,
   authFailures: 0,
+  /** Lista pedida com cursor de paginação que este servidor nunca emitiu. */
+  invalidCursor: 0,
   cacheL0Hits: 0,
   cacheL1Hits: 0,
   cacheMisses: 0,

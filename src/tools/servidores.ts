@@ -8,7 +8,7 @@
  * size guard and are filtered in-Worker.
  */
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
@@ -394,7 +394,7 @@ export function particionarPorUnidade(
   };
 }
 
-export function registerServidoresTools(server: McpServer, admBaseUrl: string) {
+export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: string) {
   // P1. senado_servidores
   server.tool(
     "senado_servidores",
