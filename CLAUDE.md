@@ -75,6 +75,18 @@ Tests (`tests/`, mirroring `src/`) are pure unit tests with no network or mockin
 
 **Output contract (`tests/output-contract.test.ts`)**: the MCP spec requires `structuredContent` to obey the tool's `outputSchema`, and a client that validates (the Inspector validates) rejects the ENTIRE response when it doesn't — a hole that produced nine invisible violations in the sibling `bcb-br-mcp`. Here the exposure is structurally different and that is exactly what the test anchors: all 67 tools advertise ONE permissive schema (`z.object({}).passthrough()`, on the wire `{"type":"object","properties":{},"additionalProperties":{}}`), with no required field, so any JSON object satisfies it. The only way to violate it is a non-object `structuredContent`, which `toolResult()` prevents by wrapping arrays/primitives/null in `{ result }`. The test pins both teeth — the schema stays permissive and uniform, and `toolResult()` never yields a non-object. **If tools ever get their own output schemas, this file has to become the per-tool test with mocked sources that the rest of the portfolio uses** (model: `bcb-br-mcp/src/output-contract.test.ts`), and every nullable field then needs `.nullable()` in its schema.
 
+## Baselines de superfície
+
+`baselines/` guarda dumps normalizados de `tools/list` + resources + prompts
+(`node scripts/dump-surface.mjs --stdio | --url <endpoint>`), prática
+transplantada do bcb-br-mcp. Na captura inicial (01/09/2026, v3.6.0) stdio e
+produção saíram byte-idênticos — os dois canais rodam o mesmo `createServer`,
+então a única deriva possível é de deploy. O dump cobre o perfil `full`; a
+variante `/mcp/openai-app-v2` não é coberta. Depois de mudança que possa mexer
+na superfície: `npm run build && node scripts/dump-surface.mjs --stdio` e diff
+contra o baseline vigente; toda diferença precisa ser deliberada e listada no
+CHANGELOG. Ver `baselines/README.md`.
+
 ## Evals
 
 `evals/` holds a tool-selection eval: 47 pt-BR fixtures (`evals/fixtures/queries.ts`) scored against the live catalog (`evals/catalog.ts` rebuilds it by running the registrars — keep its `GROUPS` in sync with `src/server.ts`). The catalog/fixtures/scorer core runs offline inside `npm test`. The live run (`npx tsx evals/run.ts`) calls the Anthropic Messages API with `ANTHROPIC_API_KEY` and **bills API usage separately from any Claude subscription — never run or suggest it unless the user explicitly asks**; there is a zero-API-cost alternative via Claude Code subagents (script + instructions in `docs/_local/eval-subagentes/`).
