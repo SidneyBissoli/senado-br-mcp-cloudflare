@@ -156,7 +156,7 @@ O Claude Code a descobre automaticamente ao trabalhar neste repositório. Para u
 
 ### Pré-requisitos
 
-- Node.js 20+
+- Node.js 22+ (`engines.node`)
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) v4+
 - Conta Cloudflare
 

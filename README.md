@@ -156,7 +156,7 @@ Claude Code auto-discovers it when you work in this repo. To use it elsewhere, c
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+ (`engines.node`)
 - [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) v4+
 - Cloudflare account
 
