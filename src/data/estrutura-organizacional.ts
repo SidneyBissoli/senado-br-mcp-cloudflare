@@ -1,12 +1,12 @@
 // GERADO por scripts/ingest-estrutura/index.ts — NÃO edite à mão.
 // Snapshot da árvore organizacional do Senado (portal institucional), até o nível de serviço.
-// Extraído em 2026-08-01T08:10:35.063Z. Rode `npm run ingest:estrutura` para atualizar.
+// Extraído em 2026-09-01T10:56:16.383Z. Rode `npm run ingest:estrutura` para atualizar.
 import type { EstruturaSnapshot } from "../estrutura/tipos.js";
 
 export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
-  "extraidoEm": "2026-08-01T08:10:35.063Z",
+  "extraidoEm": "2026-09-01T10:56:16.383Z",
   "fonteUrl": "https://www12.senado.leg.br/institucional/estrutura/orgaosenado",
-  "total": 824,
+  "total": 823,
   "orgaos": [
     {
       "cod": -2072346465,
@@ -1953,12 +1953,6 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "codSuperior": null
     },
     {
-      "cod": 9426,
-      "sigla": null,
-      "nome": "Assessoria Técnica da Strans",
-      "codSuperior": 8852
-    },
-    {
       "cod": 9430,
       "sigla": null,
       "nome": "Serviço de Fomento à Pesquisa e Extensão",
@@ -2223,12 +2217,6 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "codSuperior": 9600
     },
     {
-      "cod": 9596,
-      "sigla": null,
-      "nome": "Serviço de Manutenção Eletromecânica",
-      "codSuperior": 10741
-    },
-    {
       "cod": 9600,
       "sigla": null,
       "nome": "Coordenação de Transmissão de Tv e Rádio",
@@ -2460,12 +2448,6 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "cod": 9809,
       "sigla": null,
       "nome": "Serviço de Pesquisa e Análise",
-      "codSuperior": 9807
-    },
-    {
-      "cod": 9810,
-      "sigla": null,
-      "nome": "Observatório da Mulher Contra a Violência",
       "codSuperior": 9807
     },
     {
@@ -4791,18 +4773,6 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "codSuperior": 10620
     },
     {
-      "cod": 10801,
-      "sigla": "GSBBONET",
-      "nome": "Gabinete do Senador Bruno Bonetti",
-      "codSuperior": 108
-    },
-    {
-      "cod": 10803,
-      "sigla": null,
-      "nome": "Escritório de Apoio Nº 01 do Senador Bruno Bonetti",
-      "codSuperior": 10801
-    },
-    {
       "cod": 10806,
       "sigla": "GSRACIOL",
       "nome": "Gabinete da Senadora Roberta Acioly",
@@ -4951,6 +4921,30 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "sigla": null,
       "nome": "Coordenação do Observatório da Mulher Contra a Violência",
       "codSuperior": 8852
+    },
+    {
+      "cod": 10860,
+      "sigla": "GSLPEREI",
+      "nome": "Gabinete da Senadora Lourdinha Pereira",
+      "codSuperior": 108
+    },
+    {
+      "cod": 10861,
+      "sigla": null,
+      "nome": "Escritório de Apoio Nº 01 da Senadora Lourdinha Pereira",
+      "codSuperior": 10860
+    },
+    {
+      "cod": 10862,
+      "sigla": "GSSREGIN",
+      "nome": "Gabinete do Senador Sargento Reginauro",
+      "codSuperior": 108
+    },
+    {
+      "cod": 10863,
+      "sigla": null,
+      "nome": "Escritório de Apoio Nº 01 do Senador Sargento Reginauro",
+      "codSuperior": 10862
     }
   ]
 };
