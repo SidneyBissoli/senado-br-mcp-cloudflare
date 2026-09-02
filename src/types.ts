@@ -14,6 +14,12 @@ export interface Env {
    * the per-tool telemetry. Absent = no request is ever marked.
    */
   SELF_MARKER?: string;
+  /**
+   * Temporary mcpindex.ai claim token (`wrangler secret put MCPINDEX_CHALLENGE`),
+   * served at /.well-known/mcpindex-challenge during the 15-minute ownership
+   * verification window. Absent = the route answers 404.
+   */
+  MCPINDEX_CHALLENGE?: string;
   // e-Cidadania sovereign dataset (P2). Optional so tests/local dev run without it;
   // tools fall back to live scraping when the binding or data is absent.
   ECIDADANIA_DB?: D1Database;

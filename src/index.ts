@@ -103,6 +103,22 @@ export default {
       );
     }
 
+    // mcpindex.ai ownership challenge — public. Serves the temporary token from
+    // the MCPINDEX_CHALLENGE secret (the claim's 15-minute window) as text/plain;
+    // when the secret is absent (the permanent state) the route answers 404.
+    if (url.pathname === "/.well-known/mcpindex-challenge") {
+      if (!env.MCPINDEX_CHALLENGE) {
+        return new Response("Not Found", {
+          status: 404,
+          headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" },
+        });
+      }
+      return new Response(env.MCPINDEX_CHALLENGE, {
+        status: 200,
+        headers: { "Content-Type": "text/plain", "Cache-Control": "no-store" },
+      });
+    }
+
     // CORS preflight never carries Authorization — skip auth
     if (request.method !== "OPTIONS") {
       const authResponse = await checkAuth(request, env.API_KEY);
