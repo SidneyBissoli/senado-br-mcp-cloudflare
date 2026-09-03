@@ -289,3 +289,18 @@ export const resultWithProvenance = (
   structuredContent: Record<string, unknown>;
   _meta: Record<string, unknown>;
 } => ({ ...provenanceContext.result(data, provenance) });
+
+/**
+ * Os dois canais não-textuais do envelope (`structuredContent.provenance` +
+ * `attribution`, e o espelho em `_meta`) SEM o bloco de texto — para tools cujo
+ * `content` é ditado por um contrato externo e não pode levar rodapé (`search`/
+ * `fetch` do Deep Research, em `src/tools/deep-research.ts`, cujo texto tem de
+ * ser exatamente o JSON do contrato). Deriva do mesmo `provenanceContext.result`
+ * das outras tools, então o portão de proveniência continua único.
+ */
+export function provenanceExtras(
+  provenance: Provenance | Provenance[],
+): { structured: Record<string, unknown>; meta: Record<string, unknown> } {
+  const { structuredContent, _meta } = provenanceContext.result({}, provenance);
+  return { structured: structuredContent, meta: _meta };
+}

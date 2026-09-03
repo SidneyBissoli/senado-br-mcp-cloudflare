@@ -36,6 +36,7 @@ import { registerServidoresTools } from "../src/tools/servidores.js";
 import { registerSupridosTools } from "../src/tools/supridos.js";
 import { registerOrcamentoSenadoTools } from "../src/tools/orcamento-senado.js";
 import { registerEstruturaTools } from "../src/tools/estrutura.js";
+import { registerDeepResearchToolsSenado } from "../src/tools/deep-research.js";
 
 /**
  * Minimal stub Env. The only group that reads `env` at registration time is e-Cidadania,
@@ -68,6 +69,7 @@ const GROUPS: CatalogGroup[] = [
   { area: "supridos", register: (s) => registerSupridosTools(s as never, ADM_BASE) },
   { area: "orcamento-senado", register: (s) => registerOrcamentoSenadoTools(s as never) },
   { area: "estrutura", register: (s) => registerEstruturaTools(s as never) },
+  { area: "deep-research", register: (s) => registerDeepResearchToolsSenado(s as never, LEGIS_BASE) },
 ];
 
 /** The live catalog (tools + toolNames + areaByName), built once at module load. */

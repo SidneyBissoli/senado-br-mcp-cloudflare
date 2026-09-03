@@ -6,6 +6,57 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.7.0] - 2026-09-03
+
+**`search` e `fetch` — o contrato Deep Research da OpenAI.** O deep research
+do ChatGPT (e o company knowledge, e os workflows de pesquisa da API Responses)
+só usa um servidor MCP que exponha EXATAMENTE essas duas tools; sem elas o
+servidor era conector de chat e de diretório, mas não fonte de pesquisa. 67 →
+**69 tools**. Nada muda nas 67 `senado_*`.
+
+### Added
+
+- **Grupo U — Deep Research (2 tools)**, `src/tools/deep-research.ts`, sobre
+  `@sbissoli/mcp-search` 0.3.0 (dep nova). Acervo: senadores em exercício
+  (`sen:<código>`, `/senador/lista/atual`) e colegiados ativos do Senado e do
+  Congresso (`com:<código>`, `/comissao/lista/colegiados`) — as duas listas
+  fechadas que a API publica inteiras; matérias ficam de fora (não há dump).
+  Índice em memória construído no 1º uso (mesmas chaves de cache das
+  `senado_listar_*`) e mantido por 24 h. `fetch` reusa as leituras reais de
+  `senado_obter_senador` e `senado_obter_comissao` (extraídas em
+  `fetchSenadorDetalhe`/`fetchComissaoColegiado`), com o mesmo cache e a mesma
+  proveniência. `url` é sempre a página pública humana — perfil do senador em
+  `www25.senado.leg.br` e a página da comissão em
+  `legis.senado.leg.br/comissoes/comissao?codcol=<código>` (padrão verificado ao
+  vivo: CAE, CCJ e CCAI respondem 200; código inexistente, 404).
+- Desenho "coletor + shim": a fábrica do pacote é apontada para um coletor que
+  só colhe `description` e `callback`; o registro passa pelo shim `host.tool`
+  de `createServer` como o dos outros 20 grupos — filtro de perfil, título de
+  `tool-titles.ts`, annotations, `outputSchema` permissivo ÚNICO (o gate de
+  `output-contract` fica intacto) e `instrumentTool`. As duas ficam SÓ em
+  `/mcp`; o perfil curado `/mcp/openai-app-v2` continua com 27.
+- `provenanceExtras()` em `src/utils/provenance.ts`: os canais
+  `structuredContent`/`_meta` do envelope sem o rodapé de texto — para tools
+  cujo `content` é ditado por contrato externo.
+- `npm run smoke:stdio` (o script existia sem entrada em `scripts`).
+- Seção "ChatGPT (Deep Research)" nos dois READMEs; Grupo U no inventário.
+
+### Changed
+
+- Superfície: +2 tools (`search`, `fetch`); recurso `senado://catalogo` passa
+  a listar o Grupo U e a dizer 69. Baselines `surface-*-3.6.0` → `3.7.0`.
+- `parseComissaoItem` exportada de `comissoes.ts` (era mapeamento inline em
+  `senado_listar_comissoes`).
+
+### Fixed
+
+- `scripts/smoke-stdio.mjs` pinava **66** tools — já estava errado (o servidor
+  registrava 67) e ninguém viu porque nada o executava. Agora deriva a contagem do baseline
+  `surface-stdio-<v>.json` mais recente e exercita `search` → `fetch` +
+  id desconhecido ao vivo.
+- README pt-BR dizia "25 ferramentas" no perfil curado do ChatGPT App
+  (são 27; a frase quebrava linha e escapava do teste de contagem).
+
 ## [3.6.0] - 2026-08-30
 
 Migra para o **MCP SDK v2** (`@modelcontextprotocol/server` 2.0.0) e fecha os

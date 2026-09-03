@@ -2,7 +2,7 @@
 
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-1f6feb)
-![Tools](https://img.shields.io/badge/tools-67-2ea44f)
+![Tools](https://img.shields.io/badge/tools-69-2ea44f)
 [![CI](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare/actions/workflows/ci.yml/badge.svg)](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare/actions/workflows/ci.yml)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
 [![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
@@ -17,7 +17,7 @@
 
 A **public, hosted** MCP server that gives AI assistants live, structured access to **Brazilian Senate open data** — **no installation, no account, no API key**. Point your MCP client at the hosted endpoint and start asking about senators, bills, votes, expenses, and more. It runs on Cloudflare Workers over Streamable HTTP.
 
-It exposes **67 tools**, **4 prompts**, and **5 resources** across two domains:
+It exposes **69 tools**, **4 prompts**, and **5 resources** across two domains:
 
 - **Legislative** — senators; bills and their tramitation; votes; committees; plenary sessions, results and presidential vetoes; party-bloc voting orientation; speeches and stenographic transcripts; blocs and leadership; federal legislation; and citizen participation via the e-Cidadania portal.
 - **Administrative** — CEAPS parliamentary-quota expenses; housing allowance; civil servants and payroll; overtime; interns; procurement contracts and biddings; outsourced staff; petty-cash funds; and budget execution.
@@ -68,6 +68,16 @@ Public legal URLs for app review:
 - Privacy policy: `https://senado.sidneybissoli.com/privacy`
 - Terms of use: `https://senado.sidneybissoli.com/terms`
 
+### ChatGPT (Deep Research)
+
+ChatGPT deep research (and company knowledge, and research workflows over the Responses API) only uses an MCP server that exposes exactly `search` and `fetch` — this server does, on top of the `senado_*` tools, on the full `/mcp` surface (not on the curated app profile). Point the connector at the hosted endpoint, no key required:
+
+```
+https://senado.sidneybissoli.com/mcp
+```
+
+`search` ranks the query against the senators in office and the active committees of the Senate and the National Congress and returns `{ id, title, url }` (`sen:<código>` / `com:<código>`); `fetch` returns the document as readable Markdown — the senator's biography and mandates, or the committee's summary and board — with the canonical public page (the senator's profile on www25.senado.leg.br or the committee page on legis.senado.leg.br), which is what ChatGPT cites. Both carry the same provenance block as every other tool, in `structuredContent` and `_meta` (the text channel is the contract's JSON). In ChatGPT's developer mode (Settings → Security and login → Developer mode) any tool is callable — the `senado_*` tools remain the ones to use for data.
+
 ### Install (any client)
 
 For clients that launch MCP servers as a command — and for one-command setup — use the
@@ -87,7 +97,7 @@ own instance** — it is **not** required to use this public server.
 
 Prefer not to route queries through a third-party host (e.g. a newsroom policy)? The **same server**
 also runs as a **local stdio process** that talks **directly to the official government APIs** — same
-67 tools, same provenance envelope, no Cloudflare in the loop. This is the npm/stdio channel, published
+69 tools, same provenance envelope, no Cloudflare in the loop. This is the npm/stdio channel, published
 as [`senado-br-mcp`](https://www.npmjs.com/package/senado-br-mcp).
 
 Point a command-based client (Claude Desktop/Code, etc.) at the package — npm fetches and runs it,
@@ -125,7 +135,7 @@ list/corpus tools: without D1 they fall back to a live scrape of the ~5 REST hig
 
 This repo bundles a Claude [Agent Skill](https://platform.claude.com/docs/en/docs/agents-and-tools/agent-skills/overview)
 at [`.claude/skills/senado-br/`](.claude/skills/senado-br/SKILL.md) that teaches Claude **when** to reach for
-this server and **how** to use its 67 tools well — a themed tool map, common question→tool playbooks, the
+this server and **how** to use its 69 tools well — a themed tool map, common question→tool playbooks, the
 provenance contract, and gotchas (dates, the `codigoMateria` bridge, e-Cidadania's open-set listing, pagination).
 It points back to the server's own `senado://catalogo` / `senado://guia` resources rather than duplicating them.
 
@@ -535,7 +545,7 @@ In addition to the `provenance` envelope, `structuredContent` carries a top-leve
 
 `retrieved_at` fidelity is provided by the cache layer (`cachedFetchWithMeta`), which persists the fetch timestamp alongside the value, so it reflects the real upstream extraction even on a cache hit. Two exceptions report an honest live timestamp instead: the e-Cidadania **list** tools (read from D1) use the corpus's `lastScrapedAt` — the true age of the stored data — while e-Cidadania **detail** tools, scraped live, use the fetch time and a level-3 canonical item URL. The only path that falls back to the build-time default is the in-code static reference catalog (`senado_tabelas_referencia` `tipos-materia`), which has no upstream extraction instant.
 
-Coverage is **universal**: all 67 tools carry the envelope (verify with `grep -c 'resultWithProvenance(' src/tools/*.ts`). The **⊕** marks in the inventory below denote the original pilot tools (votes, bills, processes); the envelope now extends to every tool, so the marks are historical.
+Coverage is **universal**: all 69 tools carry the envelope — the 67 `senado_*` tools via `resultWithProvenance(` (verify with `grep -c 'resultWithProvenance(' src/tools/*.ts`) and the two Deep Research tools via `provenanceExtras` (same block, in `structuredContent`/`_meta`, since their text channel is the contract's JSON). The **⊕** marks in the inventory below denote the original pilot tools (votes, bills, processes); the envelope now extends to every tool, so the marks are historical.
 
 ## Citable dataset (e-Cidadania participation)
 
@@ -739,7 +749,16 @@ Reads a bundled snapshot of the Senate's organizational tree (crawled from the i
 |------|-------------|
 | `senado_estrutura_organizacional` | Organizational chart (organograma) resolved for a `unidade` (sigla like `DGER` or name): returns its `caminho` (ancestors) and every subordinate unit (`subordinadas[]` — secretarias, coordenações, serviços, núcleos — with `nivel`). Pairs with `senado_servidores`'s `subordinadasA` filter, which counts/lists all servants under a whole directorate (a servant sits in a leaf serviço, so filtering `lotacao` by the parent sigla returns 0). |
 
-**Total: 67 tools**
+### Group U — Deep Research (2 tools)
+
+The [OpenAI Deep Research contract](#chatgpt-deep-research): the only two tools without the `senado_` prefix, because the names are fixed by the contract. Registered through the same shim as the others (read-only annotations, permissive `outputSchema`, per-tool telemetry) and served on `/mcp` only — the curated ChatGPT app profile does not include them. The index (senators in office + active committees, ~300 documents) is built on first use from the same two list endpoints the `senado_listar_*` tools read, and kept for 24 h.
+
+| Tool | Description |
+|------|-------------|
+| `search` | Ranks the query (natural language or keywords, pt/en, accent-insensitive) against senators in office and active committees; returns up to 10 `{ id, title, url }` — `sen:<código>` with the public profile URL, `com:<código>` with the public committee page. Provenance of both lists in `structuredContent`/`_meta`. |
+| `fetch` | Returns the document for an id from `search` as `{ id, title, text, url, metadata }`: the senator's biography and mandates (same read as `senado_obter_senador`) or the committee's summary and board (same read as `senado_obter_comissao`), as Markdown, with that read's provenance. Unknown id → error. |
+
+**Total: 69 tools**
 
 ### Prompts (4)
 
@@ -759,7 +778,7 @@ Static context documents/tables (MCP `resources` capability), defined in `src/re
 | URI | Type | Content |
 | --- | --- | --- |
 | `senado://guia` | markdown | Visão geral e qual ferramenta usar por objetivo. |
-| `senado://catalogo` | markdown | As 67 ferramentas agrupadas por domínio. |
+| `senado://catalogo` | markdown | As 69 ferramentas agrupadas por domínio. |
 | `senado://glossario` | markdown | Siglas e termos do Senado (PEC, CEAPS, CCJ, RCN…). |
 | `senado://tabelas/tipos-materia` | json | Tipos de proposição (sigla/nome/descrição). |
 | `senado://tabelas/ufs` | json | As 27 unidades federativas. |
@@ -848,7 +867,7 @@ tests/                    # Vitest unit tests mirroring src/ (parsers, cache, th
 ## Connecting MCP Clients
 
 This is a **remote** server (Streamable HTTP, no install, open access) — point any MCP client at
-`https://senado.sidneybissoli.com/mcp`. Besides 67 tools, it exposes **prompts** (ready-made pt-BR
+`https://senado.sidneybissoli.com/mcp`. Besides 69 tools, it exposes **prompts** (ready-made pt-BR
 workflows: `senado_gastos_senador`, `senado_tramitacao_materia`, `senado_votos_senador`,
 `senado_panorama_ecidadania`) and **resources** (`senado://guia`, `senado://catalogo`,
 `senado://glossario`, `senado://tabelas/tipos-materia`, `senado://tabelas/ufs`).

@@ -23,7 +23,7 @@ describe("createServer", () => {
     const tools = (server as any)._registeredTools;
     expect(tools).toBeDefined();
     const names = Object.keys(tools);
-    expect(names.length).toBe(67);
+    expect(names.length).toBe(69);
   });
 
   it("registers at least one tool from every group", () => {
@@ -49,6 +49,9 @@ describe("createServer", () => {
       "senado_contratos",               // Q
       "senado_suprimento_fundos",       // R
       "senado_execucao_orcamentaria",   // S
+      "senado_estrutura_organizacional",// T
+      "search",                         // U (Deep Research — sem prefixo, por contrato)
+      "fetch",                          // U
     ];
     for (const name of representatives) {
       expect(names, `tool ${name} não registrado`).toContain(name);

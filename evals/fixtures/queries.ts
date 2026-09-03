@@ -327,4 +327,18 @@ export const FIXTURES: EvalFixture[] = [
     expectedTools: ["senado_execucao_orcamentaria"],
     note: "Execução orçamentária da casa — neighbor de orcamento_parlamentar (que é emenda à União).",
   },
+
+  // --- deep research (contrato OpenAI: search/fetch, sem prefixo) ----------
+  {
+    id: "dr-01",
+    query: "Pesquise no acervo do Senado documentos sobre a Comissão de Assuntos Econômicos e me dê o id para ler o inteiro.",
+    expectedTools: ["search", "senado_listar_comissoes"],
+    note: "Pedido explícito de pesquisa no acervo com id para leitura — o search do Deep Research; listar_comissoes é a alternativa defensável.",
+  },
+  {
+    id: "dr-02",
+    query: "Leia o documento com id sen:5322 que a busca devolveu.",
+    expectedTools: ["fetch"],
+    note: "Id prefixado devolvido pelo search — só o fetch o resolve.",
+  },
 ];

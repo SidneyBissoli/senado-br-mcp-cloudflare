@@ -35,6 +35,7 @@
     "eval:judge": "tsx scripts/eval/judge.ts",
     "eval:report": "tsx scripts/eval/report.ts",
     "smoke:openai-app": "node scripts/smoke-openai-app.mjs",
+    "smoke:stdio": "node scripts/smoke-stdio.mjs",
     "ingest:ecidadania": "tsx scripts/ingest-ecidadania/index.ts",
     "ingest:ecidadania:eventos": "tsx scripts/ingest-ecidadania/index-eventos.ts",
     "ingest:ecidadania:ideias": "tsx scripts/ingest-ecidadania/index-ideias.ts",
@@ -50,6 +51,7 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "@sbissoli/mcp-provenance": "^0.1.0",
+    "@sbissoli/mcp-search": "^0.3.0",
     "@sbissoli/mcp-stats": "^0.2.0",
     "zod": "^4.5.4"
   },

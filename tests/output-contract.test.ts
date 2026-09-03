@@ -66,8 +66,8 @@ afterAll(async () => {
 });
 
 describe("outputSchema anunciado", () => {
-  it("as 67 tools declaram outputSchema", () => {
-    expect(tools).toHaveLength(67);
+  it("as 69 tools declaram outputSchema", () => {
+    expect(tools).toHaveLength(69);
     for (const tool of tools) {
       expect(tool.outputSchema, `${tool.name} sem outputSchema`).toBeDefined();
     }

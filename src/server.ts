@@ -25,6 +25,7 @@ import { registerServidoresTools } from "./tools/servidores.js";
 import { registerSupridosTools } from "./tools/supridos.js";
 import { registerOrcamentoSenadoTools } from "./tools/orcamento-senado.js";
 import { registerEstruturaTools } from "./tools/estrutura.js";
+import { registerDeepResearchToolsSenado } from "./tools/deep-research.js";
 import { registerPrompts } from "./prompts.js";
 import { registerResources } from "./resources.js";
 import { instrumentTool } from "./instrument.js";
@@ -178,6 +179,10 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
 
   // Group T — Estrutura Organizacional (1 tool — árvore de órgãos, snapshot bundlado)
   registerEstruturaTools(host);
+
+  // Group U — Deep Research (2 tools: `search`/`fetch`, o contrato OpenAI — os únicos
+  // nomes sem o prefixo `senado_`; passam pelo mesmo shim que os outros)
+  registerDeepResearchToolsSenado(host, baseUrl);
 
   // MCP prompts (4 reusable pt-BR workflow templates) and resources (5 static
   // context docs/tables) — advertised as the `prompts` and `resources` capabilities.

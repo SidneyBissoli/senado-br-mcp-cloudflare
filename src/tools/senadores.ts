@@ -171,6 +171,44 @@ export function matchesNome(s: { nome: string; nomeCompleto: string }, nome: str
   return normalizeText(s.nomeCompleto).includes(alvo) || normalizeText(s.nome).includes(alvo);
 }
 
+/**
+ * A leitura de `senado_obter_senador`: detalhe biográfico + mandatos (sub-endpoint,
+ * degrada para lista vazia). Exportada porque o `fetch` do Deep Research
+ * (`deep-research.ts`) é este mesmo documento, com a mesma proveniência e o
+ * mesmo cache — `path` é o que entra em `provenanceFor`.
+ */
+export async function fetchSenadorDetalhe(codigoSenador: number, baseUrl: string) {
+  const path = `/senador/${codigoSenador}`;
+  const { value: response, fetchedAt } = await cachedFetchWithMeta(
+    "senado_obter_senador",
+    { codigo: codigoSenador },
+    CACHE_ON_DEMAND,
+    () => upstreamFetch(path, {}, baseUrl),
+  );
+  const dados = (response as any).DetalheParlamentar || response;
+  const detalhe = parseSenadorDetalhe(dados);
+  // The /senador/{codigo} detail carries no Mandatos; fetch the sub-endpoint.
+  // Degrade to an empty list if it fails, keeping the biographical data.
+  let mandatos: ReturnType<typeof parseMandato>[] = [];
+  try {
+    const mandatosPath = `/senador/${codigoSenador}/mandatos`;
+    const { value: mResp } = await cachedFetchWithMeta(
+      "senado_obter_senador_mandatos",
+      { codigo: codigoSenador },
+      CACHE_ON_DEMAND,
+      () => upstreamFetch(mandatosPath, {}, baseUrl),
+    );
+    mandatos = digArrayRoot(
+      mResp,
+      [["MandatoParlamentar", "Parlamentar", "Mandatos", "Mandato"]],
+      "senado_obter_senador:mandatos",
+    ).map(parseMandato);
+  } catch {
+    // sub-endpoint unavailable — keep the (empty) mandatos from the detail
+  }
+  return { path, fetchedAt, detalhe: { ...detalhe, mandatos } };
+}
+
 export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) {
   // A1. senado_listar_senadores (filtro `nome` substitui a antiga busca por nome)
   server.tool(
@@ -225,39 +263,12 @@ export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) 
     },
     async (params) => {
       try {
-        const path = `/senador/${params.codigoSenador}`;
-        const { value: response, fetchedAt } = await cachedFetchWithMeta(
-          "senado_obter_senador",
-          { codigo: params.codigoSenador },
-          CACHE_ON_DEMAND,
-          () => upstreamFetch(path, {}, baseUrl),
-        );
-        const dados = (response as any).DetalheParlamentar || response;
-        const detalhe = parseSenadorDetalhe(dados);
-        // The /senador/{codigo} detail carries no Mandatos; fetch the sub-endpoint.
-        // Degrade to an empty list if it fails, keeping the biographical data.
-        let mandatos: ReturnType<typeof parseMandato>[] = [];
-        try {
-          const mandatosPath = `/senador/${params.codigoSenador}/mandatos`;
-          const { value: mResp } = await cachedFetchWithMeta(
-            "senado_obter_senador_mandatos",
-            { codigo: params.codigoSenador },
-            CACHE_ON_DEMAND,
-            () => upstreamFetch(mandatosPath, {}, baseUrl),
-          );
-          mandatos = digArrayRoot(
-            mResp,
-            [["MandatoParlamentar", "Parlamentar", "Mandatos", "Mandato"]],
-            "senado_obter_senador:mandatos",
-          ).map(parseMandato);
-        } catch {
-          // sub-endpoint unavailable — keep the (empty) mandatos from the detail
-        }
+        const { path, fetchedAt, detalhe } = await fetchSenadorDetalhe(params.codigoSenador, baseUrl);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `codigoParlamentar=${params.codigoSenador}`,
           retrieved_at: fetchedAt,
         });
-        return resultWithProvenance({ ...detalhe, mandatos }, prov);
+        return resultWithProvenance(detalhe, prov);
       } catch (e) {
         return errorFrom(e, "Senador não encontrado");
       }

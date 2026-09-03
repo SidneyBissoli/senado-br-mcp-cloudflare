@@ -15,7 +15,7 @@ export function buildGuia(): string {
   return `# Senado BR MCP — guia de uso
 
 Servidor MCP de dados abertos do Senado Federal (API legislativa, API administrativa e portal
-e-Cidadania). 67 ferramentas, respostas em pt-BR. Abaixo, por onde começar conforme o objetivo.
+e-Cidadania). 69 ferramentas, respostas em pt-BR. Abaixo, por onde começar conforme o objetivo.
 
 ## Senadores
 - \`senado_listar_senadores\` — lista/busca por nome, UF ou partido (use o filtro \`nome\` quando só tiver o nome).
@@ -55,9 +55,9 @@ Dica: vários tools usam um parâmetro enum (\`secao\`/\`tipo\`/\`por\`/\`modo\`
 leia a descrição do tool para os valores aceitos.`;
 }
 
-/** Compact grouped catalog of all 67 tools. */
+/** Compact grouped catalog of all 69 tools. */
 export function buildCatalogo(): string {
-  return `# Catálogo de ferramentas (67)
+  return `# Catálogo de ferramentas (69)
 
 A — Senadores (5): senado_listar_senadores, senado_obter_senador, senado_votacoes_senador, senado_senador_historico, senado_senadores_afastados
 B — Matérias (2): senado_buscar_materias, senado_obter_materia
@@ -78,7 +78,8 @@ P — Servidores (4): senado_servidores, senado_remuneracoes_servidores, senado_
 Q — Contratações (6): senado_contratos, senado_contratacao_detalhe, senado_licitacoes, senado_terceirizados, senado_empresas_contratadas, senado_contratacoes_lista
 R — Suprimento de fundos (1): senado_suprimento_fundos
 S — Orçamento do Senado (1): senado_execucao_orcamentaria
-T — Estrutura organizacional (1): senado_estrutura_organizacional`;
+T — Estrutura organizacional (1): senado_estrutura_organizacional
+U — Deep Research (2, contrato OpenAI, sem prefixo): search, fetch`;
 }
 
 /** Glossary of common Senate acronyms and terms. */
@@ -132,7 +133,7 @@ export function registerResources(server: McpServer) {
     "senado://catalogo",
     {
       title: "Catálogo de ferramentas",
-      description: "Lista das 67 ferramentas agrupadas por domínio.",
+      description: "Lista das 69 ferramentas agrupadas por domínio.",
       mimeType: "text/markdown",
     },
     (uri) => ({ contents: [{ uri: uri.href, mimeType: "text/markdown", text: buildCatalogo() }] }),

@@ -4,7 +4,7 @@
  * The Anthropic Connectors Directory review requires a `title` annotation on
  * each tool (alongside `readOnlyHint`). The central shim in `server.ts` injects
  * `annotations.title = TOOL_TITLES[name]` for each tool, so this map must stay
- * in sync with the 67 registered tools — the coverage test in
+ * in sync with the 69 registered tools — the coverage test in
  * `tests/tool-titles.test.ts` fails if a registered tool is missing an entry.
  *
  * Titles are short, user-facing display labels (pt-BR), not descriptions.
@@ -116,6 +116,11 @@ export const TOOL_TITLES: Record<string, string> = {
 
   // Estrutura organizacional
   senado_estrutura_organizacional: "Estrutura organizacional",
+
+  // Deep Research (contrato OpenAI — os únicos nomes sem o prefixo `senado_`;
+  // os mesmos títulos padrão pt-BR da fábrica de @sbissoli/mcp-search)
+  search: "Busca para Deep Research",
+  fetch: "Documento para Deep Research",
 };
 
 /**

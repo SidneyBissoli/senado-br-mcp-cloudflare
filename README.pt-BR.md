@@ -2,7 +2,7 @@
 
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare%20Workers-F38020?logo=cloudflare&logoColor=white)
 ![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-1f6feb)
-![Tools](https://img.shields.io/badge/tools-67-2ea44f)
+![Tools](https://img.shields.io/badge/tools-69-2ea44f)
 [![CI](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare/actions/workflows/ci.yml/badge.svg)](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare/actions/workflows/ci.yml)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
 [![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
@@ -16,7 +16,7 @@
 
 Um servidor MCP **público e hospedado** que dá aos assistentes de IA acesso ao vivo e estruturado aos **dados abertos do Senado Federal do Brasil** — **sem instalação, sem conta, sem chave de API**. Aponte o seu cliente MCP para o endpoint hospedado e comece a perguntar sobre senadores, matérias, votações, despesas e muito mais. Roda em Cloudflare Workers via Streamable HTTP.
 
-Expõe **67 ferramentas**, **4 prompts** e **5 recursos** em dois domínios:
+Expõe **69 ferramentas**, **4 prompts** e **5 recursos** em dois domínios:
 
 - **Legislativo** — senadores; matérias e sua tramitação; votações; comissões; sessões plenárias, resultados e vetos presidenciais; orientação de bancada nas votações; discursos e notas taquigráficas; blocos e lideranças; legislação federal; e participação cidadã pelo portal e-Cidadania.
 - **Administrativo** — despesas da cota parlamentar (CEAPS); auxílio-moradia; servidores e remunerações; horas extras; estagiários; contratos e licitações; terceirizados; suprimento de fundos; e execução orçamentária.
@@ -50,7 +50,7 @@ Para submissao e revisao pelo OpenAI Apps SDK, o Worker tambem expoe uma superfi
 https://senado.sidneybissoli.com/mcp/openai-app-v2
 ```
 
-Esse endpoint preserva o servidor MCP publico completo em `/mcp`, mas limita a descoberta a 25
+Esse endpoint preserva o servidor MCP publico completo em `/mcp`, mas limita a descoberta a 27
 ferramentas de alto sinal, organizadas por intencao de usuario, para uso como app do ChatGPT.
 `/mcp/openai-app` continua disponivel como alias legado, mas novas configuracoes do app no ChatGPT
 devem usar `/mcp/openai-app-v2` para forcar a leitura do schema atual das ferramentas. As ferramentas
@@ -67,6 +67,16 @@ URLs publicas legais para revisao do app:
 
 - Politica de privacidade: `https://senado.sidneybissoli.com/privacy`
 - Termos de uso: `https://senado.sidneybissoli.com/terms`
+
+### ChatGPT (Deep Research)
+
+O deep research do ChatGPT (e o company knowledge, e os workflows de pesquisa da API Responses) só usa um servidor MCP que exponha exatamente `search` e `fetch` — este servidor expõe, além das ferramentas `senado_*`, na superfície completa `/mcp` (não no perfil curado do app). Aponte o conector para o endpoint hospedado, sem chave:
+
+```
+https://senado.sidneybissoli.com/mcp
+```
+
+`search` ranqueia a consulta contra os senadores em exercício e as comissões ativas do Senado e do Congresso Nacional e devolve `{ id, title, url }` (`sen:<código>` / `com:<código>`); `fetch` devolve o documento em Markdown legível — a biografia e os mandatos do senador, ou o resumo e a mesa da comissão — com a página pública canônica (o perfil do senador em www25.senado.leg.br ou a página da comissão em legis.senado.leg.br), que é o que o ChatGPT cita. As duas carregam o mesmo bloco de proveniência das outras ferramentas, em `structuredContent` e `_meta` (o canal de texto é o JSON do contrato). No modo desenvolvedor do ChatGPT (Settings → Security and login → Developer mode) qualquer ferramenta é chamável — as `senado_*` continuam sendo as ferramentas para dados.
 
 ### Instalação (qualquer cliente)
 
@@ -87,7 +97,7 @@ própria instância** — **não** é necessário para usar este servidor públi
 
 Prefere não rotear suas consultas por um servidor de terceiros (ex.: política de uma redação)? O **mesmo
 servidor** também roda como um **processo local stdio** que bate **direto nas APIs oficiais do governo** —
-as mesmas 67 ferramentas, o mesmo envelope de proveniência, sem Cloudflare no caminho. É o canal npm/stdio,
+as mesmas 69 ferramentas, o mesmo envelope de proveniência, sem Cloudflare no caminho. É o canal npm/stdio,
 publicado como [`senado-br-mcp`](https://www.npmjs.com/package/senado-br-mcp).
 
 Aponte um cliente baseado em comando (Claude Desktop/Code, etc.) para o pacote — o npm baixa e executa,
@@ -125,7 +135,7 @@ Os logs vão para o **stderr** — o stdout carrega apenas o fluxo do protocolo 
 
 Este repositório inclui uma [Agent Skill](https://platform.claude.com/docs/en/docs/agents-and-tools/agent-skills/overview)
 do Claude em [`.claude/skills/senado-br/`](.claude/skills/senado-br/SKILL.md) que ensina o Claude **quando**
-recorrer a este servidor e **como** usar bem as 67 ferramentas — um mapa de ferramentas por tema, playbooks de
+recorrer a este servidor e **como** usar bem as 69 ferramentas — um mapa de ferramentas por tema, playbooks de
 pergunta→ferramenta, o contrato de proveniência e os gotchas (datas, a ponte `codigoMateria`, a listagem
 só-abertas do e-Cidadania, paginação). Ela aponta para os recursos `senado://catalogo` / `senado://guia` do
 próprio servidor em vez de duplicá-los.
@@ -709,7 +719,16 @@ Lê um retrato embutido da árvore organizacional do Senado (varrida do portal i
 |------|-------------|
 | `senado_estrutura_organizacional` | Organograma resolvido para uma `unidade` (sigla como `DGER` ou nome): devolve o `caminho` (ancestrais) e todas as unidades subordinadas (`subordinadas[]` — secretarias, coordenações, serviços, núcleos — com `nivel`). Faz par com o filtro `subordinadasA` de `senado_servidores`, que conta/lista todos os servidores sob uma diretoria inteira (o servidor fica num serviço-folha, então filtrar `lotacao` pela sigla do pai devolve 0). |
 
-**Total: 67 ferramentas**
+### Grupo U — Deep Research (2 ferramentas)
+
+O [contrato Deep Research da OpenAI](#chatgpt-deep-research): as únicas duas ferramentas sem o prefixo `senado_`, porque os nomes são fixados pelo contrato. Registradas pelo mesmo shim das outras (annotations somente-leitura, `outputSchema` permissivo, telemetria por ferramenta) e servidas só em `/mcp` — o perfil curado do app do ChatGPT não as inclui. O índice (senadores em exercício + comissões ativas, ~300 documentos) é construído no primeiro uso a partir dos mesmos dois endpoints de lista que as ferramentas `senado_listar_*` leem, e mantido por 24 h.
+
+| Ferramenta | Descrição |
+|------|-------------|
+| `search` | Ranqueia a consulta (linguagem natural ou palavras-chave, pt/en, sem distinguir acentos) contra senadores em exercício e comissões ativas; devolve até 10 `{ id, title, url }` — `sen:<código>` com a URL do perfil público, `com:<código>` com a página pública da comissão. Proveniência das duas listas em `structuredContent`/`_meta`. |
+| `fetch` | Devolve o documento de um id vindo de `search` como `{ id, title, text, url, metadata }`: a biografia e os mandatos do senador (a mesma leitura de `senado_obter_senador`) ou o resumo e a mesa da comissão (a mesma leitura de `senado_obter_comissao`), em Markdown, com a proveniência dessa leitura. Id desconhecido → erro. |
+
+**Total: 69 ferramentas**
 
 ### Prompts (4)
 
@@ -729,7 +748,7 @@ Documentos/tabelas de contexto estáticos (capacidade MCP `resources`), definido
 | URI | Tipo | Conteúdo |
 | --- | --- | --- |
 | `senado://guia` | markdown | Visão geral e qual ferramenta usar por objetivo. |
-| `senado://catalogo` | markdown | As 67 ferramentas agrupadas por domínio. |
+| `senado://catalogo` | markdown | As 69 ferramentas agrupadas por domínio. |
 | `senado://glossario` | markdown | Siglas e termos do Senado (PEC, CEAPS, CCJ, RCN…). |
 | `senado://tabelas/tipos-materia` | json | Tipos de proposição (sigla/nome/descrição). |
 | `senado://tabelas/ufs` | json | As 27 unidades federativas. |
@@ -813,7 +832,7 @@ tests/                    # Testes unitários Vitest espelhando src/ (parsers, c
 ## Conectando clientes MCP
 
 Este é um servidor **remoto** (Streamable HTTP, sem instalação, acesso aberto) — aponte qualquer cliente MCP para
-`https://senado.sidneybissoli.com/mcp`. Além das 67 ferramentas, ele expõe **prompts** (workflows prontos em pt-BR:
+`https://senado.sidneybissoli.com/mcp`. Além das 69 ferramentas, ele expõe **prompts** (workflows prontos em pt-BR:
 `senado_gastos_senador`, `senado_tramitacao_materia`, `senado_votos_senador`,
 `senado_panorama_ecidadania`) e **recursos** (`senado://guia`, `senado://catalogo`,
 `senado://glossario`, `senado://tabelas/tipos-materia`, `senado://tabelas/ufs`).

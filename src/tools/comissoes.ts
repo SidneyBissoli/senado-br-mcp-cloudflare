@@ -95,6 +95,22 @@ export function parseComissaoResumo(colegiado: any, sigla: string, secao: string
   return payload;
 }
 
+/**
+ * Um item de `/comissao/lista/colegiados` na forma que `senado_listar_comissoes`
+ * devolve. Exportado porque o índice do Deep Research (`deep-research.ts`) lê a
+ * mesma lista e precisa da mesma projeção.
+ */
+export function parseComissaoItem(c: any) {
+  return {
+    codigo: parseInt(c.Codigo || "0"),
+    sigla: c.Sigla || "",
+    nome: c.Nome || "",
+    tipo: (c.DescricaoTipoColegiado as string | undefined) || null,
+    casa: (c.SiglaCasa as string | undefined) || null,
+    ativa: true, // this endpoint only returns active committees
+  };
+}
+
 /** Resolve a committee sigla to its numeric code via the list endpoint. */
 export async function resolveComissaoCodigo(sigla: string, baseUrl: string): Promise<number | null> {
   const response = await cachedFetch("senado_listar_comissoes", {}, CACHE_SEMI_STATIC, () =>
@@ -105,6 +121,24 @@ export async function resolveComissaoCodigo(sigla: string, baseUrl: string): Pro
   const upper = sigla.toUpperCase();
   const match = comissoes.find((c: any) => (c.Sigla || "").toUpperCase() === upper);
   return match ? parseInt(match.Codigo || "0") : null;
+}
+
+/**
+ * A leitura da seção `resumo` de `senado_obter_comissao` a partir do código
+ * numérico: o Colegiado cru de `/comissao/{codigo}` (ou `undefined` quando a
+ * fonte não o traz). Exportada porque o `fetch` do Deep Research
+ * (`deep-research.ts`) é este mesmo documento, com o mesmo cache — `path` é o
+ * que entra em `provenanceFor`.
+ */
+export async function fetchComissaoColegiado(codigo: number, baseUrl: string) {
+  const path = `/comissao/${codigo}`;
+  const { value: response, fetchedAt } = await cachedFetchWithMeta(
+    "senado_obter_comissao", { codigo }, CACHE_SEMI_STATIC,
+    () => upstreamFetch(path, {}, baseUrl),
+  );
+  const r = response as any;
+  const colegiado = ensureArray(r?.ComissoesCongressoNacional?.Colegiados?.Colegiado)[0];
+  return { path, fetchedAt, colegiado };
 }
 
 export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) {
@@ -125,14 +159,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
         const r = response as any;
         let comissoes = ensureArray(
           r?.ListaColegiados?.Colegiados?.Colegiado,
-        ).map((c: any) => ({
-          codigo: parseInt(c.Codigo || "0"),
-          sigla: c.Sigla || "",
-          nome: c.Nome || "",
-          tipo: c.DescricaoTipoColegiado || null,
-          casa: c.SiglaCasa || null,
-          ativa: true, // this endpoint only returns active committees
-        }));
+        ).map(parseComissaoItem);
         if (params.tipo === "mista") {
           // No DescricaoTipoColegiado equals "mista"; the mistas (CMO, CCAI, CMMC, CMCVM,
           // CMMIR and the CMMPVs) are identifiable by "Mista" in the name.
@@ -206,15 +233,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
           return resultWithProvenance({ sigla, secao, count: membros.length, membros }, prov);
         }
 
-        const resumoPath = `/comissao/${codigo}`;
-        const { value: response, fetchedAt } = await cachedFetchWithMeta(
-          "senado_obter_comissao", { codigo }, CACHE_SEMI_STATIC,
-          () => upstreamFetch(resumoPath, {}, baseUrl),
-        );
-        const r = response as any;
-        const colegiado = ensureArray(
-          r?.ComissoesCongressoNacional?.Colegiados?.Colegiado,
-        )[0];
+        const { path: resumoPath, fetchedAt, colegiado } = await fetchComissaoColegiado(codigo, baseUrl);
         if (!colegiado) return toolError("Dados da comissão não encontrados.");
 
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, resumoPath, {
