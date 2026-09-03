@@ -2,7 +2,7 @@
   "identifier": "sidneybissoli-senado-br-mcp-cloudflare",
   "name": "Dados Abertos Senado BR - MCP",
   "icon": "🏛️",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "Independent MCP server for Brazilian Federal Senate open data — read-only tools, prompts and resources across the legislative process, Senate administration and the e-Cidadania portal. Cloudflare Workers, Streamable HTTP, no auth. Not affiliated with or endorsed by the Senate, OpenAI or ChatGPT. Responses in pt-BR. MIT licensed.",
   "author": "Sidney Bissoli",
   "authorUrl": "https://github.com/SidneyBissoli",
