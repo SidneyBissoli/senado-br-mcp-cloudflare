@@ -48,7 +48,6 @@
     "release:zenodo": "tsx scripts/build-dataset/zenodo-publish.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.30.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "@sbissoli/mcp-provenance": "^0.1.0",
     "@sbissoli/mcp-search": "^0.3.0",
@@ -58,6 +57,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260830.1",
     "@modelcontextprotocol/client": "^2.0.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@sbissoli/mcp-evals": "^0.1.0",
     "@types/node": "^26.4.0",
     "agents": "^0.22.0",

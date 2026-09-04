@@ -148,7 +148,7 @@ Claude Code auto-discovers it when you work in this repo. To use it elsewhere, c
 - **Runtime:** Cloudflare Workers (ESM)
 - **Transport:** Streamable HTTP (MCP spec 2025-03-26) via `createMcpHandler` from `agents/mcp`
 - **Protocol:** MCP over JSON-RPC — `/mcp` handles the full public server; `/mcp/openai-app-v2` exposes a curated 27-tool profile plus a shared MCP Apps widget for OpenAI app review/submission (`/mcp/openai-app` remains as a legacy alias)
-- **SDK:** `@modelcontextprotocol/sdk` 1.26.0+ (per-request McpServer instances)
+- **SDK:** `@modelcontextprotocol/server` 2.x (per-request McpServer instances; the v1 `@modelcontextprotocol/sdk` remains only as a peer of `agents`, dev-time)
 - **Validation:** Zod schemas for all tool inputs
 - **Caching:** 2-layer (L0 memory + L1 Cache API) with SHA-256 keying
 - **e-Cidadania store:** D1 database refreshed by a Cron Trigger (every 2h) — list tools read from D1 with a live-scrape fallback and a staleness flag; detail tools stay live with write-through (see [e-Cidadania](#e-cidadania-d1-backed-cron-refreshed))
