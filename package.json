@@ -64,7 +64,8 @@
     "exceljs": "^4.4.0",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11",
+    "vite": "^8.2.2",
+    "vitest": "^5.0.0",
     "wrangler": "^4.127.1"
   },
   "overrides": {
