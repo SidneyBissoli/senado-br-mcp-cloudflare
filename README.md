@@ -6,7 +6,7 @@
 [![CI](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare/actions/workflows/ci.yml/badge.svg)](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare/actions/workflows/ci.yml)
 [![MCP Registry](https://img.shields.io/badge/MCP-Registry-blue)](https://registry.modelcontextprotocol.io)
 [![LobeHub](https://lobehub.com/badge/mcp/sidneybissoli-senado-br-mcp-cloudflare)](https://lobehub.com/mcp/sidneybissoli-senado-br-mcp-cloudflare)
-[![smithery badge](https://smithery.ai/badge/sidneybissoli/senado-br-mcp-cloudflare)](https://smithery.ai/servers/sidneybissoli/senado-br-mcp-cloudflare)
+[![LightNow capabilities](https://lightnow.ai/badge/io.github.SidneyBissoli/senado-br-mcp-cloudflare)](https://lightnow.ai/servers/io.github.SidneyBissoli/senado-br-mcp-cloudflare)
 [![senado-br-mcp-cloudflare MCP server](https://glama.ai/mcp/servers/SidneyBissoli/senado-br-mcp-cloudflare/badges/score.svg)](https://glama.ai/mcp/servers/SidneyBissoli/senado-br-mcp-cloudflare)
 [![GitHub stars](https://img.shields.io/github/stars/SidneyBissoli/senado-br-mcp-cloudflare?style=flat&logo=github)](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare)
 [![GitHub Sponsors](https://img.shields.io/github/sponsors/SidneyBissoli?logo=githubsponsors&label=Sponsor&color=db61a2)](https://github.com/sponsors/SidneyBissoli)
