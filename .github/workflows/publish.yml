@@ -180,9 +180,12 @@ jobs:
             exit 1
           fi
 
-      # O npm leva alguns segundos para expor uma versão recém-publicada. Sem
-      # esta espera, o registro consultaria cedo demais e devolveria o MESMO 404
-      # do bug original — falha idêntica, causa completamente diferente.
+      # O npm leva um tempo para expor uma versão recém-publicada — e desde
+      # 2026 o publish responde "Your package is being processed and may take a
+      # few minutes to become available": o processamento é assíncrono e já
+      # levou ~3 min (sih-br-mcp 0.13.1, 09/09/2026; a espera de 100 s daqui
+      # estourou e o job do registro falhou com o MESMO 404 do bug original —
+      # falha idêntica, causa completamente diferente). 10 min de janela.
       - name: Esperar o npm expor a versão
         if: steps.check.outputs.found == 'true'
         run: |
@@ -192,15 +195,15 @@ jobs:
             echo "::notice::server.json sem packages[] npm — nada a esperar"
             exit 0
           fi
-          for i in $(seq 1 10); do
+          for i in $(seq 1 40); do
             if [ "$(npm view "$NAME@$VERSION" version 2>/dev/null || true)" = "$VERSION" ]; then
               echo "npm confirmou $NAME@$VERSION"
               exit 0
             fi
-            echo "tentativa $i: $NAME@$VERSION ainda nao visivel; aguardando 10s"
-            sleep 10
+            echo "tentativa $i: $NAME@$VERSION ainda nao visivel; aguardando 15s"
+            sleep 15
           done
-          echo "::error::$NAME@$VERSION nao ficou visivel no npm apos 100s"
+          echo "::error::$NAME@$VERSION nao ficou visivel no npm apos 10 min"
           exit 1
 
       - name: Instalar mcp-publisher
