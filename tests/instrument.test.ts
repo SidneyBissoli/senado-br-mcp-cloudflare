@@ -56,7 +56,7 @@ describe("instrumentTool", () => {
     expect(ae.points).toHaveLength(1);
     expect(ae.points[0].indexes).toEqual(["senado_obter_senador"]);
     // No cache fetches in this callback → cacheClass "none", zero fetch/hit counts.
-    expect(ae.points[0].blobs).toEqual(["senado_obter_senador", "ok", "none", "", "", ""]);
+    expect(ae.points[0].blobs).toEqual(["senado_obter_senador", "ok", "none", "", "", "", "", ""]);
     expect(ae.points[0].doubles).toEqual([0, 0, 0]);
   });
 
@@ -67,7 +67,7 @@ describe("instrumentTool", () => {
     await wrapped({});
 
     expect(getMetrics().perTool.senado_ceaps).toEqual({ calls: 1, errors: 1 });
-    expect(ae.points[0].blobs).toEqual(["senado_ceaps", "error", "none", "", "", ""]);
+    expect(ae.points[0].blobs).toEqual(["senado_ceaps", "error", "none", "", "", "", "outro", ""]);
     expect(ae.points[0].doubles).toEqual([1, 0, 0]);
   });
 
@@ -80,7 +80,7 @@ describe("instrumentTool", () => {
 
     await expect(wrapped({})).rejects.toThrow("upstream down");
     expect(getMetrics().perTool.senado_vetos).toEqual({ calls: 1, errors: 1 });
-    expect(ae.points[0].blobs).toEqual(["senado_vetos", "error", "none", "", "", ""]);
+    expect(ae.points[0].blobs).toEqual(["senado_vetos", "error", "none", "", "", "", "fonte", ""]);
   });
 
   it("works without an analytics binding (in-memory only)", async () => {
@@ -116,7 +116,7 @@ describe("instrumentTool", () => {
 
     await wrapped({});
 
-    expect(ae.points[0].blobs).toEqual(["senado_obter_materia", "ok", "partial", "", "", ""]);
+    expect(ae.points[0].blobs).toEqual(["senado_obter_materia", "ok", "partial", "", "", "", "", ""]);
     expect(ae.points[0].doubles).toEqual([0, 3, 2]); // [errorFlag, fetches, hits]
   });
 
@@ -134,9 +134,9 @@ describe("instrumentTool", () => {
     await cached({});
     await live({});
 
-    expect(ae.points[0].blobs).toEqual(["senado_obter_votacao", "ok", "cached", "", "", ""]);
+    expect(ae.points[0].blobs).toEqual(["senado_obter_votacao", "ok", "cached", "", "", "", "", ""]);
     expect(ae.points[0].doubles).toEqual([0, 1, 1]);
-    expect(ae.points[1].blobs).toEqual(["senado_search_processos", "ok", "live", "", "", ""]);
+    expect(ae.points[1].blobs).toEqual(["senado_search_processos", "ok", "live", "", "", "", "", ""]);
     expect(ae.points[1].doubles).toEqual([0, 1, 0]);
   });
 
@@ -162,7 +162,7 @@ describe("instrumentTool", () => {
 
     await wrapped({});
 
-    expect(ae.points[0].blobs).toEqual(["senado_obter_senador", "ok", "none", "self", "US", "Anthropic"]);
+    expect(ae.points[0].blobs).toEqual(["senado_obter_senador", "ok", "none", "self", "US", "Anthropic", "", ""]);
   });
 
   it("accumulates calls across invocations of the same tool", async () => {

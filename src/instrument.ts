@@ -15,10 +15,12 @@
  * there is nothing to await and no need for ctx.waitUntil — a try/catch is the
  * correct and sufficient guard.
  *
- * Privacy: only the tool name, a coarse ok/error status, cache-outcome counts, and
- * aggregable request context (country, AS organization, owner's self-use marker) are
- * recorded. No user query content, tool parameters, IP, or PII ever reach Analytics
- * Engine.
+ * Privacy: only the tool name, a coarse ok/error status, cache-outcome counts,
+ * aggregable request context (country, AS organization, owner's self-use marker),
+ * and — since 2026-09-10 — the SHAPE of the call: the NAMES of the parameters
+ * supplied and a closed-vocabulary error class. No user query content, no
+ * parameter VALUES, no IP and no PII ever reach Analytics Engine. The reasoning
+ * for that line, and why the shape was worth adding, is in src/call-shape.ts.
  *
  * Request context (blobs 4–6): hosted AI-platform connectors egress from the
  * platform's own servers (e.g. Anthropic in the US), so country/AS is the only way
@@ -32,6 +34,7 @@
 // and inspect the `isError` flag on its result.
 type ToolCallback = (...args: unknown[]) => Promise<unknown> | unknown;
 
+import { classifyError, errorText, paramNames, type ErrorClass } from "./call-shape.js";
 import { incr, incrTool } from "./metrics.js";
 import { callCache, cacheClass, type CallCacheStats } from "./observability/call-context.js";
 
@@ -64,20 +67,27 @@ export function instrumentTool(
   return async (...args: unknown[]) => {
     incr("toolCalls");
     let isError = false;
+    let classe: ErrorClass | "" = "";
     // Per-call store the cache layer increments per upstream fetch (see call-context.ts).
     const stats: CallCacheStats = { fetches: 0, hits: 0 };
     try {
       const result = await callCache.run(stats, () => cb(...args));
       isError =
         typeof result === "object" && result !== null && (result as { isError?: unknown }).isError === true;
+      if (isError) classe = classifyError(errorText(result));
       return result;
     } catch (e) {
       // A thrown error is also a failed tool call — record it, then rethrow so the
       // SDK still produces the normal error response.
       isError = true;
+      classe = classifyError(e instanceof Error ? e.message : String(e));
       throw e;
     } finally {
-      recordToolCall(name, isError, stats, analytics, tag);
+      // ATENÇÃO ao que NÃO chega aqui: erro de validação do esquema. O SDK o
+      // responde ANTES do callback, então a chamada não é contada nem como
+      // chamada nem como erro. Medido em 10/09/2026 pelo /metrics: três
+      // chamadas com argumento de forma errada não moveram o contador.
+      recordToolCall(name, isError, stats, analytics, tag, classe, paramNames(args));
     }
   };
 }
@@ -88,6 +98,8 @@ function recordToolCall(
   stats: CallCacheStats,
   analytics?: AnalyticsEngineDataset,
   tag?: RequestTag,
+  errorClass: ErrorClass | "" = "",
+  params = "",
 ): void {
   incrTool(name, isError);
   if (!analytics) return;
@@ -99,6 +111,8 @@ function recordToolCall(
       // blob3 = cache class of the call (cached | live | partial | none),
       // blob4 = "self" when the owner's secret header matched, blob5 = country,
       // blob6 = AS organization (request.cf) — same positions in every portfolio MCP.
+      // blob7 = error class (closed vocabulary, "" when the call succeeded),
+      // blob8 = NAMES of the parameters supplied, comma-separated — never values.
       blobs: [
         name,
         isError ? "error" : "ok",
@@ -106,6 +120,8 @@ function recordToolCall(
         tag?.self ? "self" : "",
         tag?.country ?? "",
         tag?.asOrg ?? "",
+        errorClass,
+        params,
       ],
       // double1 = error flag (error rate via avg); double2 = upstream fetches in the call;
       // double3 = how many were cache hits (fetch-level cache-hit ratio via sum/sum).
