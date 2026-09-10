@@ -18,6 +18,7 @@ import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolError, errorFrom, ensureArray, safeInt, toBool, normalizeText } from "../utils/validation.js";
 import { digArrayRoot } from "../utils/upstream-parse.js";
+import { escolherReuniao, ehReuniaoInexistente, mensagemCodigoInexistente } from "./resolver-reuniao.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
 import { USER_AGENT } from "../version.js";
@@ -379,23 +380,71 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
   // E6. senado_reuniao_comissao
   server.tool(
     "senado_reuniao_comissao",
-    "Detalha uma reunião de comissão pelo `codigoReuniao`. Retorna um objeto com `codigo`, `titulo`, `comissao`, `data`, `hora`, `local`, `situacao`, `realizada`, `secreta`, `tipoPresenca` (presencial/semipresencial), `presidente`, links `urlPauta`/`urlResultado`/`urlAta` e `partes` (cada parte com `evento` e `itens` apreciados: `identificacao`, `ementa`, `autoria`, `relatoria`, `resultado`, `codigoMateria`). A API NÃO publica lista de presença da reunião (só presidente e eventuais convidados): reconstrua a presença pelos votos nominais (`senado_votacao_comissao`), por quem falou na transcrição (`senado_notas_taquigraficas` com `tipo=reuniao`) ou pela ata oficial (`urlAta`, quando publicada). Obtenha o `codigoReuniao` em `senado_agenda_comissoes` ou `senado_reunioes_comissao`.",
+    "Detalha uma reunião de comissão. Aceita DOIS caminhos: o `codigoReuniao` direto, ou `sigla` da comissão mais `data` (YYYYMMDD) — neste segundo caso a ferramenta resolve o código sozinha, e devolve as candidatas quando o dia tem mais de uma reunião. Retorna um objeto com `codigo`, `titulo`, `comissao`, `data`, `hora`, `local`, `situacao`, `realizada`, `secreta`, `tipoPresenca` (presencial/semipresencial), `presidente`, links `urlPauta`/`urlResultado`/`urlAta` e `partes` (cada parte com `evento` e `itens` apreciados: `identificacao`, `ementa`, `autoria`, `relatoria`, `resultado`, `codigoMateria`). A API NÃO publica lista de presença da reunião (só presidente e eventuais convidados): reconstrua a presença pelos votos nominais (`senado_votacao_comissao`), por quem falou na transcrição (`senado_notas_taquigraficas` com `tipo=reuniao`) ou pela ata oficial (`urlAta`, quando publicada). Sem código à mão, prefira `sigla` + `data`; o `codigoReuniao` também sai de `senado_agenda_comissoes` ou `senado_reunioes_comissao`.",
     {
-      codigoReuniao: z.number().int().positive().describe("Código da reunião (campo 'codigo' na agenda de comissões)"),
+      codigoReuniao: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe("Código da reunião (campo 'codigo' na agenda). Sem ele, informe sigla e data."),
+      sigla: z.string().min(2).optional().describe("Sigla da comissão (ex.: CAE) — alternativa ao código"),
+      data: z
+        .string()
+        .regex(/^\d{8}$/)
+        .optional()
+        .describe("Data da reunião (YYYYMMDD) — usada com `sigla`; sem ela, os últimos 14 dias"),
     },
     async (params) => {
       try {
-        const reuniaoPath = `/comissao/reuniao/${params.codigoReuniao}`;
+        // Caminho por sigla: resolve o código internamente. Existe porque a
+        // ferramenta falhou em 74 de 74 chamadas com o código como única
+        // entrada — quem pergunta tem uma sigla e uma data, não um inteiro
+        // interno. Ver src/tools/resolver-reuniao.ts.
+        let codigo = params.codigoReuniao;
+        if (codigo === undefined) {
+          const sigla = (params.sigla || "").toUpperCase();
+          if (!sigla) {
+            return toolError(
+              "Informe `codigoReuniao`, ou `sigla` da comissão (com `data`, opcional). " +
+                "Sem nenhum dos dois não há o que detalhar.",
+              false,
+            );
+          }
+          const hoje = new Date();
+          const inicio = new Date(hoje);
+          inicio.setDate(inicio.getDate() - 14);
+          const di = params.data || formatDateYMD(inicio);
+          const df = params.data || formatDateYMD(hoje);
+          const agenda = await cachedFetchWithMeta(
+            "senado_reuniao_comissao_resolve",
+            { sigla, di, df },
+            CACHE_DYNAMIC,
+            () => upstreamFetch(`/comissao/agenda/${di}/${df}`, {}, baseUrl),
+          );
+          const candidatas = ensureArray((agenda.value as any)?.AgendaReuniao?.reunioes?.reuniao)
+            .filter((re: any) => (re.colegiadoCriador?.sigla || "").toUpperCase() === sigla)
+            .map((re: any) => ({
+              codigo: parseInt(re.codigo || "0"),
+              descricao: re.descricao || re.titulo || "",
+              data: re.dataInicio ? String(re.dataInicio).split("T")[0] : "",
+              hora: re.dataInicio ? String(re.dataInicio).split("T")[1]?.slice(0, 5) || null : null,
+            }));
+          const escolha = escolherReuniao(candidatas, sigla, params.data ? di : `${di}–${df}`);
+          if (escolha.tipo !== "codigo") return toolError(escolha.mensagem, false);
+          codigo = escolha.codigo;
+        }
+        const reuniaoPath = `/comissao/reuniao/${codigo}`;
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_reuniao_comissao",
-          { codigo: params.codigoReuniao },
+          { codigo },
           CACHE_ON_DEMAND,
           () => upstreamFetch(reuniaoPath, {}, baseUrl),
         );
         const re = (response as any)?.DetalheReuniao?.reuniao ?? (response as any)?.reuniao ?? response;
         const com = re.colegiadoCriador || {};
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, reuniaoPath, {
-          dataset_id: `codigoReuniao=${params.codigoReuniao}`,
+          dataset_id: `codigoReuniao=${codigo}`,
           reference_period: re.dataInicio ? String(re.dataInicio).split("T")[0] : undefined,
           retrieved_at: fetchedAt,
         });
@@ -439,6 +488,13 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
           })),
         }, prov);
       } catch (e) {
+        // Corpo vazio neste endpoint é "não existe", não erro transitório. O
+        // upstreamFetch marca vazio como 502 retryable, o que vale para a
+        // maioria dos endpoints e mandava o agente repetir uma chamada que
+        // nunca ia funcionar.
+        if (ehReuniaoInexistente(e)) {
+          return toolError(mensagemCodigoInexistente(params.codigoReuniao ?? 0), false);
+        }
         return errorFrom(e, "Reunião de comissão não encontrada");
       }
     },
