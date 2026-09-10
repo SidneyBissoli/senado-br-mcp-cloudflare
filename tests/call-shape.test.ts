@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { classifyError, errorText, paramNames } from "../src/call-shape.js";
 import { instrumentTool } from "../src/instrument.js";
 
@@ -9,6 +11,56 @@ import { instrumentTool } from "../src/instrument.js";
  * precisa acertar para a próxima resposta ser confiável — e a linha que ela
  * não pode cruzar, que é gravar valor de parâmetro.
  */
+/**
+ * A GUARDA. Varre as mensagens de erro do próprio `src/` e reprova se alguma
+ * cair em `outro`. Escrita assim porque uma lista de literais copiados aqui
+ * fossilizaria o dia da varredura: quando passei o classificador por este
+ * repositório, 12 das 18 mensagens não tinham classe — a telemetria não
+ * responderia nada — e a lista copiada não diria nada sobre a mensagem que
+ * alguém acrescentar amanhã.
+ */
+const CHAMADA = /toolError\(([\s\S]{10,1200}?)\n?\s*\)/g;
+const LITERAL = /(["'`])((?:\\.|(?!\1)[\s\S])*)\1/g;
+/** Mensagem que só repassa o texto de cima; o sinal chega em execução. */
+const REPASSE = /:\s*X\.?$/;
+
+function mensagensDeErro(): string[] {
+  const achadas = new Set<string>();
+  const ande = (dir: string): void => {
+    for (const entrada of readdirSync(dir)) {
+      const caminho = join(dir, entrada);
+      if (statSync(caminho).isDirectory()) {
+        ande(caminho);
+        continue;
+      }
+      if (!entrada.endsWith(".ts") || entrada.includes(".test.")) continue;
+      for (const chamada of readFileSync(caminho, "utf8").matchAll(CHAMADA)) {
+        const partes = [...chamada[1].matchAll(LITERAL)].map((p) => p[2]);
+        if (partes.length === 0) continue;
+        const texto = partes.join("").replace(/\$\{[^}]*\}/g, "X").replace(/\s+/g, " ").trim();
+        // Exige espaco: literais colados sem prosa (uma lista de nomes de
+        // parametro, por exemplo) nao sao mensagem e nao se classificam.
+        if (texto.length > 15 && /\s/.test(texto)) achadas.add(texto);
+      }
+    }
+  };
+  ande(new URL("../src", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
+  return [...achadas];
+}
+
+describe("guarda: as mensagens deste servidor são classificáveis", () => {
+  const mensagens = mensagensDeErro();
+
+  it("a varredura encontra as mensagens (senão a guarda passaria vazia)", () => {
+    expect(mensagens.length).toBeGreaterThan(10);
+  });
+
+  it("nenhuma mensagem própria cai em `outro`", () => {
+    const orfas = mensagens.filter((m) => !REPASSE.test(m) && classifyError(m) === "outro");
+    expect(orfas, `sem classe:\n${orfas.map((m) => `  - ${m}`).join("\n")}`).toEqual([]);
+  });
+});
+
 describe("classifyError", () => {
   it("regra de contrato checada no código", () => {
     expect(classifyError('O horizonte "anual" exige `referencia` no formato yyyy')).toBe("contrato");
@@ -71,8 +123,16 @@ describe("classifyError sobre as mensagens REAIS da produção", () => {
 
   it("a mensagem de parâmetro faltando é contrato", () => {
     const r = envelope("Informe `codigoReuniao`, ou `sigla` da comissão (com `data`, opcional).");
-    // "Informe" sozinho não é sinal de contrato; o que classifica é o restante.
-    expect(["contrato", "outro"]).toContain(classifyError(errorText(r)));
+    // Este caso ficou hedged na primeira versão ("contrato ou outro") porque eu
+    // tinha dúvida se `Informe` era sinal. A varredura de TODAS as mensagens do
+    // repositório respondeu: dez delas dizem isso, e é a família canônica de
+    // parâmetro que falta. O sinal fica DEPOIS de não-encontrado na ordem.
+    expect(classifyError(errorText(r))).toBe("contrato");
+  });
+
+  it("`informe` no MEIO da frase não sequestra um não encontrado", () => {
+    const r = envelope("Não existe reunião com esse código. Informe um código válido.");
+    expect(classifyError(errorText(r))).toBe("nao_encontrado");
   });
 
   it("erro transitório de verdade continua sendo fonte", () => {
