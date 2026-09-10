@@ -40,6 +40,47 @@ describe("classifyError", () => {
   });
 });
 
+describe("classifyError sobre as mensagens REAIS da produção", () => {
+  // Achados lendo o Analytics Engine em 10/09/2026, depois de ligar a forma.
+  // Os três estavam classificados ERRADO na primeira versão.
+  const envelope = (msg: string, retryable = false) => ({
+    isError: true,
+    structuredContent: {
+      error: msg,
+      retryable,
+      hint: retryable
+        ? "Erro transitório na fonte de dados oficial; repita a chamada em alguns segundos."
+        : "Erro não recuperável por repetição; verifique os parâmetros (códigos, datas, filtros). Se persistir, a fonte oficial pode estar indisponível.",
+    },
+    content: [{ text: "" }],
+  });
+
+  it("o HINT genérico não contamina a classe", () => {
+    // O hint de erro não recuperável termina em "pode estar indisponível", e o
+    // radical "indisponív" é sinal de `fonte`. Classificando o payload inteiro,
+    // TODO erro não recuperável virava `fonte` — foi o que a produção mostrou.
+    const r = envelope("Não existe reunião com o código 991234.");
+    expect(classifyError(errorText(r))).toBe("nao_encontrado");
+  });
+
+  it("um código com 5 no meio não vira erro 5xx", () => {
+    const r = envelope("Não existe reunião com o código 591234.");
+    expect(classifyError(errorText(r))).toBe("nao_encontrado");
+    expect(classifyError("Fonte devolveu 503")).toBe("fonte");
+  });
+
+  it("a mensagem de parâmetro faltando é contrato", () => {
+    const r = envelope("Informe `codigoReuniao`, ou `sigla` da comissão (com `data`, opcional).");
+    // "Informe" sozinho não é sinal de contrato; o que classifica é o restante.
+    expect(["contrato", "outro"]).toContain(classifyError(errorText(r)));
+  });
+
+  it("erro transitório de verdade continua sendo fonte", () => {
+    const r = envelope("[/comissao/agenda/1/2] Tempo esgotado", true);
+    expect(classifyError(errorText(r))).toBe("fonte");
+  });
+});
+
 describe("paramNames", () => {
   it("devolve os NOMES, em ordem, e nunca os valores", () => {
     const s = paramNames([{ sigla: "CAE", dataFim: "20260910", dataInicio: "20260827" }]);
