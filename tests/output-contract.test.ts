@@ -65,6 +65,56 @@ afterAll(async () => {
   await client.close();
 });
 
+/**
+ * Parâmetro que não existe tem de ser RECUSADO, nunca descartado em silêncio.
+ *
+ * Com o esquema aberto, o zod tira a chave desconhecida, o parâmetro que o
+ * chamador queria usar fica com o default e a tool responde OUTRA pergunta com
+ * cara de resposta. Medido no irmão ibge-br-mcp em 11/09/2026: `periodo` no
+ * singular, que o esquema não tem, devolveu a população de 2026 para uma
+ * pergunta sobre 2023, sem nenhum aviso. Resposta errada é pior que erro — erro
+ * o modelo corrige na chamada seguinte, resposta errada vira número em
+ * relatório. Aqui o campo minado é grande: 67 ferramentas, muitas com pares
+ * quase homônimos (`codigoSenador`/`codigoParlamentar`, `sigla`/`siglaComissao`).
+ *
+ * `search`/`fetch` ficam ABERTAS de propósito: o contrato é da OpenAI.
+ */
+describe("esquema de entrada recusa parâmetro que não existe", () => {
+  const CONTRATO_ALHEIO = ["search", "fetch"];
+
+  it("toda tool senado_* publica additionalProperties: false", () => {
+    const proprias = tools.filter((t) => !CONTRATO_ALHEIO.includes(t.name));
+
+    expect(proprias.length).toBeGreaterThanOrEqual(60);
+    for (const t of proprias) {
+      const schema = t.inputSchema as { additionalProperties?: unknown };
+      expect(schema.additionalProperties, `${t.name} aceita chave desconhecida`).toBe(false);
+    }
+  });
+
+  it("search e fetch continuam abertas — o contrato é da OpenAI", () => {
+    for (const nome of CONTRATO_ALHEIO) {
+      const t = tools.find((x) => x.name === nome);
+      expect(t, `${nome} sumiu da superfície`).toBeDefined();
+      const schema = t!.inputSchema as { additionalProperties?: unknown };
+      expect(schema.additionalProperties, `${nome} não deveria ter sido fechada`).not.toBe(false);
+    }
+  });
+
+  it("a recusa NOMEIA a chave, para o modelo se corrigir sozinho", async () => {
+    const r = await client.callTool({
+      name: "senado_listar_senadores",
+      arguments: { emExercicio: true, sigla: "SP" },
+    });
+
+    expect(r.isError).toBe(true);
+    const texto = Array.isArray(r.content)
+      ? r.content.map((c) => ("text" in c ? c.text : "")).join(" ")
+      : "";
+    expect(texto).toContain("sigla");
+  });
+});
+
 describe("outputSchema anunciado", () => {
   it("as 69 tools declaram outputSchema", () => {
     expect(tools).toHaveLength(69);

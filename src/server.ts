@@ -45,6 +45,33 @@ import { announceServedVersions } from "./discover.js";
 
 type ToolCallback = (...args: unknown[]) => Promise<unknown> | unknown;
 
+/**
+ * O esquema de entrada RECUSA parâmetro que não existe.
+ *
+ * Todas as tools do senado passam por um funil só (`host.tool` abaixo), que
+ * recebia a shape crua e a entregava ao SDK como objeto ABERTO. Aberto, o zod
+ * descarta a chave desconhecida em silêncio, o parâmetro que o chamador queria
+ * usar fica com o default e a ferramenta responde OUTRA pergunta com cara de
+ * resposta. Medido no irmão ibge-br-mcp em 11/09/2026: `periodo` no singular,
+ * que o esquema não tem, devolveu a população de 2026 para uma pergunta sobre
+ * 2023, com nenhum aviso. Resposta errada é pior que erro — erro o modelo
+ * corrige na chamada seguinte, resposta errada vira número em relatório. Aqui
+ * o campo minado é grande: 67 ferramentas, muitas com pares quase homônimos
+ * (`codigoSenador`/`codigoParlamentar`, `sigla`/`siglaComissao`).
+ *
+ * `.strict()` publica `additionalProperties: false` e faz o SDK responder
+ * `Unrecognized key: "<nome>"`, que NOMEIA a chave.
+ *
+ * `search` e `fetch` ficam ABERTAS de propósito: o contrato é da OpenAI, elas
+ * entram pelo mesmo funil (registerDeepResearchToolsSenado) e fechá-las seria
+ * mexer num contrato que não é nosso.
+ */
+const TOOLS_DE_CONTRATO_ALHEIO = new Set(["search", "fetch"]);
+
+function esquemaDeEntrada(name: string, shape: Record<string, unknown>) {
+  const objeto = z.object(shape as z.ZodRawShape);
+  return TOOLS_DE_CONTRATO_ALHEIO.has(name) ? objeto : objeto.strict();
+}
 export function createServer(env: Env, ctx?: ExecutionContext, options: CreateServerOptions = {}): McpServer {
   const toolProfile = options.toolProfile ?? "full";
   const server = new McpServer(
@@ -102,7 +129,7 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
       {
         title: titleForTool(name),
         description,
-        inputSchema: shape as never,
+        inputSchema: esquemaDeEntrada(name, shape) as never,
         outputSchema: outputSchema as never,
         annotations: {
           title: titleForTool(name),

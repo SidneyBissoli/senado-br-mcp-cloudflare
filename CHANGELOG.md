@@ -6,6 +6,35 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Fixed
+
+- **As 67 tools `senado_*` recusam parâmetro que não existe.** Com o esquema
+  aberto, o zod descartava a chave desconhecida em silêncio, o parâmetro que o
+  chamador queria usar ficava com o default e a tool respondia OUTRA pergunta
+  com cara de resposta. Medido no irmão `ibge-br-mcp` em 11/09/2026: `periodo`
+  no singular, que o esquema não tem, devolveu a população de **2026** para uma
+  pergunta sobre 2023, sem nenhum aviso — um agente reporta isso como o número
+  de 2023. Resposta errada é pior que erro: erro o modelo corrige na chamada
+  seguinte, resposta errada vira número em relatório. Aqui o campo minado é o
+  maior do portfólio: 67 ferramentas, muitas com pares quase homônimos
+  (`codigoSenador`/`codigoParlamentar`, `sigla`/`siglaComissao`).
+
+  O conserto é de uma linha porque todas as tools passam por um funil só
+  (`host.tool` em `src/server.ts`), que recebia a shape crua e a entregava ao
+  SDK como objeto aberto. Agora ela vira `z.object(shape).strict()`, o que
+  publica `additionalProperties: false` e faz o SDK responder
+  `Unrecognized key: "<nome>"` — nomeando a chave, para o modelo se corrigir
+  sozinho. **Mudança de superfície** nas 67.
+
+  `search` e `fetch` continuam ABERTAS de propósito: entram pelo mesmo funil
+  (`registerDeepResearchToolsSenado`), mas o contrato é da OpenAI e fechá-las
+  seria mexer num contrato que não é nosso. Guarda em
+  `tests/output-contract.test.ts`, nos dois sentidos.
+
+  Preço consciente: erro de validação de esquema é respondido pelo SDK ANTES do
+  callback, então não passa pela instrumentação e não aparece na telemetria.
+  Troca-se visibilidade por prevenção.
+
 ## [3.7.0] - 2026-09-03
 
 **`search` e `fetch` — o contrato Deep Research da OpenAI.** O deep research
