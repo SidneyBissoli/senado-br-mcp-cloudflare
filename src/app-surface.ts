@@ -1,6 +1,12 @@
 export const DEFAULT_MCP_ROUTE = "/mcp";
 export const OPENAI_APP_LEGACY_MCP_ROUTE = "/mcp/openai-app";
 export const OPENAI_APP_MCP_ROUTE = "/mcp/openai-app-v2";
+
+// Rota privada do dono: mesma superficie COMPLETA da rota publica, outro
+// endereco, e a telemetria a marca como uso proprio (ver src/instrument.ts).
+// Precisa ser reconhecida aqui, senao handlerRouteForPath cai no fallback e
+// o handler e montado numa rota diferente da que a requisicao pediu.
+export const SELF_MCP_ROUTE = "/mcp/uso-proprio";
 export const OPENAI_APP_WIDGET_URI = "ui://senado-br-mcp/openai-app-dashboard-v2.html";
 export const OPENAI_APP_WIDGET_DOMAIN = "https://senado.sidneybissoli.com";
 
@@ -107,7 +113,11 @@ export function mcpRouteForProfile(profile: SenadoToolProfile): string {
 
 export function handlerRouteForPath(pathname: string, profile: SenadoToolProfile): string {
   const normalized = normalizeMcpRoute(pathname);
-  if (OPENAI_APP_MCP_ROUTES.has(normalized) || normalized === DEFAULT_MCP_ROUTE) {
+  if (
+    OPENAI_APP_MCP_ROUTES.has(normalized) ||
+    normalized === DEFAULT_MCP_ROUTE ||
+    normalized === SELF_MCP_ROUTE
+  ) {
     return pathname;
   }
   return mcpRouteForProfile(profile);

@@ -41,6 +41,25 @@ import { callCache, cacheClass, type CallCacheStats } from "./observability/call
 /** Header the owner's MCP clients send (value = the SELF_MARKER secret). */
 export const SELF_HEADER = "x-mcp-self";
 
+/**
+ * Rota privada do dono: mesma superficie, mesmo resultado, outro ENDERECO.
+ *
+ * O marcador por header so funciona em cliente que aceita header custom, e o
+ * conector do claude.ai nao aceita — e e por ele que o dono mais usa os
+ * proprios servidores. Medido em 28/08/2026: o header pegava UMA chamada por
+ * produto por semana; todo o resto do uso proprio saia dos servidores da
+ * Anthropic, indistinguivel de terceiro, inflando a adocao.
+ *
+ * O conector nao manda header, mas aponta para qualquer URL. Entao a
+ * separacao vem da ROTA: chamada que chega aqui e uso proprio por construcao.
+ *
+ * O caminho e adivinhavel de proposito (o dono precisa cola-lo em varios
+ * clientes). O risco e um varredor cair aqui e ser contado como dono: sujeira
+ * no balde do uso proprio, nao vazamento — a rota serve o mesmo conteudo
+ * publico. Detectavel olhando pais/AS das chamadas marcadas.
+ */
+export const SELF_ROUTE = "/mcp/uso-proprio";
+
 /** Per-request context, computed once in the Worker's fetch handler. */
 export interface RequestTag {
   self: boolean;
@@ -52,7 +71,9 @@ export interface RequestTag {
 export function tagRequest(request: Request, selfSecret?: string): RequestTag {
   const cf = (request as { cf?: IncomingRequestCfProperties }).cf;
   return {
-    self: !!selfSecret && request.headers.get(SELF_HEADER) === selfSecret,
+    self:
+      (!!selfSecret && request.headers.get(SELF_HEADER) === selfSecret) ||
+      new URL(request.url).pathname === SELF_ROUTE,
     country: typeof cf?.country === "string" ? cf.country : "",
     asOrg: typeof cf?.asOrganization === "string" ? cf.asOrganization : "",
   };
