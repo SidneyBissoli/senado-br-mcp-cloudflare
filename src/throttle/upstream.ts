@@ -23,6 +23,21 @@ export class UpstreamError extends Error {
     message: string,
     public readonly status: number,
     public readonly retryable: boolean,
+    /**
+     * True only when the upstream never produced a response: DNS, TCP, TLS,
+     * an aborted request, or the time budget running out. A response that
+     * arrived and was rejected — an HTTP status, a body over the size guard,
+     * an empty body, a body that is not JSON — is NOT transport, even when
+     * its status is 502.
+     *
+     * The distinction exists because "the Senado did not answer" and "the
+     * Senado answered with a different shape" are opposite facts for the
+     * nightly contract tier: the first means drift could not be measured
+     * tonight, the second is the drift it exists to catch. Status alone
+     * cannot carry it — 502 is used for both a real Bad Gateway and a body
+     * that failed to parse.
+     */
+    public readonly transport: boolean = false,
   ) {
     super(message);
     this.name = "UpstreamError";
@@ -125,6 +140,7 @@ export async function upstreamFetch(
       lastError = lastError || new UpstreamError(
         `[${path}] Timeout: orçamento de ${UPSTREAM_TIMEOUT_MS}ms esgotado antes da tentativa ${attempt + 1}`,
         504,
+        true,
         true,
       );
       break;
@@ -235,6 +251,7 @@ export async function upstreamFetch(
           : `[${path}] Erro de rede: ${(err as Error).message || "desconhecido"}`,
         isAbort ? 504 : 502,
         true, // Network errors are always retryable
+        true, // ...and they are transport: no response ever arrived
       );
 
       if (isAbort) break; // AbortError means time budget is spent

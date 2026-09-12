@@ -1,0 +1,73 @@
+name: Contract tests retry
+
+# Re-runs a failed "Contract tests (upstream shape drift)" job on a fresh
+# runner.
+#
+# Why this exists: on 02, 04, 08 and 11/09/2026 the nightly tier did not fail
+# on drift — every one of the 66 specs timed out against BOTH Senado hosts
+# (legis and adm), `0 ok`, and the job ran to its 30 min ceiling. The nights
+# in between were green in 86-116 s, and the same endpoints answer in under a
+# second from a residential connection. So the upstream is intermittently not
+# answering this runner, and the leading hypothesis — not yet proven here, so
+# the workflow logs the egress IP to settle it — is the same one the
+# e-Cidadania probe in this repo was built for: some cloud egress ranges
+# dropped for a while. If that is what it is, another IP is the cure.
+#
+# `gh run rerun --failed` re-runs only the jobs that failed, each landing on
+# a new runner. A night that stays red across three runners is a real
+# outage worth alerting on.
+#
+# The wait covers the other shape of the outage — the upstream itself under
+# load — and costs nothing on a public repo.
+
+on:
+  workflow_run:
+    workflows: ["Contract tests (upstream shape drift)"]
+    types: [completed]
+
+permissions:
+  actions: write # gh run rerun
+
+jobs:
+  rerun:
+    # Deliberately NOT `!= 'success'`. A run someone cancelled by hand also
+    # reports `cancelled`, and restarting it would override that person's
+    # decision. Until now an outage showed up as `cancelled` too, because the
+    # job ran into its own 30 min ceiling; with the refresher's breaker it
+    # exits 3 and lands here as `failure`. `timed_out` stays as a backstop.
+    if: >-
+      (github.event.workflow_run.conclusion == 'failure' ||
+       github.event.workflow_run.conclusion == 'timed_out') &&
+      github.event.workflow_run.run_attempt < 3
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Wait, then re-run the failed jobs on a new runner
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: |
+          set -euo pipefail
+          echo "run $RUN_ID did not succeed on attempt $ATTEMPT; waiting 10 min"
+          sleep 600
+          # Belt to the job-level `if`. That guard reads the attempt out of
+          # the event payload, and a GitHub expression coerces an absent
+          # field to 0 — which would compare as "< 3" forever and turn a
+          # genuine, reproducible failure into an endless retry loop. So ask
+          # the API for the attempt the run is actually on, right before
+          # firing, and refuse from the live number.
+          live=$(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID" \
+            --jq '.run_attempt')
+          case "$live" in
+            ''|*[!0-9]*)
+              echo "could not read run_attempt (got '$live'); refusing" >&2
+              exit 1
+              ;;
+          esac
+          if [ "$live" -ge 3 ]; then
+            echo "run $RUN_ID is already on attempt $live; giving up"
+            exit 0
+          fi
+          gh run rerun "$RUN_ID" --failed -R "${{ github.repository }}"
+          echo "re-run requested for the failed jobs of $RUN_ID"

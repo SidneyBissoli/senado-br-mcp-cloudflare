@@ -21,11 +21,17 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { upstreamFetch } from "../../src/throttle/upstream.js";
 import { admFetch } from "../../src/throttle/adm.js";
 import { MAX_RESPONSE_SIZE_LARGE } from "../../src/types.js";
-import { FIXTURES, type Helpers } from "./manifest.js";
+import { FIXTURES, MissingDependencyError, type Helpers } from "./manifest.js";
+import {
+  classifyFailure,
+  breakerTripped,
+  DEFAULT_TRANSPORT_STREAK_LIMIT,
+  EXIT_UPSTREAM_UNREACHABLE,
+} from "./outage.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURES_DIR = join(ROOT, "tests", "contract", "fixtures");
@@ -34,6 +40,15 @@ const FINANCEIRO_BASE = "https://www.senado.gov.br";
 const PAUSE_MS = 400;
 const CAPTURE_RETRIES = 3;
 const DEFAULT_KEEP_ITEMS = 3;
+
+/**
+ * Streak limit for the outage breaker. `DEFAULT_TRANSPORT_STREAK_LIMIT` and
+ * the reasoning behind it live in `outage.ts`; the env override exists so
+ * the behaviour can be exercised without waiting out five real timeouts.
+ */
+const TRANSPORT_STREAK_LIMIT = Number(
+  process.env.CONTRACT_TRANSPORT_STREAK ?? DEFAULT_TRANSPORT_STREAK_LIMIT,
+);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -74,6 +89,11 @@ async function captureWithRetry(name: string, fn: () => Promise<unknown>): Promi
       return await fn();
     } catch (err) {
       lastErr = err;
+      // A missing dependency cannot heal by trying again — the capture it
+      // needs already failed. Retrying it only burns 6 s of backoff per
+      // spec, which on a night when the whole upstream is down is most of
+      // the manifest.
+      if (err instanceof MissingDependencyError) throw err;
       const msg = err instanceof Error ? err.message : String(err);
       console.warn(`  retry ${attempt}/${CAPTURE_RETRIES} for '${name}': ${msg}`);
       await sleep(2000 * attempt);
@@ -94,32 +114,75 @@ async function main(): Promise<void> {
   // Dependency captures (h.ctx) require the full manifest order; when running
   // a subset, dependencies may be missing — specs throw a clear error then.
   const failures: string[] = [];
+  let captured = 0;
+  let transportFailures = 0;
+  let transportStreak = 0;
+  let tripped = false;
+
   for (const spec of specs) {
     const target = join(FIXTURES_DIR, spec.family, `${spec.name}.json`);
     process.stdout.write(`capturing ${spec.family}/${spec.name} ... `);
+    const startedAt = Date.now();
     try {
       const raw = await captureWithRetry(spec.name, () => spec.capture(helpers));
       helpers.ctx.set(spec.name, raw);
       const normalized = normalizeFixture(raw, spec.keepItems ?? DEFAULT_KEEP_ITEMS);
       mkdirSync(dirname(target), { recursive: true });
       writeFileSync(target, JSON.stringify(normalized, null, 2) + "\n", "utf8");
-      console.log("ok");
+      captured++;
+      transportStreak = 0;
+      console.log(`ok (${Date.now() - startedAt}ms)`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.log(`FAILED: ${msg}`);
+      const kind = classifyFailure(err);
+      console.log(`FAILED [${kind}] (${Date.now() - startedAt}ms): ${msg}`);
       failures.push(spec.name);
+      if (kind === "transport") {
+        transportFailures++;
+        transportStreak++;
+      } else if (kind === "other") {
+        // A response DID arrive, so the upstream is reachable; whatever is
+        // wrong is shape-shaped and belongs to the contract tier.
+        transportStreak = 0;
+      }
+      // `dependency` deliberately leaves the streak untouched.
+    }
+    if (breakerTripped(captured, transportStreak, TRANSPORT_STREAK_LIMIT)) {
+      tripped = true;
+      break;
     }
     await sleep(PAUSE_MS);
   }
 
+  if (tripped) {
+    console.error(
+      `\nPARANDO CEDO: ${transportStreak} falhas de transporte seguidas e nenhuma ` +
+        `captura bem-sucedida — o upstream do Senado não está respondendo a este ` +
+        `runner.\nIsto NÃO é deriva de formato: a deriva não foi medida nesta ` +
+        `rodada. Re-rodar o job cai em outro IP de saída.`,
+    );
+    process.exit(EXIT_UPSTREAM_UNREACHABLE);
+  }
+
   if (failures.length > 0) {
-    console.error(`\n${failures.length} capture(s) failed: ${failures.join(", ")}`);
+    console.error(
+      `\n${failures.length} capture(s) failed: ${failures.join(", ")}` +
+        (transportFailures > 0 ? ` (${transportFailures} de transporte)` : ""),
+    );
     process.exit(1);
   }
   console.log(`\nall ${specs.length} fixtures written to ${FIXTURES_DIR}`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only run when invoked as the entry point, so the unit suite can import
+// `classifyFailure`/`breakerTripped` without firing a live capture run.
+const invokedDirectly =
+  process.argv[1] !== undefined &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (invokedDirectly) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

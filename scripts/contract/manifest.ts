@@ -55,9 +55,23 @@ function asArray(v: unknown): unknown[] {
   return Array.isArray(v) ? v : [v];
 }
 
+/**
+ * A spec could not run because an earlier capture it feeds on is missing.
+ * Carries no information about whether the upstream is reachable — the
+ * refresher must neither count it against the upstream nor let it clear a
+ * run of transport failures, so it needs to be recognizable by type rather
+ * than by matching the message text.
+ */
+export class MissingDependencyError extends Error {
+  constructor(public readonly dependsOn: string) {
+    super(`spec depends on '${dependsOn}' which was not captured`);
+    this.name = "MissingDependencyError";
+  }
+}
+
 function fromCtx(h: Helpers, name: string): unknown {
   const raw = h.ctx.get(name);
-  if (raw === undefined) throw new Error(`spec depends on '${name}' which was not captured`);
+  if (raw === undefined) throw new MissingDependencyError(name);
   return raw;
 }
 
