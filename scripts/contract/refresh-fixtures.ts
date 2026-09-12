@@ -157,9 +157,12 @@ async function main(): Promise<void> {
   if (tripped) {
     console.error(
       `\nPARANDO CEDO: ${transportStreak} falhas de transporte seguidas e nenhuma ` +
-        `captura bem-sucedida — o upstream do Senado não está respondendo a este ` +
-        `runner.\nIsto NÃO é deriva de formato: a deriva não foi medida nesta ` +
-        `rodada. Re-rodar o job cai em outro IP de saída.`,
+        `captura bem-sucedida.\n` +
+        `Isto NÃO é deriva de formato — a deriva não foi medida nesta rodada.\n` +
+        `O Senado descarta pacotes de alguns IPs de origem (medido em 12/09/2026: ` +
+        `2 de 20 runners simultâneos sem nenhuma resposta de TCP, em todos os ` +
+        `endereços do Senado, enquanto os outros 18 conectavam). Esperar não ` +
+        `desbloqueia; só um runner novo, com outro IP, resolve.`,
     );
     process.exit(EXIT_UPSTREAM_UNREACHABLE);
   }

@@ -3,22 +3,33 @@ name: Contract tests retry
 # Re-runs a failed "Contract tests (upstream shape drift)" job on a fresh
 # runner.
 #
-# Why this exists: on 02, 04, 08 and 11/09/2026 the nightly tier did not fail
-# on drift — every one of the 66 specs timed out against BOTH Senado hosts
-# (legis and adm), `0 ok`, and the job ran to its 30 min ceiling. The nights
-# in between were green in 86-116 s, and the same endpoints answer in under a
-# second from a residential connection. So the upstream is intermittently not
-# answering this runner, and the leading hypothesis — not yet proven here, so
-# the workflow logs the egress IP to settle it — is the same one the
-# e-Cidadania probe in this repo was built for: some cloud egress ranges
-# dropped for a while. If that is what it is, another IP is the cure.
+# Why this exists, MEASURED on 12/09/2026: the Senado silently drops packets
+# from some source addresses, and a job that lands on one of them is lost.
 #
-# `gh run rerun --failed` re-runs only the jobs that failed, each landing on
-# a new runner. A night that stays red across three runners is a real
-# outage worth alerting on.
+# The experiment: 20 GitHub runners fired at the same instant against
+# 201.54.48.132 (which serves BOTH legis.senado.leg.br and adm.senado.gov.br)
+# and 201.54.48.99 (www12). 18 runners connected normally. Two —
+# 20.64.173.130 and 52.154.19.227 — got no answer at all: raw TCP to port 443
+# never completed, on every Senado address, with our User-Agent and with a
+# plain `curl/8.5.0` alike, while the same two runners fetched a control site
+# in under 60 ms. Neighbours inside the same Azure ranges connected fine, so
+# this is a per-address blocklist and not a cloud range being refused.
 #
-# The wait covers the other shape of the outage — the upstream itself under
-# load — and costs nothing on a public repo.
+# That is exactly what the bad nights look like from the inside: on 02, 04,
+# 08 and 11/09 every single one of ~264 requests timed out — no RST, no DNS
+# error, no HTTP status, and the FIRST request already dead, so nothing our
+# run did caused it. Silence is the signature of a firewall DROP; a host that
+# is down answers with a reset, and a host under load answers with 5xx.
+#
+# So the cure is a different source address, and nothing else. `gh run rerun
+# --failed` re-runs only the jobs that failed, each landing on a fresh runner
+# with a fresh address. At the 10% blocked measured above, three attempts put
+# the odds of losing a night near one in a thousand.
+#
+# The wait is deliberately SHORT. An earlier version slept 10 min, which came
+# from the hypothesis that the upstream was under load; the measurement above
+# refuted that. Waiting does not un-block an address — only a new runner
+# does. The minute that is left only keeps a systemic failure from spinning.
 
 on:
   workflow_run:
@@ -49,8 +60,8 @@ jobs:
           ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
         run: |
           set -euo pipefail
-          echo "run $RUN_ID did not succeed on attempt $ATTEMPT; waiting 10 min"
-          sleep 600
+          echo "run $RUN_ID did not succeed on attempt $ATTEMPT; waiting 60s"
+          sleep 60
           # Belt to the job-level `if`. That guard reads the attempt out of
           # the event payload, and a GitHub expression coerces an absent
           # field to 0 — which would compare as "< 3" forever and turn a
