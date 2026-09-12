@@ -41,10 +41,40 @@ jobs:
       - name: Contract tests (committed fixtures)
         run: npm run test:contract
 
+      # Recorded so a night that fails is diagnosable afterwards. The outages
+      # this tier keeps hitting are all-or-nothing and intermittent, and the
+      # leading hypothesis is the Senado dropping some cloud egress ranges for
+      # a while — the same shape the e-Cidadania probe in this repo was built
+      # to test. Without the address in the log there is nothing to correlate.
+      - name: Runner egress IP (diagnostic)
+        run: |
+          echo "egress=$(curl -s --max-time 15 https://api.ipify.org || echo indisponivel)"
+
       # Refresh every fixture from the live upstream (working tree only,
       # nothing is committed), then re-run the same assertions.
+      #
+      # Exit 3 is the refresher's circuit breaker: the upstream never
+      # answered, so drift was NOT measured tonight. That is a different fact
+      # from drift and it is labelled as such here, because the portfolio
+      # panel reads this job's conclusion and used to report an outage as
+      # "a fonte mudou".
       - name: Refresh fixtures from live upstream
-        run: npm run contract:refresh
+        run: |
+          set +e
+          npm run contract:refresh
+          code=$?
+          set -e
+          if [ "$code" -eq 3 ]; then
+            {
+              echo "### Upstream do Senado inalcançável"
+              echo
+              echo "Nenhuma captura respondeu; o disjuntor parou a rodada."
+              echo "**A deriva de formato NÃO foi medida nesta noite** — isto não"
+              echo "é deriva. Re-rodar o job cai em outro IP de saída."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error title=Upstream inalcançável::deriva não medida; não é deriva de formato"
+          fi
+          exit $code
 
       - name: Contract tests (live-refreshed fixtures)
         run: npm run test:contract

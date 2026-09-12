@@ -8,6 +8,27 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- **A tier noturna de contrato não acusa mais deriva quando o upstream está
+  fora.** Nas noites de 02, 04, 08 e 11/09/2026 as 66 specs deram timeout
+  contra os DOIS hosts do Senado — `0 ok` — e o job seguiu percorrendo o
+  manifesto até o teto de 30 min cortá-lo. O painel do portfólio leu a
+  conclusão e anunciou "a fonte mudou". Não tinha mudado: nenhuma asserção
+  chegou a ser avaliada. Um detector de deriva que dá alarme falso em apagão
+  é um detector que ninguém lê mais. As noites intercaladas fecharam verdes em
+  86 a 116 s, e os mesmos endpoints respondem em menos de 1 s de uma conexão
+  residencial, então o upstream está intermitentemente não atendendo o runner.
+  Três mudanças: `UpstreamError` ganhou a bandeira `transport`, verdadeira só
+  quando nenhuma resposta chegou (DNS, TCP, TLS, abort, orçamento) — o status
+  sozinho não servia, porque 502 é usado tanto para Bad Gateway de verdade
+  quanto para corpo que não parseia, que é justamente deriva; o refresher abre
+  um disjuntor depois de 5 falhas de transporte seguidas sem nada capturado,
+  saindo com código 3 em ~3 min e dizendo em letras claras que a deriva NÃO
+  foi medida; e o workflow novo `Contract tests retry` re-roda só os jobs
+  vermelhos num runner novo, até 3 tentativas. O IP de saída do runner passou
+  a ser registrado, para a próxima noite ruim ser diagnosticável. Dependência
+  faltando virou `MissingDependencyError`: não conta a favor nem contra o
+  upstream, e deixou de ser repetida 3 vezes à toa.
+
 - **As 67 tools `senado_*` recusam parâmetro que não existe.** Com o esquema
   aberto, o zod descartava a chave desconhecida em silêncio, o parâmetro que o
   chamador queria usar ficava com o default e a tool respondia OUTRA pergunta
