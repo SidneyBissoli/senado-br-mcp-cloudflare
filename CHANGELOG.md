@@ -8,6 +8,24 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- **Causa das noites perdidas da tier de contrato, medida: o Senado descarta
+  pacotes de alguns IPs de origem.** 20 runners do GitHub dispararam no mesmo
+  instante contra `201.54.48.132` (que atende `legis.senado.leg.br` E
+  `adm.senado.gov.br`) e `201.54.48.99` (www12). Dezoito conectaram normal.
+  Dois — `20.64.173.130` e `52.154.19.227` — não receberam **nenhuma resposta
+  de TCP** em nenhum endereço do Senado, com o nosso User-Agent e com um
+  `curl/8.5.0` genérico igualmente, enquanto buscavam um site de controle em
+  menos de 60 ms. Vizinhos nas mesmas faixas da Azure passaram, então é lista
+  por endereço, não faixa de nuvem recusada. É exatamente o que as noites
+  ruins mostram por dentro: cerca de 264 requisições, 100% timeout, nenhum
+  RST, nenhum erro de DNS, nenhum status HTTP, e a PRIMEIRA já morta — silêncio
+  é assinatura de descarte em firewall; host derrubado responde com reset e
+  host sobrecarregado responde com 5xx. Consequência prática: a espera de 10
+  min do retry nasceu da hipótese de upstream sobrecarregado, que a medição
+  derrubou, e caiu para 60 s. Esperar não desbloqueia endereço; só runner novo
+  resolve. Com os 10% bloqueados medidos, três tentativas põem a chance de
+  perder uma noite perto de uma em mil.
+
 - **A tier noturna de contrato não acusa mais deriva quando o upstream está
   fora.** Nas noites de 02, 04, 08 e 11/09/2026 as 66 specs deram timeout
   contra os DOIS hosts do Senado — `0 ok` — e o job seguiu percorrendo o

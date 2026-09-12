@@ -14,6 +14,14 @@
  * and the job walked the whole manifest until its 30 min ceiling cut it. The
  * portfolio panel then reported "a fonte mudou". It had not. A drift detector
  * that raises a false alarm on an outage is a detector that stops being read.
+ *
+ * The cause, measured on 12/09/2026: the Senado drops packets from some
+ * source addresses. 20 runners fired at the same instant; 18 connected, 2 got
+ * no TCP answer at all from every Senado address, with our User-Agent and
+ * with a plain curl one alike, while fetching a control site in under 60 ms.
+ * A job that draws a blocked address loses the whole night, which is why the
+ * cure is a fresh runner and why this module has to be able to say, in the
+ * log, that drift was never measured.
  */
 
 import { UpstreamError } from "../../src/throttle/upstream.js";

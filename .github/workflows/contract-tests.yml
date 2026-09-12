@@ -41,11 +41,13 @@ jobs:
       - name: Contract tests (committed fixtures)
         run: npm run test:contract
 
-      # Recorded so a night that fails is diagnosable afterwards. The outages
-      # this tier keeps hitting are all-or-nothing and intermittent, and the
-      # leading hypothesis is the Senado dropping some cloud egress ranges for
-      # a while — the same shape the e-Cidadania probe in this repo was built
-      # to test. Without the address in the log there is nothing to correlate.
+      # The Senado keeps a per-address blocklist and drops packets from the
+      # addresses on it (measured 12/09/2026: 2 of 20 simultaneous runners got
+      # no TCP answer at all from every Senado address, while 18 connected
+      # normally and the same two fetched a control site in under 60 ms).
+      # Recording which address this job drew is what makes a lost night
+      # readable afterwards, and what would let us build a picture of the
+      # blocklist over time.
       - name: Runner egress IP (diagnostic)
         run: |
           echo "egress=$(curl -s --max-time 15 https://api.ipify.org || echo indisponivel)"
