@@ -45,13 +45,20 @@ export interface PercentilRotulado {
 export type Entrada = Record<string, unknown> & { valor: number };
 
 export interface Estatisticas {
+  /** Registros considerados. `0` é o único sinal que nunca mente. */
   n: number;
+  /** Soma dos valores. Zero num conjunto vazio é a soma vazia, e é correto. */
   soma: number;
-  minimo: number;
-  maximo: number;
-  media: number;
-  mediana: number;
-  desvioPadrao: number;
+  /**
+   * `null` quando `n === 0`. Mínimo, máximo, média, mediana e desvio de um
+   * conjunto VAZIO são indefinidos, não zero — ver `arredondarEstatisticas`
+   * para o porquê disso ter derrubado uma resposta em produção.
+   */
+  minimo: number | null;
+  maximo: number | null;
+  media: number | null;
+  mediana: number | null;
+  desvioPadrao: number | null;
   percentis: Percentis;
   argMax: Entrada | null;
   argMin: Entrada | null;
@@ -136,8 +143,25 @@ export function computarEstatisticas(
 // whole surface: 2-decimal money rounding + the package's labeled percentile list
 // (pt-BR locale), so the model never surfaces internal shorthand ("p99").
 
-/** 2-decimal money rounding (all statistics fields are monetary — BRL). */
-const r2 = (n: number) => Math.round(n * 100) / 100;
+/**
+ * 2-decimal money rounding (all statistics fields are monetary — BRL).
+ *
+ * NULL-SAFE de propósito: `Math.round(null * 100) / 100` é **0**, e sem esta
+ * guarda o arredondamento desfazia, no último passo, todo o conserto que o
+ * motor comum faz no primeiro — o `null` do conjunto vazio voltaria a ser zero
+ * a caminho da resposta.
+ *
+ * Sobrecarregada porque os dois usos são diferentes e ambos devem continuar
+ * exatos: campo de DISTRIBUIÇÃO pode ser nulo (não houve o que resumir), mas o
+ * `valor` de um registro extremo nunca é — um extremo só existe quando há
+ * registro. Sem a sobrecarga, `arredondarEntradas` passaria a anunciar
+ * `number | null` e espalharia um nulo impossível pela superfície.
+ */
+function r2(n: number): number;
+function r2(n: number | null): number | null;
+function r2(n: number | null): number | null {
+  return n === null ? null : Math.round(n * 100) / 100;
+}
 
 /**
  * Format a number as pt-BR currency deterministically ("R$ 1.234,56") — no
@@ -166,6 +190,27 @@ export function arredondarEstatisticas(
   e: Estatisticas,
   formatarValor: (n: number) => string = formatarBRL,
 ) {
+  // SEM REGISTRO NENHUM não existe distribuição, e o bloco não é emitido.
+  //
+  // Defeito medido em produção em 14/09/2026:
+  // `senado_ceaps({ano: 2024, estatisticas: true, nomeSenador: "ZZQX
+  // INEXISTENTE"})` — ano válido, filtro que não casa nada — respondia a
+  // distribuição inteira em zero e, pior, NARRADA por extenso pela lista de
+  // percentis: "mediana — metade dos valores é igual ou inferior a R$ 0,00",
+  // "99% dos valores são iguais ou inferiores a R$ 0,00", com bloco de
+  // proveniência completo. Um modelo que lê isso afirma ao leitor que a
+  // despesa mediana foi R$ 0,00 — afirmação sobre o mundo, saída de uma
+  // consulta vazia, com aparência de dado oficial.
+  //
+  // Trocar a FORMA, e não só zerar os campos, é deliberado: uma fileira de
+  // nulos ainda convida quem lê a tratá-los como dado, e o aviso NEGA a
+  // leitura errada ("não significa que os valores sejam zero"). Mesma decisão
+  // do `formatStats` do motor comum, repetida aqui porque este módulo mantém a
+  // própria camada de exibição.
+  if (e.n === 0) {
+    return { n: 0, aviso: ptBR.noRecordsNotice() };
+  }
+
   return {
     n: e.n,
     soma: r2(e.soma),
