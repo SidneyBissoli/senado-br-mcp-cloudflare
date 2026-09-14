@@ -29,7 +29,10 @@ describe("percentil (type 7 / numpy / Excel PERCENTILE.INC)", () => {
     expect(percentil(asc, 1)).toBe(100);
   });
   it("handles empty and singleton arrays", () => {
-    expect(percentil([], 0.5)).toBe(0);
+    // Vazio devolve null desde @sbissoli/mcp-stats 0.3.0: nao existe "o
+    // percentil 50 de nada", e devolver 0 era o primeiro elo da cadeia que
+    // fazia a resposta narrar "metade dos valores e igual ou inferior a R$ 0,00".
+    expect(percentil([], 0.5)).toBeNull();
     expect(percentil([42], 0.9)).toBe(42);
   });
 });
@@ -130,14 +133,23 @@ describe("computarEstatisticas — grouping", () => {
 });
 
 describe("computarEstatisticas — empty input", () => {
-  it("returns a well-formed zeroed result", () => {
+  it("returns an UNDEFINED result, not a zeroed one", () => {
     const r = computarEstatisticas([], valorDe, { topN: 5 }) as Estatisticas;
     expect(r.n).toBe(0);
-    expect(r.soma).toBe(0);
     expect(r.argMax).toBeNull();
     expect(r.argMin).toBeNull();
     expect(r.top).toEqual([]);
-    expect(r.percentis).toEqual({ p25: 0, p50: 0, p75: 0, p90: 0, p95: 0, p99: 0 });
+    // `n` e `soma` seguem numericos: zero registro e um fato, e a soma vazia e
+    // zero por definicao. Sao os dois campos em que o zero nao mente.
+    expect(r.soma).toBe(0);
+    // O resto e INDEFINIDO. Zero atravessa qualquer validacao de tipo, tem
+    // cara de medida e nao deixa rastro; null obriga quem consome a decidir.
+    expect(r.minimo).toBeNull();
+    expect(r.maximo).toBeNull();
+    expect(r.media).toBeNull();
+    expect(r.mediana).toBeNull();
+    expect(r.desvioPadrao).toBeNull();
+    expect(r.percentis).toEqual({ p25: null, p50: null, p75: null, p90: null, p95: null, p99: null });
   });
 });
 
@@ -185,9 +197,45 @@ describe("rotularPercentis", () => {
 describe("arredondarEstatisticas", () => {
   it("rounds scalars to 2 decimals and emits percentis as the labeled list", () => {
     const e = computarEstatisticas(DEZ, valorDe, { topN: 0 }) as Estatisticas;
-    const out = arredondarEstatisticas(e);
+    const out = arredondarEstatisticas(e) as Extract<ReturnType<typeof arredondarEstatisticas>, { percentis: unknown }>;
     expect(Array.isArray(out.percentis)).toBe(true);
     expect(out.percentis.every((p) => typeof p.rotulo === "string" && p.rotulo.length > 0)).toBe(true);
     expect(out.media).toBe(55);
+  });
+
+  /**
+   * O defeito que este bloco existe para impedir, medido em producao em
+   * 14/09/2026: `senado_ceaps({ano: 2024, estatisticas: true, nomeSenador:
+   * "ZZQX INEXISTENTE"})` -- ano valido, filtro que nao casa nada -- respondia
+   * a distribuicao inteira em zero e NARRADA por extenso ("mediana -- metade
+   * dos valores e igual ou inferior a R$ 0,00"), com proveniencia completa.
+   *
+   * A assercao central varre a saida atras de QUALQUER valor formatado, em vez
+   * de pinar a frase que o defeito escrevia: sobrevive a reescrita de rotulo e
+   * reprova na hora se alguem voltar a citar numero no caso vazio.
+   */
+  it("sem registro nenhum: troca o bloco por um aviso, sem citar valor", () => {
+    const e = computarEstatisticas([], valorDe, { topN: 5 }) as Estatisticas;
+    const out = arredondarEstatisticas(e) as Record<string, unknown>;
+
+    expect(out.n).toBe(0);
+    expect(typeof out.aviso).toBe("string");
+    expect(String(out.aviso)).toMatch(/n[aã]o significa que os valores sejam zero/i);
+    for (const campo of ["soma", "minimo", "maximo", "media", "mediana", "desvioPadrao", "percentis"]) {
+      expect(out, `nao deveria emitir ${campo}`).not.toHaveProperty(campo);
+    }
+    expect(JSON.stringify(out)).not.toMatch(/R\$\s*-?[\d.,]+/);
+  });
+
+  it("zero legitimo continua sendo zero: valores medidos que somam nada", () => {
+    // A distincao que tudo isto defende -- "nao medi" contra "medi e deu zero".
+    // Quatro despesas de R$ 0,00 SAO uma medicao, e tem de sair narradas.
+    const zeros = [0, 0, 0, 0].map((v) => ({ v }));
+    const e = computarEstatisticas(zeros, valorDe, { topN: 0 }) as Estatisticas;
+    const out = arredondarEstatisticas(e) as Record<string, unknown>;
+    expect(out.n).toBe(4);
+    expect(out).not.toHaveProperty("aviso");
+    expect(out.media).toBe(0);
+    expect(JSON.stringify(out)).toMatch(/R\$ 0,00/);
   });
 });
