@@ -12,7 +12,7 @@ import { buildStatus } from "./status.js";
 import type { Env } from "./types.js";
 import { logger } from "./utils/logger.js";
 import { incr, getMetrics } from "./metrics.js";
-import { recordProtocolMethods, tagRequest } from "./instrument.js";
+import { recordProtocolMethods, sessionFromRequest, tagRequest, withSessionHeader } from "./instrument.js";
 import { ICON_JPEG_BASE64 } from "./icon.js";
 import { refreshEcidadania } from "./scraper/pipeline.js";
 import { handlerRouteForPath, toolProfileForRoute } from "./app-surface.js";
@@ -134,7 +134,6 @@ export default {
     const toolProfile = toolProfileForRoute(url.pathname);
     const route = handlerRouteForPath(url.pathname, toolProfile);
     // Per-request context (self marker, country, AS) for the per-tool telemetry.
-    const requestTag = tagRequest(request, env.SELF_MARKER);
     // FÁBRICA, não instância. O SDK v2 exige um `McpServer` novo por request e
     // o `createMcpHandler` da `agents` 0.20+ recebe a função que o constrói —
     // era `createMcpHandler(server, …)` na v1. É também o que os cinco irmãos
@@ -148,6 +147,11 @@ export default {
             .json()
             .catch(() => undefined)
         : undefined;
+    // Sessão: o handler é stateless e não emite id; o Worker sorteia no
+    // initialize e devolve no cabeçalho, e nas demais requisições lê o que o
+    // cliente repetiu. Vai na telemetria (blob9). Ver src/instrument.ts.
+    const sessao = sessionFromRequest(request, url.pathname === route ? corpoMcp : undefined);
+    const requestTag = tagRequest(request, env.SELF_MARKER, sessao.id);
 
     const handler = createMcpHandler(() => createServer(env, ctx, { toolProfile, requestTag }), {
       route,
@@ -186,6 +190,7 @@ export default {
     // desfecho lido do HTTP da resposta, e só para o POST de uma rota MCP
     // (fora dela `route` é o default do perfil, não o caminho pedido). Ver
     // recordProtocolMethods em src/instrument.ts.
+    response = withSessionHeader(response, sessao);
     recordProtocolMethods(env.SENADO_ANALYTICS, requestTag, url.pathname === route ? corpoMcp : undefined, response.status);
 
     const ms = Date.now() - start;

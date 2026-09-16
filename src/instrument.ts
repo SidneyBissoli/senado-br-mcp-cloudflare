@@ -65,10 +65,12 @@ export interface RequestTag {
   self: boolean;
   country: string;
   asOrg: string;
+  /** Id de sessão (blob9): emitido no initialize, lido do cabeçalho depois; "" sem sessão. */
+  sessao: string;
 }
 
 /** Extracts country/AS from request.cf and matches the self-use secret header. */
-export function tagRequest(request: Request, selfSecret?: string): RequestTag {
+export function tagRequest(request: Request, selfSecret?: string, sessao = ""): RequestTag {
   const cf = (request as { cf?: IncomingRequestCfProperties }).cf;
   return {
     self:
@@ -76,6 +78,7 @@ export function tagRequest(request: Request, selfSecret?: string): RequestTag {
       new URL(request.url).pathname === SELF_ROUTE,
     country: typeof cf?.country === "string" ? cf.country : "",
     asOrg: typeof cf?.asOrganization === "string" ? cf.asOrganization : "",
+    sessao,
   };
 }
 
@@ -121,6 +124,7 @@ function recordToolCall(
   tag?: RequestTag,
   errorClass: ErrorClass | "" = "",
   params = "",
+  cliente = "",
 ): void {
   incrTool(name, isError);
   if (!analytics) return;
@@ -134,6 +138,9 @@ function recordToolCall(
       // blob6 = AS organization (request.cf) — same positions in every portfolio MCP.
       // blob7 = error class (closed vocabulary, "" when the call succeeded),
       // blob8 = NAMES of the parameters supplied, comma-separated — never values.
+      // blob9 = session id issued at initialize (random, echoed by the client),
+      // blob10 = client software name from initialize (clientInfo.name, normalised;
+      // only on the initialize line) — same positions in every portfolio MCP.
       blobs: [
         name,
         isError ? "error" : "ok",
@@ -143,6 +150,8 @@ function recordToolCall(
         tag?.asOrg ?? "",
         errorClass,
         params,
+        tag?.sessao ?? "",
+        cliente,
       ],
       // double1 = error flag (error rate via avg); double2 = upstream fetches in the call;
       // double3 = how many were cache hits (fetch-level cache-hit ratio via sum/sum).
@@ -216,13 +225,25 @@ export function recordProtocolMethods(
   status: number,
 ): string[] {
   if (!analytics || body === undefined) return [];
+  const cliente = clientNameFromBody(body);
   const nomes = protocolNamesFromBody(body, status);
   const isError = status >= 400;
   for (const name of nomes) {
     try {
       analytics.writeDataPoint({
         indexes: [name],
-        blobs: [name, isError ? "error" : "ok", "", tag?.self ? "self" : "", tag?.country ?? "", tag?.asOrg ?? "", "", ""],
+        blobs: [
+          name,
+          isError ? "error" : "ok",
+          "",
+          tag?.self ? "self" : "",
+          tag?.country ?? "",
+          tag?.asOrg ?? "",
+          "",
+          "",
+          tag?.sessao ?? "",
+          name === "initialize" ? cliente : "",
+        ],
         doubles: [isError ? 1 : 0, 0, 0],
       });
     } catch {
@@ -230,4 +251,91 @@ export function recordProtocolMethods(
     }
   }
   return nomes;
+}
+
+/**
+ * SESSÃO E CLIENTE (blobs 9 e 10, desde 2026-09-17).
+ *
+ * O que faltava para o funil de sessão do painel ser um funil de verdade: a
+ * telemetria tinha `initialize` e `tools/call` como contagens soltas, sem
+ * nada que ligasse duas linhas à mesma sessão — a razão "chamadas por
+ * initialize" mistura quantas sessões usaram com quanto cada uma usou, e
+ * 2,5 tanto pode ser todo mundo chamando 2 ou 3 vezes quanto 10% chamando 25.
+ *
+ * O elo é o do próprio protocolo: o servidor devolve `Mcp-Session-Id` na
+ * resposta ao `initialize` e o cliente é obrigado a repeti-lo em toda
+ * requisição seguinte. O handler continua STATELESS — o transporte do SDK v2
+ * não emite id neste modo e, conferido em 16/09/2026 nos sete servidores e
+ * no código (`validateSession` retorna sem checar quando não há gerador),
+ * também não lê nem valida o que o cliente manda. Então o Worker sorteia o
+ * id no `initialize`, devolve no cabeçalho e, nas demais requisições, só lê
+ * o que o cliente devolveu e grava. Nada é armazenado; o id é aleatório
+ * (UUID v4 do `crypto`) e não identifica pessoa, máquina nem rede — só liga
+ * as linhas de um aperto de mão. Colisão de UUID v4 é da ordem de n²/2¹²⁹:
+ * não é risco prático.
+ *
+ * O cliente é o software que se apresentou no `initialize`
+ * (`params.clientInfo.name`): claude.ai, Claude Code, Inspector, um scanner
+ * com nome próprio. É autodeclarado e descreve o programa, não a pessoa. Vai
+ * normalizado (minúsculas, sem versão, vocabulário de caracteres fechado,
+ * tamanho limitado) para não virar texto livre na telemetria, e SÓ na linha
+ * do `initialize` — as chamadas seguintes chegam ao cliente pela sessão.
+ *
+ * Id que o cliente manda e não parece um id (fora do vocabulário, comprido
+ * demais) é tratado como ausente: continua sem estado, e a telemetria não
+ * carrega o que não sabe ler.
+ */
+export const SESSION_HEADER = "mcp-session-id";
+const SESSION_ID_OK = /^[A-Za-z0-9._~-]{1,64}$/;
+
+/** O corpo (mensagem ou lote JSON-RPC) contém um `initialize`? */
+export function isInitialize(body: unknown): boolean {
+  const itens = Array.isArray(body) ? body : [body];
+  return itens.some(
+    (m) => !!m && typeof m === "object" && (m as { method?: unknown }).method === "initialize",
+  );
+}
+
+/**
+ * A sessão desta requisição: sorteada no `initialize` (`nova`), lida do
+ * cabeçalho nas demais; "" quando não há sessão legível.
+ */
+export function sessionFromRequest(request: Request, body: unknown): { id: string; nova: boolean } {
+  if (isInitialize(body)) return { id: crypto.randomUUID(), nova: true };
+  const enviada = request.headers.get(SESSION_HEADER) ?? "";
+  return { id: SESSION_ID_OK.test(enviada) ? enviada : "", nova: false };
+}
+
+/** Devolve a resposta com o `Mcp-Session-Id` quando a sessão nasceu aqui. */
+export function withSessionHeader(response: Response, sessao: { id: string; nova: boolean }): Response {
+  if (!sessao.nova || !sessao.id) return response;
+  const headers = new Headers(response.headers);
+  headers.set(SESSION_HEADER, sessao.id);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+/** Nome do cliente normalizado: minúsculas, caracteres fechados, até 40. */
+export function normalizeClientName(x: unknown): string {
+  if (typeof x !== "string") return "";
+  return x
+    .toLowerCase()
+    .replace(/[^a-z0-9._+/ -]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 40);
+}
+
+/** `clientInfo.name` do `initialize` (o primeiro, num lote); "" fora dele. */
+export function clientNameFromBody(body: unknown): string {
+  const itens = Array.isArray(body) ? body : [body];
+  for (const m of itens) {
+    if (!m || typeof m !== "object") continue;
+    const msg = m as { method?: unknown; params?: { clientInfo?: { name?: unknown } } };
+    if (msg.method === "initialize") return normalizeClientName(msg.params?.clientInfo?.name);
+  }
+  return "";
 }

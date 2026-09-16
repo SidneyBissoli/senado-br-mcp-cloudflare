@@ -6,6 +6,18 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Changed
+
+- **Telemetria: sessão e cliente (blobs 9 e 10).** O servidor passa a emitir
+  `Mcp-Session-Id` (UUID v4 aleatório) na resposta ao `initialize` e a gravar,
+  em cada linha da telemetria, o id que o cliente devolve — o elo que faltava
+  para o funil de sessão do painel contar sessões de verdade, e não a razão
+  "chamadas por initialize". O handler continua stateless (o SDK não valida
+  o cabeçalho nesse modo, conferido em 16/09/2026 nos sete servidores); nada é
+  armazenado e o id não identifica pessoa nem máquina. O nome do software
+  cliente declarado no `initialize` (`clientInfo.name`, normalizado) vai na
+  linha do aperto de mão.
+
 ### Fixed
 
 - **Causa das noites perdidas da tier de contrato, medida: o Senado descarta
