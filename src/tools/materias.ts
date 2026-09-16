@@ -152,6 +152,24 @@ async function resolveProcesso(
   return { item, fetchedAt };
 }
 
+/**
+ * Zero resultado por palavra-chave não é prova de que o tema não existe: a
+ * busca é REMOTA e casa contra as palavras-chave que o próprio Senado indexa,
+ * com tesauro dele. Medido na produção em 16/09/2026: "maconha" e "cannabis"
+ * acham as mesmas 6 matérias (o tesauro cobre), mas "remédio" acha 0 contra 16
+ * de "medicamento" e "carro" acha 5 contra 151 de "veículo". Como o casamento
+ * é da fonte, o conserto local é dizer o que fazer em seguida — não uma tabela
+ * de tradução, que aqui só repetiria o tesauro do Senado.
+ */
+export function dicaBuscaVazia(palavraChave: string): string {
+  return (
+    `Nenhuma matéria indexada com a palavra-chave "${palavraChave}". A busca casa contra as palavras-chave ` +
+    "que o Senado atribui a cada processo, no vocabulário dele: tente o termo técnico ou mais geral " +
+    "(medicamento, não remédio; veículo, não carro), o singular, um sinônimo, " +
+    "ou combine com `ano`/`sigla` em vez da palavra-chave."
+  );
+}
+
 export function registerMateriasTools(server: SenadoToolHost, baseUrl: string) {
   // B1. senado_buscar_materias
   server.tool(
@@ -215,6 +233,8 @@ export function registerMateriasTools(server: SenadoToolHost, baseUrl: string) {
           count: materias.length,
           total: todos.length,
           ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} resultados. Refine a busca ou aumente o limite.` } : {}),
+          // Zero calado é beco sem saída (ver dicaBuscaVazia).
+          ...(todos.length === 0 && params.palavraChave ? { dica: dicaBuscaVazia(params.palavraChave) } : {}),
           materias,
         }, prov);
       } catch (e) {

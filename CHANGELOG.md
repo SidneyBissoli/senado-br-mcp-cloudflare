@@ -6,6 +6,20 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Fixed
+
+- **`senado_buscar_materias` com palavra-chave sem achado devolvia zero,
+  calado.** A busca por `palavraChave` é remota: casa contra as palavras-chave
+  que o próprio Senado atribui a cada processo, no vocabulário dele. Medido na
+  produção em 16/09/2026: "maconha" e "cannabis" acham as mesmas 6 matérias (o
+  tesauro do Senado cobre), mas "remédio" acha **0** contra 16 de
+  "medicamento" e "carro" acha 5 contra 151 de "veículo". É a mesma classe
+  consertada com tabela de tradução no ilo, uis, ibge, medical e bcb (item
+  `mcp:vocabulario-da-pergunta` do portfólio) — aqui, como o casamento é da
+  fonte, o conserto é a saída: zero resultado por palavra-chave vem com
+  `dica` dizendo que o vocabulário é o do Senado, com os pares medidos e a
+  alternativa (`ano`/`sigla`). Sem mudança de superfície.
+
 ### Changed
 
 - **Telemetria: sessão e cliente (blobs 9 e 10).** O servidor passa a emitir
