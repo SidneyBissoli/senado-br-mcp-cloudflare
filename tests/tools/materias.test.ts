@@ -1,11 +1,22 @@
 import { describe, it, expect } from "vitest";
 import {
+  dicaBuscaVazia,
   parseProcessoResumo,
   parseProcessoDetalhe,
   pickRelatorAtual,
   parseInformesTramitacao,
   parseDocumentoProcesso,
 } from "../../src/tools/materias.js";
+
+describe("dicaBuscaVazia", () => {
+  it("nomeia a palavra-chave e diz que o vocabulário é o do Senado, com exemplos medidos", () => {
+    const d = dicaBuscaVazia("remédio");
+    expect(d).toContain('"remédio"');
+    expect(d).toContain("palavras-chave");
+    expect(d).toContain("medicamento");
+    expect(d).toMatch(/ano.*sigla/);
+  });
+});
 
 describe("parseProcessoResumo", () => {
   it("parses a v3 /processo search item", () => {
