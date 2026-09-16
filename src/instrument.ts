@@ -152,3 +152,82 @@ function recordToolCall(
     // Swallow: a telemetry failure must never break or slow a tool response.
   }
 }
+
+/**
+ * Métodos de PROTOCOLO, gravados na camada HTTP.
+ *
+ * `instrumentTool` só vê `tools/call`: ela envolve o callback da tool.
+ * `initialize`, `tools/list`, `notifications/*`, `ping` e o que mais o
+ * cliente mande (`server/discover`, por exemplo) atravessam o transporte sem
+ * tocar tool nenhuma — e são eles que contam o FUNIL DE SESSÃO: quantos
+ * `initialize` viram chamada de ferramenta de verdade, que é o que separa
+ * "acharam o servidor" de "usaram o servidor". Medido em 2026-09-10: só o
+ * sih-br-mcp os gravava, porque lá o Worker é um proxy que lê o corpo
+ * JSON-RPC antes de encaminhar. Aqui o servidor roda dentro do Worker, e o
+ * corpo vem de uma CÓPIA tirada antes de o handler consumir o stream
+ * (src/index.ts). Desde 2026-09-16 a frota inteira grava igual.
+ *
+ * Mesmo esquema de blobs, com o método no lugar do nome da tool — igual ao
+ * sih. O painel separa os dois pelo nome (`metodo_de_protocolo`). Classe de
+ * cache, classe de erro e parâmetros ficam vazios; fetches e hits, zero.
+ *
+ * O que entra, e de onde vem o desfecho:
+ *  - todo método que não é `tools/call` → uma linha, "ok" se o HTTP da
+ *    resposta for < 400, "error" senão. LIMITAÇÃO, a mesma do sih: erro
+ *    JSON-RPC que viaja dentro de um 200 (método desconhecido, -32601) sai
+ *    como "ok" — ler exigiria consumir o corpo que está sendo devolvido;
+ *  - `tools/call` só quando o HTTP é ≥ 400: o transporte recusou antes de
+ *    despachar (Accept errado, sessão inválida, Origin estrangeiro) e a tool
+ *    nunca rodou; sem isto a recusa seria invisível. Com HTTP < 400 a
+ *    `instrumentTool` já gravou a linha, com o desfecho de verdade — não se
+ *    grava de novo;
+ *  - lote JSON-RPC (array) → uma linha por item; item sem `method` (resposta
+ *    do cliente, corpo que não é JSON) → nada.
+ *
+ * Só no Analytics Engine: os contadores do /metrics continuam contando tools.
+ */
+export function protocolNamesFromBody(body: unknown, status: number): string[] {
+  const itens = Array.isArray(body) ? body : [body];
+  const nomes: string[] = [];
+  for (const item of itens) {
+    if (!item || typeof item !== "object") continue;
+    const msg = item as { method?: unknown; params?: unknown };
+    if (typeof msg.method !== "string" || msg.method === "") continue;
+    if (msg.method === "tools/call") {
+      if (status < 400) continue; // instrumentTool já gravou esta
+      const params = msg.params as { name?: unknown } | undefined;
+      nomes.push(typeof params?.name === "string" && params.name !== "" ? params.name : "tools/call");
+    } else {
+      nomes.push(msg.method);
+    }
+  }
+  return nomes;
+}
+
+/**
+ * Grava no Analytics Engine os métodos de protocolo de um POST no endpoint
+ * MCP (ver protocolNamesFromBody). Devolve os nomes gravados. Sem binding,
+ * não grava nada.
+ */
+export function recordProtocolMethods(
+  analytics: AnalyticsEngineDataset | undefined,
+  tag: RequestTag | undefined,
+  body: unknown,
+  status: number,
+): string[] {
+  if (!analytics || body === undefined) return [];
+  const nomes = protocolNamesFromBody(body, status);
+  const isError = status >= 400;
+  for (const name of nomes) {
+    try {
+      analytics.writeDataPoint({
+        indexes: [name],
+        blobs: [name, isError ? "error" : "ok", "", tag?.self ? "self" : "", tag?.country ?? "", tag?.asOrg ?? "", "", ""],
+        doubles: [isError ? 1 : 0, 0, 0],
+      });
+    } catch {
+      // Falha de telemetria nunca quebra nem atrasa a resposta.
+    }
+  }
+  return nomes;
+}

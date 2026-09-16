@@ -12,7 +12,7 @@ import { buildStatus } from "./status.js";
 import type { Env } from "./types.js";
 import { logger } from "./utils/logger.js";
 import { incr, getMetrics } from "./metrics.js";
-import { tagRequest } from "./instrument.js";
+import { recordProtocolMethods, tagRequest } from "./instrument.js";
 import { ICON_JPEG_BASE64 } from "./icon.js";
 import { refreshEcidadania } from "./scraper/pipeline.js";
 import { handlerRouteForPath, toolProfileForRoute } from "./app-surface.js";
@@ -181,6 +181,13 @@ export default {
         },
       });
     }
+    // Métodos de protocolo (initialize, tools/list, notifications/*...) não
+    // passam pela instrumentTool: vão para o Analytics Engine daqui, com o
+    // desfecho lido do HTTP da resposta, e só para o POST de uma rota MCP
+    // (fora dela `route` é o default do perfil, não o caminho pedido). Ver
+    // recordProtocolMethods em src/instrument.ts.
+    recordProtocolMethods(env.SENADO_ANALYTICS, requestTag, url.pathname === route ? corpoMcp : undefined, response.status);
+
     const ms = Date.now() - start;
     logger.info("request", { method: request.method, path: url.pathname, status: response.status, ms });
     return response;
