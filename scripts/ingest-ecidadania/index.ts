@@ -34,6 +34,7 @@ import { readExistingMeta, readPayloads, readAllPayloads, readLastGoodRows } fro
 import { selectRestatus, buildRestatusRecords } from "./restatus.js";
 import { generateLoadSql, generateRunOnlySql } from "./sql.js";
 import { fetchConsultaDetalheCorpus } from "./detalhe.js";
+import { criarDisjuntor } from "./breaker.js";
 
 const SENADO_BASE_URL = process.env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
 const PAGE_DELAY_MS = Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
@@ -42,6 +43,10 @@ const DETAIL_DELAY_MS = Number(process.env.INGEST_CONSULTAS_DETAIL_DELAY_MS) || 
 const DETAIL_CHUNK = Number(process.env.INGEST_CONSULTAS_CHUNK) || 3000;
 const MAX_PAGES = 1000; // safety cap against a runaway pagination value
 const OUT_PATH = join(dirname(fileURLToPath(import.meta.url)), "out.sql");
+
+// Um disjuntor por RUN: falha de transporte seguida, em qualquer dos dois laços
+// (páginas e detalhe), é o mesmo sintoma — o portal parou de responder.
+const disjuntor = criarDisjuntor();
 
 /** Uma consulta ainda NÃO enriquecida = seu payload não carrega a chave `autoria` (v1 ou nova). */
 function needsEnrich(prev: string | undefined): boolean {
@@ -77,8 +82,10 @@ async function enrichConsulta(
       const d = await fetchConsultaDetalheCorpus(id);
       autoria = d.autoria;
       relator = d.relator;
+      disjuntor.sucesso();
     } catch (e) {
       console.error(`[consultas][detalhe][gap] id=${id}: ${e instanceof Error ? e.message : String(e)}`);
+      disjuntor.falha(e, `id=${id}`);
     }
     await sleep(DETAIL_DELAY_MS);
   }
@@ -121,9 +128,11 @@ async function crawlAllPages(): Promise<CrawlResult> {
         parseConsultaListingPage,
       );
       for (const it of parsed) byId.set(it.codigoMateria, it);
+      disjuntor.sucesso();
     } catch (e) {
       logPageFailure("consultas", `p${p}`, e);
       failedPages.push(p);
+      disjuntor.falha(e, `p${p}`);
     }
     await sleep(PAGE_DELAY_MS);
   }

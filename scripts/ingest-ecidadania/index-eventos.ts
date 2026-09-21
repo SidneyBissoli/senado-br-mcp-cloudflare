@@ -24,6 +24,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { sleep } from "./http.js";
 import { fetchParsedPage, firstContactOpts, logPageFailure } from "./page-retry.js";
+import { criarDisjuntor } from "./breaker.js";
 import { parseEventoListingPage, findLastPageEventos, type EventoListingItem } from "./eventos-listing.js";
 import { ECIDADANIA_BASE, buildEventoResumo, buildEventoResumoEnriquecido, type EventoResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
@@ -38,6 +39,11 @@ const DETAIL_DELAY_MS = Number(process.env.INGEST_EVENTOS_DETAIL_DELAY_MS) || 25
 /** Quantos eventos enriquecer (detalhe+AJAX) por execução — o resto preserva o detalhe já gravado. */
 const CHUNK = Number(process.env.INGEST_EVENTOS_CHUNK) || 1500;
 const MAX_PAGES = 500;
+
+// Um disjuntor por RUN: falha de transporte seguida, em qualquer dos laços, é o
+// mesmo sintoma — o portal parou de responder. Ver breaker.ts.
+const disjuntor = criarDisjuntor();
+
 const OUT_DIR = dirname(fileURLToPath(import.meta.url));
 const OUT_PATH = join(OUT_DIR, "out-eventos.sql");
 const COMENT_PREFIX = "out-eventos-comentarios-";
@@ -66,9 +72,11 @@ async function crawlAllPages(now: Date): Promise<CrawlResult> {
     try {
       const { items: parsed } = await fetchParsedPage(`${ECIDADANIA_BASE}/principalaudiencia?p=${p}`, parsePage);
       for (const it of parsed) byId.set(it.id, it);
+      disjuntor.sucesso();
     } catch (e) {
       logPageFailure(ENTIDADE, `p${p}`, e);
       failedPages.push(p);
+      disjuntor.falha(e, `p${p}`);
     }
     await sleep(PAGE_DELAY_MS);
   }
@@ -155,9 +163,11 @@ async function enrichSlice(
     let detalhe = null;
     try {
       detalhe = await fetchEventoDetalhe(it.id);
+      disjuntor.sucesso();
     } catch (e) {
       detailFails++;
       console.error(`[eventos][detalhe][gap] id=${it.id}: ${e instanceof Error ? e.message : String(e)}`);
+      disjuntor.falha(e, `detalhe id=${it.id}`);
     }
     await sleep(DETAIL_DELAY_MS);
 
@@ -166,9 +176,11 @@ async function enrichSlice(
       const cs = await fetchComentariosAudiencia(it.id);
       comentariosCanon = cs.length;
       for (const c of cs) comentarioRecords.push(toComentarioRecord(it.id, c));
+      disjuntor.sucesso();
     } catch (e) {
       commentFails++;
       console.error(`[eventos][comentarios][gap] id=${it.id}: ${e instanceof Error ? e.message : String(e)}`);
+      disjuntor.falha(e, `comentarios id=${it.id}`);
     }
     await sleep(DETAIL_DELAY_MS);
 

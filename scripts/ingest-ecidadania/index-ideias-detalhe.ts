@@ -24,6 +24,7 @@ import { dirname, join } from "node:path";
 import { sleep } from "./http.js";
 import { buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
+import { criarDisjuntor } from "./breaker.js";
 import { readCurrentRange, readDetalheCursor, type CurrentPayloadRow } from "./d1.js";
 import { generateDetalheLoadSqlBatches, cursorUpsertStmt } from "./sql.js";
 import { fetchIdeiaDetalheCorpus } from "./detalhe.js";
@@ -85,6 +86,7 @@ async function main(): Promise<void> {
   }
   console.log(`[ideias-detalhe] cursor=${cursor.lastEntityId} fullPasses=${fullPasses} chunk=${rows.length}`);
 
+  const disjuntor = criarDisjuntor();
   const records: SyncRecord[] = [];
   let fetched = 0;
   let gaps = 0;
@@ -94,9 +96,11 @@ async function main(): Promise<void> {
     try {
       detail = await fetchIdeiaDetalheCorpus(row.id);
       fetched++;
+      disjuntor.sucesso();
     } catch (e) {
       gaps++;
       console.error(`[ideias-detalhe][gap] id=${row.id}: ${e instanceof Error ? e.message : String(e)}`);
+      disjuntor.falha(e, `id=${row.id}`);
     }
     await sleep(DETAIL_DELAY_MS);
     records.push(rebuild(row, detail));

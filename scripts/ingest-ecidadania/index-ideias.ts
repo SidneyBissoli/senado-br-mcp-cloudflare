@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { sleep } from "./http.js";
 import { fetchParsedPage, firstContactOpts, logPageFailure, type ParsedPage } from "./page-retry.js";
+import { criarDisjuntor } from "./breaker.js";
 import {
   parseIdeiaListingPage,
   findLastPageIdeias,
@@ -36,6 +37,11 @@ const MAX_PAGES_PER_SITUACAO = 5000;
 const BATCH_SIZE = Number(process.env.INGEST_IDEIAS_BATCH_SIZE) || 10000;
 const OUT_DIR = dirname(fileURLToPath(import.meta.url));
 const OUT_PREFIX = "out-ideias-";
+
+// Um disjuntor por RUN: falha de transporte seguida, em qualquer dos laços, é o
+// mesmo sintoma — o portal parou de responder. Ver breaker.ts.
+const disjuntor = criarDisjuntor();
+
 
 type IdeiaCrawlItem = IdeiaListingItem & { status: string };
 
@@ -65,9 +71,11 @@ async function crawlAllSituacoes(): Promise<CrawlResult> {
         allowEmpty: true,
         ...firstContactOpts(),
       });
+      disjuntor.sucesso();
     } catch (e) {
       logPageFailure(ENTIDADE, `s${situacao}:p1`, e);
       failedPages.push(`s${situacao}:p1`);
+      disjuntor.falha(e, `s${situacao}:p1`);
       continue;
     }
     totalPages++;
@@ -80,9 +88,11 @@ async function crawlAllSituacoes(): Promise<CrawlResult> {
       try {
         const { items: parsed } = await fetchParsedPage(`${base}&p=${p}`, parseIdeiaListingPage);
         for (const it of parsed) if (!byId.has(it.id)) byId.set(it.id, { ...it, status });
+        disjuntor.sucesso();
       } catch (e) {
         logPageFailure(ENTIDADE, `s${situacao}:p${p}`, e);
         failedPages.push(`s${situacao}:p${p}`);
+        disjuntor.falha(e, `s${situacao}:p${p}`);
       }
       totalPages++;
       await sleep(PAGE_DELAY_MS);
