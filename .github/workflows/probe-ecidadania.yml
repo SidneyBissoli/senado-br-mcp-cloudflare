@@ -1,17 +1,42 @@
 name: Probe e-Cidadania reachability
 
-# Diagnostic ONLY — no D1, no writes, no secrets. Answers a single question: can a GitHub Actions
-# runner reach www12.senado.leg.br/ecidadania right now, and if not, how does it fail? Compare the
-# result against the same curl from a residential IP (which currently returns 200) to tell a transient
-# outage apart from a persistent cloud-IP block. Manual trigger only.
+# Diagnostic ONLY — no D1, no writes, no secrets. Answers a single question: can a runner reach
+# www12.senado.leg.br/ecidadania right now, and if not, how does it fail? Compare the result against
+# the same curl from a residential IP (which currently returns 200) to tell a transient outage apart
+# from a persistent IP block. Manual trigger only.
+#
+# `runner` input, added 21/09/2026: the probe used to be pinned to ubuntu-latest — an Azure IP, the
+# range e-Cidadania is KNOWN to drop. So it could only ever re-confirm the block it was built to
+# explain, and could NOT observe the machine that actually does the crawl: the dedicated Hetzner box
+# (label `ecidadania`). When an ingest run fails with curl (28), that box is what needs probing;
+# probing ubuntu-latest answers a different question. Pick the runner deliberately:
+#   ecidadania    → the box the ingest really uses. Use this to diagnose an ingest failure.
+#   ubuntu-latest → GitHub's cloud. Use this only to re-verify the Azure block itself.
 
 on:
   workflow_dispatch:
+    inputs:
+      runner:
+        description: "Where to probe from"
+        type: choice
+        options:
+          - ecidadania
+          - ubuntu-latest
+        default: ecidadania
 
 jobs:
   probe:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner == 'ubuntu-latest' && 'ubuntu-latest' || fromJSON('["self-hosted","ecidadania"]') }}
     steps:
+      - name: Where am I probing from
+        run: echo "runner request='${{ inputs.runner }}' host=$(hostname)"
+
+      # The self-hosted box has no toolcache guarantee; the two node steps below are the decisive
+      # ones, so make sure node exists on BOTH runner kinds.
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Runner egress IP
         run: |
           echo "Runner public egress IP (which range is being blocked, if any):"
