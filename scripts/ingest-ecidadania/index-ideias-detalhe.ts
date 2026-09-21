@@ -26,7 +26,7 @@ import { buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { criarDisjuntor } from "./breaker.js";
 import { readCurrentRange, readDetalheCursor, type CurrentPayloadRow } from "./d1.js";
-import { generateDetalheLoadSqlBatches, cursorUpsertStmt } from "./sql.js";
+import { generateDetalheLoadSqlBatches, cursorUpsertStmt, generateRunOnlySql } from "./sql.js";
 import { fetchIdeiaDetalheCorpus } from "./detalhe.js";
 
 const ENTIDADE = "ideias";
@@ -40,6 +40,28 @@ function cleanOldOutputs(): void {
   for (const f of readdirSync(OUT_DIR)) {
     if (f.startsWith(OUT_PREFIX) && f.endsWith(".sql")) unlinkSync(join(OUT_DIR, f));
   }
+}
+
+/**
+ * Linha de run de FALHA — e só de falha.
+ *
+ * Este job compartilha `entidade` com o crawl do corpus de ideias, e por isso
+ * NUNCA grava run row 'ok': ele não é um crawl de corpus e não pode mexer no
+ * baseline de freshness (a regra está no cabeçalho de
+ * `generateDetalheLoadSqlBatches`, em sql.ts). Essa parte do desenho está certa.
+ *
+ * O que faltava era o outro lado. Até 21/09/2026 uma falha aqui não deixava
+ * rastro NENHUM no D1 — só no log da Action —, enquanto os três irmãos gravam
+ * 'erro' em 4 a 6 pontos. A ironia ficou visível no episódio de 20-21/09: das
+ * quatro rodadas mortas pelo portal fora, TRÊS eram deste job, o único mudo.
+ *
+ * Gravar 'erro' é seguro e não reabre a ressalva acima porque os TRÊS leitores
+ * da tabela filtram por status='ok' — `pipeline.ts` (baseline de linhas),
+ * `store.ts` (freshness) e `d1.ts` (último corpus bom). Linha de erro é
+ * invisível para os três: ela informa, não desloca baseline nenhum.
+ */
+function writeRunOnly(now: string, status: string, rows: number, error: string): void {
+  writeFileSync(join(OUT_DIR, `${OUT_PREFIX}001.sql`), generateRunOnlySql(now, status, rows, error, ENTIDADE));
 }
 
 /** Rebuild an IdeiaResumo preserving listing fields from the stored payload + fresh (or preserved) detail. */
@@ -126,5 +148,14 @@ async function main(): Promise<void> {
 main().catch((e) => {
   const err = e instanceof Error ? e.message : String(e);
   console.error(`[ideias-detalhe][fatal] ${err}`);
+  try {
+    // Limpa ANTES de escrever: os lotes parciais do chunk interrompido levam o
+    // upsert do cursor na cauda, e aplicá-los faria o cursor avançar sobre itens
+    // que nunca foram buscados.
+    cleanOldOutputs();
+    writeRunOnly(new Date().toISOString(), "erro", 0, `fatal: ${err}`);
+  } catch {
+    /* nothing more we can do */
+  }
   process.exit(1);
 });
