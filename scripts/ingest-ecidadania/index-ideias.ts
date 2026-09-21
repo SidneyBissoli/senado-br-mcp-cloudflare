@@ -17,7 +17,7 @@ import { writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { sleep } from "./http.js";
-import { fetchParsedPage, logPageFailure, type ParsedPage } from "./page-retry.js";
+import { fetchParsedPage, firstContactOpts, logPageFailure, type ParsedPage } from "./page-retry.js";
 import {
   parseIdeiaListingPage,
   findLastPageIdeias,
@@ -61,7 +61,10 @@ async function crawlAllSituacoes(): Promise<CrawlResult> {
     // p1: a situacao bucket may be legitimately empty, so 0 items is not a failure here.
     let firstPage: ParsedPage<IdeiaListingItem>;
     try {
-      firstPage = await fetchParsedPage(`${base}&p=1`, parseIdeiaListingPage, { allowEmpty: true });
+      firstPage = await fetchParsedPage(`${base}&p=1`, parseIdeiaListingPage, {
+        allowEmpty: true,
+        ...firstContactOpts(),
+      });
     } catch (e) {
       logPageFailure(ENTIDADE, `s${situacao}:p1`, e);
       failedPages.push(`s${situacao}:p1`);

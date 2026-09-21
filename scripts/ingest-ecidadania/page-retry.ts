@@ -14,6 +14,39 @@ const PAGE_ATTEMPTS = 3;
 /** Deliberately long and flat: we are waiting out a portal hiccup, not hammering it. */
 const PAGE_RETRY_DELAY_MS = Number(process.env.INGEST_PAGE_RETRY_DELAY_MS) || 5000;
 
+/**
+ * FIRST CONTACT — page 1 of a listing crawl. Deliberately far more patient than a mid-crawl page.
+ *
+ * MEASURED on 21/09/2026, when the consultas run died on `pesquisamateria?p=1` with curl (28),
+ * "timed out after 30002 ms with 0 bytes received". The portal was simply down for a while: a
+ * probe from the SAME box minutes later got HTTP 200 on every endpoint, and a residential IP in
+ * Brazil had 200 throughout. Three reasons this page deserves its own budget:
+ *
+ *   - it is FATAL. If p=1 fails, nothing else in the run can happen and the whole night is lost;
+ *     a mid-crawl page only costs its own rows and is recorded as a failed page.
+ *   - TIME is the only cure available here. The contract-tests retry cures by landing on a NEW
+ *     source address ("waiting does not un-block an address — only a new runner does"), but the
+ *     ingest runs on a DEDICATED self-hosted box with a FIXED IP: `gh run rerun` comes back on
+ *     the same address. That reasoning does not transfer; waiting is what is left.
+ *   - the budget was there and went unused. Total patience was 3 page attempts x ~2.6 min of
+ *     getText retries ~= 8 minutes, inside a job allowed 200. It gave up with 96% of its time
+ *     unspent.
+ *
+ * 6 attempts x (up to ~2.6 min of getText retries + 4 min flat pause) rides out roughly half an
+ * hour of downtime and still leaves the crawl the bulk of its budget. This costs NOTHING on a
+ * healthy day: the pause only ever happens after a failed attempt.
+ */
+const FIRST_CONTACT_ATTEMPTS = Number(process.env.INGEST_FIRST_CONTACT_ATTEMPTS) || 6;
+const FIRST_CONTACT_DELAY_MS = Number(process.env.INGEST_FIRST_CONTACT_DELAY_MS) || 240_000;
+
+/**
+ * Retry profile for the fatal page-1 fetch of a listing crawl. Spread into the `fetchParsedPage`
+ * options so the caller keeps whatever else it needs (`allowEmpty`, test seams).
+ */
+export function firstContactOpts(): Pick<FetchParsedPageOpts, "attempts" | "retryDelayMs"> {
+  return { attempts: FIRST_CONTACT_ATTEMPTS, retryDelayMs: FIRST_CONTACT_DELAY_MS };
+}
+
 export interface ParsedPage<T> {
   html: string;
   items: T[];

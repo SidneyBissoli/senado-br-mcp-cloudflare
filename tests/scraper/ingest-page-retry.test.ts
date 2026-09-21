@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { fetchParsedPage, logPageFailure } from "../../scripts/ingest-ecidadania/page-retry.js";
+import { fetchParsedPage, firstContactOpts, logPageFailure } from "../../scripts/ingest-ecidadania/page-retry.js";
 
 const noSleep = async () => {};
 const parseCsv = (html: string) => (html ? html.split(",").filter(Boolean) : []);
@@ -108,3 +108,76 @@ describe("logPageFailure", () => {
     expect(() => logPageFailure("ideias", "s7:p9", new Error("x"))).not.toThrow();
   });
 });
+
+describe("firstContactOpts — o orcamento da pagina 1", () => {
+  // Estes casos derivam do defeito de 21/09/2026: a ingestao de consultas morreu em
+  // `pesquisamateria?p=1` com curl (28) depois de ~8 min, dentro de um job com 200 min de
+  // orcamento, e a pagina 1 e FATAL (sem ela o run inteiro se perde). Nada aqui fixa um
+  // numero literal: o que se afirma e a RELACAO entre os dois perfis e o efeito observavel.
+
+  it("e estritamente mais paciente que o perfil de pagina do meio do crawl", async () => {
+    const meioDoCrawl = await contarTentativasAteDesistir({});
+    const primeiroContato = await contarTentativasAteDesistir(firstContactOpts());
+    expect(primeiroContato).toBeGreaterThan(meioDoCrawl);
+  });
+
+  it("espera entre as tentativas por muito mais tempo que o perfil de pagina", async () => {
+    const meioDoCrawl = await somarEsperaAteDesistir({});
+    const primeiroContato = await somarEsperaAteDesistir(firstContactOpts());
+    expect(primeiroContato).toBeGreaterThan(meioDoCrawl);
+  });
+
+  it("sobrevive a uma queda do portal que derruba o perfil de pagina", async () => {
+    // Quantas falhas seguidas o perfil de pagina NAO aguenta.
+    const quedas = await contarTentativasAteDesistir({});
+    const tentar = (opts: Parameters<typeof fetchParsedPage>[2]) =>
+      fetchParsedPage(
+        "u",
+        parseCsv,
+        {
+          ...opts,
+          fetchText: (() => {
+            let n = 0;
+            return async () => {
+              n++;
+              if (n <= quedas) throw new Error("curl failed: (28) Operation timed out");
+              return "a,b";
+            };
+          })(),
+          sleepFn: noSleep,
+        },
+      );
+
+    await expect(tentar({})).rejects.toThrow(/28/);
+    await expect(tentar(firstContactOpts())).resolves.toMatchObject({ items: ["a", "b"] });
+  });
+});
+
+/** Quantas tentativas o perfil faz antes de desistir, medido contra um fetch que sempre falha. */
+async function contarTentativasAteDesistir(opts: Record<string, unknown>): Promise<number> {
+  let calls = 0;
+  await fetchParsedPage("u", parseCsv, {
+    ...opts,
+    fetchText: async () => {
+      calls++;
+      throw new Error("sempre falha");
+    },
+    sleepFn: noSleep,
+  }).catch(() => {});
+  return calls;
+}
+
+/** Soma das pausas que o perfil pede antes de desistir. */
+async function somarEsperaAteDesistir(opts: Record<string, unknown>): Promise<number> {
+  let total = 0;
+  await fetchParsedPage("u", parseCsv, {
+    ...opts,
+    fetchText: async () => {
+      throw new Error("sempre falha");
+    },
+    sleepFn: async (ms: number) => {
+      total += ms;
+    },
+  }).catch(() => {});
+  return total;
+}

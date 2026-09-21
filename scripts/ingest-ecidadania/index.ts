@@ -24,7 +24,7 @@ import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { sleep } from "./http.js";
-import { fetchParsedPage, logPageFailure } from "./page-retry.js";
+import { fetchParsedPage, firstContactOpts, logPageFailure } from "./page-retry.js";
 import { parseConsultaListingPage, findLastPage, type ListingItem } from "./listing.js";
 import { buildTramitandoSet, deriveStatus } from "./status.js";
 import { ECIDADANIA_BASE, buildConsultaResumo, type ConsultaResumo } from "../../src/scraper/ecidadania.js";
@@ -106,9 +106,10 @@ async function crawlAllPages(): Promise<CrawlResult> {
   const byId = new Map<number, ListingItem>();
   const failedPages: number[] = [];
 
-  // p1 failure stays fatal (propagates to main), but now gets the page-level retry too.
+  // p1 failure stays fatal (propagates to main), so it gets the patient first-contact budget.
   const first = await fetchParsedPage(`${ECIDADANIA_BASE}/pesquisamateria?p=1`, parseConsultaListingPage, {
     allowEmpty: true,
+    ...firstContactOpts(),
   });
   let lastPage = Math.min(findLastPage(first.html), MAX_PAGES);
   for (const it of first.items) byId.set(it.codigoMateria, it);
