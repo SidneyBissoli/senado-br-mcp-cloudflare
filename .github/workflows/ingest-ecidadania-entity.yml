@@ -70,11 +70,7 @@ jobs:
       # so re-applying them every run is idempotent and self-heals schema drift (e.g. the v2
       # ecidadania_comentarios + ecidadania_detalhe_cursor tables the enrichment jobs read/write).
       - name: Apply D1 migrations (idempotent)
-        run: |
-          for f in $(ls migrations/*.sql | sort); do
-            echo "Applying migration $f"
-            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
-          done
+        run: bash scripts/apply-d1.sh $(ls migrations/*.sql | sort)
 
       # ── consultas ────────────────────────────────────────────────────────────────────────────────
       - name: Generate corpus load SQL (consultas)
@@ -85,7 +81,7 @@ jobs:
       # is still recorded into ecidadania_scrape_runs even on a gate failure.
       - name: Apply consultas to D1
         if: ${{ always() && inputs.entity == 'consultas' }}
-        run: npx wrangler d1 execute senado-ecidadania --remote --file=scripts/ingest-ecidadania/out.sql
+        run: bash scripts/apply-d1.sh scripts/ingest-ecidadania/out.sql
 
       # ── eventos (listing principalaudiencia?p=N + detalhe/AJAX de uma fatia rotativa por cursor) ──
       - name: Generate eventos corpus load SQL
@@ -99,17 +95,15 @@ jobs:
 
       - name: Apply eventos to D1
         if: ${{ always() && inputs.entity == 'eventos' }}
-        run: npx wrangler d1 execute senado-ecidadania --remote --file=scripts/ingest-ecidadania/out-eventos.sql
+        run: bash scripts/apply-d1.sh scripts/ingest-ecidadania/out-eventos.sql
 
       # Nível-comentário (fragmento AJAX; tabela ecidadania_comentarios). Emitido junto com o corpus de
       # eventos (out-eventos-comentarios-NNN.sql); pode não existir quando nada mudou — tolerar ausência.
       - name: Apply eventos comentários to D1 (batched files, in order)
         if: ${{ always() && inputs.entity == 'eventos' }}
         run: |
-          for f in $(ls scripts/ingest-ecidadania/out-eventos-comentarios-*.sql 2>/dev/null | sort); do
-            echo "Applying $f"
-            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
-          done
+          files=$(ls scripts/ingest-ecidadania/out-eventos-comentarios-*.sql 2>/dev/null | sort || true)
+          if [ -n "$files" ]; then bash scripts/apply-d1.sh $files; else echo "nenhum lote a aplicar"; fi
 
       # ── ideias (listing pesquisaideia?situacao=N&p=M; batches out-ideias-NNN.sql) ──────────────────
       - name: Generate ideias corpus load SQL
@@ -119,10 +113,8 @@ jobs:
       - name: Apply ideias to D1 (batched files, in order)
         if: ${{ always() && inputs.entity == 'ideias' }}
         run: |
-          for f in $(ls scripts/ingest-ecidadania/out-ideias-[0-9]*.sql 2>/dev/null | sort); do
-            echo "Applying $f"
-            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
-          done
+          files=$(ls scripts/ingest-ecidadania/out-ideias-[0-9]*.sql 2>/dev/null | sort || true)
+          if [ -n "$files" ]; then bash scripts/apply-d1.sh $files; else echo "nenhum lote a aplicar"; fi
 
       # ── ideias-detalhe (backfill resumível por cursor de ~113,7k; reabre dataPublicacao/autorUf/…) ──
       # Tem cron próprio e roda VÁRIAS vezes/dia (ver stub) para queimar o backfill mais rápido.
@@ -136,7 +128,5 @@ jobs:
       - name: Apply ideias detail backfill to D1 (batched files, in order)
         if: ${{ always() && inputs.entity == 'ideias-detalhe' }}
         run: |
-          for f in $(ls scripts/ingest-ecidadania/out-ideias-detalhe-*.sql 2>/dev/null | sort); do
-            echo "Applying $f"
-            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
-          done
+          files=$(ls scripts/ingest-ecidadania/out-ideias-detalhe-*.sql 2>/dev/null | sort || true)
+          if [ -n "$files" ]; then bash scripts/apply-d1.sh $files; else echo "nenhum lote a aplicar"; fi

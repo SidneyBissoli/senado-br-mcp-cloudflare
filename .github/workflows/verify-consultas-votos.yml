@@ -74,8 +74,4 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          for f in $(ls scripts/ingest-ecidadania/out-consultas-votos-*.sql | sort); do
-            echo "Applying $f"
-            npx wrangler d1 execute senado-ecidadania --remote --file="$f"
-          done
+        run: bash scripts/apply-d1.sh $(ls scripts/ingest-ecidadania/out-consultas-votos-*.sql | sort)
