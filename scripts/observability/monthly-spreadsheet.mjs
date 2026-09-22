@@ -1,8 +1,19 @@
 // Vetor B — monthly usage spreadsheet. Queries the Analytics Engine SQL API for
-// one calendar month and writes an .xlsx with one tab per query (resumo + A/B/C/D)
+// one calendar month and writes an .xlsx with one tab per query (resumo + A/B/C/D/E)
 // to reports/usage/senado-mcp_<last-day-of-month>.xlsx (gitignored). The scheduled
 // workflow runs this on the 1st for the previous month and uploads the file as a
 // private artifact — it is never committed nor posted to an issue.
+//
+// O USO DO DONO NÃO ENTRA NAS ABAS DE ADOÇÃO. Até 22/09/2026 o WHERE de todas as
+// consultas era só o intervalo de datas, então smoke de produção, rodadas de eval
+// e teste manual entravam na contagem de chamadas e no ranking — o servidor
+// gravava o marcador (`blob4 = 'self'`, ligado pelo cabeçalho secreto ou pela rota
+// /mcp/uso-proprio) e a planilha o ignorava. Medir a própria sonda como adoção é a
+// mesma classe que já custou caro no painel do portfólio.
+//
+// Agora A/B/C/D e o total são do PÚBLICO (`blob4 != 'self'`), e o tráfego do dono
+// sai na aba E, com o total e a fatia que representou. Separado, não descartado:
+// saber quanto do movimento é meu é informação, e some se eu só filtrar.
 //
 // AE SQL is a limited ClickHouse subset (no scalar subqueries, no NULLIF), so the
 // adoption % (B) and cache-hit ratio (C) are computed in JS. Counts are weighted
@@ -16,6 +27,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import ExcelJS from "exceljs";
 
 const ACCOUNT_ID = process.env.CF_ACCOUNT_ID || "5c499208eebced4e34bd98ffa204f2fb";
@@ -148,6 +160,35 @@ async function collect(token, where) {
   return { A, B, C, D, total };
 }
 
+/**
+ * Os dois recortes da janela do mês. `blob4` é `'self'` quando a chamada veio do
+ * dono (cabeçalho secreto ou rota /mcp/uso-proprio) e string vazia quando não —
+ * ver src/instrument.ts, que grava nas mesmas posições em todo MCP do portfólio.
+ *
+ * São COMPLEMENTARES de propósito: toda linha da janela cai em exatamente um dos
+ * dois, então `publico + proprio` fecha com o total bruto. Um teste afirma isso.
+ */
+export function escopos(where) {
+  return {
+    publico: `(${where}) AND blob4 != 'self'`,
+    proprio: `(${where}) AND blob4 = 'self'`,
+  };
+}
+
+/** O tráfego do DONO, por dia e tool — surfaceado, não descartado. */
+async function collectProprio(token, where) {
+  const E = (
+    await runSQL(
+      `SELECT toStartOfDay(timestamp) AS day, blob1 AS tool, SUM(_sample_interval) AS calls
+       FROM ${DATASET} WHERE ${where}
+       GROUP BY day, tool ORDER BY day DESC, calls DESC`,
+      token,
+    )
+  ).map((r) => ({ day: String(r.day).slice(0, 10), tool: r.tool, calls: num(r.calls) }));
+  const total = E.reduce((acc, r) => acc + r.calls, 0);
+  return { E, total };
+}
+
 function addSheet(wb, name, rows) {
   const ws = wb.addWorksheet(name);
   if (!rows.length) {
@@ -182,8 +223,10 @@ async function main() {
 
   const { start, nextStart, lastDay } = monthBounds(year, month);
   const where = `timestamp >= toDateTime('${start}') AND timestamp < toDateTime('${nextStart}')`;
+  const escopo = escopos(where);
   console.error(`Coletando ${year}-${pad(month)} (${start} → ${nextStart})…`);
-  const { A, B, C, D, total } = await collect(token, where);
+  const { A, B, C, D, total } = await collect(token, escopo.publico);
+  const { E, total: totalProprio } = await collectProprio(token, escopo.proprio);
 
   const wb = new ExcelJS.Workbook();
   wb.creator = "senado-br-mcp / Vetor B";
@@ -198,9 +241,18 @@ async function main() {
     { k: "dataset", v: DATASET },
     { k: "conta", v: ACCOUNT_ID },
     { k: "gerado em (UTC)", v: new Date().toISOString() },
-    { k: "total de chamadas (amostra ponderada)", v: total },
-    { k: "tools distintas no mês", v: new Set(A.map((r) => r.tool)).size },
-    { k: "dias com tráfego", v: new Set(A.map((r) => r.day)).size },
+    { k: "chamadas DO PÚBLICO (amostra ponderada)", v: total },
+    { k: "tools distintas no mês (público)", v: new Set(A.map((r) => r.tool)).size },
+    { k: "dias com tráfego (público)", v: new Set(A.map((r) => r.day)).size },
+    { k: "— uso próprio, fora das abas A–D —", v: "" },
+    { k: "chamadas do DONO (smoke, evals, teste manual)", v: totalProprio },
+    {
+      k: "fatia que o uso próprio representou",
+      v:
+        total + totalProprio > 0
+          ? `${Math.round((1000 * totalProprio) / (total + totalProprio)) / 10}%`
+          : "—",
+    },
   ]);
   resumo.getRow(1).font = { bold: true };
 
@@ -208,15 +260,22 @@ async function main() {
   addSheet(wb, "B - ranking adocao", B);
   addSheet(wb, "C - cache vs live", C);
   addSheet(wb, "D - classe de cache", D);
+  addSheet(wb, "E - uso proprio (fora de A-D)", E);
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const outPath = path.join(OUT_DIR, `senado-mcp_${lastDay}.xlsx`);
   await wb.xlsx.writeFile(outPath);
-  console.error(`OK — ${A.length} linhas em A, ${total} chamadas no mês.`);
+  console.error(
+    `OK — ${A.length} linhas em A, ${total} chamadas do público e ${totalProprio} do dono (fora de A–D).`,
+  );
   console.log(outPath);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Só executa quando chamado direto: o teste importa este módulo para afirmar os
+// escopos, e importar não pode disparar consulta à Analytics Engine.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}
