@@ -34,7 +34,7 @@
 // and inspect the `isError` flag on its result.
 type ToolCallback = (...args: unknown[]) => Promise<unknown> | unknown;
 
-import { classifyError, errorText, paramNames, type ErrorClass } from "./call-shape.js";
+import { classifyError, classifyThrown, errorText, paramNames, type ErrorClass } from "./call-shape.js";
 import { incr, incrTool } from "./metrics.js";
 import { callCache, cacheClass, type CallCacheStats } from "./observability/call-context.js";
 
@@ -104,7 +104,10 @@ export function instrumentTool(
       // A thrown error is also a failed tool call — record it, then rethrow so the
       // SDK still produces the normal error response.
       isError = true;
-      classe = classifyError(e instanceof Error ? e.message : String(e));
+      // `classifyThrown` e não `classifyError`: aqui o OBJETO do erro existe,
+      // e o tipo dele separa bug nosso (`TypeError` & cia. -> `defeito`) de
+      // condição da fonte. Pela mensagem, um `TypeError` caía em `outro`.
+      classe = classifyThrown(e);
       throw e;
     } finally {
       // ATENÇÃO ao que NÃO chega aqui: erro de validação do esquema. O SDK o
