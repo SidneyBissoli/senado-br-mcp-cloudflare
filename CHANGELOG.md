@@ -4,7 +4,26 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [3.8.0] - 2026-09-23
+
+O que estava acumulado em `[Unreleased]` desde a 3.7.0 sai nesta versão: a tag
+leva o master inteiro, e o endpoint hospedado já vinha recebendo estas mudanças
+por deploy contínuo enquanto o pacote continuava dizendo 3.7.0.
+
+### Added
+
+- **Classe `defeito` na telemetria, e `classifyThrown()`.** `classifyError`
+  classifica pela MENSAGEM, e a frase de uma exceção de runtime não casa com
+  padrão nenhum do vocabulário: um `TypeError` ia para `outro`, a classe que a
+  própria definição do tipo descreve como alarme — *se esta classe crescer, é
+  sinal de que falta uma classe*. O sinal honesto é o TIPO do erro (`TypeError`,
+  `RangeError`, `ReferenceError`, `SyntaxError` são bug NOSSO, não condição da
+  fonte); caçar por texto fossilizaria a mensagem do V8, que muda entre versões
+  de Node. `classifyThrown(e)` entra só no `catch` de `instrument.ts`, onde o
+  objeto do erro existe; o sítio do `isError` continua em `classifyError`,
+  porque ali só há o texto do envelope. **`classifyError` fica INTACTA.** Sem
+  mudança de superfície: nenhuma tool, nenhum esquema e nenhuma resposta mudam.
+  Conserto nascido no `ibge-br-mcp` 5.1.2 e portado igual aos cinco irmãos.
 
 ### Fixed
 
