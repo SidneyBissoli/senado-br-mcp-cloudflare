@@ -13,6 +13,7 @@ import type { Env } from "./types.js";
 import { logger } from "./utils/logger.js";
 import { incr, getMetrics } from "./metrics.js";
 import { recordProtocolMethods, sessionFromRequest, tagRequest, withSessionHeader } from "./instrument.js";
+import { desfechosDoCorpo, teeResposta, type Desfecho } from "./envelope.js";
 import { ICON_JPEG_BASE64 } from "./icon.js";
 import { refreshEcidadania } from "./scraper/pipeline.js";
 import { handlerRouteForPath, toolProfileForRoute } from "./app-surface.js";
@@ -153,7 +154,10 @@ export default {
     const sessao = sessionFromRequest(request, url.pathname === route ? corpoMcp : undefined);
     const requestTag = tagRequest(request, env.SELF_MARKER, sessao.id);
 
-    const handler = createMcpHandler(() => createServer(env, ctx, { toolProfile, requestTag }), {
+    // Recibo da instrumentTool: o que ela gravar nesta requisição fica aqui, e é
+    // contra ele que recordProtocolMethods reconcilia. Ver src/instrument.ts.
+    const gravados = new Map<string, number>();
+    const handler = createMcpHandler(() => createServer(env, ctx, { toolProfile, requestTag, gravados }), {
       route,
       corsOptions: {
         origin: env.ALLOWED_ORIGIN || "*",
@@ -186,12 +190,46 @@ export default {
       });
     }
     // Métodos de protocolo (initialize, tools/list, notifications/*...) não
-    // passam pela instrumentTool: vão para o Analytics Engine daqui, com o
-    // desfecho lido do HTTP da resposta, e só para o POST de uma rota MCP
-    // (fora dela `route` é o default do perfil, não o caminho pedido). Ver
+    // passam pela instrumentTool, e nem toda `tools/call` passa: a recusa de
+    // esquema é respondida pelo SDK antes do callback. As duas vão para o
+    // Analytics Engine daqui, e só para o POST de uma rota MCP (fora dela
+    // `route` é o default do perfil, não o caminho pedido). Ver
     // recordProtocolMethods em src/instrument.ts.
+    //
+    // O desfecho sai do ENVELOPE da resposta, não do HTTP — o protocolo MCP
+    // manda escrever o erro dentro da mensagem e deixar o HTTP em 200. Para
+    // lê-lo sem atrasar ninguém, o corpo é teado e o ramo de leitura corre em
+    // `ctx.waitUntil`, DEPOIS de a resposta ter saído; o cliente recebe no mesmo
+    // ritmo de antes. Esperar o fim do stream é também o que garante que a
+    // instrumentTool já terminou de gravar, e portanto que o recibo está
+    // completo. (A recusa de cursor acima também é lida daqui: o corpo dela
+    // carrega o -32602, e o envelope o classifica como `contrato`.)
     response = withSessionHeader(response, sessao);
-    recordProtocolMethods(env.SENADO_ANALYTICS, requestTag, url.pathname === route ? corpoMcp : undefined, response.status);
+    const corpoDeProtocolo = url.pathname === route ? corpoMcp : undefined;
+    if (corpoDeProtocolo !== undefined) {
+      const status = response.status;
+      const grava = (desfechos: Map<string, Desfecho>): void => {
+        recordProtocolMethods(
+          env.SENADO_ANALYTICS,
+          requestTag,
+          corpoDeProtocolo,
+          status,
+          desfechos,
+          gravados,
+        );
+      };
+      const { paraCliente, paraLeitura } = teeResposta(response);
+      response = paraCliente;
+      if (paraLeitura) {
+        ctx.waitUntil(
+          desfechosDoCorpo(paraLeitura)
+            .then(grava)
+            .catch(() => grava(new Map())),
+        );
+      } else {
+        grava(new Map()); // resposta sem corpo: vale o HTTP, como antes
+      }
+    }
 
     const ms = Date.now() - start;
     logger.info("request", { method: request.method, path: url.pathname, status: response.status, ms });
