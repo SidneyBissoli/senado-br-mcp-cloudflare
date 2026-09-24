@@ -34,6 +34,7 @@
 // and inspect the `isError` flag on its result.
 type ToolCallback = (...args: unknown[]) => Promise<unknown> | unknown;
 
+import { resolveDesfecho, type Desfecho } from "./envelope.js";
 import { classifyError, classifyThrown, errorText, paramNames, type ErrorClass } from "./call-shape.js";
 import { incr, incrTool } from "./metrics.js";
 import { callCache, cacheClass, type CallCacheStats } from "./observability/call-context.js";
@@ -87,6 +88,7 @@ export function instrumentTool(
   cb: ToolCallback,
   analytics?: AnalyticsEngineDataset,
   tag?: RequestTag,
+  gravados?: Map<string, number>,
 ): ToolCallback {
   return async (...args: unknown[]) => {
     incr("toolCalls");
@@ -115,6 +117,11 @@ export function instrumentTool(
       // chamada nem como erro. Medido em 10/09/2026 pelo /metrics: três
       // chamadas com argumento de forma errada não moveram o contador.
       recordToolCall(name, isError, stats, analytics, tag, classe, paramNames(args));
+      // Recibo desta requisicao: e contra ele que recordProtocolMethods
+      // reconcilia. Fica no `finally` junto da gravacao, para os dois nunca
+      // discordarem. A recusa de esquema NAO passa por aqui -- e exatamente
+      // por isso que ela nao deixa recibo, e a linha dela e escrita la.
+      if (gravados) gravados.set(name, (gravados.get(name) ?? 0) + 1);
     }
   };
 }
@@ -183,55 +190,100 @@ function recordToolCall(
  * sih. O painel separa os dois pelo nome (`metodo_de_protocolo`). Classe de
  * cache, classe de erro e parâmetros ficam vazios; fetches e hits, zero.
  *
- * O que entra, e de onde vem o desfecho:
- *  - todo método que não é `tools/call` → uma linha, "ok" se o HTTP da
- *    resposta for < 400, "error" senão. LIMITAÇÃO, a mesma do sih: erro
- *    JSON-RPC que viaja dentro de um 200 (método desconhecido, -32601) sai
- *    como "ok" — ler exigiria consumir o corpo que está sendo devolvido;
- *  - `tools/call` só quando o HTTP é ≥ 400: o transporte recusou antes de
- *    despachar (Accept errado, sessão inválida, Origin estrangeiro) e a tool
- *    nunca rodou; sem isto a recusa seria invisível. Com HTTP < 400 a
- *    `instrumentTool` já gravou a linha, com o desfecho de verdade — não se
- *    grava de novo;
+ * O que entra:
+ *  - todo método que não é `tools/call` → uma linha;
+ *  - `tools/call` que a `instrumentTool` NÃO gravou → uma linha, pelo nome da
+ *    tool;
  *  - lote JSON-RPC (array) → uma linha por item; item sem `method` (resposta
  *    do cliente, corpo que não é JSON) → nada.
  *
+ * A RECONCILIAÇÃO — o defeito que este arquivo carregava até 24/09/2026.
+ *
+ * Aqui estava `if (status < 400) continue; // instrumentTool já gravou esta`:
+ * a reconciliação era por STATUS HTTP, e supunha que 200 implica linha gravada.
+ * Só que a `instrumentTool` envolve o CALLBACK da tool, e a recusa de esquema é
+ * respondida pelo SDK antes dele — o `finally` que grava nunca roda. É a mesma
+ * ressalva que o comentário de `instrumentTool` já declarava desde 10/09/2026
+ * ("a chamada não é contada nem como chamada nem como erro"); o que faltava era
+ * notar que o `continue` daqui fechava a única outra porta. Medido na produção:
+ * a recusa sai HTTP 200, e não gerava linha nenhuma.
+ *
+ * Agora a reconciliação é por NOME, contra o recibo que a própria
+ * `instrumentTool` deixa (`gravados`). Cada `tools/call` do pedido consome uma
+ * unidade do recibo daquele nome; sem recibo, a linha é escrita aqui. Nunca
+ * conta duas vezes e nunca deixa de contar. O status HTTP sai da reconciliação
+ * e fica só como critério de RESERVA do desfecho.
+ *
+ * O DESFECHO vem do ENVELOPE da resposta (src/envelope.ts), casado por `id`
+ * JSON-RPC. Com isso cai junto a LIMITAÇÃO que este comentário declarava: erro
+ * JSON-RPC dentro de um 200 saía como "ok".
+ *
  * Só no Analytics Engine: os contadores do /metrics continuam contando tools.
  */
-export function protocolNamesFromBody(body: unknown, status: number): string[] {
+
+/** Uma mensagem do PEDIDO que vira linha: o nome gravado e o `id` da resposta. */
+export interface MensagemDoPedido {
+  /** O método, ou o nome da tool quando é `tools/call`. */
+  nome: string;
+  /** `id` JSON-RPC como texto; "" na notificação, que não tem resposta. */
+  id: string;
+}
+
+/**
+ * As mensagens do corpo que ainda precisam de linha, já descontado o recibo.
+ *
+ * `gravados` é CONSUMIDO (decrementado) durante a varredura. Chamar sem ele
+ * significa "a instrumentTool não gravou nada".
+ */
+export function protocolMessagesFromBody(
+  body: unknown,
+  gravados?: Map<string, number>,
+): MensagemDoPedido[] {
   const itens = Array.isArray(body) ? body : [body];
-  const nomes: string[] = [];
+  const mensagens: MensagemDoPedido[] = [];
   for (const item of itens) {
     if (!item || typeof item !== "object") continue;
-    const msg = item as { method?: unknown; params?: unknown };
+    const msg = item as { method?: unknown; params?: unknown; id?: unknown };
     if (typeof msg.method !== "string" || msg.method === "") continue;
+    const id = typeof msg.id === "string" || typeof msg.id === "number" ? String(msg.id) : "";
     if (msg.method === "tools/call") {
-      if (status < 400) continue; // instrumentTool já gravou esta
       const params = msg.params as { name?: unknown } | undefined;
-      nomes.push(typeof params?.name === "string" && params.name !== "" ? params.name : "tools/call");
+      const nome =
+        typeof params?.name === "string" && params.name !== "" ? params.name : "tools/call";
+      const recibo = gravados?.get(nome) ?? 0;
+      if (recibo > 0) {
+        gravados?.set(nome, recibo - 1); // a instrumentTool já gravou esta
+        continue;
+      }
+      mensagens.push({ nome, id });
     } else {
-      nomes.push(msg.method);
+      mensagens.push({ nome: msg.method, id });
     }
   }
-  return nomes;
+  return mensagens;
 }
 
 /**
  * Grava no Analytics Engine os métodos de protocolo de um POST no endpoint
- * MCP (ver protocolNamesFromBody). Devolve os nomes gravados. Sem binding,
- * não grava nada.
+ * MCP (ver acima). Devolve os nomes gravados. Sem binding, não grava nada.
+ *
+ * `desfechos` é o que a leitura do envelope colheu por `id`; sem ele — corpo
+ * não teado, stream cortado — vale o HTTP, que é o critério de reserva.
  */
 export function recordProtocolMethods(
   analytics: AnalyticsEngineDataset | undefined,
   tag: RequestTag | undefined,
   body: unknown,
   status: number,
+  desfechos: Map<string, Desfecho> = new Map(),
+  gravados?: Map<string, number>,
 ): string[] {
   if (!analytics || body === undefined) return [];
   const cliente = clientNameFromBody(body);
-  const nomes = protocolNamesFromBody(body, status);
-  const isError = status >= 400;
-  for (const name of nomes) {
+  const mensagens = protocolMessagesFromBody(body, gravados);
+  const falhouHttp = status >= 400;
+  for (const { nome: name, id } of mensagens) {
+    const { erro: isError, classe } = resolveDesfecho(id, desfechos, falhouHttp);
     try {
       analytics.writeDataPoint({
         indexes: [name],
@@ -242,7 +294,7 @@ export function recordProtocolMethods(
           tag?.self ? "self" : "",
           tag?.country ?? "",
           tag?.asOrg ?? "",
-          "",
+          classe,
           "",
           tag?.sessao ?? "",
           name === "initialize" ? cliente : "",
@@ -253,7 +305,7 @@ export function recordProtocolMethods(
       // Falha de telemetria nunca quebra nem atrasa a resposta.
     }
   }
-  return nomes;
+  return mensagens.map((m) => m.nome);
 }
 
 /**

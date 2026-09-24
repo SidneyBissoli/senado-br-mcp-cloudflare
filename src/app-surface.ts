@@ -18,6 +18,13 @@ export interface CreateServerOptions {
   toolProfile?: SenadoToolProfile;
   /** Per-request context (self marker, country, AS) written to Analytics Engine. */
   requestTag?: import("./instrument.js").RequestTag;
+  /**
+   * Per-request receipt: how many Analytics Engine rows `instrumentTool` wrote
+   * for each tool name. `recordProtocolMethods` reconciles against it, so a
+   * `tools/call` the SDK refused before the callback (schema validation) still
+   * gets a row. See src/instrument.ts.
+   */
+  gravados?: Map<string, number>;
 }
 
 export const SERVER_INSTRUCTIONS = [
