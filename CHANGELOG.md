@@ -4,7 +4,13 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [3.9.0] - 2026-09-24
+
+Bump MINOR porque a superfície publicada muda: a descrição de
+`senado_obter_senador` passa a documentar `emExercicio` e a dizer que código
+inexistente retorna erro. A tag leva o master inteiro, e a **3.8.0 foi numerada
+no `package.json` e nunca virou release** — quem estiver na 3.7.0 do npm recebe
+as duas entradas abaixo de uma vez.
 
 ### Fixed
 
