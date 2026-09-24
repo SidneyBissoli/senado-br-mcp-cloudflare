@@ -25,8 +25,10 @@ import {
   parseProfissao,
   parseVotoSenador,
   extractParlamentares,
+  derivarEmExercicio,
 } from "../../src/tools/senadores.js";
 import { digArrayRoot } from "../../src/utils/upstream-parse.js";
+import { ensureArray } from "../../src/utils/validation.js";
 import senadorListaAtualRaw from "./fixtures/legado/senador-lista-atual.json?raw";
 import senadoresAfastadosRaw from "./fixtures/legado/senadores-afastados.json?raw";
 import senadorDetalheRaw from "./fixtures/legado/senador-detalhe.json?raw";
@@ -139,6 +141,18 @@ describe("contract: /senador/{codigo} detail", () => {
     // The detail endpoint carries no Mandatos node; the parser must still return an array
     expect(Array.isArray(d.mandatos)).toBe(true);
   });
+
+  // A premissa do conserto de 24/09/2026: o detalhe NÃO sabe se a pessoa está
+  // em exercício — nem por exercícios, nem por mandatos. Se o upstream passar a
+  // publicar isso aqui, esta guarda cai e a derivação pode vir da própria
+  // resposta, em vez do sub-endpoint /mandatos.
+  it("o detalhe não carrega exercício nenhum — por isso emExercicio vem dos mandatos", () => {
+    const p = detalhe.DetalheParlamentar.Parlamentar;
+    expect(p).not.toHaveProperty("Mandatos");
+    expect(p).not.toHaveProperty("Exercicios");
+    expect(JSON.stringify(p.IdentificacaoParlamentar)).not.toMatch(/xerc/i);
+    expect(parseSenadorDetalhe(detalhe.DetalheParlamentar).emExercicio).toBeNull();
+  });
 });
 
 // ── /senador/{codigo}/mandatos — MandatoParlamentar ───────────────────────
@@ -171,6 +185,26 @@ describe("contract: /senador/{codigo}/mandatos", () => {
       // Both legislaturas of a mandate carry DataFim upstream, so this stays strict
       expect(m.dataFim).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
+  });
+
+  // Os campos crus de que `derivarEmExercicio` depende. `DataFim` é opcional de
+  // propósito — a sua AUSÊNCIA é justamente o sinal de exercício aberto —, mas
+  // `DataInicio` não é: sem ela a regra devolve `null` para todo mundo e o
+  // campo emudece em vez de errar.
+  it("os Exercicios do mandato carregam DataInicio, que é de onde sai emExercicio", () => {
+    const items = digArrayRoot(
+      mandatos,
+      [["MandatoParlamentar", "Parlamentar", "Mandatos", "Mandato"]],
+      "contract:senador-mandatos",
+    ) as any[];
+    const exercicios = items.flatMap((m) => ensureArray(m?.Exercicios?.Exercicio) as any[]);
+    expect(exercicios.length).toBeGreaterThan(0);
+    for (const e of exercicios) {
+      expect(e.DataInicio).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      if (e.DataFim !== undefined) expect(e.DataFim).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+    // A fixture é de um titular em exercício (5672): exercício aberto, sem DataFim.
+    expect(derivarEmExercicio(items, "2026-09-24")).toBe(true);
   });
 });
 

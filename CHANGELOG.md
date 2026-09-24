@@ -4,6 +4,43 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- **`senado_obter_senador` inventava um senador para código inexistente, e
+  afirmava `emExercicio: true` sobre gente real.** Duas faces do mesmo defeito,
+  medidas em 24/09/2026 (item `mcp:ausencia-com-200` do portfólio):
+
+  1. **Ausência com HTTP 200.** Para `/senador/999999` o upstream responde
+     **200 com 304 bytes**: o envelope `DetalheParlamentar` e os `Metadados`
+     estão lá, o nó `Parlamentar` não. O código fazia
+     `response.DetalheParlamentar || response` e deixava o parser montar um
+     registro inteiro a partir do nada — `codigo: 0`, `nome: ""`, bloco de
+     proveniência e tudo. Quem perguntasse por um código errado recebia uma
+     **afirmação falsa**, não um erro. A defesa foi para a BORDA, com a peça
+     que o repo já tinha: `digObjectRoot`, que num detalhe por identificador
+     único trata nó ausente como ausência e nunca como "vazio legítimo". A
+     mensagem (`Senador com código N não encontrado.`) é classificável — cai
+     em `nao_encontrado` na telemetria, não em `outro`.
+  2. **`emExercicio` estava FIXO em `true` no código.** O detalhe
+     `/senador/{codigo}` não carrega exercício nenhum (medido: só
+     `IdentificacaoParlamentar`, `DadosBasicosParlamentar` e
+     `OutrasInformacoes`), então o campo era invenção. O servidor se
+     contradizia sobre a **mesma pessoa real**: o código 6358 saía
+     `emExercicio: true` aqui e `false` em `senado_senadores_afastados`. Agora
+     é derivado do dado, pelo sub-endpoint `/mandatos` que a tool **já
+     buscava**: está em exercício quem tem um `Exercicio` já iniciado e ainda
+     não encerrado. A regra foi validada contra as duas listas oficiais —
+     `/senador/lista/atual` (81) e `/senador/afastados` (42): **123 de 123
+     acertos**. Quando os mandatos não podem ser lidos o campo vem `null`,
+     nunca `false` — campo que não se sabe não pode sair afirmado.
+
+  `fetch` do Deep Research traduz a nova exceção no `null` do contrato
+  ("documento não encontrado"), que já era a forma de ausência dali.
+  **Mudança de superfície:** a descrição de `senado_obter_senador` passa a
+  documentar `emExercicio` e a dizer que código inexistente retorna erro.
+
 ## [3.8.0] - 2026-09-23
 
 O que estava acumulado em `[Unreleased]` desde a 3.7.0 sai nesta versão: a tag

@@ -52,6 +52,7 @@ import { ensureArray } from "../utils/validation.js";
 import { provenanceExtras, provenanceFor, type Provenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC } from "../types.js";
 import { extractParlamentares, fetchSenadorDetalhe, parseSenadorResumo } from "./senadores.js";
+import { RootNotFoundError } from "../utils/upstream-parse.js";
 import { fetchComissaoColegiado, parseComissaoItem, parseComissaoResumo } from "./comissoes.js";
 import { UFS } from "./referencia.js";
 
@@ -250,7 +251,20 @@ function handlers(baseUrl: string) {
     if (id.startsWith(PREFIXO_SENADOR)) {
       const codigo = Number.parseInt(id.slice(PREFIXO_SENADOR.length), 10);
       if (!Number.isInteger(codigo) || codigo <= 0) return null;
-      const { path, fetchedAt, detalhe } = await fetchSenadorDetalhe(codigo, baseUrl);
+      // Desde 24/09/2026 `fetchSenadorDetalhe` LANÇA em código inexistente, em
+      // vez de devolver um registro montado de defaults. Aqui a ausência tem
+      // forma própria — `null`, que a fábrica do mcp-search traduz no
+      // "documento não encontrado" do contrato —, então a exceção vira null.
+      // O `!detalhe.codigo` continua como cinto: outro caminho de ausência que
+      // apareça não pode virar documento vazio.
+      let detalheSenador: Awaited<ReturnType<typeof fetchSenadorDetalhe>>;
+      try {
+        detalheSenador = await fetchSenadorDetalhe(codigo, baseUrl);
+      } catch (e) {
+        if (e instanceof RootNotFoundError) return null;
+        throw e;
+      }
+      const { path, fetchedAt, detalhe } = detalheSenador;
       if (!detalhe.codigo) return null;
       const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
         dataset_id: `codigoParlamentar=${codigo}`,

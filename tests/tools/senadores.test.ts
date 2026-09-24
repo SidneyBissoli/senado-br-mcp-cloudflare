@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador, parseLicenca, parseMandato, parseComissaoMembro, parseCargoSenador, matchesPartido } from "../../src/tools/senadores.js";
+import { digObjectRoot } from "../../src/utils/upstream-parse.js";
+import { classifyError } from "../../src/call-shape.js";
+import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador, parseLicenca, parseMandato, parseComissaoMembro, parseCargoSenador, matchesPartido, derivarEmExercicio } from "../../src/tools/senadores.js";
 
 describe("matchesPartido (OBS-6)", () => {
   it("matches exact and common short forms", () => {
@@ -157,6 +159,115 @@ describe("parseSenadorDetalhe", () => {
     const result = parseSenadorDetalhe(dados);
     expect(result.mandatos).toHaveLength(1);
     expect(result.mandatos[0].legislatura).toBe(56);
+  });
+
+  // Até 24/09/2026 o parser devolvia `emExercicio: true` FIXO, e o servidor se
+  // contradizia sobre gente real: o código 6358 (Ana Paula Lobato, suplente com
+  // exercício encerrado em 30/07/2026) saía `true` aqui e `false` em
+  // `senado_senadores_afastados`. O campo agora nasce sem afirmação nenhuma.
+  it("nunca afirma emExercicio: o detalhe não carrega exercício", () => {
+    expect(parseSenadorDetalhe({}).emExercicio).toBeNull();
+    const comMandato = {
+      Parlamentar: {
+        IdentificacaoParlamentar: { CodigoParlamentar: "6358" },
+        DadosBasicosParlamentar: {},
+        Mandatos: { Mandato: [{ UfParlamentar: "MA", DescricaoParticipacao: "1º Suplente" }] },
+      },
+    };
+    expect(parseSenadorDetalhe(comMandato).emExercicio).toBeNull();
+  });
+});
+
+// A ausência que o upstream responde com HTTP 200. O envelope abaixo é a
+// resposta LITERAL de /senador/999999.json em 24/09/2026 (200, 304 bytes):
+// metadados presentes, nó `Parlamentar` ausente. `fetchSenadorDetalhe` decide
+// por esta mesma chamada, então o que se guarda aqui é a decisão dela.
+describe("ausência com HTTP 200 no detalhe do senador", () => {
+  const CANDIDATOS = [["DetalheParlamentar", "Parlamentar"], ["Parlamentar"]];
+  const vazio = {
+    DetalheParlamentar: {
+      noNamespaceSchemaLocation: "https://legis.senado.leg.br/dadosabertos/dados/DetalheParlamentarv6.xsd",
+      Metadados: {
+        Versao: "24/09/2026 00:13:24",
+        VersaoServico: "6",
+        DataVersaoServico: "2021-09-09",
+        DescricaoDataSet: "Retorna os detalhes de um Senador informado no parâmetro.",
+      },
+    },
+  };
+
+  it("código inexistente vira erro, nunca um registro montado de defaults", () => {
+    expect(() =>
+      digObjectRoot(vazio, CANDIDATOS, "senado_obter_senador", {
+        notFoundMessage: "Senador com código 999999 não encontrado.",
+      }),
+    ).toThrow(/não encontrado/);
+    // O que o parser faria com o envelope se a borda não barrasse: um senador
+    // inteiro, de mentira, com `codigo: 0` e nome vazio.
+    expect(parseSenadorDetalhe(vazio.DetalheParlamentar).codigo).toBe(0);
+  });
+
+  it("a mensagem cai em `nao_encontrado` na telemetria, não em `outro`", () => {
+    expect(classifyError("Senador com código 999999 não encontrado.")).toBe("nao_encontrado");
+  });
+
+  it("senador que existe atravessa a mesma borda", () => {
+    const real = { DetalheParlamentar: { Parlamentar: { IdentificacaoParlamentar: { CodigoParlamentar: "5672" } } } };
+    const dados = digObjectRoot(real, CANDIDATOS, "senado_obter_senador");
+    expect(parseSenadorDetalhe(dados).codigo).toBe(5672);
+  });
+});
+
+// Casos reais capturados de /senador/{codigo}/mandatos em 24/09/2026. A regra
+// foi medida contra as duas listas oficiais: 123 senadores, 123 acertos.
+describe("derivarEmExercicio", () => {
+  const HOJE = "2026-09-24";
+  const mandato = (exercicios: unknown) => [{ Exercicios: { Exercicio: exercicios } }];
+
+  it("exercício aberto é exercício em curso (titular 5672 e suplente 5906)", () => {
+    expect(derivarEmExercicio(mandato([{ DataInicio: "2023-02-01" }]), HOJE)).toBe(true);
+    expect(
+      derivarEmExercicio(
+        mandato([
+          { DataInicio: "2024-12-29" },
+          { DataInicio: "2022-05-24", DataFim: "2022-09-21" },
+        ]),
+        HOJE,
+      ),
+    ).toBe(true);
+  });
+
+  it("todos os exercícios encerrados é fora de exercício (afastada 6358)", () => {
+    expect(
+      derivarEmExercicio(
+        mandato([
+          { DataInicio: "2024-02-21", DataFim: "2026-07-30" },
+          { DataInicio: "2023-02-02", DataFim: "2024-01-31" },
+        ]),
+        HOJE,
+      ),
+    ).toBe(false);
+  });
+
+  it("exercício que ainda não começou não conta", () => {
+    expect(derivarEmExercicio(mandato([{ DataInicio: "2027-02-01" }]), HOJE)).toBe(false);
+  });
+
+  it("o último dia do exercício ainda é exercício (a fronteira é fechada)", () => {
+    expect(derivarEmExercicio(mandato([{ DataInicio: "2023-02-01", DataFim: HOJE }]), HOJE)).toBe(true);
+  });
+
+  it("sem exercício para ler devolve null, nunca false", () => {
+    // mandatos vazios = sub-endpoint indisponível; mandato sem Exercicios = o
+    // upstream não publicou o bloco. Nos dois casos não se sabe — e `false`
+    // afirmaria que a pessoa está fora de exercício.
+    expect(derivarEmExercicio([], HOJE)).toBeNull();
+    expect(derivarEmExercicio([{ UfParlamentar: "MA" }], HOJE)).toBeNull();
+    expect(derivarEmExercicio(mandato([{ DataFim: "2024-01-31" }]), HOJE)).toBeNull();
+  });
+
+  it("aceita o Exercicio único que o upstream manda fora de array", () => {
+    expect(derivarEmExercicio(mandato({ DataInicio: "2023-02-01" }), HOJE)).toBe(true);
   });
 });
 

@@ -12,8 +12,8 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray, normalizeText, safeInt } from "../utils/validation.js";
-import { digArrayRoot } from "../utils/upstream-parse.js";
-import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { digArrayRoot, digObjectRoot } from "../utils/upstream-parse.js";
+import { provenanceFor, resultWithProvenance, toBrasiliaIso } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
 export function parseSenadorResumo(parlamentar: any) {
@@ -45,6 +45,36 @@ export function matchesPartido(sigla: unknown, filtro: string): boolean {
   return shorter >= 4 && (sp.startsWith(p) || p.startsWith(sp));
 }
 
+/**
+ * `emExercicio` derivado do DADO, nunca afirmado. Regra: está em exercício quem
+ * tem um `Exercicio` já iniciado e ainda não encerrado — suplente que assumiu a
+ * vaga tem exercício aberto (`DataFim` ausente); titular licenciado tem todos
+ * fechados.
+ *
+ * MEDIDA em 24/09/2026 contra as duas listas oficiais (`/senador/lista/atual`,
+ * 81 senadores, e `/senador/afastados`, 42): 123 de 123 acertos, sem exceção.
+ *
+ * Devolve `null` — não `false` — quando não há exercício nenhum para ler
+ * (sub-endpoint `/mandatos` indisponível, ou mandato sem `Exercicios`): campo
+ * que não se sabe não pode sair afirmado, e `false` afirmaria "não está em
+ * exercício". As datas do upstream são ISO `AAAA-MM-DD`, então a comparação
+ * lexicográfica é a cronológica; `hoje` vem do chamador (fuso de Brasília)
+ * para a função continuar pura e testável.
+ */
+export function derivarEmExercicio(mandatos: unknown[], hoje: string): boolean | null {
+  let algumExercicio = false;
+  for (const m of mandatos) {
+    for (const e of ensureArray((m as any)?.Exercicios?.Exercicio) as any[]) {
+      const inicio = e?.DataInicio;
+      if (!inicio) continue;
+      algumExercicio = true;
+      const fim = e?.DataFim;
+      if (inicio <= hoje && (!fim || fim >= hoje)) return true;
+    }
+  }
+  return algumExercicio ? false : null;
+}
+
 export function parseSenadorDetalhe(dados: any) {
   const p = dados.Parlamentar || dados;
   const id = p.IdentificacaoParlamentar || {};
@@ -62,7 +92,15 @@ export function parseSenadorDetalhe(dados: any) {
     uf: id.UfParlamentar || "",
     foto: id.UrlFotoParlamentar || null,
     email: id.EmailParlamentar || null,
-    emExercicio: true,
+    // O detalhe `/senador/{codigo}` NÃO carrega exercício nenhum — medido em
+    // 24/09/2026: traz só IdentificacaoParlamentar, DadosBasicosParlamentar e
+    // OutrasInformacoes. Até 24/09 este campo saía `true` fixo, e o servidor se
+    // contradizia sobre gente real (o código 6358 saía `emExercicio: true` aqui
+    // e `false` em `senado_senadores_afastados`). Quem sabe a verdade é o
+    // sub-endpoint `/mandatos`: `fetchSenadorDetalhe` sobrescreve este valor com
+    // `derivarEmExercicio`. `null` é o default honesto para quem chamar o parser
+    // sozinho, sem os mandatos em mãos.
+    emExercicio: null as boolean | null,
     mandatos: ensureArray(p.Mandatos?.Mandato).map((m: any) => ({
       legislatura: parseInt(m.PrimeiraLegislaturaDoMandato?.NumeroLegislatura || "0"),
       uf: m.UfParlamentar || "",
@@ -185,11 +223,28 @@ export async function fetchSenadorDetalhe(codigoSenador: number, baseUrl: string
     CACHE_ON_DEMAND,
     () => upstreamFetch(path, {}, baseUrl),
   );
-  const dados = (response as any).DetalheParlamentar || response;
+  // Ausência com HTTP 200: para um código que não existe o upstream devolve
+  // `{"DetalheParlamentar":{...Metadados}}` — envelope e metadados presentes,
+  // SEM o nó `Parlamentar` (medido em 24/09/2026: 200, 304 bytes). O
+  // `?? response` que havia aqui deixava o parser montar um registro inteiro a
+  // partir de nada (`codigo: 0`, `nome: ""`), e quem perguntava recebia uma
+  // afirmação falsa. `digObjectRoot` é a defesa na BORDA: num detalhe por
+  // identificador único, nó ausente é ausência, nunca "vazio legítimo".
+  const dados = digObjectRoot(
+    response,
+    [
+      ["DetalheParlamentar", "Parlamentar"],
+      ["Parlamentar"],
+    ],
+    "senado_obter_senador",
+    { notFoundMessage: `Senador com código ${codigoSenador} não encontrado.` },
+  );
   const detalhe = parseSenadorDetalhe(dados);
   // The /senador/{codigo} detail carries no Mandatos; fetch the sub-endpoint.
   // Degrade to an empty list if it fails, keeping the biographical data.
-  let mandatos: ReturnType<typeof parseMandato>[] = [];
+  // É também o único endpoint que carrega os `Exercicios`, de onde sai o
+  // `emExercicio` — lista vazia (falha do sub-endpoint) vira `null`, não `false`.
+  let mandatosBrutos: unknown[] = [];
   try {
     const mandatosPath = `/senador/${codigoSenador}/mandatos`;
     const { value: mResp } = await cachedFetchWithMeta(
@@ -198,15 +253,24 @@ export async function fetchSenadorDetalhe(codigoSenador: number, baseUrl: string
       CACHE_ON_DEMAND,
       () => upstreamFetch(mandatosPath, {}, baseUrl),
     );
-    mandatos = digArrayRoot(
+    mandatosBrutos = digArrayRoot(
       mResp,
       [["MandatoParlamentar", "Parlamentar", "Mandatos", "Mandato"]],
       "senado_obter_senador:mandatos",
-    ).map(parseMandato);
+    );
   } catch {
     // sub-endpoint unavailable — keep the (empty) mandatos from the detail
   }
-  return { path, fetchedAt, detalhe: { ...detalhe, mandatos } };
+  const hoje = toBrasiliaIso(new Date()).slice(0, 10);
+  return {
+    path,
+    fetchedAt,
+    detalhe: {
+      ...detalhe,
+      emExercicio: derivarEmExercicio(mandatosBrutos, hoje),
+      mandatos: mandatosBrutos.map(parseMandato),
+    },
+  };
 }
 
 export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) {
@@ -257,7 +321,7 @@ export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) 
   // A2. senado_obter_senador
   server.tool(
     "senado_obter_senador",
-    "Obtém o detalhe biográfico de um senador específico. Retorna um objeto com `codigo`, `nome`, `nomeCompleto`, `nomeCivil`, `sexo`, `dataNascimento`, `naturalidade`/`ufNaturalidade`, `partido`, `uf`, `foto`, `email` e a lista `mandatos` (`legislatura`, `uf`, `participacao`, `dataInicio`, `dataFim`). Requer `codigoSenador` — obtenha-o via `senado_listar_senadores` (filtro `nome`). Para filiações, profissões, licenças, comissões ou cargos use `senado_senador_historico` (parâmetro `tipo`).",
+    "Obtém o detalhe biográfico de um senador específico. Retorna um objeto com `codigo`, `nome`, `nomeCompleto`, `nomeCivil`, `sexo`, `dataNascimento`, `naturalidade`/`ufNaturalidade`, `partido`, `uf`, `foto`, `email`, `emExercicio` e a lista `mandatos` (`legislatura`, `uf`, `participacao`, `dataInicio`, `dataFim`). `emExercicio` é derivado dos exercícios do mandato (aberto = em exercício) e vem `null` — nunca afirmado — quando os mandatos não puderam ser lidos. Código inexistente retorna erro (\"Senador com código N não encontrado\"), nunca um registro vazio. Requer `codigoSenador` — obtenha-o via `senado_listar_senadores` (filtro `nome`). Para filiações, profissões, licenças, comissões ou cargos use `senado_senador_historico` (parâmetro `tipo`).",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador no sistema do Senado"),
     },
