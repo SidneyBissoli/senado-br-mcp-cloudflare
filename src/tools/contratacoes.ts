@@ -94,6 +94,66 @@ export function ordenarEPaginar<T>(lista: T[], ordem: "asc" | "desc", offset: nu
   return ordenada.slice(offset, offset + limite);
 }
 
+/**
+ * A lista-pai crua contém o `id`?
+ *
+ * Separada de `paiExiste` para ser testável pela convenção da casa (unitário,
+ * sem rede): a decisão que importa é a COMPARAÇÃO, não o fetch.
+ *
+ * Compara como NÚMERO dos dois lados — o id vem `number` do esquema da tool e a
+ * fonte já o serviu como string em outras coleções —, e ausência (`null`,
+ * `undefined`, `""`) nunca vira 0: `Number("")` é 0, e sem a guarda um registro
+ * sem id casaria com `id: 0` ([[notacao-do-codigo-limpa-dos-dois-lados]]).
+ */
+export function contemId(lista: unknown, id: number): boolean {
+  return ensureArray(lista).some((c: unknown) => {
+    const bruto = (c as { id?: unknown })?.id;
+    if (bruto === null || bruto === undefined || bruto === "") return false;
+    return Number(bruto) === id;
+  });
+}
+
+/**
+ * A contratação `id` existe na lista-pai de `tipo`?
+ *
+ * POR QUE ISTO EXISTE. A API administrativa responde **404 com corpo vazio**
+ * tanto para sub-recurso de pai INEXISTENTE quanto para seção legitimamente
+ * VAZIA — medido em 24/09/2026: `/contratos/99999999/itens` e
+ * `/contratos/541/itens` (pai real, seção sem registro) dão o mesmo 404, e
+ * `/contratos/632/itens` dá 200. A fonte não distingue os dois, então a borda
+ * da rede também não pode: é a única rota adm que fica em `on404: "empty"`, e
+ * o preço disso é desfazer a ambiguidade AQUI.
+ *
+ * Custo: nenhum, na prática. Confirmar o pai é procurar o id na lista completa
+ * que `senado_contratos` / `senado_contratacoes_lista` já baixam e cacheiam —
+ * a chamada usa as MESMAS chaves de cache, então é acerto de cache. Não há
+ * rota de item único: conferido no Swagger, `/contratos/632` dá 404 e `?id=632`
+ * é ignorado (devolve a base inteira).
+ *
+ * Em falha de rede devolve `null` (indeterminado), não `false`: a fonte fora do
+ * ar não é prova de que o contrato não existe.
+ */
+export async function paiExiste(
+  tipo: string,
+  id: number,
+  admBaseUrl: string,
+): Promise<boolean | null> {
+  try {
+    const { value } = tipo === "contratos"
+      ? await cachedFetchWithMeta(
+          "senado_contratos", {}, CACHE_SEMI_STATIC,
+          () => admFetchLarge("/contratacoes/contratos", {}, admBaseUrl),
+        )
+      : await cachedFetchWithMeta(
+          "senado_contratacoes_lista", { tipo }, CACHE_SEMI_STATIC,
+          () => admFetch(`/contratacoes/${tipo}`, {}, admBaseUrl),
+        );
+    return contemId(value, id);
+  } catch {
+    return null;
+  }
+}
+
 export function registerContratacoesTools(server: SenadoToolHost, admBaseUrl: string) {
   // Q1. senado_contratos
   server.tool(
@@ -157,7 +217,7 @@ export function registerContratacoesTools(server: SenadoToolHost, admBaseUrl: st
   // Q2. senado_contratacao_detalhe
   server.tool(
     "senado_contratacao_detalhe",
-    "Detalha uma seção específica de uma contratação já identificada pelo `id`. `tipo` indica a natureza do registro: `contratos` (contrato firmado; padrão), `atas_registro_preco` (compromisso de preços para compras futuras) ou `notas_empenho` (reserva orçamentária do gasto). `secao` escolhe o aspecto: `itens`, `pagamentos`, `garantias` (qualquer `tipo`), `aditivos` (só `contratos`) ou `acionamentos` (só `atas_registro_preco`). Retorna `{ id, tipo, secao, count, total, itens }` com os registros brutos da seção (campos conforme a API administrativa), limitados a `limite` (padrão 100, máx 500) — `count < total` indica truncagem; seção sem registros retorna `count` 0 e `itens` vazio; combinações `secao`×`tipo` inválidas (ex.: `aditivos` fora de contratos) retornam erro. Atenção: a fonte NÃO publica o valor do contrato em nenhuma seção; apenas `aditivos` traz `valor`, referente ao termo aditivo (às vezes nulo) — não procure valor monetário em itens/pagamentos/garantias. Obtenha o `id` via `senado_contratos` ou `senado_contratacoes_lista` — para localizar a contratação (não detalhá-la) use aquelas ferramentas.",
+    "Detalha uma seção específica de uma contratação já identificada pelo `id`. `tipo` indica a natureza do registro: `contratos` (contrato firmado; padrão), `atas_registro_preco` (compromisso de preços para compras futuras) ou `notas_empenho` (reserva orçamentária do gasto). `secao` escolhe o aspecto: `itens`, `pagamentos`, `garantias` (qualquer `tipo`), `aditivos` (só `contratos`) ou `acionamentos` (só `atas_registro_preco`). Retorna `{ id, tipo, secao, count, total, itens }` com os registros brutos da seção (campos conforme a API administrativa), limitados a `limite` (padrão 100, máx 500) — `count < total` indica truncagem; seção sem registros retorna `count` 0 e `itens` vazio (o `id` é conferido na lista-pai antes, então `count` 0 significa mesmo seção vazia, não contratação inexistente); `id` que não existe e combinações `secao`×`tipo` inválidas (ex.: `aditivos` fora de contratos) retornam erro. Atenção: a fonte NÃO publica o valor do contrato em nenhuma seção; apenas `aditivos` traz `valor`, referente ao termo aditivo (às vezes nulo) — não procure valor monetário em itens/pagamentos/garantias. Obtenha o `id` via `senado_contratos` ou `senado_contratacoes_lista` — para localizar a contratação (não detalhá-la) use aquelas ferramentas.",
       {
         id: z.number().int().positive().describe("ID da contratação (campo 'id' das listas de contratos/atas/empenhos)"),
         tipo: z.enum(["contratos", "atas_registro_preco", "notas_empenho"]).optional().default("contratos").describe("contratos = contrato firmado (padrão); atas_registro_preco = compromisso de preços p/ compras futuras; notas_empenho = reserva orçamentária do gasto"),
@@ -181,9 +241,24 @@ export function registerContratacoesTools(server: SenadoToolHost, admBaseUrl: st
           "senado_contratacao_detalhe",
           { tipo, id: params.id, secao: params.secao },
           CACHE_ON_DEMAND,
-          () => admFetch(path, {}, admBaseUrl),
+          // `empty` sobrescreve o `absent` que `admFetch` passou a usar em
+          // 24/09/2026: aqui o 404 é mesmo ambíguo (ver `paiExiste`), e quem
+          // desfaz a ambiguidade é a conferência do pai, logo abaixo.
+          () => admFetch(path, {}, admBaseUrl, { on404: "empty" }),
         );
         const todos = ensureArray(response);
+        // Seção vazia: só agora vale pagar a conferência do pai — e ela é
+        // acerto de cache. Pai ausente => ausência tipada (`nao_encontrado`);
+        // pai presente => o zero é VERDADE e segue como `count: 0`.
+        if (todos.length === 0) {
+          const existe = await paiExiste(tipo, params.id, admBaseUrl);
+          if (existe === false) {
+            return toolError(
+              `Não existe ${tipo} com id ${params.id}. Obtenha o id em ` +
+                (tipo === "contratos" ? "senado_contratos" : "senado_contratacoes_lista") + ".",
+            );
+          }
+        }
         const limite = params.limite ?? 100;
         const prov = provenanceFor("SENADO_ADM", admBaseUrl, `/api/v1${path}`, {
           dataset_id: `${tipo}=${params.id}; secao=${params.secao}`, retrieved_at: fetchedAt,

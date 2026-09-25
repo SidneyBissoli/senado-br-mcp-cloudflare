@@ -78,7 +78,7 @@ describe("parseVideoUnidade", () => {
 
 describe("acervo vazio → aviso (achado #12)", () => {
   // O upstream 404a para códigos sem transcrição/mídia (conjuntas do CN,
-  // canceladas/não realizadas); treat404AsEmpty devolve [] e o handler monta o
+  // canceladas/não realizadas); on404: "empty" devolve [] e o handler monta o
   // resultado vazio com aviso — o mesmo caminho é exercitado aqui.
   it("notas: resposta [] (404-as-empty) produz totalBlocos 0 e aviso", () => {
     const response: unknown = [];

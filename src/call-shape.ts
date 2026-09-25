@@ -51,6 +51,12 @@ export type ErrorClass =
  */
 export function classifyError(message: string): ErrorClass {
   const m = message.toLowerCase();
+  // PRIMEIRO de todos, e de propósito: a rota que não existe na fonte é
+  // defeito NOSSO (montamos um caminho errado), e a palavra que a nomeia —
+  // "inexistente" — cairia em `nao_encontrado` logo abaixo, que é exatamente a
+  // conflação que o conserto de 24/09/2026 desfez na borda da rede. A frase
+  // vem de `MSG_ROTA_INEXISTENTE`; ela não é vocabulário da fonte, é nosso.
+  if (m.includes("defeito do servidor mcp")) return "defeito";
   // A fronteira de palavra vai só no INÍCIO. Os padrões são RADICAIS
   // ("vazi", "obrigatóri", "indisponív") justamente porque a flexão muda o
   // fim: `\bvazi\b` não casa "vazia", e foi assim que "Resposta upstream

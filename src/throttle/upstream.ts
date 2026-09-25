@@ -45,6 +45,54 @@ export class UpstreamError extends Error {
 }
 
 /**
+ * Frase-chave da mensagem de rota inexistente. Vive numa constante porque
+ * `classifyError` casa contra ela para devolver `defeito`: se o texto mudar
+ * num lugar só, a telemetria volta a mentir em silêncio.
+ */
+export const MSG_ROTA_INEXISTENTE = "Rota inexistente na fonte (defeito do servidor MCP)";
+
+/**
+ * A fonte respondeu, e respondeu que a CHAVE pedida não existe no acervo.
+ *
+ * Separada de `UpstreamError` porque não é falha da fonte: é resposta dela.
+ * A mensagem é escrita para cair em `nao_encontrado` no `classifyError`.
+ */
+export class RecursoAusenteError extends UpstreamError {
+  constructor(path: string) {
+    super(
+      `[${path}] A fonte não tem registro para esta chave: o recurso não existe no acervo publicado.`,
+      404,
+      false,
+    );
+    this.name = "RecursoAusenteError";
+  }
+}
+
+/**
+ * Distingue os DOIS 404 que as APIs do Senado emitem — medido em 24/09/2026
+ * nas duas bases, legislativa e administrativa:
+ *
+ * | caso                          | corpo                                                |
+ * |-------------------------------|------------------------------------------------------|
+ * | rota não existe (erro NOSSO)  | problem+json com `detail: "No static resource ..."`  |
+ * | chave sem registro            | corpo vazio, ou problem+json SEM `detail`            |
+ *
+ * `/servidores/xxxx` traz o `detail`; `/supridos/2005` vem com
+ * `Content-Length: 0`; `/taquigrafia/notas/sessao/99999999` traz
+ * `{instance,status,title}` sem `detail`. Só o primeiro é defeito nosso.
+ */
+export function rotaInexistente(corpo: string): boolean {
+  if (!corpo.trim()) return false;
+  let detail: unknown;
+  try {
+    detail = (JSON.parse(corpo) as { detail?: unknown }).detail;
+  } catch {
+    return false;
+  }
+  return typeof detail === "string" && /^No static resource\b/i.test(detail.trim());
+}
+
+/**
  * Parse an HTTP Retry-After header (RFC 9110 §10.2.3) into milliseconds to wait.
  * Accepts the delta-seconds form ("5") and the HTTP-date form; returns null when
  * absent or unparseable, so the caller falls back to its own backoff.
@@ -78,8 +126,23 @@ export interface UpstreamOptions {
   noJsonSuffix?: boolean;
   /** Override the response size guard (bytes). Use for known-large datasets. */
   maxSize?: number;
-  /** Return [] instead of throwing on HTTP 404 (APIs that 404 on empty collections). */
-  treat404AsEmpty?: boolean;
+  /**
+   * O que fazer com um HTTP 404 cujo CORPO está vazio — isto é, a rota existe
+   * e é a CHAVE pedida que não tem registro.
+   *
+   * - `"absent"`: lança `RecursoAusenteError` (classe `nao_encontrado`). É o
+   *   certo para coleção chaveada (ano, ano/mês, situação): a fonte devolve
+   *   `200 []` quando a chave é válida e ainda não há dado, então o 404 só
+   *   sobra para chave FORA da cobertura. Medido em 24/09/2026:
+   *   `/servidores/horas-extras/2026/10` (mês futuro, chave válida) responde
+   *   `200 []`, enquanto `/supridos/2005` (fora da cobertura) responde 404.
+   * - `"empty"`: devolve `[]`. Só para rota em que o 404 é mesmo ambíguo e
+   *   quem chama resolve a ambiguidade por outro caminho — hoje só
+   *   `senado_contratacao_detalhe`, que confere o pai na lista já cacheada.
+   *
+   * Omitir mantém o 404 como erro de upstream, que é o padrão da casa.
+   */
+  on404?: "absent" | "empty";
 }
 
 /**
@@ -185,10 +248,19 @@ export async function upstreamFetch(
         break;
       }
 
-      if (response.status === 404 && options.treat404AsEmpty) {
+      if (response.status === 404 && options.on404) {
         incr("upstreamCalls");
         log("upstream", path, 404, Date.now() - startTime, attempt);
-        return [];
+        const corpo404 = await response.text();
+        if (rotaInexistente(corpo404)) {
+          throw new UpstreamError(
+            `[${path}] ${MSG_ROTA_INEXISTENTE} — o caminho montado não existe na API do Senado.`,
+            404,
+            false,
+          );
+        }
+        if (options.on404 === "empty") return [];
+        throw new RecursoAusenteError(path);
       }
 
       if (!response.ok) {

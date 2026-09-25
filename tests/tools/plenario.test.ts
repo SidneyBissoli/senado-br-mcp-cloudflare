@@ -135,7 +135,10 @@ describe("parseOrientacaoVotacao", () => {
         { partido: "PT", voto: "SIM" },
       ],
     });
-    expect(result.codigoVotacao).toBe(12150);
+    // Nome da FONTE, não `codigoVotacao`: este é o terceiro espaço de
+    // numeração e nenhuma tool o aceita como entrada (conserto de 24/09/2026).
+    expect(result.codigoVotacaoSve).toBe(12150);
+    expect(result).not.toHaveProperty("codigoVotacao");
     expect(result.materia).toBe("Requerimento nº 911, de 2025");
     expect(result.totalSim).toBe(48);
     // OBS-5: enriched fields

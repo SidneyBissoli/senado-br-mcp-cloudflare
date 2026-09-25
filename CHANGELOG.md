@@ -4,6 +4,109 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [3.10.0] - 2026-09-24
+
+Bump MINOR porque a superfície publicada muda: cinco descrições, dois esquemas
+de entrada e dois formatos de saída (item `mcp:zero-em-sub-recurso` do
+portfólio). O item nasceu como "duas ferramentas devolvem `count: 0` para id
+inexistente"; a medição de 24/09/2026 mostrou que uma delas estava **quebrada
+para a entrada que ela própria documentava** e que a outra tinha a causa na
+borda da rede, herdada por 16 pontos de chamada.
+
+### Fixed
+
+- **`senado_obter_votacao` respondia `count: 0` para votação que EXISTE.** A
+  API do Senado publica DOIS códigos no mesmo item de `/votacao` —
+  `codigoSessao` (581816, a sessão plenária) e `codigoSessaoVotacao` (7101, a
+  votação dentro dela) — e o handler enfiava o parâmetro `codigoVotacao` no
+  filtro `codigoSessao`. Como só o primeiro é filtrável, quem casava nome com
+  nome e passava 7101 recebia `{count: 0, votacoes: []}`, com bloco de
+  proveniência completo, para o PLP 124/2022 (12/08/2026, 69 Sim x 0 Não).
+  Pior que zero calado: **indistinguível do zero de um id inventado**.
+
+  O funil medido em produção era total. Três portas entregam um campo chamado
+  `codigoVotacao`, e as três alimentavam essa tool com um valor que ela
+  recusava em silêncio:
+
+  | porta | campo que ela chamava de `codigoVotacao` | valor (PLP 124/2022) |
+  |---|---|---|
+  | `senado_search_votacoes` | `codigoSessaoVotacao` (expõe também `codigoSessao`) | 7101 |
+  | `senado_votacoes_senador` | `codigoSessaoVotacao` | 7101 — **48 de 48** |
+  | `senado_orientacao_bancada` | `codigoVotacaoSve` (TERCEIRO espaço) | 13059 |
+
+  `senado_votacoes_senador` ainda dizia na descrição "para detalhes use
+  `senado_obter_votacao`": 100% do que ela entregava era recusado.
+
+  Consertos: `codigoVotacao` **aceita os dois espaços** (resolve o código de 4
+  dígitos varrendo a janela temporal, com `ano` opcional para votação antiga) e
+  código de nenhum dos dois retorna **erro classificável**, nunca lista vazia;
+  `senado_votacoes_senador` passa a emitir o **par** `codigoSessao` +
+  `codigoVotacao`, o que faz a resolução acertar de primeira; e
+  `senado_orientacao_bancada` renomeia sua saída para `codigoVotacaoSve`, o
+  nome da fonte — é um identificador do sistema de votação eletrônica que não
+  aparece uma vez em `/votacao`, e chamá-lo de `codigoVotacao` convidava ao
+  erro.
+
+- **`treat404AsEmpty` transformava TODO 404 da API administrativa em `[]`, em
+  16 pontos de chamada.** A flag existia desde sempre, com o comentário "some
+  collections 404 instead of returning an empty array". A medição derrubou a
+  premissa: a fonte responde **`200 []`** quando a chave é válida e ainda não
+  há dado (`/servidores/horas-extras/2026/10`, mês futuro), então o 404 só
+  sobra para chave **fora da cobertura publicada** — e aí o `[]` virava uma
+  afirmação falsa. `/supridos/2005` e `/senadores/despesas_ceaps/2007`
+  respondem 404, e o servidor dizia `count: 0`: leia-se "o Senado não gastou
+  nada".
+
+  A medição também achou um discriminador que existia e era jogado fora, igual
+  nas duas APIs: o 404 de **rota inexistente** traz `detail: "No static
+  resource …"` no corpo, enquanto o de **chave ausente** vem com corpo vazio ou
+  problem+json sem `detail`. A borda (`src/throttle/upstream.ts`) passa a
+  separar os três casos: rota inexistente é **defeito nosso** e falha alto
+  (classe `defeito`); chave ausente é ausência tipada (`nao_encontrado`); e
+  `[]` só sai onde alguém pedir explicitamente.
+
+- **`senado_contratacao_detalhe` não distinguia contratação inexistente de
+  seção vazia** — e não tinha como, porque a fonte usa o MESMO 404 de corpo
+  vazio para os dois (`/contratos/99999999/itens` e `/contratos/541/itens`, pai
+  real com seção vazia; 17 de 20 pares contrato × seção dão 404, então o caso
+  ambíguo é a norma, não a exceção). Não existe rota de item único: conferido
+  no Swagger, `/contratos/632` dá 404 e `?id=632` é ignorado. A tool agora
+  confere o `id` na **lista-pai que `senado_contratos` /
+  `senado_contratacoes_lista` já baixam e cacheiam** — acerto de cache, custo
+  zero na prática — e só paga essa conferência quando a seção veio vazia. Pai
+  ausente vira erro; pai presente faz do `count: 0` uma verdade.
+
+- **`senado_suprimento_fundos` anunciava `ano >= 2010` para uma fonte que
+  publica de 2013 em diante** (medido: 2009 a 2012 respondem 404). Com a flag
+  antiga, pedir 2011 devolvia `count: 0`. O limite do esquema passa a 2013,
+  fechando a porta antes da rede.
+
+### Unchanged, e de propósito
+
+- As duas ferramentas de `taquigrafia` continuam devolvendo resultado vazio no
+  404, porque **o zero delas fala**: vem com um `aviso` que nomeia os buracos
+  estruturais da cobertura (sessões conjuntas do CN, canceladas, algumas
+  solenes) e manda conferir o `tipo`. Elas herdam de graça a proteção nova
+  contra rota montada errada.
+
+### Superfície
+
+Descrições: `senado_obter_votacao`, `senado_votacoes_senador`,
+`senado_orientacao_bancada`, `senado_contratacao_detalhe`,
+`senado_suprimento_fundos`. Entrada: `senado_obter_votacao` ganha `ano`
+(opcional) e reescreve `codigoVotacao`; `senado_suprimento_fundos` sobe o
+mínimo de `ano` para 2013. Saída: `senado_votacoes_senador` ganha
+`codigoSessao`; `senado_orientacao_bancada` renomeia `codigoVotacao` para
+`codigoVotacaoSve`.
+
+### Tests
+
+18 guardas novas (1021 → 1039). A borda não tinha **nenhum** teste cobrindo o
+`treat404AsEmpty` — foi por isso que o defeito sobreviveu. As novas fixam os
+três casos de 404 com corpos copiados literalmente da fonte, e a de votações
+fixa o **par** (7101 e 581816 levam à mesma votação), não o valor. Uma delas
+pegou um defeito real durante a escrita.
+
 ## [3.9.0] - 2026-09-24
 
 Bump MINOR porque a superfície publicada muda: a descrição de

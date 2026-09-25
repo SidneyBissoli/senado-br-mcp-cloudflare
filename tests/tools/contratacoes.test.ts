@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseContrato, parseTerceirizado, matchesFiltro, matchesFiltroCampo, podarLicitacao, ordenarEPaginar } from "../../src/tools/contratacoes.js";
+import { parseContrato, parseTerceirizado, matchesFiltro, matchesFiltroCampo, podarLicitacao, ordenarEPaginar, contemId } from "../../src/tools/contratacoes.js";
 
 describe("podarLicitacao (OBS-20)", () => {
   it("drops the circular parent licitacao from each detalhamento", () => {
@@ -147,5 +147,46 @@ describe("ordenarEPaginar (achado #2 / P63)", () => {
   it("offset beyond the list yields empty; input is not mutated", () => {
     expect(ordenarEPaginar(lista, "desc", 99, 5)).toEqual([]);
     expect(lista).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+// ── contemId: o que desfaz a ambiguidade do 404 ────────────────────────────────
+//
+// A API administrativa responde 404 de corpo vazio TANTO para sub-recurso de pai
+// inexistente QUANTO para seção legitimamente vazia (medido em 24/09/2026:
+// `/contratos/99999999/itens` e `/contratos/541/itens` dão o mesmo 404). Por
+// isso esta rota fica em `on404: "empty"` e a ambiguidade se desfaz conferindo o
+// pai na lista já cacheada. Aqui a guarda fixa a COMPARAÇÃO, que é a decisão.
+const LISTA_PAI = [
+  { id: 632, numero: "0032/2024" },
+  { id: 541, numero: "0041/2023" },
+];
+
+describe("contemId", () => {
+  it("acha o pai que existe, e nega o que não existe", () => {
+    expect(contemId(LISTA_PAI, 632)).toBe(true);
+    // 541 existe como contrato, embora a seção `itens` dele responda 404 —
+    // é exatamente o caso que virava `count: 0` indistinguível.
+    expect(contemId(LISTA_PAI, 541)).toBe(true);
+    expect(contemId(LISTA_PAI, 99999999)).toBe(false);
+  });
+
+  it("compara como número dos dois lados", () => {
+    expect(contemId([{ id: "632" }], 632)).toBe(true);
+    expect(contemId([{ id: 632 }], 632)).toBe(true);
+  });
+
+  it("registro sem id não casa com id 0", () => {
+    // `Number("")` é 0 e `Number(null)` é 0: sem a guarda de ausência, um
+    // registro sem id responderia "o pai 0 existe".
+    for (const vazio of [null, undefined, ""]) {
+      expect(contemId([{ id: vazio }], 0)).toBe(false);
+    }
+    expect(contemId([{}], 0)).toBe(false);
+  });
+
+  it("aceita lista vazia e payload que não é lista", () => {
+    expect(contemId([], 632)).toBe(false);
+    expect(contemId(null, 632)).toBe(false);
   });
 });

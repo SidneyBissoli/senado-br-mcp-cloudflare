@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { toISODate, formatISO, lastDayOfMonth, parseVotacaoItem, expandirResultado } from "../../src/tools/votacoes.js";
+import { toISODate, formatISO, lastDayOfMonth, parseVotacaoItem, expandirResultado, acharPorCodigoVotacao } from "../../src/tools/votacoes.js";
 
 describe("toISODate", () => {
   it("converts YYYYMMDD to YYYY-MM-DD", () => {
@@ -181,5 +181,95 @@ describe("parseVotacaoItem", () => {
     const r = parseVotacaoItem(item);
     expect(r.totalSim).toBe(55);
     expect(r.placarComputado).toBeUndefined();
+  });
+});
+
+// ── Os dois espaços de numeração de /votacao ──────────────────────────────────
+//
+// A guarda fixa o PAR, não o valor ([[notacao-do-codigo-limpa-dos-dois-lados]]):
+// o que o conserto de 24/09/2026 promete é que 7101 e 581816 levem à MESMA
+// votação, e que um código de nenhum dos dois espaços não devolva vazio.
+//
+// Item copiado da resposta real de `/votacao?codigoSessao=581816` em
+// 24/09/2026 (votos truncados). O conferidor NÃO monta a URL como o handler:
+// ele exercita `acharPorCodigoVotacao` sobre a lista crua, que é a parte que
+// antes não existia ([[guarda-que-reusa-o-padrao-do-defeito]]).
+const ITEM_PLP_124 = {
+  codigoSessao: 581816,
+  codigoSessaoVotacao: 7101,
+  dataSessao: "2026-08-12T14:00:00",
+  identificacao: "PLP 124/2022 (Substitutivo-CD)",
+  codigoMateria: 171682,
+  descricaoVotacao:
+    "Votação nominal do Substitutivo da Câmara dos Deputados ao Projeto de Lei Complementar nº 124, de 2022.",
+  resultadoVotacao: "A",
+  votacaoSecreta: "N",
+  votos: [
+    { codigoParlamentar: 5322, nomeParlamentar: "Teste Um", siglaPartidoParlamentar: "MDB", siglaUFParlamentar: "ES", descricaoVotoParlamentar: "Sim" },
+    { codigoParlamentar: 5323, nomeParlamentar: "Teste Dois", siglaPartidoParlamentar: "PT", siglaUFParlamentar: "BA", descricaoVotoParlamentar: "Sim" },
+  ],
+};
+
+/** As outras duas votações da MESMA sessão — é por isso que a sessão não serve de chave única. */
+const OUTRAS_DA_SESSAO = [
+  { codigoSessao: 581816, codigoSessaoVotacao: 7102, dataSessao: "2026-08-12T19:40:00", resultadoVotacao: "A" },
+  { codigoSessao: 581816, codigoSessaoVotacao: 7103, dataSessao: "2026-08-12T20:03:00", resultadoVotacao: "A" },
+];
+
+const BASE_CRUA = [ITEM_PLP_124, ...OUTRAS_DA_SESSAO];
+
+describe("acharPorCodigoVotacao — os dois espaços de numeração", () => {
+  it("acha a votação pelo codigoVotacao de 4 dígitos, que a fonte não filtra", () => {
+    const achado = acharPorCodigoVotacao(BASE_CRUA, 7101);
+    expect(achado).toBeDefined();
+    expect(achado.codigoSessao).toBe(581816);
+  });
+
+  it("o par 7101/581816 aponta para a MESMA votação", () => {
+    // Caminho A: o código da votação, resolvido na janela.
+    const porVotacao = parseVotacaoItem(acharPorCodigoVotacao(BASE_CRUA, 7101), true);
+    // Caminho B: o código da sessão, que é o filtro que a fonte honra — a
+    // sessão devolve as três votações, e a do PLP 124 é a de codigoVotacao 7101.
+    const daSessao = BASE_CRUA.filter((v) => v.codigoSessao === 581816);
+    const porSessao = parseVotacaoItem(
+      daSessao.find((v) => v.codigoSessaoVotacao === 7101),
+      true,
+    );
+    expect(porVotacao).toEqual(porSessao);
+    expect(porVotacao.materia).toBe("PLP 124/2022 (Substitutivo-CD)");
+    expect(porVotacao.votos).toHaveLength(2);
+  });
+
+  it("o codigoSessao NÃO é codigoVotacao: 581816 não se acha neste espaço", () => {
+    // Se isto passasse a achar, os dois espaços teriam colidido e o passo 2 do
+    // handler poderia responder a pergunta errada.
+    expect(acharPorCodigoVotacao(BASE_CRUA, 581816)).toBeUndefined();
+  });
+
+  it("código de nenhum dos dois espaços não se acha — e o handler erra em vez de devolver vazio", () => {
+    expect(acharPorCodigoVotacao(BASE_CRUA, 99999999)).toBeUndefined();
+    // 13059 é o codigoVotacaoSve de senado_orientacao_bancada: um TERCEIRO
+    // espaço, que não aparece uma vez em /votacao.
+    expect(acharPorCodigoVotacao(BASE_CRUA, 13059)).toBeUndefined();
+  });
+
+  it("compara como número dos dois lados, e não trata ausência como zero", () => {
+    expect(acharPorCodigoVotacao([{ codigoSessaoVotacao: "7101" }], 7101)).toBeDefined();
+    for (const vazio of [null, undefined, ""]) {
+      expect(acharPorCodigoVotacao([{ codigoSessaoVotacao: vazio }], 0)).toBeUndefined();
+    }
+  });
+
+  it("aceita lista vazia e payload que não é lista", () => {
+    expect(acharPorCodigoVotacao([], 7101)).toBeUndefined();
+    expect(acharPorCodigoVotacao(null, 7101)).toBeUndefined();
+  });
+});
+
+describe("parseVotacaoItem — expõe os dois códigos", () => {
+  it("nomeia cada espaço com o seu campo", () => {
+    const r = parseVotacaoItem(ITEM_PLP_124, true);
+    expect(r.codigoSessao).toBe(581816);
+    expect(r.codigoVotacao).toBe(7101);
   });
 });

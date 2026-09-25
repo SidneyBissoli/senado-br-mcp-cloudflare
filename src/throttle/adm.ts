@@ -4,7 +4,7 @@
  *
  * Differences from the legislative API:
  * - no `.json` suffix on paths
- * - some collections 404 instead of returning an empty array
+ * - a chave fora da cobertura responde 404, não array vazio
  * - some datasets are very large (CEAPS year ≈ 10 MB), hence the raised guard
  *
  * Reuses upstreamFetch, so the global token bucket, concurrency limit,
@@ -23,7 +23,15 @@ export async function admFetch(
   const base = baseUrl || SENADO_ADM_BASE_URL_DEFAULT;
   return upstreamFetch(`/api/v1${path}`, params, base, {
     noJsonSuffix: true,
-    treat404AsEmpty: true,
+    // `absent`, e não o `treat404AsEmpty: true` que estava aqui até 24/09/2026.
+    // A flag antiga transformava TODO 404 em `[]`, e com isso 16 pontos de
+    // chamada — CEAPS, supridos, remunerações, horas extras, contratos — diziam
+    // "count: 0" para ano que a fonte NÃO PUBLICA. Medido: `/supridos/2005` e
+    // `/senadores/despesas_ceaps/2007` respondem 404, enquanto a chave válida
+    // sem dado responde `200 []`. Logo o 404 aqui nunca significou "vazio".
+    // Quem precisa do `[]` pede `on404: "empty"` explicitamente, pelo
+    // `options` abaixo, e assume o ônus de desfazer a ambiguidade.
+    on404: "absent",
     ...options,
   });
 }

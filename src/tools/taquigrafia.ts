@@ -103,7 +103,15 @@ export function registerTaquigrafiaTools(server: SenadoToolHost, baseUrl: string
           // The acervo answers 404 for codes without transcript (CN joint sessions,
           // cancelled/not-held sessions, some solemn ones) — serve the promised
           // empty result instead of an upstream error.
-          () => upstreamFetch(path, {}, baseUrl, { treat404AsEmpty: true }),
+          //
+          // `empty` DE PROPÓSITO, ao contrário da classe administrativa que a
+          // varredura de 24/09/2026 converteu para `absent`: aqui o zero não é
+          // calado. Ele vem com `NOTAS_TAQUIGRAFICAS_AVISO_VAZIO`, que nomeia os
+          // buracos estruturais da cobertura e manda conferir o `tipo` — e a
+          // descrição da tool promete esse formato. O ganho da borda nova chega
+          // mesmo assim: rota montada errada agora falha alto em vez de virar
+          // "sem notas".
+          () => upstreamFetch(path, {}, baseUrl, { on404: "empty" }),
         );
         const nt = (response as any)?.notasTaquigraficas ?? response;
         const quartosTodos = ensureArray(nt?.quartos);
@@ -175,8 +183,9 @@ export function registerTaquigrafiaTools(server: SenadoToolHost, baseUrl: string
           "senado_videos_taquigrafia",
           { tipo, id: params.id },
           CACHE_ON_DEMAND,
-          // Same 404-as-empty posture as the notes acervo (missing media -> 404).
-          () => upstreamFetch(path, {}, baseUrl, { treat404AsEmpty: true }),
+          // Same 404-as-empty posture as the notes acervo (missing media -> 404),
+          // e pelo mesmo motivo: o zero aqui fala, via VIDEOS_TAQUIGRAFIA_AVISO_VAZIO.
+          () => upstreamFetch(path, {}, baseUrl, { on404: "empty" }),
         );
         const videosTodos = ensureArray(response).map(parseVideoUnidade);
         let videos = videosTodos;

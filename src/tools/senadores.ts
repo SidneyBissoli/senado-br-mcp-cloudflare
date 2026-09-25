@@ -120,6 +120,14 @@ export function parseVotoSenador(v: any, codigoSenador: number) {
     (vt: any) => vt.codigoParlamentar === codigoSenador,
   ) as any;
   return {
+    // O PAR, não um dos dois. Até 24/09/2026 este campo servia só o
+    // `codigoSessaoVotacao` (4 dígitos) e a descrição mandava usar
+    // `senado_obter_votacao` com ele — que filtrava por `codigoSessao` e
+    // respondia `count: 0`. Medido: 48 de 48 votos de um senador em 2026 saíam
+    // com código de 4 dígitos, ou seja, o caminho documentado quebrava sempre.
+    // Hoje as duas pontas resolvem, e emitir os dois poupa a varredura da
+    // janela: com `codigoSessao` o `obter_votacao` acerta de primeira.
+    codigoSessao: v.codigoSessao || null,
     codigoVotacao: v.codigoSessaoVotacao || v.codigoSessao || 0,
     data: v.dataSessao ? String(v.dataSessao).split("T")[0] : "",
     materia: v.identificacao || (v.sigla ? `${v.sigla} ${v.numero}/${v.ano}` : ""),
@@ -342,7 +350,7 @@ export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) 
   // A4. senado_votacoes_senador (migrated to v3 /votacao?codigoParlamentar — legacy endpoint deprecated)
   server.tool(
     "senado_votacoes_senador",
-    "Lista as votações nominais de um senador, mostrando como votou em cada matéria. Retorna `{ periodo, count, votos }`, cada voto com `codigoVotacao`, `data`, `materia`, `descricao`, `voto` e `resultado`, ordenados da mais recente para a mais antiga. Sem período usa o ano corrente; informe `ano` ou o par `dataInicio`/`dataFim` (YYYYMMDD). Requer `codigoSenador` (obtenha via `senado_listar_senadores`); para detalhes de uma votação específica use `senado_obter_votacao`.",
+    "Lista as votações nominais de um senador, mostrando como votou em cada matéria. Retorna `{ periodo, count, votos }`, cada voto com `codigoSessao`, `codigoVotacao`, `data`, `materia`, `descricao`, `voto` e `resultado`, ordenados da mais recente para a mais antiga. Sem período usa o ano corrente; informe `ano` ou o par `dataInicio`/`dataFim` (YYYYMMDD). Requer `codigoSenador` (obtenha via `senado_listar_senadores`); para detalhes de uma votação específica (votos de todos os senadores) use `senado_obter_votacao` — os dois códigos são aceitos, e `codigoSessao` resolve direto.",
     {
       codigoSenador: z.number().int().positive().describe("Código único do senador"),
       ano: z.number().int().min(1900).max(2100).optional().describe("Ano das votações"),
