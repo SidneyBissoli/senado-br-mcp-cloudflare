@@ -330,6 +330,19 @@ describe("parseVotoSenador", () => {
     ],
   };
 
+  it("emite o PAR de códigos, não um dos dois", () => {
+    // Conserto de 24/09/2026. Esta tool devolvia só o codigoSessaoVotacao e a
+    // descrição dela mandava usar senado_obter_votacao com ele — que filtra por
+    // codigoSessao e respondia `count: 0`. Medido na produção: 48 de 48 votos de
+    // um senador em 2026 vinham com o código de 4 dígitos, ou seja, o caminho
+    // documentado quebrava SEMPRE. Emitir os dois faz o `obter_votacao` acertar
+    // de primeira, sem varrer janela.
+    const result = parseVotoSenador(votacao, 5672);
+    expect(result.codigoSessao).toBe(64512);
+    expect(result.codigoVotacao).toBe(7244);
+    expect(result.codigoSessao).not.toBe(result.codigoVotacao);
+  });
+
   it("extracts the senator's own vote", () => {
     const result = parseVotoSenador(votacao, 5672);
     expect(result.codigoVotacao).toBe(7244);

@@ -157,7 +157,10 @@ describe("contract: /plenario/votacao/orientacaoBancada (flat camelCase)", () =>
   it("parseOrientacaoVotacao yields typed tallies and orientacoes", () => {
     const votacoes = raw.votacoes.map(parseOrientacaoVotacao);
     const v = votacoes[0];
-    expect(typeof v.codigoVotacao).toBe("number");
+    // `codigoVotacaoSve`: o nome da FONTE. Este é o terceiro espaço de
+    // numeração do Senado e nenhuma tool o aceita como entrada — ver o
+    // conserto de 24/09/2026 em `senado_obter_votacao`.
+    expect(typeof v.codigoVotacaoSve).toBe("number");
     expect(typeof v.totalSim).toBe("number");
     expect(typeof v.totalNao).toBe("number");
     expect(typeof v.totalAbstencao).toBe("number");

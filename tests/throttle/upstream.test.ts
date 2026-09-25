@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   upstreamFetch,
   UpstreamError,
+  RecursoAusenteError,
   parseRetryAfterMs,
   computeRetryWaitMs,
 } from "../../src/throttle/upstream.js";
+import { classifyError } from "../../src/call-shape.js";
 import * as tokenBucket from "../../src/throttle/token-bucket.js";
 
 // Mock the global fetch
@@ -168,5 +170,98 @@ describe("computeRetryWaitMs", () => {
 
   it("adds the jitter on top", () => {
     expect(computeRetryWaitMs(0, 3000, 250)).toBe(3250);
+  });
+});
+
+// ── on404: os DOIS 404 da fonte ───────────────────────────────────────────────
+//
+// Os corpos abaixo são CÓPIA LITERAL do que as duas APIs do Senado
+// responderam em 24/09/2026, coladas de `curl`, não construídas a partir do
+// padrão que `rotaInexistente` casa — o conferidor não pode reusar o caminho do
+// defeito ([[guarda-que-reusa-o-padrao-do-defeito]]). Se a fonte mudar a forma,
+// é o tier de contrato que acusa, e estas guardas continuam descrevendo o
+// contrato que o código promete.
+
+/** `GET /api/v1/servidores/xxxx` — rota que NÃO existe. */
+const CORPO_ROTA_INEXISTENTE =
+  '{"type":"about:blank","title":"Not Found","status":404,' +
+  '"detail":"No static resource api/v1/servidores/xxxx.",' +
+  '"instance":"/adm-dadosabertos/api/v1/servidores/xxxx"}';
+
+/** `GET /taquigrafia/notas/sessao/99999999` — rota existe, CHAVE não. */
+const CORPO_CHAVE_AUSENTE =
+  '{"instance":"/dadosabertos/taquigrafia/notas/sessao/99999999",' +
+  '"status":404,"title":"Not Found"}';
+
+/** `GET /api/v1/supridos/2005` — ano fora da cobertura: nginx, Content-Length 0. */
+const CORPO_VAZIO = "";
+
+function resposta404(corpo: string) {
+  return new Response(corpo || null, {
+    status: 404,
+    headers: { "Content-Type": "application/problem+json" },
+  });
+}
+
+describe("upstreamFetch — on404", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(tokenBucket.globalBucket, "tryConsume").mockReturnValue(true);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("sem on404, o 404 continua erro de upstream", async () => {
+    mockFetch.mockResolvedValueOnce(resposta404(CORPO_VAZIO));
+    await expect(upstreamFetch("/supridos/2005")).rejects.toBeInstanceOf(UpstreamError);
+  });
+
+  it('on404 "absent": corpo vazio vira ausência tipada, não []', async () => {
+    mockFetch.mockResolvedValueOnce(resposta404(CORPO_VAZIO));
+    await expect(
+      upstreamFetch("/supridos/2005", {}, undefined, { on404: "absent" }),
+    ).rejects.toBeInstanceOf(RecursoAusenteError);
+  });
+
+  it('on404 "absent": problem+json SEM detail também é chave ausente', async () => {
+    mockFetch.mockResolvedValueOnce(resposta404(CORPO_CHAVE_AUSENTE));
+    await expect(
+      upstreamFetch("/taquigrafia/notas/sessao/99999999", {}, undefined, { on404: "absent" }),
+    ).rejects.toBeInstanceOf(RecursoAusenteError);
+  });
+
+  it("a ausência tipada classifica como nao_encontrado", async () => {
+    mockFetch.mockResolvedValueOnce(resposta404(CORPO_VAZIO));
+    try {
+      await upstreamFetch("/supridos/2005", {}, undefined, { on404: "absent" });
+      expect.unreachable("deveria ter lançado");
+    } catch (e) {
+      expect(classifyError((e as Error).message)).toBe("nao_encontrado");
+      expect((e as UpstreamError).retryable).toBe(false);
+    }
+  });
+
+  it('on404 "empty": corpo vazio vira [] (rota de 404 ambíguo)', async () => {
+    mockFetch.mockResolvedValueOnce(resposta404(CORPO_VAZIO));
+    const r = await upstreamFetch("/contratacoes/contratos/541/itens", {}, undefined, {
+      on404: "empty",
+    });
+    expect(r).toEqual([]);
+  });
+
+  it("rota inexistente NUNCA vira [] nem ausência — nem com on404 empty", async () => {
+    for (const on404 of ["absent", "empty"] as const) {
+      mockFetch.mockResolvedValueOnce(resposta404(CORPO_ROTA_INEXISTENTE));
+      try {
+        await upstreamFetch("/servidores/xxxx", {}, undefined, { on404 });
+        expect.unreachable(`deveria ter lançado com on404=${on404}`);
+      } catch (e) {
+        expect(e).not.toBeInstanceOf(RecursoAusenteError);
+        // É defeito NOSSO (caminho montado errado), não ausência de dado:
+        // a telemetria tem de separar os dois.
+        expect(classifyError((e as Error).message)).toBe("defeito");
+      }
+    }
   });
 });

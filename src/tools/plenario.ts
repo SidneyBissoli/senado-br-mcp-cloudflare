@@ -115,7 +115,14 @@ export function parseSessaoResultado(s: any) {
 /** Parse an orientacaoBancada votacao item (flat camelCase). */
 export function parseOrientacaoVotacao(v: any) {
   return {
-    codigoVotacao: v.codigoVotacaoSve ?? null,
+    // `codigoVotacaoSve`, com o nome da FONTE, e não `codigoVotacao`. Medido em
+    // 24/09/2026: é um TERCEIRO espaço de numeração — as 3 votações de
+    // 12/08/2026 são 13059/13159/13161 aqui, 7101/7102/7103 em
+    // `senado_votacoes_senador` e a sessão 581816 em `senado_obter_votacao`. O
+    // campo `codigoVotacaoSve` não aparece UMA vez em `/votacao`, então nenhuma
+    // tool o resolve; chamá-lo de `codigoVotacao` convidava a alimentar o
+    // `senado_obter_votacao` com ele e receber `count: 0` calado.
+    codigoVotacaoSve: v.codigoVotacaoSve ?? null,
     descricao: v.descricaoVotacao || null,
     materia: v.descricaoMateria ||
       (v.siglaTipoMateria ? `${v.siglaTipoMateria} ${v.numeroMateria}/${v.anoMateria}` : null),
@@ -237,7 +244,7 @@ export function registerPlenarioTools(server: SenadoToolHost, baseUrl: string) {
   // F3. senado_orientacao_bancada
   server.tool(
     "senado_orientacao_bancada",
-    "Orientação de bancada nas votações de plenário: como cada liderança partidária orientou o voto, com placar — essencial para análise de disciplina partidária. Retorna `{ count, votacoes }`, com cada votação trazendo `codigoVotacao`, `descricao`, `materia`, `dataInicio`, `dataTermino`, `sessao`, totais (`totalSim`, `totalNao`, `totalAbstencao`, `obstrucoes`), `quorumInicial`/`quorumFinal` e `orientacoes` (`partido`, `voto`). Informe `data` (um dia) ou o período `dataInicio`/`dataFim`. Para o resultado das sessões use `senado_resultado_plenario`.",
+    "Orientação de bancada nas votações de plenário: como cada liderança partidária orientou o voto, com placar — essencial para análise de disciplina partidária. Retorna `{ count, votacoes }`, com cada votação trazendo `codigoVotacaoSve`, `descricao`, `materia`, `dataInicio`, `dataTermino`, `sessao`, totais (`totalSim`, `totalNao`, `totalAbstencao`, `obstrucoes`), `quorumInicial`/`quorumFinal` e `orientacoes` (`partido`, `voto`). Informe `data` (um dia) ou o período `dataInicio`/`dataFim`. O `codigoVotacaoSve` é o identificador interno do sistema de votação eletrônica e pertence a um espaço de numeração próprio: NÃO serve como entrada de `senado_obter_votacao` (use a `data` com `senado_search_votacoes` para chegar ao código da votação). Para o resultado das sessões use `senado_resultado_plenario`.",
     {
       data: z.string().regex(/^\d{8}$/).optional().describe("Data da sessão (YYYYMMDD)"),
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início do período (YYYYMMDD)"),

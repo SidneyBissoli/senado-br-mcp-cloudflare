@@ -11,7 +11,7 @@ import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { errorFrom, buildParams, ensureArray } from "../utils/validation.js";
+import { toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
 import { computarPlacar } from "../utils/placar.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND } from "../types.js";
@@ -94,33 +94,109 @@ export function parseVotacaoItem(v: any, includeVotos = false) {
   return result;
 }
 
+/**
+ * Os DOIS espaços de numeração que o item de `/votacao` carrega ao mesmo tempo.
+ *
+ * | campo da fonte        | exemplo  | o que é                          |
+ * |-----------------------|----------|----------------------------------|
+ * | `codigoSessao`        | 581816   | a sessão plenária (6 dígitos)    |
+ * | `codigoSessaoVotacao` | 7101     | a votação dentro dela (4 dígitos)|
+ *
+ * `/votacao` só filtra pelo primeiro: medido em 24/09/2026,
+ * `?codigoSessao=581816` devolve 3 votações e 81 votos nominais, enquanto
+ * `?codigoSessao=7101` devolve `[]`. E a fonte **ignora filtro desconhecido**
+ * em vez de recusá-lo — `?codigoSessaoVotacao=7101` devolve a base inteira
+ * (1,77 MB) —, então não existe filtro server-side pelo código da votação:
+ * resolver é do nosso lado ([[esquema-que-nao-recusa-responde-outra-pergunta]]).
+ */
+export const CAMPO_SESSAO = "codigoSessao";
+export const CAMPO_VOTACAO = "codigoSessaoVotacao";
+
+/**
+ * Acha, numa lista crua de `/votacao`, o item cujo `codigoSessaoVotacao` é
+ * `codigo`. Devolve `undefined` quando não está na janela.
+ *
+ * Existe separada do handler para a guarda poder exercitá-la sem montar URL —
+ * o conferidor não pode reusar o caminho do defeito
+ * ([[guarda-que-reusa-o-padrao-do-defeito]]).
+ */
+export function acharPorCodigoVotacao(lista: unknown, codigo: number): any | undefined {
+  return ensureArray(lista).find((v: any) => {
+    const bruto = v?.[CAMPO_VOTACAO];
+    if (bruto === null || bruto === undefined || bruto === "") return false;
+    return Number(bruto) === codigo;
+  });
+}
+
 export function registerVotacoesTools(server: SenadoToolHost, baseUrl: string) {
   // D3. senado_obter_votacao
   server.tool(
     "senado_obter_votacao",
-    "Obtém detalhes de uma votação de **plenário** pelo `codigoVotacao` (que é o `codigoSessao` da sessão plenária), incluindo votos nominais. Retorna o objeto da votação (placar, `resultado` legível + `resultadoCodigo` bruto, `secreta`) com `votos[]` (`codigoSenador`, `nomeSenador`, `partido`, `uf`, `voto`); se a sessão tiver várias votações, retorna `{ codigoSessao, count, votacoes }`. Obtenha o `codigoSessao` via `senado_search_votacoes` antes de chamar. Atenção: este endpoint só aceita códigos de votação de **plenário** — códigos de `senado_votacao_comissao` pertencem a outro espaço de numeração e NÃO são válidos aqui (podem coincidir numericamente, mas apontam para outra votação).",
+    "Obtém detalhes de uma votação de **plenário**, incluindo votos nominais. `codigoVotacao` aceita OS DOIS códigos que a fonte publica para a mesma votação: o `codigoVotacao` de 4 dígitos (ex.: 7101 — o que `senado_search_votacoes` e `senado_votacoes_senador` devolvem nesse campo) ou o `codigoSessao` de 6 dígitos da sessão plenária (ex.: 581816). Com o código da votação retorna aquela votação; com o da sessão retorna `{ codigoSessao, count, votacoes }` com todas as votações da sessão. Cada votação traz placar, `resultado` legível + `resultadoCodigo` bruto, `secreta` e `votos[]` (`codigoSenador`, `nomeSenador`, `partido`, `uf`, `voto`). Resolver o código de 4 dígitos exige varrer uma janela temporal: por padrão a janela recente da fonte (~12 meses); para votação mais antiga informe `ano`. Código que não existe em nenhum dos dois espaços retorna erro — nunca lista vazia. Atenção: códigos de `senado_votacao_comissao` e o `codigoVotacao` de `senado_orientacao_bancada` pertencem a OUTROS espaços de numeração e não são válidos aqui.",
     {
-      codigoVotacao: z.number().int().positive().describe("Código único da votação (codigoSessao da sessão plenária)"),
+      codigoVotacao: z.number().int().positive().describe("Código da votação (4 dígitos, ex. 7101) OU o codigoSessao da sessão plenária (6 dígitos, ex. 581816) — os dois são aceitos"),
+      ano: z.number().int().min(1990).max(2100).optional().describe("Só para código de votação de 4 dígitos ANTERIOR aos últimos ~12 meses: o ano em que a votação ocorreu, para abrir a janela de busca"),
     },
     async (params) => {
       try {
-        const qp = { codigoSessao: String(params.codigoVotacao) };
+        const codigo = params.codigoVotacao;
+        // PASSO 1 — tentar como codigoSessao, o ÚNICO filtro que a fonte honra.
+        const qp = { [CAMPO_SESSAO]: String(codigo) };
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_obter_votacao",
-          { codigo: params.codigoVotacao },
+          { codigo },
           CACHE_ON_DEMAND,
           () => upstreamFetch("/votacao", qp, baseUrl),
         );
         const votacoes = ensureArray(response).map((v: any) => parseVotacaoItem(v, true));
-        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
-          dataset_id: `codigoSessao=${params.codigoVotacao}`,
-          reference_period: votacoes[0]?.data || undefined,
-          retrieved_at: fetchedAt,
-        });
-        if (votacoes.length === 1) return resultWithProvenance(votacoes[0], prov);
-        return resultWithProvenance(
-          { codigoSessao: params.codigoVotacao, count: votacoes.length, votacoes },
-          prov,
+        if (votacoes.length > 0) {
+          const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
+            dataset_id: `${CAMPO_SESSAO}=${codigo}`,
+            reference_period: votacoes[0]?.data || undefined,
+            retrieved_at: fetchedAt,
+          });
+          if (votacoes.length === 1) return resultWithProvenance(votacoes[0], prov);
+          return resultWithProvenance({ codigoSessao: codigo, count: votacoes.length, votacoes }, prov);
+        }
+
+        // PASSO 2 — vazio não é resposta: o número pode ser do OUTRO espaço.
+        // Até 24/09/2026 o handler paravaaqui e devolvia `{count: 0}` — para
+        // 7101, que é a votação do PLP 124/2022 com 69 Sim. Pior que zero
+        // calado: indistinguível do zero de um id inventado.
+        const janela: Record<string, string> = params.ano
+          ? { dataInicio: `${params.ano}-01-01`, dataFim: `${params.ano}-12-31` }
+          : {};
+        const { value: cru, fetchedAt: fetchedAtJanela } = await cachedFetchWithMeta(
+          "senado_obter_votacao_janela",
+          janela,
+          CACHE_ON_DEMAND,
+          () => upstreamFetch("/votacao", janela, baseUrl),
+        );
+        const achado = acharPorCodigoVotacao(cru, codigo);
+        if (achado) {
+          const votacao = parseVotacaoItem(achado, true);
+          return resultWithProvenance(
+            votacao,
+            provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
+              dataset_id: `${CAMPO_VOTACAO}=${codigo}`,
+              reference_period: votacao.data || undefined,
+              retrieved_at: fetchedAtJanela,
+            }),
+          );
+        }
+
+        // PASSO 3 — não está em nenhum dos dois espaços: ausência TIPADA.
+        const ondeProcurou = params.ano
+          ? `no ano ${params.ano}`
+          : "na janela recente da fonte (~12 meses)";
+        return toolError(
+          `Não existe votação de plenário com o código ${codigo}: ele não é ` +
+            `codigoSessao de nenhuma sessão nem codigoVotacao ${ondeProcurou}.` +
+            (params.ano
+              ? " Confira o ano e o código em senado_search_votacoes."
+              : " Se a votação é anterior, informe o `ano`; ou obtenha o código em" +
+                " senado_search_votacoes. O `codigoVotacao` de senado_orientacao_bancada" +
+                " pertence a outro espaço de numeração e não é aceito aqui."),
         );
       } catch (e) {
         return errorFrom(e, "Votação não encontrada");

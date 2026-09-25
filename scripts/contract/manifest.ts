@@ -22,7 +22,7 @@ export interface Helpers {
   legis: (
     path: string,
     params?: Record<string, string>,
-    opts?: { large?: boolean; treat404AsEmpty?: boolean },
+    opts?: { large?: boolean; on404?: "absent" | "empty" },
   ) => Promise<unknown>;
   /** admFetch against the adm base (prefixes /api/v1). */
   adm: (path: string, params?: Record<string, string>, large?: boolean) => Promise<unknown>;
@@ -373,7 +373,7 @@ export const FIXTURES: FixtureSpec[] = [
     name: "notas-taquigraficas",
     capture: async (h) => {
       for (const cod of codigosSessoes(h)) {
-        const raw = await h.legis(`/taquigrafia/notas/sessao/${cod}`, {}, { treat404AsEmpty: true });
+        const raw = await h.legis(`/taquigrafia/notas/sessao/${cod}`, {}, { on404: "empty" });
         const nt = (dig(raw, "notasTaquigraficas") ?? raw) as Record<string, unknown> | unknown[];
         if (asArray(dig(nt, "quartos")).length > 0) return raw;
       }
@@ -385,7 +385,7 @@ export const FIXTURES: FixtureSpec[] = [
     name: "videos-taquigrafia",
     capture: async (h) => {
       for (const cod of codigosSessoes(h)) {
-        const raw = await h.legis(`/taquigrafia/videos/sessao/${cod}`, {}, { treat404AsEmpty: true });
+        const raw = await h.legis(`/taquigrafia/videos/sessao/${cod}`, {}, { on404: "empty" });
         if (asArray(raw).length > 0) return raw;
       }
       throw new Error("no plenary session with taquigrafia videos found");

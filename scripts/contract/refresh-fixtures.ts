@@ -73,7 +73,7 @@ const helpers: Helpers = {
   legis: (path, params = {}, opts = {}) =>
     upstreamFetch(path, params, undefined, {
       maxSize: opts.large ? MAX_RESPONSE_SIZE_LARGE : undefined,
-      treat404AsEmpty: opts.treat404AsEmpty,
+      on404: opts.on404,
     }),
   adm: (path, params = {}, large = false) =>
     admFetch(path, params, undefined, large ? { maxSize: MAX_RESPONSE_SIZE_LARGE } : {}),
