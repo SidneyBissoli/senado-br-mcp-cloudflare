@@ -4,7 +4,10 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
-## [3.10.0] - 2026-09-24
+## [3.10.0] - 2026-09-25
+
+Numerada em 24/09 e publicada em 25/09; a tag leva o master inteiro, então a
+seção "Também nesta tag", no fim, cobre o que entrou depois do bump.
 
 Bump MINOR porque a superfície publicada muda: cinco descrições, dois esquemas
 de entrada e dois formatos de saída (item `mcp:zero-em-sub-recurso` do
@@ -106,6 +109,22 @@ mínimo de `ano` para 2013. Saída: `senado_votacoes_senador` ganha
 três casos de 404 com corpos copiados literalmente da fonte, e a de votações
 fixa o **par** (7101 e 581816 levam à mesma votação), não o valor. Uma delas
 pegou um defeito real durante a escrita.
+
+### Também nesta tag (depois do bump)
+- **A recusa de esquema não era contada — nem como chamada nem como erro
+  (só o Worker; o canal stdio não muda).** A reconciliação entre a
+  `instrumentTool` e a camada HTTP era por status e supunha que 200 implica
+  linha gravada; a recusa do zod é respondida pelo SDK antes do callback,
+  então o `finally` que grava nunca rodava. Medido em produção em 24/09/2026
+  pela rota do dono. Agora a reconciliação é por NOME contra o recibo da
+  própria `instrumentTool`, e o desfecho sai do envelope da resposta casado
+  por `id` JSON-RPC — erro JSON-RPC dentro de um 200 deixa de sair `ok`.
+  Sexto e último dos seis servidores (conserto nascido no ilo-mcp-server).
+- **A ficha do LobeHub passa a ser presa por teste.**
+  `tests/lhm-manifest.test.ts` compara `lhm.plugin.json` com o servidor real
+  (`npm run manifest:lhm` o regenera). Medido em 25/09/2026: a ficha publicada
+  estava na 3.7.0 com o npm em 3.9.0 — o LobeHub só ingere o que
+  `lhm plugin update` publica.
 
 ## [3.9.0] - 2026-09-24
 
