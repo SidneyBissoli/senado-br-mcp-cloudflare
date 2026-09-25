@@ -45,7 +45,8 @@
     "build:dataset": "tsx scripts/build-dataset/index.ts",
     "dataset:dictionary": "tsx scripts/build-dataset/index.ts --dictionary-only",
     "release:dataset": "tsx scripts/build-dataset/release.ts",
-    "release:zenodo": "tsx scripts/build-dataset/zenodo-publish.ts"
+    "release:zenodo": "tsx scripts/build-dataset/zenodo-publish.ts",
+    "manifest:lhm": "node scripts/gen-lhm-manifest.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",
