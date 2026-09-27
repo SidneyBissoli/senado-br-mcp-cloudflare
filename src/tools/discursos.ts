@@ -12,8 +12,7 @@ import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray, safeInt } from "../utils/validation.js";
 import { digArrayRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
-import { CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
-import { USER_AGENT } from "../version.js";
+import { CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
 /**
  * Aviso anexado quando `tipo=discursos` é chamado sem período. O upstream
@@ -199,45 +198,25 @@ export function registerDiscursosTools(server: SenadoToolHost, baseUrl: string) 
           async () => {
             // This endpoint serves ONLY text/plain; the ".json" suffix (or Accept:
             // application/json) forces content negotiation to JSON -> HTTP 406. No suffix
-            // + Accept including text/plain -> 200.
-            const url = `${baseUrl}/discurso/texto-integral/${params.codigoPronunciamento}`;
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+            // + Accept including text/plain -> 200. Pelo `upstreamFetch` em modo texto
+            // desde a 3.11.0 (antes: `fetch` cru, sem retry nem contagem no `retrieval`).
+            const text = (await upstreamFetch(
+              `/discurso/texto-integral/${params.codigoPronunciamento}`,
+              {},
+              baseUrl,
+              { noJsonSuffix: true, text: true, accept: "text/plain, application/json" },
+            )) as string;
+            // Try to parse as JSON first — API might wrap the text
             try {
-              const resp = await fetch(url, {
-                method: "GET",
-                headers: {
-                  Accept: "text/plain, application/json",
-                  "User-Agent": USER_AGENT,
-                },
-                signal: controller.signal,
-              });
-              clearTimeout(timeout);
-              if (!resp.ok) {
-                throw new Error(`Upstream retornou HTTP ${resp.status} para texto do discurso ${params.codigoPronunciamento}`);
+              const json = JSON.parse(text);
+              // If it's an object with a text field, extract it
+              if (json && typeof json === "object") {
+                return json.TextoIntegral || json.textoIntegral || json.texto || text;
               }
-              const text = await resp.text();
-              if (!text.trim()) {
-                throw new Error(`Texto do discurso ${params.codigoPronunciamento} vazio`);
-              }
-              // Try to parse as JSON first — API might wrap the text
-              try {
-                const json = JSON.parse(text);
-                // If it's an object with a text field, extract it
-                if (json && typeof json === "object") {
-                  return json.TextoIntegral || json.textoIntegral || json.texto || text;
-                }
-                return text;
-              } catch {
-                // Not JSON — return raw text
-                return text;
-              }
-            } catch (e) {
-              clearTimeout(timeout);
-              if ((e as Error).name === "AbortError") {
-                throw new Error(`Timeout ao obter texto do discurso ${params.codigoPronunciamento}`);
-              }
-              throw e;
+              return text;
+            } catch {
+              // Not JSON — return raw text
+              return text;
             }
           },
         );

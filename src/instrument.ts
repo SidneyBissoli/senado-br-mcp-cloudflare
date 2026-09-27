@@ -38,6 +38,7 @@ import { resolveDesfecho, type Desfecho } from "./envelope.js";
 import { classifyError, classifyThrown, errorText, paramNames, type ErrorClass } from "./call-shape.js";
 import { incr, incrTool } from "./metrics.js";
 import { callCache, cacheClass, type CallCacheStats } from "./observability/call-context.js";
+import { withUpstreamCall } from "./throttle/upstream.js";
 
 /** Header the owner's MCP clients send (value = the SELF_MARKER secret). */
 export const SELF_HEADER = "x-mcp-self";
@@ -97,7 +98,12 @@ export function instrumentTool(
     // Per-call store the cache layer increments per upstream fetch (see call-context.ts).
     const stats: CallCacheStats = { fetches: 0, hits: 0 };
     try {
-      const result = await callCache.run(stats, () => cb(...args));
+      // Dois contextos por chamada, aninhados: o coletor de REDE do fetch comum
+      // (idas, tentativas, anomalias → `retrieval` da proveniência; ver
+      // src/throttle/upstream.ts) e o acumulador de CACHE (acertos → blob3).
+      // Este é o único lugar em que uma chamada de tool começa — stdio e Worker
+      // passam pelo mesmo funil (`host.tool` em src/server.ts).
+      const result = await withUpstreamCall(() => callCache.run(stats, () => Promise.resolve(cb(...args))));
       isError =
         typeof result === "object" && result !== null && (result as { isError?: unknown }).isError === true;
       if (isError) classe = classifyError(errorText(result));

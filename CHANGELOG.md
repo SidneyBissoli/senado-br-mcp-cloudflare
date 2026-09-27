@@ -4,6 +4,92 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [3.11.0] - 2026-09-27
+
+Bump MINOR porque o bloco de proveniência de TODA resposta ganha uma chave:
+`retrieval` — o diagnóstico da ida à origem, contrato v1.1 do portfólio
+(`@sbissoli/mcp-provenance` 0.2.0). É a sexta adoção do fetch comum
+`@sbissoli/mcp-upstream` (depois de bcb, ibge, ilo, uis e medical), e a
+resposta ao item "Diagnóstico de origem na proveniência" do roadmap técnico:
+um sucesso obtido depois de duas respostas anômalas da fonte deixa de ser
+indistinguível de um sucesso de primeira. A superfície de `tools/list` NÃO
+muda (`baselines/surface-stdio-3.11.0.json` é byte-idêntico ao dump da
+3.10.0): as 69 tools anunciam um `outputSchema` permissivo.
+
+### Added
+
+- **`provenance.retrieval` em toda resposta** — `{ requests, attempts,
+  anomalies, unstable }`: quantas idas à fonte a chamada fez, quantas
+  tentativas somaram (repetições incluídas), que classes de anomalia foram
+  vistas (`timeout`, `network`, `http_4xx`, `http_5xx`, `rate_limited`,
+  `malformed_body`) e se a resposta é instável. **Medido, nunca inventado**:
+  o coletor abre em `instrumentTool` — o único lugar em que uma chamada de
+  tool começa, stdio e Worker — e toda ida pelo `upstreamFetch` cai nele.
+  Resposta servida inteira do cache (nenhuma ida) sai `retrieval: null`, como
+  o contrato manda; fora de uma chamada de tool (cron do e-Cidadania) a ida
+  ganha um coletor descartável e a política vale igual. Um servidor com UMA
+  origem não precisa do coletor por origem do medical: os dois blocos do
+  `search` (senadores + colegiados, mesma API) carregam a medição da chamada.
+- **Os três `fetch` crus entram no funil.** `senado_requerimentos_cpi`
+  (`/comissao/cpi/{sigla}/requerimentos`), `senado_discurso_texto`
+  (`/discurso/texto-integral/{codigo}`, o único endpoint que só fala
+  `text/plain` — `upstreamFetch` ganhou `accept` e `text`) e o scraper do
+  e-Cidadania (`fetchPage`/`fetchEcidadaniaJson`, 10 sítios) faziam a ida por
+  conta própria, sem retry e fora de qualquer contagem — o `retrieval` mentiria
+  por omissão. Agora passam pelo mesmo fetch comum, com a mesma política. O
+  e-Cidadania continua fora do token bucket (é outro host, e nunca passou por
+  ele); as mensagens de erro e o `retryable` que `ecidadaniaError` lê são os
+  mesmos.
+
+### Changed
+
+- **A ida à origem é feita pelo `@sbissoli/mcp-upstream` 0.3.0**, no modo
+  `response`: timeout, retry, `Retry-After`, orçamento e contagem são do
+  pacote; o corpo continua sendo lido no senado — guardas de 5/20 MB, os DOIS
+  404 da fonte (`rotaInexistente` × chave ausente, `on404`), corpo vazio e
+  JSON inválido são semântica medida deste servidor e ficam nele. O pacote
+  classifica; o servidor decide. Token bucket e limite de 6 em voo continuam
+  ANTES da ida, fora do pacote — o balde passa a ser consumido uma vez por
+  ida, não por tentativa (as repetições já são limitadas em número e em
+  orçamento). A classe `UpstreamError` local, as mensagens ("Timeout na
+  requisição upstream (10s)", "Erro de rede: …", "Upstream retornou HTTP N",
+  "Resposta upstream vazia", "não é JSON válido") e a flag `transport` que o
+  disjuntor do contrato noturno lê não mudam.
+- **Política MEDIDA em 27/09/2026** (`curl` com o User-Agent do portfólio): a
+  API legislativa responde em 0,3–1 s (uma cauda fria de 7,4 s na busca de
+  matérias por palavra-chave, depois 0,4–1 s); a administrativa entrega 2,7 MB
+  de contratos em 1,5 s e 9 MB de CEAPS em 1,9 s; o texto integral de um
+  discurso sai em 0,35 s; o detalhe do e-Cidadania em 1,3 s. Nenhuma origem
+  chegou perto dos 10 s. Números preservados: teto de uma tentativa =
+  orçamento total da ida = **10 s** (cada tentativa recebe o que sobra),
+  2 retries, backoff 1 s → 2 s → 4 s + jitter de até 500 ms.
+- **500 e 502 genéricos passam a repetir.** Até a 3.10.0 o servidor marcava
+  todo 5xx como `retryable: true` para o agente mas só repetia 429 e 503 — o
+  agente pagava a repetição. Agora 429, 503, demais 5xx e falha de rede
+  repetem (paridade com os cinco irmãos). **Timeout continua NÃO repetindo**
+  (a tentativa pendurada gastou o orçamento inteiro), 4xx não repete, e
+  **corpo vazio e JSON inválido continuam sem repetir**: há endpoint em que o
+  corpo vazio é determinístico (`/comissao/reuniao/{codigo}` inexistente —
+  `ehReuniaoInexistente`), e repetir só atrasaria a resposta certa.
+- **A proveniência do `search` é montada por chamada**, não guardada com o
+  índice de 24 h: um bloco guardado repetiria por um dia a contagem de idas
+  da chamada que construiu o índice. Quem só acha o índice pronto recebe
+  `retrieval: null` nos dois blocos.
+- Dependências: `@sbissoli/mcp-provenance` `^0.1.0` → `^0.2.0` (contrato
+  1.0 → 1.1), `@sbissoli/mcp-upstream` `^0.3.0` (nova).
+
+### Tests
+
+- `tests/throttle/upstream.test.ts`: os testes de `parseRetryAfterMs` e
+  `computeRetryWaitMs` saem (a lógica vive no pacote, provada lá por 42 testes
+  offline) e entram os da política DESTE servidor — 503 repete, 500 passa a
+  repetir, rede repete, timeout não, 4xx não, corpo vazio não — e os do
+  coletor (`retrieval` medido dentro de `withUpstreamCall`, `null` fora,
+  chamada aninhada reusa, 404 conta como ida e não como anomalia).
+  `upstreamIo.sleep`/`random` são o ponto de injeção para calar esperas e
+  jitter. Os dois `vi.mock` do módulo (`deep-research`, `comissoes`) viraram
+  parciais. 1049 testes.
+
 ## [3.10.0] - 2026-09-25
 
 Numerada em 24/09 e publicada em 25/09; a tag leva o master inteiro, então a

@@ -15,13 +15,12 @@
 import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetch, cachedFetchWithMeta } from "../cache/manager.js";
-import { upstreamFetch } from "../throttle/upstream.js";
+import { upstreamFetch, UpstreamError } from "../throttle/upstream.js";
 import { toolError, errorFrom, ensureArray, safeInt, toBool, normalizeText } from "../utils/validation.js";
 import { digArrayRoot } from "../utils/upstream-parse.js";
 import { escolherReuniao, ehReuniaoInexistente, mensagemCodigoInexistente } from "./resolver-reuniao.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
-import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND, UPSTREAM_TIMEOUT_MS } from "../types.js";
-import { USER_AGENT } from "../version.js";
+import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
 export function formatDateYMD(d: Date): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
@@ -520,40 +519,27 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
           { sigla, pagina },
           CACHE_DYNAMIC,
           async () => {
-            const url = `${baseUrl}/comissao/cpi/${sigla}/requerimentos.json?pagina=${pagina}`;
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+            // Pelo `upstreamFetch` desde a 3.11.0: antes era um `fetch` cru, sem
+            // token bucket, sem retry e fora da contagem do `retrieval`. O corpo
+            // vazio que esta rota devolve para CPI sem requerimentos vira `[]`
+            // aqui, porque o `upstreamFetch` o trata como resposta vazia (502).
+            let data: unknown;
             try {
-              const resp = await fetch(url, {
-                headers: { Accept: "application/json", "User-Agent": USER_AGENT },
-                signal: controller.signal,
-              });
-              clearTimeout(timeout);
-              if (!resp.ok) {
-                const body = await resp.text();
-                const detail = (() => { try { return JSON.parse(body)?.detail; } catch { return null; } })();
-                throw new Error(detail || `Upstream retornou HTTP ${resp.status} para requerimentos da ${sigla}`);
-              }
-              const text = await resp.text();
-              if (!text.trim()) return [];
-              const data = JSON.parse(text);
-              if (Array.isArray(data)) return data;
-              for (const v of Object.values(data as Record<string, unknown>)) {
-                if (Array.isArray(v)) return v;
-                if (v && typeof v === "object") {
-                  for (const v2 of Object.values(v as Record<string, unknown>)) {
-                    if (Array.isArray(v2)) return v2;
-                  }
-                }
-              }
-              return [data];
+              data = await upstreamFetch(`/comissao/cpi/${sigla}/requerimentos`, { pagina: String(pagina) }, baseUrl);
             } catch (e) {
-              clearTimeout(timeout);
-              if ((e as Error).name === "AbortError") {
-                throw new Error(`Timeout ao obter requerimentos da ${sigla}`);
-              }
+              if (e instanceof UpstreamError && /vazia/.test(e.message)) return [];
               throw e;
             }
+            if (Array.isArray(data)) return data;
+            for (const v of Object.values(data as Record<string, unknown>)) {
+              if (Array.isArray(v)) return v;
+              if (v && typeof v === "object") {
+                for (const v2 of Object.values(v as Record<string, unknown>)) {
+                  if (Array.isArray(v2)) return v2;
+                }
+              }
+            }
+            return [data];
           },
         );
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/comissao/cpi/${sigla}/requerimentos`, {

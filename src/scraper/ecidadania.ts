@@ -10,8 +10,10 @@
  * driven by the Cron pipeline (step 3) and covered by fixture-based contract tests.
  */
 
+import { UpstreamError as PkgUpstreamError } from "@sbissoli/mcp-upstream";
 import { UPSTREAM_TIMEOUT_MS } from "../types.js";
 import { USER_AGENT } from "../version.js";
+import { upstreamCall } from "../throttle/upstream.js";
 
 export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
 
@@ -35,35 +37,20 @@ export async function fetchPage(
   path: string,
   opts: { ajax?: boolean; allowEmpty?: boolean } = {},
 ): Promise<string> {
-  const url = `${ECIDADANIA_BASE}${path}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
-  try {
-    const resp = await fetch(url, {
-      headers: opts.ajax
-        ? { Accept: "text/html,*/*", "User-Agent": USER_AGENT, "X-Requested-With": "XMLHttpRequest" }
-        : { Accept: "text/html", "User-Agent": USER_AGENT },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!resp.ok) {
-      throw ecidadaniaFetchError(`e-Cidadania retornou HTTP ${resp.status} para ${path}`, isTransientStatus(resp.status));
-    }
-    const text = await resp.text();
-    // AJAX comment fragments are legitimately empty for events with zero comments — allowEmpty
-    // lets the caller treat "" as a valid (empty) result instead of a transient failure.
-    if (!opts.allowEmpty && !text.trim()) {
-      throw ecidadaniaFetchError(`e-Cidadania retornou página vazia para ${path}`, true);
-    }
-    return text;
-  } catch (e) {
-    clearTimeout(timeout);
-    if ((e as Error).name === "AbortError") {
-      throw ecidadaniaFetchError(`e-Cidadania: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${path}`, true);
-    }
-    if (e instanceof Error && "retryable" in e) throw e; // already classified above
-    throw ecidadaniaFetchError(`e-Cidadania: falha de rede ao acessar ${path} (${(e as Error).message})`, true);
+  const resp = await idaEcidadania(
+    path,
+    opts.ajax
+      ? { Accept: "text/html,*/*", "User-Agent": USER_AGENT, "X-Requested-With": "XMLHttpRequest" }
+      : { Accept: "text/html", "User-Agent": USER_AGENT },
+    "e-Cidadania",
+  );
+  const text = await resp.text();
+  // AJAX comment fragments are legitimately empty for events with zero comments — allowEmpty
+  // lets the caller treat "" as a valid (empty) result instead of a transient failure.
+  if (!opts.allowEmpty && !text.trim()) {
+    throw ecidadaniaFetchError(`e-Cidadania retornou página vazia para ${path}`, true);
   }
+  return text;
 }
 
 /**
@@ -71,39 +58,56 @@ export async function fetchPage(
  * Ensures the response is valid JSON and an array.
  */
 export async function fetchEcidadaniaJson(endpoint: string): Promise<any[]> {
-  const url = `${ECIDADANIA_BASE}${endpoint}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  const resp = await idaEcidadania(
+    endpoint,
+    { Accept: "application/json", "User-Agent": USER_AGENT },
+    "e-Cidadania REST API",
+  );
+
+  let data: unknown;
   try {
-    const resp = await fetch(url, {
-      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!resp.ok) {
-      throw ecidadaniaFetchError(`e-Cidadania REST API retornou HTTP ${resp.status} para ${endpoint}`, isTransientStatus(resp.status));
-    }
+    data = await resp.json();
+  } catch {
+    throw ecidadaniaFetchError(`e-Cidadania REST API retornou JSON inválido para ${endpoint}`, true);
+  }
 
-    let data: unknown;
-    try {
-      data = await resp.json();
-    } catch {
-      throw ecidadaniaFetchError(`e-Cidadania REST API retornou JSON inválido para ${endpoint}`, true);
-    }
+  if (!Array.isArray(data)) {
+    // API returned an object or other non-array — wrap or return empty
+    if (data && typeof data === "object") return [data];
+    return [];
+  }
+  return data;
+}
 
-    if (!Array.isArray(data)) {
-      // API returned an object or other non-array — wrap or return empty
-      if (data && typeof data === "object") return [data];
-      return [];
-    }
-    return data;
+/**
+ * A ida ao portal, pelo fetch comum do portfólio (desde a 3.11.0; antes um
+ * `fetch` cru com timeout de 10 s e sem retry). Mesma política da API do Senado
+ * (`upstreamSenado`: teto 10 s, 5xx/429/rede repetem, timeout não) e mesmo
+ * coletor da chamada de tool — o detalhe raspado ao vivo entra no `retrieval`
+ * do bloco e-Cidadania. No cron (`scheduled`, fora de uma chamada) o coletor é
+ * descartável e a política vale igual. O token bucket NÃO se aplica: é outro
+ * host, e o portal nunca passou por ele. As mensagens e o `retryable` são os
+ * de antes — `ecidadaniaError` (tools) e o pipeline os leem.
+ */
+async function idaEcidadania(path: string, headers: Record<string, string>, rotulo: string): Promise<Response> {
+  const url = `${ECIDADANIA_BASE}${path}`;
+  try {
+    return await upstreamCall().response(url, { headers });
   } catch (e) {
-    clearTimeout(timeout);
-    if ((e as Error).name === "AbortError") {
-      throw ecidadaniaFetchError(`e-Cidadania REST API: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${endpoint}`, true);
+    if (!(e instanceof PkgUpstreamError)) throw e;
+    switch (e.kind) {
+      case "timeout":
+      case "aborted":
+        throw ecidadaniaFetchError(`${rotulo}: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${path}`, true);
+      case "network": {
+        const causa = e.cause instanceof Error ? e.cause.message : String(e.cause ?? "desconhecido");
+        throw ecidadaniaFetchError(`${rotulo}: falha de rede ao acessar ${path} (${causa})`, true);
+      }
+      default: {
+        const status = e.status ?? 502;
+        throw ecidadaniaFetchError(`${rotulo} retornou HTTP ${status} para ${path}`, isTransientStatus(status));
+      }
     }
-    if (e instanceof Error && "retryable" in e) throw e; // already classified above
-    throw ecidadaniaFetchError(`e-Cidadania REST API: falha de rede ao acessar ${endpoint} (${(e as Error).message})`, true);
   }
 }
 

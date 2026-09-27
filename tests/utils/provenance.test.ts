@@ -57,7 +57,7 @@ describe("buildProvenance (canonical v1.0 from historical input names)", () => {
     const p = buildProvenance({ ...BASE, dataset_id: "codigoSessao=1", reference_period: "2024-03-15" });
     expect(p.dataset.id).toBe("codigoSessao=1");
     expect(p.data_vintage).toBe("2024-03-15");
-    expect(p.contract_version).toBe("1.0");
+    expect(p.contract_version).toBe("1.1");
     expect(p.source.name).toBe("s");
     expect(p.license.name).toBe("l");
   });
@@ -205,7 +205,7 @@ describe("provenanceFooter (contract v1.0 wording)", () => {
 });
 
 describe("resultWithProvenance (three channels, concise projection)", () => {
-  it("emits the fixed 6-key concise block in structuredContent, with explicit nulls", () => {
+  it("emits the fixed 7-key concise block (v1.1) in structuredContent, with explicit nulls", () => {
     const prov = provenanceFor("SENADO_LEGIS", "https://x", "/votacao");
     const res = resultWithProvenance({ count: 2, votacoes: [] }, prov);
     expect(res.structuredContent).toMatchObject({ count: 2 });
@@ -214,6 +214,7 @@ describe("resultWithProvenance (three channels, concise projection)", () => {
       "source_url",
       "data_vintage",
       "retrieved_at",
+      "retrieval",
       "citation",
       "license",
     ]);
@@ -221,6 +222,8 @@ describe("resultWithProvenance (three channels, concise projection)", () => {
       source: SOURCES.SENADO_LEGIS.source,
       source_url: "https://x/votacao",
       data_vintage: null,
+      // Fora de uma chamada de tool não há coletor: "não medido", nunca inventado.
+      retrieval: null,
       citation: SOURCES.SENADO_LEGIS.citation,
       license: SOURCES.SENADO_LEGIS.license,
     });
