@@ -11,7 +11,7 @@ descrições 12× menores em produção). Nenhum teste unitário pega essa class
 | Arquivo | Como foi capturado | O que representa |
 |:--|:--|:--|
 | `surface-stdio-3.11.0.json` | `--stdio` sobre `dist/cli.js` do fonte atual | o que o canal npm (`senado-br-mcp`) publica |
-| `surface-http-prod-3.7.0.json` | `--url https://senado.sidneybissoli.com/mcp` | o que o endpoint hospedado serve DE FATO |
+| `surface-http-prod-3.11.0.json` | `--url https://senado.sidneybissoli.com/mcp` | o que o endpoint hospedado serve DE FATO |
 
 O nome leva a versão de propósito: `scripts/smoke-stdio.mjs` deriva a contagem
 esperada de tools do `toolCount` do `surface-stdio-<v>.json` de MAIOR versão —
@@ -52,6 +52,6 @@ divergir logo após o deploy, re-sondar antes de concluir deriva).
 O dump stdio da 3.11.0 é IDÊNTICO ao da 3.10.0 (capturado antes da mudança e
 conferido com `diff`): a adoção do fetch comum acrescenta a chave `retrieval`
 ao bloco de proveniência de TODA resposta, mas as 69 tools anunciam um único
-`outputSchema` permissivo, então nada muda em `tools/list`. O baseline de
-produção (`surface-http-prod-3.7.0.json`) só pode ser recapturado depois do
-deploy da 3.11.0.
+`outputSchema` permissivo, então nada muda em `tools/list`. Produção recapturada depois do
+deploy da 3.11.0 (27/09/2026 17h40 BRT): `surface-http-prod-3.11.0.json` é
+byte-idêntico ao stdio — os dois canais continuam partilhando a superfície.
