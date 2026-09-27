@@ -11,10 +11,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { refreshConsultasHighlights } from "../../src/scraper/pipeline.js";
 import { buildConsultaResumo } from "../../src/scraper/ecidadania.js";
+import { upstreamIo } from "../../src/throttle/upstream.js";
 import { contentHash } from "../../src/scraper/pipeline.js";
 
 const NOW = "2026-06-16T00:00:00Z";
 const mockFetch = vi.fn();
+// Sem espera real entre as tentativas do fetch comum (a falha de rede repete).
+upstreamIo.sleep = async () => {};
 
 /** REST highlight payload (one item, id 100, 10.000 SIM / 5.000 NÃO). */
 function highlightResponse() {
@@ -107,7 +110,9 @@ describe("refreshConsultasHighlights", () => {
   });
 
   it("records erro-metrica without touching current when the live fetch fails", async () => {
-    mockFetch.mockRejectedValueOnce(new Error("portal down"));
+    // Falha de rede REPETE desde a 3.11.0 (fetch comum): o dublê tem de cair
+    // em todas as tentativas, e a espera entre elas é calada em `upstreamIo`.
+    mockFetch.mockRejectedValue(new Error("portal down"));
     const { db, executed } = fakeD1(new Map());
     const summary = await refreshConsultasHighlights(db, NOW);
 

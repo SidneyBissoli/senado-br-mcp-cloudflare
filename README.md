@@ -154,7 +154,7 @@ Claude Code auto-discovers it when you work in this repo. To use it elsewhere, c
 - **Caching:** 2-layer (L0 memory + L1 Cache API) with SHA-256 keying
 - **e-Cidadania store:** D1 database refreshed by a Cron Trigger (every 2h) — list tools read from D1 with a live-scrape fallback and a staleness flag; detail tools stay live with write-through (see [e-Cidadania](#e-cidadania-d1-backed-cron-refreshed))
 - **Rate limiting:** Token bucket — global (8 req/s) + per-client (2 req/s)
-- **Upstream throttle:** Max 6 concurrent requests, 10s timeout, retry with exponential backoff
+- **Upstream throttle:** Max 6 concurrent requests, 10s budget per trip, retry on 429/5xx/network with exponential backoff and `Retry-After` (portfolio shared fetch `@sbissoli/mcp-upstream`); every response's provenance carries the measured `retrieval` diagnostics (trips, attempts, anomalies)
 - **Auth:** Optional Bearer token (set the `API_KEY` secret; open access when unset). Constant-time comparison.
 - **Observability:** Structured JSON logging + in-memory counters at `/metrics`; per-tool call telemetry (selection, error rate, cache-vs-live) in Cloudflare Analytics Engine, PII-free
 - **Liveness:** Runs on Cloudflare's own global network behind a custom domain — no third-party host that can go dark. Public `/health` and `/status` (version + last-deploy id/timestamp) make uptime and the current build verifiable; the **status** badge above pings the live endpoint

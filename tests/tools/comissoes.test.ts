@@ -180,7 +180,10 @@ vi.mock("../../src/cache/manager.js", () => ({
   cachedFetch: vi.fn(),
 }));
 
-vi.mock("../../src/throttle/upstream.js", () => ({
+// Parcial: só a ida à fonte é dublada. O coletor de rede (`withUpstreamCall`,
+// `currentRetrieval`) que instrumentTool/provenanceFor importam fica real.
+vi.mock("../../src/throttle/upstream.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/throttle/upstream.js")>()),
   upstreamFetch: vi.fn(),
 }));
 

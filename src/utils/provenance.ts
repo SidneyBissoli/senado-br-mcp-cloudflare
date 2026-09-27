@@ -45,7 +45,9 @@ import {
   toCanonicalIso,
   type CanonicalProvenance,
   type ProvenanceInput,
+  type RetrievalInput,
 } from "@sbissoli/mcp-provenance";
+import { currentRetrieval } from "../throttle/upstream.js";
 
 /** Contexto único do servidor: namespace de `_meta`, idioma, fuso e modo default. */
 export const provenanceContext = createProvenanceContext({
@@ -103,6 +105,13 @@ interface ExtraInput {
   retrieved_at?: string;
   api_version?: string;
   field_sources?: FieldSource[];
+  /**
+   * Diagnóstico da ida à origem (contrato v1.1). Omitido, sai a MEDIÇÃO da
+   * chamada corrente (`currentRetrieval()`: o coletor que `instrumentTool` abre
+   * por chamada de tool — ver src/throttle/upstream.ts); `null` explícito diz
+   * "não medido" (dado local, D1, cache puro).
+   */
+  retrieval?: RetrievalInput | null;
 }
 
 const extraToCanonical = (extra: ExtraInput = {}) => ({
@@ -113,6 +122,7 @@ const extraToCanonical = (extra: ExtraInput = {}) => ({
   ...(extra.field_sources !== undefined
     ? { field_sources: extra.field_sources.map(toCanonicalFieldSource) }
     : {}),
+  retrieval: extra.retrieval !== undefined ? extra.retrieval : currentRetrieval(),
 });
 
 /** Metadados estáticos por fonte upstream. source_url é montado por chamada (endpoint real). */
@@ -182,6 +192,7 @@ export function buildProvenance(input: {
   retrieved_at?: string;
   api_version?: string;
   field_sources?: FieldSource[];
+  retrieval?: RetrievalInput | null;
 }): Provenance {
   const { source, source_url, citation, license, ...extra } = input;
   return provenanceContext.build({
@@ -221,7 +232,7 @@ export const ECIDADANIA_BASE_URL = "https://www12.senado.leg.br/ecidadania";
  */
 export function provenanceEcidadania(
   pathOrUrl: string,
-  extra?: Pick<ExtraInput, "dataset_id" | "reference_period" | "retrieved_at">,
+  extra?: Pick<ExtraInput, "dataset_id" | "reference_period" | "retrieved_at" | "retrieval">,
 ): Provenance {
   const source_url = pathOrUrl.startsWith("http")
     ? pathOrUrl
@@ -236,7 +247,7 @@ export function provenanceEcidadania(
  * partir do payload) e `retrieved_at` é o `lastScrapedAt` do corpus em D1 (idade real do dado).
  */
 export function provenanceArquimedesVotos(
-  extra?: Pick<ExtraInput, "reference_period" | "retrieved_at">,
+  extra?: Pick<ExtraInput, "reference_period" | "retrieved_at" | "retrieval">,
 ): Provenance {
   return provenanceContext.from(SOURCES.ECIDADANIA_ARQUIMEDES, {
     source_url: ECIDADANIA_ARQUIMEDES_CSV_URL,

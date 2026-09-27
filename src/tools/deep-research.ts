@@ -82,8 +82,14 @@ type ComissaoItem = ReturnType<typeof parseComissaoItem>;
 
 interface IndiceCarregado {
   index: SearchIndex;
-  /** Proveniência das duas listas — a do `search`. */
-  provenance: Provenance[];
+  /**
+   * Instante em que cada uma das duas listas foi extraída da fonte (o
+   * `fetchedAt` do cache). A proveniência do `search` é montada POR CHAMADA a
+   * partir daqui (`provenanciaDoIndice`), e não guardada com o índice: o bloco
+   * carrega o `retrieval` da chamada corrente, e o índice vive 24 h — um bloco
+   * guardado repetiria por um dia a contagem de idas da chamada que o construiu.
+   */
+  extraidoEm: { senadores: string; colegiados: string };
   criadoEm: number;
 }
 
@@ -149,12 +155,22 @@ async function construirIndice(baseUrl: string): Promise<IndiceCarregado> {
   const comissoes = ensureArray((com.value as any)?.ListaColegiados?.Colegiados?.Colegiado).map(parseComissaoItem);
   return {
     index: createIndex([...entradasSenadores(senadores), ...entradasComissoes(comissoes)]),
-    provenance: [
-      provenanceFor("SENADO_LEGIS", baseUrl, PATH_SENADORES, { dataset_id: "lista/atual", retrieved_at: sen.fetchedAt }),
-      provenanceFor("SENADO_LEGIS", baseUrl, PATH_COLEGIADOS, { retrieved_at: com.fetchedAt }),
-    ],
+    extraidoEm: { senadores: sen.fetchedAt, colegiados: com.fetchedAt },
     criadoEm: Date.now(),
   };
+}
+
+/**
+ * Proveniência das duas listas do índice — dois blocos da MESMA origem, e por
+ * isso os dois com o `retrieval` medido nesta chamada (o coletor é por chamada;
+ * ver src/throttle/upstream.ts). Chamada que só achou o índice pronto não foi
+ * à fonte, e os blocos dizem `retrieval: null`.
+ */
+function provenanciaDoIndice(baseUrl: string, indice: IndiceCarregado): Provenance[] {
+  return [
+    provenanceFor("SENADO_LEGIS", baseUrl, PATH_SENADORES, { dataset_id: "lista/atual", retrieved_at: indice.extraidoEm.senadores }),
+    provenanceFor("SENADO_LEGIS", baseUrl, PATH_COLEGIADOS, { retrieved_at: indice.extraidoEm.colegiados }),
+  ];
 }
 
 /**
@@ -244,7 +260,7 @@ function handlers(baseUrl: string) {
   async function search(query: string): Promise<SearchReply> {
     const indice = await obterIndice(baseUrl);
     const results = indice.index.search(query, { limit: DEEP_RESEARCH_LIMIT }).map(({ id, title, url }) => ({ id, title, url }));
-    return { results, extras: provenanceExtras(indice.provenance) };
+    return { results, extras: provenanceExtras(provenanciaDoIndice(baseUrl, indice)) };
   }
 
   async function fetch(id: string): Promise<FetchReply | null> {

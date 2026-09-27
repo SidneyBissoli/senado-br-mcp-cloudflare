@@ -14,7 +14,10 @@ import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { DEEP_RESEARCH_TOOLS } from "@sbissoli/mcp-search";
 
-vi.mock("../../src/throttle/upstream.js", () => ({
+// Parcial: só a ida à fonte é dublada. O coletor de rede (`withUpstreamCall`,
+// `currentRetrieval`) que instrumentTool/provenanceFor importam fica real.
+vi.mock("../../src/throttle/upstream.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/throttle/upstream.js")>()),
   upstreamFetch: vi.fn(),
 }));
 
