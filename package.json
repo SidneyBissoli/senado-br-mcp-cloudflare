@@ -51,7 +51,7 @@
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",
     "@sbissoli/mcp-provenance": "^0.2.0",
-    "@sbissoli/mcp-search": "^0.5.0",
+    "@sbissoli/mcp-search": "^0.6.2",
     "@sbissoli/mcp-stats": "^0.3.0",
     "@sbissoli/mcp-upstream": "^0.3.0",
     "zod": "^4.5.4"
@@ -62,7 +62,7 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@sbissoli/mcp-evals": "^0.1.0",
     "@types/node": "^26.5.1",
-    "agents": "^0.23.0",
+    "agents": "^0.24.0",
     "exceljs": "^4.4.0",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
