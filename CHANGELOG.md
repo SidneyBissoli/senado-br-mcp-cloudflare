@@ -4,6 +4,27 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Só telemetria do canal hospedado: nenhuma tool, parâmetro, campo ou mensagem
+muda, e a superfície publicada é idêntica à da 3.11.0.
+
+### Fixed
+
+- **Falha da origem gravada como erro de classe `outro`.** Medido em
+  30/09/2026 rodando o classificador sobre as mensagens de falha: "Erro de
+  rede: ..." (base legislativa), o 429 do nosso próprio balde ("Taxa de
+  requisições excedida") e, no e-Cidadania, "falha de rede ao acessar" e
+  "retornou HTTP 429/400/403" caíam em `outro`. O tipo existia no `catch`; só
+  o texto chegava ao `instrumentTool`. Agora `UpstreamError` e o erro do
+  e-Cidadania nascem com a classe (404 → `nao_encontrado`, o resto →
+  `fonte`; rota inexistente segue `defeito` e corpo vazio segue
+  `nao_encontrado`, explícitos), `errorFrom`/`ecidadaniaError` a anexam numa
+  chave-símbolo fora do fio e `instrumentTool` a lê antes da frase. Mesmo
+  conserto do bcb-br-mcp (#45), ilo-mcp-server (#24), uis-mcp-server (#22),
+  ibge-br-mcp (#62) e medical-terminologies-mcp (#58). Gate em
+  `tests/classe-do-erro.test.ts`.
+
 ## [3.11.0] - 2026-09-27
 
 Bump MINOR porque o bloco de proveniência de TODA resposta ganha uma chave:

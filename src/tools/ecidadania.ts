@@ -14,6 +14,7 @@ import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { toolError } from "../utils/validation.js";
+import { anexarClasse } from "../call-shape.js";
 import { provenanceEcidadania, provenanceArquimedesVotos, resultWithProvenance } from "../utils/provenance.js";
 import { tagUntrustedFields, tagUntrustedList, neutralizeUntrustedText, sanitizeScrapedText } from "../utils/untrusted.js";
 import { logger } from "../utils/logger.js";
@@ -134,7 +135,10 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
     // Emit the same structured tool_error log the other tools get via errorFrom(); log the raw
     // message (no suffix), but keep the reassuring suffix in the user-facing tool error.
     logger.error("tool_error", { message: msg, retryable });
-    return toolError(`${msg}. As demais funcionalidades (senadores, matérias, votações) continuam operacionais.`, retryable);
+    return anexarClasse(
+      toolError(`${msg}. As demais funcionalidades (senadores, matérias, votações) continuam operacionais.`, retryable),
+      e,
+    );
   }
 
   // G1. senado_ecidadania_listar_consultas
