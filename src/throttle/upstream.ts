@@ -70,6 +70,7 @@ import { UPSTREAM_TIMEOUT_MS, MAX_RESPONSE_SIZE, SENADO_BASE_URL_DEFAULT } from 
 import { log, logger } from "../utils/logger.js";
 import { incr } from "../metrics.js";
 import { USER_AGENT } from "../version.js";
+import type { ErrorClass } from "../call-shape.js";
 
 const MAX_RETRIES = 2;
 const MAX_CONCURRENT = 6;
@@ -95,10 +96,22 @@ export class UpstreamError extends Error {
      * that failed to parse.
      */
     public readonly transport: boolean = false,
+    /**
+     * Classe de telemetria pelo TIPO, não pela frase (ver `CLASSE_DO_ERRO` em
+     * src/call-shape.ts). Medido em 30/09/2026: pela frase, "Erro de rede: ..."
+     * e o 429 do nosso próprio balde ("Taxa de requisições excedida") caíam em
+     * `outro`. Padrão: 404 é ausência respondida, o resto é a fonte falhando;
+     * quem sabe mais passa explícito (rota inexistente é `defeito`, corpo vazio
+     * é `nao_encontrado`).
+     */
+    classe?: ErrorClass,
   ) {
     super(message);
     this.name = "UpstreamError";
+    this.classe = classe ?? (status === 404 ? "nao_encontrado" : "fonte");
   }
+
+  readonly classe: ErrorClass;
 }
 
 /**
@@ -349,6 +362,8 @@ export async function upstreamFetch(
           `[${path}] ${MSG_ROTA_INEXISTENTE} — o caminho montado não existe na API do Senado.`,
           404,
           false,
+          false,
+          "defeito",
         );
       }
       if (options.on404 === "empty") return [];
@@ -392,10 +407,14 @@ export async function upstreamFetch(
   log("upstream", path, response.status, latency, call.attempts - attemptsBefore - 1);
 
   if (!text.trim()) {
+    // `nao_encontrado`, como a frase já dava ("vazi"): um corpo vazio é como o
+    // `/comissao/reuniao/{codigo}` responde a código inexistente.
     throw new UpstreamError(
       `[${path}] Resposta upstream vazia`,
       502,
       true,
+      false,
+      "nao_encontrado",
     );
   }
 

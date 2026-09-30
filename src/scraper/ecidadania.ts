@@ -14,6 +14,7 @@ import { UpstreamError as PkgUpstreamError } from "@sbissoli/mcp-upstream";
 import { UPSTREAM_TIMEOUT_MS } from "../types.js";
 import { USER_AGENT } from "../version.js";
 import { upstreamCall } from "../throttle/upstream.js";
+import type { ErrorClass } from "../call-shape.js";
 
 export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
 
@@ -23,8 +24,14 @@ export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
  * (not `upstreamFetch`), so transient conditions are classified here: 5xx / 429 /
  * timeout / network → retryable; 4xx → not.
  */
-function ecidadaniaFetchError(message: string, retryable: boolean): Error {
-  return Object.assign(new Error(message), { retryable });
+/**
+ * `classe`, quando dada, é a classe de telemetria decidida pelo TIPO da falha
+ * (ver `CLASSE_DO_ERRO` em src/call-shape.ts). Medido em 30/09/2026: pela
+ * frase, "falha de rede ao acessar" e "retornou HTTP 429/400/403" caíam em
+ * `outro`. Sem ela, vale a frase, como sempre.
+ */
+function ecidadaniaFetchError(message: string, retryable: boolean, classe?: ErrorClass): Error {
+  return Object.assign(new Error(message), classe ? { retryable, classe } : { retryable });
 }
 const isTransientStatus = (status: number) => status >= 500 || status === 429;
 
@@ -98,14 +105,22 @@ async function idaEcidadania(path: string, headers: Record<string, string>, rotu
     switch (e.kind) {
       case "timeout":
       case "aborted":
-        throw ecidadaniaFetchError(`${rotulo}: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${path}`, true);
+        throw ecidadaniaFetchError(
+          `${rotulo}: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${path}`,
+          true,
+          "fonte",
+        );
       case "network": {
         const causa = e.cause instanceof Error ? e.cause.message : String(e.cause ?? "desconhecido");
-        throw ecidadaniaFetchError(`${rotulo}: falha de rede ao acessar ${path} (${causa})`, true);
+        throw ecidadaniaFetchError(`${rotulo}: falha de rede ao acessar ${path} (${causa})`, true, "fonte");
       }
       default: {
         const status = e.status ?? 502;
-        throw ecidadaniaFetchError(`${rotulo} retornou HTTP ${status} para ${path}`, isTransientStatus(status));
+        throw ecidadaniaFetchError(
+          `${rotulo} retornou HTTP ${status} para ${path}`,
+          isTransientStatus(status),
+          status === 404 ? "nao_encontrado" : "fonte",
+        );
       }
     }
   }

@@ -35,7 +35,7 @@
 type ToolCallback = (...args: unknown[]) => Promise<unknown> | unknown;
 
 import { resolveDesfecho, type Desfecho } from "./envelope.js";
-import { classifyError, classifyThrown, errorText, paramNames, type ErrorClass } from "./call-shape.js";
+import { classeAnexada, classifyError, classifyThrown, errorText, paramNames, type ErrorClass } from "./call-shape.js";
 import { incr, incrTool } from "./metrics.js";
 import { callCache, cacheClass, type CallCacheStats } from "./observability/call-context.js";
 import { withUpstreamCall } from "./throttle/upstream.js";
@@ -106,7 +106,9 @@ export function instrumentTool(
       const result = await withUpstreamCall(() => callCache.run(stats, () => Promise.resolve(cb(...args))));
       isError =
         typeof result === "object" && result !== null && (result as { isError?: unknown }).isError === true;
-      if (isError) classe = classifyError(errorText(result));
+      // A classe que o handler anexou pelo TIPO do erro vence a frase; a frase
+      // fica para o erro que nasceu sem tipo. Ver CLASSE_DO_ERRO.
+      if (isError) classe = classeAnexada(result) ?? classifyError(errorText(result));
       return result;
     } catch (e) {
       // A thrown error is also a failed tool call — record it, then rethrow so the

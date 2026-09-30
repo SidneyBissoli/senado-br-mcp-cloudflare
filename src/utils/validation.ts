@@ -2,6 +2,7 @@
 
 import { incr } from "../metrics.js";
 import { logger } from "./logger.js";
+import { anexarClasse } from "../call-shape.js";
 
 /** Actionable next-step guidance, derived from whether retrying can help. */
 function defaultHint(isRetryable: boolean): string {
@@ -38,7 +39,9 @@ export function errorFrom(e: unknown, fallbackMessage: string) {
     ? (e as any).retryable
     : false;
   logger.error("tool_error", { message, retryable });
-  return toolError(message, retryable);
+  // A classe de telemetria vai pelo TIPO do erro, fora do fio (ver
+  // CLASSE_DO_ERRO em src/call-shape.ts); sem ela, vale a frase.
+  return anexarClasse(toolError(message, retryable), e);
 }
 
 export function toolResult(data: unknown) {
