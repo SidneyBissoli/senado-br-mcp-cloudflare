@@ -203,7 +203,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
         const sigla = params.sigla.toUpperCase();
         const secao = params.secao ?? "resumo";
         const codigo = await resolveComissaoCodigo(sigla, baseUrl);
-        if (!codigo) return toolError(`Comissão com sigla "${sigla}" não encontrada.`);
+        if (!codigo) return toolError(`Comissão com sigla "${sigla}" não encontrada.`, "nao_encontrado");
 
         if (secao === "membros") {
           const membrosPath = `/composicao/comissao/${codigo}`;
@@ -234,7 +234,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
         }
 
         const { path: resumoPath, fetchedAt, colegiado } = await fetchComissaoColegiado(codigo, baseUrl);
-        if (!colegiado) return toolError("Dados da comissão não encontrados.");
+        if (!colegiado) return toolError("Dados da comissão não encontrados.", "nao_encontrado");
 
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, resumoPath, {
           dataset_id: `comissao=${sigla}; codigo=${codigo}`, retrieved_at: fetchedAt,
@@ -407,7 +407,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
             return toolError(
               "Informe `codigoReuniao`, ou `sigla` da comissão (com `data`, opcional). " +
                 "Sem nenhum dos dois não há o que detalhar.",
-              false,
+              "contrato",
             );
           }
           const hoje = new Date();
@@ -430,7 +430,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
               hora: re.dataInicio ? String(re.dataInicio).split("T")[1]?.slice(0, 5) || null : null,
             }));
           const escolha = escolherReuniao(candidatas, sigla, params.data ? di : `${di}–${df}`);
-          if (escolha.tipo !== "codigo") return toolError(escolha.mensagem, false);
+          if (escolha.tipo !== "codigo") return toolError(escolha.mensagem, escolha.classe);
           codigo = escolha.codigo;
         }
         const reuniaoPath = `/comissao/reuniao/${codigo}`;
@@ -492,7 +492,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
         // maioria dos endpoints e mandava o agente repetir uma chamada que
         // nunca ia funcionar.
         if (ehReuniaoInexistente(e)) {
-          return toolError(mensagemCodigoInexistente(params.codigoReuniao ?? 0), false);
+          return toolError(mensagemCodigoInexistente(params.codigoReuniao ?? 0), "nao_encontrado");
         }
         return errorFrom(e, "Reunião de comissão não encontrada");
       }

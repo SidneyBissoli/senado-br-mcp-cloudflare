@@ -67,7 +67,7 @@ export function registerEstruturaTools(server: SenadoToolHost) {
           const dica = sugestoes.length
             ? ` Você quis dizer: ${sugestoes.map((s) => (s.sigla ? `${s.sigla} (${s.nome})` : s.nome)).join("; ")}?`
             : "";
-          return toolError(`Unidade '${params.unidade}' não encontrada na estrutura organizacional.${dica}`);
+          return toolError(`Unidade '${params.unidade}' não encontrada na estrutura organizacional.${dica}`, "nao_encontrado");
         }
 
         const caminho = ancestrais(indice, alvo.cod).reverse().map(formaOrgao); // da cúpula até o superior imediato

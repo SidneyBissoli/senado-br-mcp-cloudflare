@@ -22,6 +22,7 @@ import { errorFrom } from "../src/utils/validation.js";
 import { instrumentTool } from "../src/instrument.js";
 import { classeAnexada } from "../src/call-shape.js";
 import { capturarDeepResearchTools } from "../src/tools/deep-research.js";
+import { registerComissoesTools } from "../src/tools/comissoes.js";
 
 /** A classe que a chamada gravaria no Analytics Engine (blob7). */
 async function classeGravada(ida: () => Promise<unknown>): Promise<string> {
@@ -167,5 +168,78 @@ describe("a classe viaja FORA do fio", () => {
     }
     expect(Object.keys(resultado as object).sort()).toEqual(["content", "isError", "structuredContent"]);
     expect(JSON.stringify(resultado)).not.toContain("classe");
+  });
+});
+
+/**
+ * Onda 2 (30/09/2026): o erro que o HANDLER decide (`toolError`) passa a
+ * declarar a classe. Antes, `toolError` não anexava nada e o hook caía na
+ * frase — que ecoa argumento do chamador. Os casos abaixo atravessam a tool
+ * de verdade (registrada num host dublado), `instrumentTool` e a linha do
+ * Analytics Engine, com `fetch` dublado (sem rede).
+ */
+type Callback = (params: Record<string, unknown>) => Promise<unknown>;
+
+function toolsDeComissoes(): Map<string, Callback> {
+  const tools = new Map<string, Callback>();
+  const host = {
+    tool: (name: string, _d: string, _s: unknown, cb: Callback) => void tools.set(name, cb),
+  } as unknown as Parameters<typeof registerComissoesTools>[0];
+  registerComissoesTools(host, "https://legis.senado.leg.br/dadosabertos");
+  return tools;
+}
+
+async function classeDaTool(nome: string, params: Record<string, unknown>): Promise<string> {
+  const pontos: AnalyticsEngineDataPoint[] = [];
+  const ae = { writeDataPoint: (p: AnalyticsEngineDataPoint) => void pontos.push(p) } as AnalyticsEngineDataset;
+  const cb = toolsDeComissoes().get(nome)!;
+  const resultado = await instrumentTool(nome, cb as Parameters<typeof instrumentTool>[1], ae)(params);
+  expect((resultado as { isError?: boolean }).isError).toBe(true);
+  expect(pontos).toHaveLength(1);
+  return String(pontos[0].blobs?.[6] ?? "");
+}
+
+function agendaCom(reunioes: unknown[]) {
+  responder(
+    async () =>
+      new Response(JSON.stringify({ AgendaReuniao: { reunioes: { reuniao: reunioes } } }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+  );
+}
+
+describe("senado_reuniao_comissao por sigla: a classe é declarada, não lida da frase", () => {
+  it("nenhuma reunião no período é `nao_encontrado` (caía em `outro`)", async () => {
+    agendaCom([]);
+    expect(await classeDaTool("senado_reuniao_comissao", { sigla: "ZZA", data: "20260901" })).toBe(
+      "nao_encontrado",
+    );
+  });
+
+  it("várias reuniões (pedido ambíguo) é `contrato` (caía em `outro`)", async () => {
+    const r = (codigo: string, hora: string) => ({
+      codigo,
+      descricao: "Reunião",
+      dataInicio: `2026-09-01T${hora}:00`,
+      colegiadoCriador: { sigla: "ZZB" },
+    });
+    agendaCom([r("1001", "09:00"), r("1002", "14:00")]);
+    expect(await classeDaTool("senado_reuniao_comissao", { sigla: "ZZB", data: "20260901" })).toBe("contrato");
+  });
+});
+
+describe("texto que ecoa argumento não sequestra a classe", () => {
+  it("sigla 'INVALIDA' inexistente é `nao_encontrado` (a frase casava `invalid` -> `contrato`)", async () => {
+    responder(
+      async () =>
+        new Response(JSON.stringify({ ListaColegiados: { Colegiados: { Colegiado: [{ Sigla: "CAE", Codigo: "38" }] } } }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    expect(await classeDaTool("senado_obter_comissao", { sigla: "INVALIDA", secao: "resumo" })).toBe(
+      "nao_encontrado",
+    );
   });
 });

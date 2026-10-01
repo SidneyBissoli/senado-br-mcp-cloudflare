@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { toolError, toolResult, buildParams, dig, ensureArray } from "../../src/utils/validation.js";
+import { classeAnexada } from "../../src/call-shape.js";
 
 vi.mock("../../src/metrics.js", () => ({
   incr: vi.fn(),
@@ -11,7 +12,7 @@ vi.mock("../../src/utils/logger.js", () => ({
 
 describe("toolError", () => {
   it("returns error structure with message", () => {
-    const result = toolError("something broke");
+    const result = toolError("something broke", "contrato");
     expect(result.isError).toBe(true);
     expect(result.content).toHaveLength(1);
     const parsed = JSON.parse(result.content[0].text);
@@ -20,19 +21,19 @@ describe("toolError", () => {
   });
 
   it("marks retryable when specified", () => {
-    const result = toolError("rate limited", true);
+    const result = toolError("rate limited", "fonte", true);
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.retryable).toBe(true);
   });
 
   it("content type is text", () => {
-    const result = toolError("fail");
+    const result = toolError("fail", "contrato");
     expect(result.content[0].type).toBe("text");
   });
 
   it("includes an actionable hint that differs by retryability", () => {
-    const transient = JSON.parse(toolError("oops", true).content[0].text);
-    const permanent = JSON.parse(toolError("oops", false).content[0].text);
+    const transient = JSON.parse(toolError("oops", "fonte", true).content[0].text);
+    const permanent = JSON.parse(toolError("oops", "contrato", false).content[0].text);
     expect(typeof transient.hint).toBe("string");
     expect(transient.hint.length).toBeGreaterThan(0);
     expect(transient.hint).not.toBe(permanent.hint);
@@ -40,18 +41,27 @@ describe("toolError", () => {
   });
 
   it("honors an explicit hint override", () => {
-    const parsed = JSON.parse(toolError("oops", false, "dica custom").content[0].text);
+    const parsed = JSON.parse(toolError("oops", "contrato", false, "dica custom").content[0].text);
     expect(parsed.hint).toBe("dica custom");
   });
 
   it("mirrors the payload in structuredContent for deterministic parsing", () => {
-    const result = toolError("broke", true) as unknown as {
+    const result = toolError("broke", "fonte", true) as unknown as {
       structuredContent: Record<string, unknown>;
       content: { text: string }[];
     };
     expect(result.structuredContent).toEqual(JSON.parse(result.content[0].text));
     expect(result.structuredContent).toMatchObject({ error: "broke", retryable: true });
     expect(result.structuredContent.hint).toBeTruthy();
+  });
+});
+
+describe("toolError: classe declarada, fora do fio", () => {
+  it("anexa a classe numa chave-símbolo não enumerável", () => {
+    const r = toolError("Comissão com sigla \"INVALIDA\" não encontrada.", "nao_encontrado");
+    expect(classeAnexada(r)).toBe("nao_encontrado");
+    expect(Object.keys(r).sort()).toEqual(["content", "isError", "structuredContent"]);
+    expect(JSON.stringify(r)).not.toContain("nao_encontrado");
   });
 });
 

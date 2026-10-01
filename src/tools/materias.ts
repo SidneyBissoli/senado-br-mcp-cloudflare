@@ -203,7 +203,7 @@ export function registerMateriasTools(server: SenadoToolHost, baseUrl: string) {
           dataFimApresentacao: df,
         });
         if (Object.keys(qp).length === 0) {
-          return toolError("É obrigatório informar pelo menos um critério de busca.");
+          return toolError("É obrigatório informar pelo menos um critério de busca.", "contrato");
         }
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_buscar_materias",

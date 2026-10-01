@@ -26,10 +26,16 @@ export interface ReuniaoResumo {
   hora: string | null;
 }
 
+/**
+ * A classe de telemetria vai junto da mensagem, decidida aqui, onde se sabe o
+ * que ela significa: nenhuma reunião é ausência respondida (`nao_encontrado`);
+ * várias é pedido ambíguo, que o chamador resolve repetindo com o código
+ * (`contrato`). Pela frase, as duas caíam em `outro` (30/09/2026).
+ */
 export type Resolucao =
   | { tipo: "codigo"; codigo: number }
-  | { tipo: "nenhuma"; mensagem: string }
-  | { tipo: "ambigua"; mensagem: string };
+  | { tipo: "nenhuma"; mensagem: string; classe: "nao_encontrado" }
+  | { tipo: "ambigua"; mensagem: string; classe: "contrato" };
 
 /**
  * Escolhe UMA reunião da lista. Devolve erro com as candidatas quando há mais
@@ -45,6 +51,7 @@ export function escolherReuniao(
   if (reunioes.length === 0) {
     return {
       tipo: "nenhuma",
+      classe: "nao_encontrado",
       mensagem:
         `Nenhuma reunião da comissão ${sigla} em ${periodo}. Confira a sigla com ` +
         `senado_listar_comissoes ou amplie o período com senado_reunioes_comissao.`,
@@ -57,6 +64,7 @@ export function escolherReuniao(
     .join("; ");
   return {
     tipo: "ambigua",
+    classe: "contrato",
     mensagem:
       `${reunioes.length} reuniões da comissão ${sigla} em ${periodo}. Repita informando ` +
       `codigoReuniao com uma destas: ${lista}${reunioes.length > 10 ? "; …" : ""}`,

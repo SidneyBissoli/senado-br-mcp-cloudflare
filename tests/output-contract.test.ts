@@ -165,7 +165,7 @@ describe("toolResult — a única forma de violar o schema é não devolver obje
   });
 
   it("o envelope de erro também é objeto (isError dispensa validação, mas não é motivo para quebrar)", () => {
-    const r = toolError("falhou", true);
+    const r = toolError("falhou", "fonte", true);
     expect(r.isError).toBe(true);
     expect(typeof r.structuredContent).toBe("object");
     expect(Array.isArray(r.structuredContent)).toBe(false);

@@ -2,7 +2,7 @@
 
 import { incr } from "../metrics.js";
 import { logger } from "./logger.js";
-import { anexarClasse } from "../call-shape.js";
+import { anexarClasse, CLASSE_DO_ERRO, type ErrorClass } from "../call-shape.js";
 
 /** Actionable next-step guidance, derived from whether retrying can help. */
 function defaultHint(isRetryable: boolean): string {
@@ -17,8 +17,11 @@ function defaultHint(isRetryable: boolean): string {
  * override). The same payload is also returned as `structuredContent` so clients can parse
  * errors deterministically — symmetric with toolResult() — the permissive outputSchema is
  * skipped on isError results anyway, and a plain object satisfies it regardless.
+ *
+ * Sem classe: é o miolo comum de `toolError` (classe declarada) e `errorFrom` (classe
+ * pelo tipo da exceção). Não exportado de propósito — ver `toolError`.
  */
-export function toolError(message: string, isRetryable = false, hint?: string) {
+function envelopeDeErro(message: string, isRetryable: boolean, hint?: string) {
   incr("toolErrors");
   const payload = { error: message, retryable: isRetryable, hint: hint ?? defaultHint(isRetryable) };
   return {
@@ -29,19 +32,40 @@ export function toolError(message: string, isRetryable = false, hint?: string) {
 }
 
 /**
- * Build a toolError from any caught value, preserving UpstreamError's retryable flag.
- * Avoids the repetitive `e instanceof Error ? e.message : "..."` pattern.
- * Note: does NOT call incr("toolErrors") directly — toolError() handles that.
+ * Erro que o HANDLER decide, com a classe de telemetria DECLARADA por quem o escreve.
+ *
+ * Por que a classe é obrigatória. Até 30/09/2026 este helper não anexava classe nenhuma, e
+ * o hook de `instrumentTool` caía na frase (`classifyError`). A frase ecoa argumento do
+ * chamador: "Nenhuma reunião da comissão X em <período>" saía `outro`, e "N reuniões …
+ * Repita informando codigoReuniao" também — a primeira é ausência respondida, a segunda é
+ * pedido ambíguo. Quem escreve a mensagem SABE o que ela significa; com o parâmetro
+ * obrigatório, o compilador cobra isso de toda chamada nova. A classe viaja fora do fio
+ * (chave-símbolo não enumerável `CLASSE_DO_ERRO`): o que o cliente recebe não muda.
+ *
+ *  - `contrato`: parâmetro que falta, combinação proibida, pedido ambíguo;
+ *  - `nao_encontrado`: a origem respondeu, e respondeu que não existe.
  */
-export function errorFrom(e: unknown, fallbackMessage: string) {
+export function toolError(message: string, classe: ErrorClass, isRetryable = false, hint?: string) {
+  const r = envelopeDeErro(message, isRetryable, hint);
+  Object.defineProperty(r, CLASSE_DO_ERRO, { value: classe, enumerable: false });
+  return r;
+}
+
+/**
+ * Build an error result from any caught value, preserving UpstreamError's retryable flag.
+ * Avoids the repetitive `e instanceof Error ? e.message : "..."` pattern.
+ * `sufixo` is appended to the user-facing message only (the log keeps the raw message).
+ */
+export function errorFrom(e: unknown, fallbackMessage: string, sufixo = "") {
   const message = e instanceof Error ? e.message : fallbackMessage;
   const retryable = e instanceof Error && "retryable" in e && typeof (e as any).retryable === "boolean"
     ? (e as any).retryable
     : false;
   logger.error("tool_error", { message, retryable });
   // A classe de telemetria vai pelo TIPO do erro, fora do fio (ver
-  // CLASSE_DO_ERRO em src/call-shape.ts); sem ela, vale a frase.
-  return anexarClasse(toolError(message, retryable), e);
+  // CLASSE_DO_ERRO em src/call-shape.ts); sem ela, vale a frase — último
+  // recurso, só para exceção que não declara classe.
+  return anexarClasse(envelopeDeErro(message + sufixo, retryable), e);
 }
 
 export function toolResult(data: unknown) {

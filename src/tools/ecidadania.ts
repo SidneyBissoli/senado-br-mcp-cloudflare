@@ -13,11 +13,9 @@
 import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
-import { toolError } from "../utils/validation.js";
-import { anexarClasse } from "../call-shape.js";
+import { errorFrom } from "../utils/validation.js";
 import { provenanceEcidadania, provenanceArquimedesVotos, resultWithProvenance } from "../utils/provenance.js";
 import { tagUntrustedFields, tagUntrustedList, neutralizeUntrustedText, sanitizeScrapedText } from "../utils/untrusted.js";
-import { logger } from "../utils/logger.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 import type { Env } from "../types.js";
 import { resolveList, writeDetalheThrough } from "../scraper/store.js";
@@ -128,16 +126,12 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
   }
 
   function ecidadaniaError(e: unknown) {
-    const msg = e instanceof Error ? e.message : "Erro ao acessar e-Cidadania";
-    const retryable = e instanceof Error && "retryable" in e && typeof (e as any).retryable === "boolean"
-      ? (e as any).retryable
-      : false;
-    // Emit the same structured tool_error log the other tools get via errorFrom(); log the raw
-    // message (no suffix), but keep the reassuring suffix in the user-facing tool error.
-    logger.error("tool_error", { message: msg, retryable });
-    return anexarClasse(
-      toolError(`${msg}. As demais funcionalidades (senadores, matérias, votações) continuam operacionais.`, retryable),
+    // Mesmo caminho de toda tool (errorFrom: log cru, classe pelo TIPO da exceção via
+    // anexarClasse); o sufixo tranquilizador vai só na mensagem que o cliente lê.
+    return errorFrom(
       e,
+      "Erro ao acessar e-Cidadania",
+      ". As demais funcionalidades (senadores, matérias, votações) continuam operacionais.",
     );
   }
 
