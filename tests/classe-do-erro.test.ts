@@ -20,6 +20,8 @@ import * as tokenBucket from "../src/throttle/token-bucket.js";
 import { fetchPage } from "../src/scraper/ecidadania.js";
 import { errorFrom } from "../src/utils/validation.js";
 import { instrumentTool } from "../src/instrument.js";
+import { classeAnexada } from "../src/call-shape.js";
+import { capturarDeepResearchTools } from "../src/tools/deep-research.js";
 
 /** A classe que a chamada gravaria no Analytics Engine (blob7). */
 async function classeGravada(ida: () => Promise<unknown>): Promise<string> {
@@ -126,6 +128,31 @@ describe("e-Cidadania: falha do portal é `fonte`", () => {
   it("404 é ausência respondida", async () => {
     responder(async () => new Response("", { status: 404 }));
     expect(await classeGravada(portal)).toBe("nao_encontrado");
+  });
+});
+
+describe("bug nosso no handler é `defeito` (varredura de 30/09/2026)", () => {
+  it("TypeError do nosso código, engolido por errorFrom", async () => {
+    const classe = await classeGravada(async () => {
+      throw new TypeError("Cannot read properties of undefined (reading 'x')");
+    });
+    expect(classe).toBe("defeito");
+  });
+
+  it("a falha de rede crua da undici NÃO é bug nosso", async () => {
+    const classe = await classeGravada(async () => {
+      throw new TypeError("fetch failed");
+    });
+    expect(classe).not.toBe("defeito");
+  });
+});
+
+describe("search/fetch pelo tipo (mcp-search 0.8.0)", () => {
+  it("id desconhecido é nao_encontrado mesmo ecoando uma palavra de `contrato`", async () => {
+    const { fetch } = capturarDeepResearchTools("https://legis.senado.leg.br/dadosabertos");
+    const r = await fetch.callback({ id: "invalid" });
+    expect((r as { isError?: boolean }).isError).toBe(true);
+    expect(classeAnexada(r)).toBe("nao_encontrado");
   });
 });
 
