@@ -1,12 +1,12 @@
 // GERADO por scripts/ingest-estrutura/index.ts — NÃO edite à mão.
 // Snapshot da árvore organizacional do Senado (portal institucional), até o nível de serviço.
-// Extraído em 2026-09-01T10:56:16.383Z. Rode `npm run ingest:estrutura` para atualizar.
+// Extraído em 2026-10-01T12:13:07.708Z. Rode `npm run ingest:estrutura` para atualizar.
 import type { EstruturaSnapshot } from "../estrutura/tipos.js";
 
 export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
-  "extraidoEm": "2026-09-01T10:56:16.383Z",
+  "extraidoEm": "2026-10-01T12:13:07.708Z",
   "fonteUrl": "https://www12.senado.leg.br/institucional/estrutura/orgaosenado",
-  "total": 823,
+  "total": 821,
   "orgaos": [
     {
       "cod": -2072346465,
@@ -3135,12 +3135,6 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "codSuperior": 10057
     },
     {
-      "cod": 10156,
-      "sigla": null,
-      "nome": "Escritório de Apoio Nº 01 do Senador Angelo Coronel",
-      "codSuperior": 10046
-    },
-    {
       "cod": 10157,
       "sigla": null,
       "nome": "Escritório de Apoio Nº 01 do Senador Plínio Valério",
@@ -4636,7 +4630,7 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
     },
     {
       "cod": 10749,
-      "sigla": null,
+      "sigla": "CSADVOSF",
       "nome": "Conselho Superior da Advocacia do Senado Federal",
       "codSuperior": 67
     },
@@ -4893,18 +4887,6 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "codSuperior": 109
     },
     {
-      "cod": 10847,
-      "sigla": "GSHKLANN",
-      "nome": "Gabinete do Senador Hermes Klann",
-      "codSuperior": 108
-    },
-    {
-      "cod": 10850,
-      "sigla": null,
-      "nome": "Escritório de Apoio Nº 01 do Senador Hermes Klann",
-      "codSuperior": 10847
-    },
-    {
       "cod": 10857,
       "sigla": null,
       "nome": "Serviço de Engenharia de Manutenção Civil",
@@ -4945,6 +4927,12 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "sigla": null,
       "nome": "Escritório de Apoio Nº 01 do Senador Sargento Reginauro",
       "codSuperior": 10862
+    },
+    {
+      "cod": 10866,
+      "sigla": "GSRBRAZ",
+      "nome": "Gabinete do Senador Renzo Braz",
+      "codSuperior": 108
     }
   ]
 };
