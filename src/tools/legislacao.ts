@@ -75,7 +75,7 @@ export function registerLegislacaoTools(server: SenadoToolHost, baseUrl: string)
           data: params.data,
         });
         if (Object.keys(qp).length === 0) {
-          return toolError("É obrigatório informar pelo menos um parâmetro de busca.");
+          return toolError("É obrigatório informar pelo menos um parâmetro de busca.", "contrato");
         }
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_buscar_legislacao", qp, CACHE_ON_DEMAND,
@@ -118,7 +118,7 @@ export function registerLegislacaoTools(server: SenadoToolHost, baseUrl: string)
           [["DetalheDocumento", "documentos", "documento"]],
           "senado_obter_legislacao",
         );
-        if (docs.length === 0) return toolError("Norma não encontrada.");
+        if (docs.length === 0) return toolError("Norma não encontrada.", "nao_encontrado");
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `norma=${params.codigo}`, retrieved_at: fetchedAt,
         });

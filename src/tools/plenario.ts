@@ -258,7 +258,7 @@ export function registerPlenarioTools(server: SenadoToolHost, baseUrl: string) {
         } else if (params.data) {
           path = `/plenario/votacao/orientacaoBancada/${params.data}`;
         } else {
-          return toolError("Informe 'data' ou o período 'dataInicio'/'dataFim'.");
+          return toolError("Informe 'data' ou o período 'dataInicio'/'dataFim'.", "contrato");
         }
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_orientacao_bancada", { path }, CACHE_ON_DEMAND,

@@ -225,7 +225,7 @@ export function registerProcessosTools(server: SenadoToolHost, baseUrl: string) 
           dataFimApresentacao: ensureISODate(params.dataFimApresentacao),
         });
         if (Object.keys(qp).length === 0) {
-          return toolError("É obrigatório informar pelo menos um parâmetro de busca.");
+          return toolError("É obrigatório informar pelo menos um parâmetro de busca.", "contrato");
         }
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_search_processos",
@@ -350,7 +350,7 @@ export function registerProcessosTools(server: SenadoToolHost, baseUrl: string) 
         }
 
         if (Object.keys(qp).length === 0) {
-          return toolError("Informe pelo menos um filtro (idProcesso, codigoMateria ou período).");
+          return toolError("Informe pelo menos um filtro (idProcesso, codigoMateria ou período).", "contrato");
         }
 
         const { value: response, fetchedAt } = await cachedFetchWithMeta(

@@ -229,10 +229,10 @@ export function registerContratacoesTools(server: SenadoToolHost, admBaseUrl: st
         const tipo = params.tipo ?? "contratos";
         let path: string;
         if (params.secao === "aditivos") {
-          if (tipo !== "contratos") return toolError("A seção 'aditivos' só existe para tipo=contratos.");
+          if (tipo !== "contratos") return toolError("A seção 'aditivos' só existe para tipo=contratos.", "contrato");
           path = `/contratacoes/contratos/${params.id}/aditivos`;
         } else if (params.secao === "acionamentos") {
-          if (tipo !== "atas_registro_preco") return toolError("A seção 'acionamentos' só existe para tipo=atas_registro_preco.");
+          if (tipo !== "atas_registro_preco") return toolError("A seção 'acionamentos' só existe para tipo=atas_registro_preco.", "contrato");
           path = `/contratacoes/atas_registro_preco/${params.id}/acionamentos`;
         } else {
           path = `/contratacoes/${tipo}/${params.id}/${params.secao}`;
@@ -256,6 +256,7 @@ export function registerContratacoesTools(server: SenadoToolHost, admBaseUrl: st
             return toolError(
               `Não existe ${tipo} com id ${params.id}. Obtenha o id em ` +
                 (tipo === "contratos" ? "senado_contratos" : "senado_contratacoes_lista") + ".",
+              "nao_encontrado",
             );
           }
         }
@@ -293,7 +294,7 @@ export function registerContratacoesTools(server: SenadoToolHost, admBaseUrl: st
           objetoContains: params.objeto,
         });
         if (Object.keys(qp).length === 0) {
-          return toolError("Informe 'numero' ou 'objeto' para a busca.");
+          return toolError("Informe 'numero' ou 'objeto' para a busca.", "contrato");
         }
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_licitacoes", qp, CACHE_SEMI_STATIC,
@@ -374,7 +375,7 @@ export function registerContratacoesTools(server: SenadoToolHost, admBaseUrl: st
     async (params) => {
       try {
         if (!params.nome && !params.cnpj) {
-          return toolError("Informe 'nome' ou 'cnpj' para a busca.");
+          return toolError("Informe 'nome' ou 'cnpj' para a busca.", "contrato");
         }
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_empresas_contratadas", {}, CACHE_SEMI_STATIC,

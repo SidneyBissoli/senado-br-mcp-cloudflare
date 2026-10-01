@@ -85,7 +85,7 @@ export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: st
         const por = params.por ?? "comissao";
 
         if (por === "senador") {
-          if (!params.codigoSenador) return toolError("Para por=senador, informe 'codigoSenador'.");
+          if (!params.codigoSenador) return toolError("Para por=senador, informe 'codigoSenador'.", "contrato");
           const qp = buildParams({
             comissao: params.comissao?.toUpperCase(),
             dataInicio: params.dataInicio,
@@ -117,7 +117,7 @@ export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: st
 
         if (por === "materia") {
           if (!params.sigla || !params.numero || !params.ano) {
-            return toolError("Para por=materia, informe 'sigla', 'numero' e 'ano'.");
+            return toolError("Para por=materia, informe 'sigla', 'numero' e 'ano'.", "contrato");
           }
           const sigla = params.sigla.toUpperCase();
           const qp = buildParams({
@@ -149,7 +149,7 @@ export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: st
         }
 
         // por === "comissao" (padrão)
-        if (!params.siglaComissao) return toolError("Para por=comissao, informe 'siglaComissao'.");
+        if (!params.siglaComissao) return toolError("Para por=comissao, informe 'siglaComissao'.", "contrato");
         const qp = buildParams({
           dataInicio: params.dataInicio,
           dataFim: params.dataFim,

@@ -435,7 +435,7 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
             const dica = sugestoes.length
               ? ` Você quis dizer: ${sugestoes.map((s) => (s.sigla ? `${s.sigla} (${s.nome})` : s.nome)).join("; ")}?`
               : "";
-            return toolError(`Unidade '${params.subordinadasA}' não encontrada na estrutura organizacional.${dica}`);
+            return toolError(`Unidade '${params.subordinadasA}' não encontrada na estrutura organizacional.${dica}`, "nao_encontrado");
           }
           const { sob, naoClassificados, afastadosOuEmTransito } = particionarPorUnidade(lista, indice, alvo.cod);
           // A classificação cruza a folha (fonte administrativa) com o organograma (fonte institucional).

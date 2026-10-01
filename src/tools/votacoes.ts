@@ -197,6 +197,7 @@ export function registerVotacoesTools(server: SenadoToolHost, baseUrl: string) {
               : " Se a votação é anterior, informe o `ano`; ou obtenha o código em" +
                 " senado_search_votacoes. O `codigoVotacao` de senado_orientacao_bancada" +
                 " pertence a outro espaço de numeração e não é aceito aqui."),
+          "nao_encontrado",
         );
       } catch (e) {
         return errorFrom(e, "Votação não encontrada");

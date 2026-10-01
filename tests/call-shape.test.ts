@@ -23,6 +23,7 @@ const CHAMADA = /toolError\(([\s\S]{10,1200}?)\n?\s*\)/g;
 const LITERAL = /(["'`])((?:\\.|(?!\1)[\s\S])*)\1/g;
 /** Mensagem que só repassa o texto de cima; o sinal chega em execução. */
 const REPASSE = /:\s*X\.?$/;
+const CLASSES = new Set(["contrato", "nao_encontrado", "fonte", "defeito", "outro"]);
 
 function mensagensDeErro(): string[] {
   const achadas = new Set<string>();
@@ -35,7 +36,9 @@ function mensagensDeErro(): string[] {
       }
       if (!entrada.endsWith(".ts") || entrada.includes(".test.")) continue;
       for (const chamada of readFileSync(caminho, "utf8").matchAll(CHAMADA)) {
-        const partes = [...chamada[1].matchAll(LITERAL)].map((p) => p[2]);
+        // O 2º argumento de toolError é a CLASSE declarada ("contrato", …), não
+        // prosa: fica fora do texto classificado.
+        const partes = [...chamada[1].matchAll(LITERAL)].map((p) => p[2]).filter((p) => !CLASSES.has(p));
         if (partes.length === 0) continue;
         const texto = partes.join("").replace(/\$\{[^}]*\}/g, "X").replace(/\s+/g, " ").trim();
         // Exige espaco: literais colados sem prosa (uma lista de nomes de
