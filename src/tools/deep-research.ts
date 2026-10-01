@@ -53,6 +53,7 @@ import { provenanceExtras, provenanceFor, type Provenance } from "../utils/prove
 import { CACHE_SEMI_STATIC } from "../types.js";
 import { extractParlamentares, fetchSenadorDetalhe, parseSenadorResumo } from "./senadores.js";
 import { RootNotFoundError } from "../utils/upstream-parse.js";
+import { classifyThrown } from "../call-shape.js";
 import { fetchComissaoColegiado, parseComissaoItem, parseComissaoResumo } from "./comissoes.js";
 import { UFS } from "./referencia.js";
 
@@ -361,6 +362,10 @@ export function capturarDeepResearchTools(baseUrl: string): Record<DeepResearchT
       "Brazilian Federal Senate open data (senators in office and active committees of the Senate and the National Congress)",
     richTools: "the `senado_*` tools",
     limit: DEEP_RESEARCH_LIMIT,
+    // A classe de uma EXCEÇÃO pelo tipo (mcp-search 0.8.0): a declarada
+    // (`error.classe`) o pacote lê primeiro; `TypeError` nosso -> `defeito`.
+    // Ela viaja no resultado (chave-símbolo da frota) até o hook do shim.
+    classifyThrown,
   });
   const porNome = (name: DeepResearchToolName): RegistroCapturado => {
     const reg = capturados.find((c) => c.name === name);

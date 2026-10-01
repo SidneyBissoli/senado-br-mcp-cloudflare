@@ -243,11 +243,26 @@ export function classeAnexada(result: unknown): ErrorClass | undefined {
   return ehClasse(c) ? c : undefined;
 }
 
-/** Anexa a classe declarada pelo erro ao resultado, fora do fio. Devolve o próprio resultado. */
+/**
+ * Anexa ao resultado, fora do fio, a classe que o erro declara — ou `defeito`,
+ * quando é bug nosso (`TypeError` & cia., como em `classifyThrown`). Devolve o
+ * próprio resultado.
+ *
+ * Medido em 30/09/2026 na varredura da frota: os ~60 `catch` que passam por
+ * `errorFrom` engolem a exceção antes do hook, e um "Cannot read properties of
+ * undefined" saía `outro`. A falha de rede crua da undici também é `TypeError`
+ * ("fetch failed"); toda ida passa por throttle/upstream.ts, que a tipa — a
+ * exclusão é guarda, para uma ida crua futura não virar `defeito`.
+ */
 export function anexarClasse<T extends object>(result: T, error: unknown): T {
-  const classe = classeDeclarada(error);
+  const classe = classeDeclarada(error) ?? (ehBugNosso(error) ? "defeito" : undefined);
   if (classe !== undefined) Object.defineProperty(result, CLASSE_DO_ERRO, { value: classe, enumerable: false });
   return result;
+}
+
+function ehBugNosso(error: unknown): boolean {
+  if (error instanceof TypeError) return error.message !== "fetch failed";
+  return error instanceof RangeError || error instanceof ReferenceError || error instanceof SyntaxError;
 }
 
 /**
