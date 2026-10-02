@@ -14,7 +14,7 @@
 [![License: MIT](https://img.shields.io/github/license/SidneyBissoli/senado-br-mcp-cloudflare)](LICENSE)
 [![Status](https://img.shields.io/website?url=https%3A%2F%2Fsenado.sidneybissoli.com%2Fhealth&up_message=online&down_message=offline&label=status)](https://senado.sidneybissoli.com/status)
 
-🇧🇷 [Leia em Português](README.pt-BR.md)
+🇧🇷 [Leia em Português](LEIA-ME.md)
 
 A **public, hosted** MCP server that gives AI assistants live, structured access to **Brazilian Senate open data** — **no installation, no account, no API key**. Point your MCP client at the hosted endpoint and start asking about senators, bills, votes, expenses, and more. It runs on Cloudflare Workers over Streamable HTTP.
 
