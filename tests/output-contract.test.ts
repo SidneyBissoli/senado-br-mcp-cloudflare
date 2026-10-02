@@ -77,28 +77,33 @@ afterAll(async () => {
  * relatório. Aqui o campo minado é grande: 67 ferramentas, muitas com pares
  * quase homônimos (`codigoSenador`/`codigoParlamentar`, `sigla`/`siglaComissao`).
  *
- * `search`/`fetch` ficam ABERTAS de propósito: o contrato é da OpenAI.
+ * `search`/`fetch` também: abertas até a 3.11.0 por serem contrato da OpenAI,
+ * estritas desde o `@sbissoli/mcp-search` 0.9.0 (`z.strictObject`).
  */
 describe("esquema de entrada recusa parâmetro que não existe", () => {
-  const CONTRATO_ALHEIO = ["search", "fetch"];
-
-  it("toda tool senado_* publica additionalProperties: false", () => {
-    const proprias = tools.filter((t) => !CONTRATO_ALHEIO.includes(t.name));
-
-    expect(proprias.length).toBeGreaterThanOrEqual(60);
-    for (const t of proprias) {
+  it("toda tool publica additionalProperties: false, search e fetch inclusive", () => {
+    expect(tools.length).toBeGreaterThanOrEqual(60);
+    for (const nome of ["search", "fetch"]) {
+      expect(tools.some((t) => t.name === nome), `${nome} sumiu da superfície`).toBe(true);
+    }
+    for (const t of tools) {
       const schema = t.inputSchema as { additionalProperties?: unknown };
       expect(schema.additionalProperties, `${t.name} aceita chave desconhecida`).toBe(false);
     }
   });
 
-  it("search e fetch continuam abertas — o contrato é da OpenAI", () => {
-    for (const nome of CONTRATO_ALHEIO) {
-      const t = tools.find((x) => x.name === nome);
-      expect(t, `${nome} sumiu da superfície`).toBeDefined();
-      const schema = t!.inputSchema as { additionalProperties?: unknown };
-      expect(schema.additionalProperties, `${nome} não deveria ter sido fechada`).not.toBe(false);
-    }
+  it("search recusa chave desconhecida e a NOMEIA, antes de chegar ao handler", async () => {
+    const r = await client.callTool({
+      name: "search",
+      arguments: { query: "reforma", ano: 2023 },
+    });
+
+    expect(r.isError).toBe(true);
+    const texto = Array.isArray(r.content)
+      ? r.content.map((c) => ("text" in c ? c.text : "")).join(" ")
+      : "";
+    expect(texto).toContain("ano");
+    expect(r.structuredContent, "o handler rodou e devolveu resultado").toBeUndefined();
   });
 
   it("a recusa NOMEIA a chave, para o modelo se corrigir sozinho", async () => {

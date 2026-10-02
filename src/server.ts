@@ -62,15 +62,14 @@ type ToolCallback = (...args: unknown[]) => Promise<unknown> | unknown;
  * `.strict()` publica `additionalProperties: false` e faz o SDK responder
  * `Unrecognized key: "<nome>"`, que NOMEIA a chave.
  *
- * `search` e `fetch` ficam ABERTAS de propósito: o contrato é da OpenAI, elas
- * entram pelo mesmo funil (registerDeepResearchToolsSenado) e fechá-las seria
- * mexer num contrato que não é nosso.
+ * Vale para TODAS, `search` e `fetch` inclusive. Até a 3.11.0 as duas ficavam
+ * abertas por serem contrato da OpenAI; desde o `@sbissoli/mcp-search` 0.9.0
+ * o próprio contrato do portfólio é estrito (`z.strictObject`), e as duas
+ * entram por este funil (registerDeepResearchToolsSenado passa a shape) —
+ * sem o `.strict()` aqui, a estrição do pacote se perderia na passagem.
  */
-const TOOLS_DE_CONTRATO_ALHEIO = new Set(["search", "fetch"]);
-
-function esquemaDeEntrada(name: string, shape: Record<string, unknown>) {
-  const objeto = z.object(shape as z.ZodRawShape);
-  return TOOLS_DE_CONTRATO_ALHEIO.has(name) ? objeto : objeto.strict();
+function esquemaDeEntrada(shape: Record<string, unknown>) {
+  return z.object(shape as z.ZodRawShape).strict();
 }
 export function createServer(env: Env, ctx?: ExecutionContext, options: CreateServerOptions = {}): McpServer {
   const toolProfile = options.toolProfile ?? "full";
@@ -129,7 +128,7 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
       {
         title: titleForTool(name),
         description,
-        inputSchema: esquemaDeEntrada(name, shape) as never,
+        inputSchema: esquemaDeEntrada(shape) as never,
         outputSchema: outputSchema as never,
         annotations: {
           title: titleForTool(name),
