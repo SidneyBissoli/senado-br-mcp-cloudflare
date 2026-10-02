@@ -42,6 +42,7 @@ on:
       - "package.json"
       - "package-lock.json"
       - "wrangler.toml"
+      - "surface.lock.json"
       - ".github/workflows/deploy-worker.yml"
   workflow_dispatch:
 
@@ -88,6 +89,15 @@ jobs:
         name: Typecheck
         run: npm run typecheck
 
+      # O DEPLOY SE RECUSA A RODAR COM TESTE VERMELHO. Até 02/10/2026 este job
+      # só checava tipos: o ci.yml roda em paralelo no mesmo push e não segura
+      # nada. Entre os testes está a trava da superfície
+      # (tests/surface-lock.test.ts): mudou sem subir a versão = vermelho aqui,
+      # e o wrangler abaixo não roda.
+      - if: steps.cf.outputs.ok == 'true'
+        name: Testes — inclui a trava da superfície
+        run: npm test
+
       - if: steps.cf.outputs.ok == 'true'
         name: Deploy via Wrangler
         env:
@@ -116,3 +126,13 @@ jobs:
       - if: steps.cf.outputs.ok == 'true'
         name: Smoke em produção
         run: npm run smoke:openai-app
+
+      # O que subiu é o que foi travado, nos DOIS perfis: superfície declarada
+      # servida sem credencial e, método a método, quem responde sem token
+      # (produção = API_KEY ausente). Os testes provam o CÓDIGO; isto prova o
+      # ENDPOINT.
+      - if: steps.cf.outputs.ok == 'true'
+        name: Superfície no ar = surface.lock.json
+        run: |
+          npx mcp-surface verificar https://senado.sidneybissoli.com/mcp --perfil full --tool senado_estrutura_organizacional --args '{"unidade":"DGER"}'
+          npx mcp-surface verificar https://senado.sidneybissoli.com/mcp/openai-app-v2 --perfil openai-app --rota "POST /mcp/openai-app-v2" --tool senado_estrutura_organizacional --args '{"unidade":"DGER"}'
