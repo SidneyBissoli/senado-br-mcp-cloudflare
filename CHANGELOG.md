@@ -6,8 +6,26 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
-Só telemetria do canal hospedado: nenhuma tool, parâmetro, campo ou mensagem
-muda, e a superfície publicada é idêntica à da 3.11.0.
+Telemetria do canal hospedado e uma trava de CI: nenhuma tool, parâmetro, campo
+ou mensagem muda, e a superfície publicada é idêntica à da 3.11.0 — agora
+afirmado por teste (`surface.lock.json`).
+
+### Added
+
+- **Impressão digital da superfície: mudou sem subir a versão = build vermelho
+  e deploy recusado** (`@sbissoli/mcp-surface`). `surface.lock.json` trava o
+  sha256 de `initialize` (instructions, capabilities, identidade sem a versão)
+  + tools/resources/templates/prompts dos DOIS perfis (`full` e `openai-app`)
+  e, numa segunda seção, QUAIS MÉTODOS RESPONDEM SEM TOKEN nas quatro rotas
+  MCP, com e sem `API_KEY` — este é o único servidor do portfólio em que a
+  chave é uma possibilidade real de configuração. O `deploy-worker.yml` passou
+  a rodar a suíte ANTES do wrangler (até aqui só checava tipos) e termina
+  conferindo os dois perfis no ar contra a trava (`mcp-surface verificar
+  --perfil`). Replay das versões publicadas em
+  `baselines/replay-2026-10-02.md`: o ar (3.11.0) serve a superfície da 3.11.0
+  publicada; nenhuma remoção fora de major; e as **1.1.0 e 1.1.2 do npm não
+  sobem** (`Dynamic require of "events" is not supported`, bundle do esbuild).
+  Proposta de um leitor (dev.to, 3g5m4 e 3g607); molde no bcb-br-mcp.
 
 ### Fixed
 
