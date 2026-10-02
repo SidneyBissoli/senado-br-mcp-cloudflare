@@ -4,11 +4,30 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [3.12.0] - 2026-10-02
 
-Telemetria do canal hospedado e uma trava de CI: nenhuma tool, parâmetro, campo
-ou mensagem muda, e a superfície publicada é idêntica à da 3.11.0 — agora
-afirmado por teste (`surface.lock.json`).
+Bump MINOR porque `search` e `fetch` passam a RECUSAR parâmetro que não
+existe — a única mudança de superfície desde a 3.11.0 (última publicada no
+npm; nenhuma versão foi numerada sem ser publicada). O resto é telemetria do
+canal hospedado e uma trava de CI que torna toda mudança de superfície
+afirmada por teste (`surface.lock.json`).
+
+### Changed
+
+- **`search` e `fetch` estritas: chave desconhecida vira erro que a NOMEIA**
+  (`@sbissoli/mcp-search` 0.9.0, `searchInputSchema`/`fetchInputSchema` como
+  `z.strictObject`). Eram as duas exceções da classe fechada em 11/09/2026
+  para as outras 67 tools: abertas por serem contrato da OpenAI, descartavam
+  em silêncio o que não conheciam — `search({ query: "reforma", ano: 2023 })`
+  buscava sem o ano e respondia como se o filtro tivesse valido. Agora
+  publicam `additionalProperties: false` e respondem `Unrecognized key:
+  "ano"` antes do handler. Aqui a estrição se perdia DUAS vezes: o registrador
+  passa só a `.shape` do contrato e o funil `esquemaDeEntrada` isentava os
+  dois nomes (`TOOLS_DE_CONTRATO_ALHEIO`); a isenção saiu, e o funil aplica
+  `.strict()` a todas as 69. `surface.lock.json`: só `search`/`fetch` do
+  perfil `full` ganham `additionalProperties: false` (o mesmo em
+  `lhm.plugin.json`, regenerado). Gate invertido em
+  `tests/output-contract.test.ts` (reprova com a isenção de volta).
 
 ### Added
 
