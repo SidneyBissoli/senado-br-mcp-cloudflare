@@ -4,6 +4,27 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [3.12.1] - 2026-10-02
+
+Só documentação e empacotamento; superfície inalterada (`surface.lock.json`
+intacto).
+
+### Fixed
+
+- **A página do npm mostrava o README em PORTUGUÊS** (`readmeFilename:
+  README.pt-BR.md` no registro). O npm empacota SEMPRE todo `README*` da raiz,
+  ignorando o campo `files` (a negação `!README.pt-BR.md` foi testada e não
+  funciona), e entre dois escolheu o par traduzido. O par em português passa a
+  se chamar `LEIA-ME.md`, na mesma raiz (os links relativos dele seguem
+  valendo); o link do `README.md` e as constantes de
+  `tests/contagem-nos-textos.test.ts` acompanham.
+
+### Added
+
+- `tests/pacote-npm-readme.test.ts`: prende o tarball real (`npm pack
+  --dry-run`) a um README só, o `README.md`. Provado vermelho com uma cópia
+  `README.pt-BR.md` de volta na raiz.
+
 ## [3.12.0] - 2026-10-02
 
 Bump MINOR porque `search` e `fetch` passam a RECUSAR parâmetro que não

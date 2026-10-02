@@ -32,7 +32,7 @@ import { OPENAI_APP_TOOL_ALLOWLIST } from "../src/app-surface.js";
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const leia = (f: string) => readFileSync(join(raiz, f), "utf8");
 
-const READMES = ["README.md", "README.pt-BR.md"] as const;
+const READMES = ["README.md", "LEIA-ME.md"] as const;
 /** `**Total: 67 tools**` */
 const TOTAL = /\*\*Total:\s*(\d+)\s+(?:tools?|ferramentas?)\*\*/gi;
 /** `### Group B — Bills/Matters (2 tools, v3 backend)` */
@@ -97,7 +97,7 @@ describe("contagem de ferramentas nos textos públicos", () => {
 });
 
 describe("paridade entre o README em inglês e o em português", () => {
-  const pt = "README.pt-BR.md";
+  const pt = "LEIA-ME.md";
 
   it("o README em português existe", () => {
     expect(existsSync(join(raiz, pt)), `${pt} ausente — metade da superfície em pt`).toBe(true);
