@@ -4,6 +4,29 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Sem mudança de superfície nem de versão: só testes e dependência de
+desenvolvimento.
+
+### Tests
+
+- **O contrato de saída tem forma de cliente** (ideia de leitor,
+  https://dev.to/arhancanli/comment/3g4i4). `tests/output-contract.test.ts`
+  conecta o servidor de verdade (`createServer`) ao `Client` do SDK pelo
+  `@sbissoli/mcp-surface/cliente` 0.2.0, comum aos sete servidores: `tools/list`
+  antes do `tools/call`, cada mensagem do servidor passando por JSON como na
+  rede, e o resultado reprovado contra o schema LISTADO, como a sessão do
+  usuário reprovaria. As chamadas que têm de dar certo passam por
+  `chamarComoCliente`; entra um caso no perfil `openai-app`, cujo
+  `structuredContent` é reescrito pelo minimizador depois do handler.
+- Controles negativos em `senado_tabelas_referencia`: `structuredContent`
+  ausente no fio tem de reprovar, e a armadilha (sem `tools/list` o `Client`
+  não valida) fica presa. Sem quebra de "campo a mais": o schema daqui é aberto
+  por desenho. Prova de que o portão pode falhar: anunciar no schema listado
+  `tabela` como número (só no JSON Schema, sem o zod do servidor ver) faz o
+  próprio `Client` recusar o resultado.
+
 ## [3.12.1] - 2026-10-02
 
 Só documentação e empacotamento; superfície inalterada (`surface.lock.json`
