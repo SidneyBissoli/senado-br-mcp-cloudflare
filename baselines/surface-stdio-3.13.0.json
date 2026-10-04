@@ -1,26 +1,106 @@
 {
-  "identifier": "sidneybissoli-senado-br-mcp-cloudflare",
-  "name": "Dados Abertos Senado BR - MCP",
-  "icon": "🏛️",
-  "version": "3.13.0",
-  "description": "Independent MCP server for Brazilian Federal Senate open data — read-only tools, prompts and resources across the legislative process, Senate administration and the e-Cidadania portal. Cloudflare Workers, Streamable HTTP, no auth. Not affiliated with or endorsed by the Senate, OpenAI or ChatGPT. Responses in pt-BR. MIT licensed.",
-  "author": "Sidney Bissoli",
-  "authorUrl": "https://github.com/SidneyBissoli",
-  "homepage": "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare",
-  "cloudEndpoint": "https://senado.sidneybissoli.com/mcp",
-  "category": "data-analytics",
-  "tags": [
-    "senado",
-    "senado-federal",
-    "brazil",
-    "brasil",
-    "legislative",
-    "politics",
-    "open-data",
-    "e-cidadania",
-    "votes",
-    "ceaps"
+  "prompts": [
+    {
+      "arguments": [
+        {
+          "description": "Nome (ou parte) do senador",
+          "name": "senador",
+          "required": true
+        },
+        {
+          "description": "Ano das despesas (ex: 2025)",
+          "name": "ano",
+          "required": true
+        }
+      ],
+      "description": "Guia o passo a passo para analisar as despesas da cota parlamentar (CEAPS) de um senador num ano, usando senado_listar_senadores e senado_ceaps.",
+      "name": "senado_gastos_senador",
+      "title": "Gastos do senador (CEAPS)"
+    },
+    {
+      "description": "Guia o passo a passo para consolidar consultas (consenso/polarização), ideias e eventos populares do portal e-Cidadania.",
+      "name": "senado_panorama_ecidadania",
+      "title": "Panorama do e-Cidadania"
+    },
+    {
+      "arguments": [
+        {
+          "description": "Tipo da proposição (ex: PEC, PL, PLP, MPV)",
+          "name": "sigla",
+          "required": true
+        },
+        {
+          "description": "Número da proposição",
+          "name": "numero",
+          "required": true
+        },
+        {
+          "description": "Ano da proposição",
+          "name": "ano",
+          "required": true
+        }
+      ],
+      "description": "Guia o passo a passo para obter a situação atual e o histórico de tramitação de uma proposição, usando senado_buscar_materias e senado_obter_materia.",
+      "name": "senado_tramitacao_materia",
+      "title": "Tramitação de uma matéria"
+    },
+    {
+      "arguments": [
+        {
+          "description": "Nome (ou parte) do senador",
+          "name": "senador",
+          "required": true
+        },
+        {
+          "description": "Período em texto livre (ex: '2024' ou 'jan a jun 2025'); vazio = ano corrente",
+          "name": "periodo",
+          "required": false
+        }
+      ],
+      "description": "Guia o passo a passo para listar os votos nominais de um senador num período, usando senado_listar_senadores e senado_votacoes_senador.",
+      "name": "senado_votos_senador",
+      "title": "Como votou um senador"
+    }
   ],
+  "resources": [
+    {
+      "description": "Lista das 69 ferramentas agrupadas por domínio.",
+      "mimeType": "text/markdown",
+      "name": "catalogo",
+      "title": "Catálogo de ferramentas",
+      "uri": "senado://catalogo"
+    },
+    {
+      "description": "Siglas e termos do processo legislativo e da administração do Senado.",
+      "mimeType": "text/markdown",
+      "name": "glossario",
+      "title": "Glossário do Senado",
+      "uri": "senado://glossario"
+    },
+    {
+      "description": "Visão geral do servidor e qual ferramenta usar para cada objetivo.",
+      "mimeType": "text/markdown",
+      "name": "guia",
+      "title": "Guia de uso do Senado BR MCP",
+      "uri": "senado://guia"
+    },
+    {
+      "description": "Siglas, nomes e descrições dos tipos de proposição legislativa.",
+      "mimeType": "application/json",
+      "name": "tipos-materia",
+      "title": "Tabela: tipos de matéria",
+      "uri": "senado://tabelas/tipos-materia"
+    },
+    {
+      "description": "As 27 UFs do Brasil (sigla e nome).",
+      "mimeType": "application/json",
+      "name": "ufs",
+      "title": "Tabela: unidades federativas",
+      "uri": "senado://tabelas/ufs"
+    }
+  ],
+  "serverName": "senado-br-mcp",
+  "toolCount": 69,
   "tools": [
     {
       "annotations": {
@@ -18685,106 +18765,6 @@
         "type": "object"
       },
       "title": "Votos de uma matéria"
-    }
-  ],
-  "resources": [
-    {
-      "description": "Lista das 69 ferramentas agrupadas por domínio.",
-      "mimeType": "text/markdown",
-      "name": "catalogo",
-      "title": "Catálogo de ferramentas",
-      "uri": "senado://catalogo"
-    },
-    {
-      "description": "Siglas e termos do processo legislativo e da administração do Senado.",
-      "mimeType": "text/markdown",
-      "name": "glossario",
-      "title": "Glossário do Senado",
-      "uri": "senado://glossario"
-    },
-    {
-      "description": "Visão geral do servidor e qual ferramenta usar para cada objetivo.",
-      "mimeType": "text/markdown",
-      "name": "guia",
-      "title": "Guia de uso do Senado BR MCP",
-      "uri": "senado://guia"
-    },
-    {
-      "description": "Siglas, nomes e descrições dos tipos de proposição legislativa.",
-      "mimeType": "application/json",
-      "name": "tipos-materia",
-      "title": "Tabela: tipos de matéria",
-      "uri": "senado://tabelas/tipos-materia"
-    },
-    {
-      "description": "As 27 UFs do Brasil (sigla e nome).",
-      "mimeType": "application/json",
-      "name": "ufs",
-      "title": "Tabela: unidades federativas",
-      "uri": "senado://tabelas/ufs"
-    }
-  ],
-  "prompts": [
-    {
-      "arguments": [
-        {
-          "description": "Nome (ou parte) do senador",
-          "name": "senador",
-          "required": true
-        },
-        {
-          "description": "Ano das despesas (ex: 2025)",
-          "name": "ano",
-          "required": true
-        }
-      ],
-      "description": "Guia o passo a passo para analisar as despesas da cota parlamentar (CEAPS) de um senador num ano, usando senado_listar_senadores e senado_ceaps.",
-      "name": "senado_gastos_senador",
-      "title": "Gastos do senador (CEAPS)"
-    },
-    {
-      "description": "Guia o passo a passo para consolidar consultas (consenso/polarização), ideias e eventos populares do portal e-Cidadania.",
-      "name": "senado_panorama_ecidadania",
-      "title": "Panorama do e-Cidadania"
-    },
-    {
-      "arguments": [
-        {
-          "description": "Tipo da proposição (ex: PEC, PL, PLP, MPV)",
-          "name": "sigla",
-          "required": true
-        },
-        {
-          "description": "Número da proposição",
-          "name": "numero",
-          "required": true
-        },
-        {
-          "description": "Ano da proposição",
-          "name": "ano",
-          "required": true
-        }
-      ],
-      "description": "Guia o passo a passo para obter a situação atual e o histórico de tramitação de uma proposição, usando senado_buscar_materias e senado_obter_materia.",
-      "name": "senado_tramitacao_materia",
-      "title": "Tramitação de uma matéria"
-    },
-    {
-      "arguments": [
-        {
-          "description": "Nome (ou parte) do senador",
-          "name": "senador",
-          "required": true
-        },
-        {
-          "description": "Período em texto livre (ex: '2024' ou 'jan a jun 2025'); vazio = ano corrente",
-          "name": "periodo",
-          "required": false
-        }
-      ],
-      "description": "Guia o passo a passo para listar os votos nominais de um senador num período, usando senado_listar_senadores e senado_votacoes_senador.",
-      "name": "senado_votos_senador",
-      "title": "Como votou um senador"
     }
   ]
 }
