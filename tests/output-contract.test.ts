@@ -21,16 +21,30 @@
  *      passar por uma revisão de contrato, este teste cai;
  *   2. `toolResult()` nunca produz `structuredContent` que não seja objeto.
  *
+ * Desde 04/10/2026 o teste tem FORMA DE CLIENTE (ideia de leitor,
+ * https://dev.to/arhancanli/comment/3g4i4): o servidor de verdade
+ * (`createServer`) é interrogado pelo `Client` do SDK, que faz `tools/list` e
+ * `tools/call` e reprova o resultado contra o schema LISTADO, sem validador
+ * escolhido por nós — o teste falha como a sessão do usuário falharia. O
+ * circuito é o `@sbissoli/mcp-surface/cliente`, comum aos sete servidores; ele
+ * passa cada mensagem do servidor por JSON, como a rede passaria (o
+ * `InMemoryTransport` sozinho deixa chave `undefined` sobreviver em memória).
+ * Controles negativos quebram o resultado NO FIO e exigem que a chamada falhe.
+ *
  * Se um dia as tools ganharem schemas de saída próprios, ESTE arquivo tem de
  * virar o teste por-tool com fontes mockadas que o resto do portfólio usa
  * (ver `bcb-br-mcp/src/output-contract.test.ts`).
  */
 
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
-import { Client } from "@modelcontextprotocol/client";
-import { InMemoryTransport } from "@modelcontextprotocol/server";
+import type { Client } from "@modelcontextprotocol/client";
+import { chamarComoCliente, conectarComoCliente, controlesNegativos } from "@sbissoli/mcp-surface/cliente";
 import { createServer } from "../src/server.js";
 import { toolResult, toolError } from "../src/utils/validation.js";
+
+/** O servidor de verdade, como o Worker o monta (sem KV real: as tools daqui não tocam a rede). */
+const fabricar = (toolProfile: "full" | "openai-app" = "full") =>
+  createServer({ CACHE_KV: {} as never } as never, undefined, { toolProfile });
 
 /**
  * O schema que as 67 tools publicam, como chega ao cliente — menos o `$schema`.
@@ -54,10 +68,9 @@ let client: Client;
 let tools: Awaited<ReturnType<Client["listTools"]>>["tools"];
 
 beforeAll(async () => {
-  const server = createServer({ CACHE_KV: {} as never } as never);
-  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  client = new Client({ name: "output-contract", version: "0.0.0" });
-  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+  // `listTools` aqui também arma o validador do Client: ele só confere o
+  // `tools/call` contra o schema que tem em cache do `tools/list`.
+  client = await conectarComoCliente(fabricar());
   ({ tools } = await client.listTools());
 });
 
@@ -180,17 +193,35 @@ describe("toolResult — a única forma de violar o schema é não devolver obje
 describe("chamada real ponta a ponta", () => {
   it("uma tool servida do catálogo local devolve structuredContent objeto e válido", async () => {
     // `tipos-materia` é catálogo curado no próprio servidor: não toca a rede.
-    const resultado = await client.callTool({
-      name: "senado_tabelas_referencia",
-      arguments: { tabela: "tipos-materia" },
-    });
+    // `chamarComoCliente` lança se o Client reprovar o resultado ou se a tool
+    // responder isError.
+    const resultado = await chamarComoCliente(client, "senado_tabelas_referencia", { tabela: "tipos-materia" });
 
-    expect(resultado.isError).toBeFalsy();
     const sc = resultado.structuredContent as Record<string, unknown>;
     expect(sc).toBeDefined();
     expect(Array.isArray(sc)).toBe(false);
     expect(typeof sc).toBe("object");
     expect(sc.tabela).toBe("tipos-materia");
+  });
+
+  /**
+   * O perfil `openai-app` (`/mcp/openai-app-v2`) tem caminho de saída PRÓPRIO:
+   * `minimizeToolResultForProfile` reescreve o `structuredContent` (tira o
+   * `meta` de topo, quando há) depois do handler. Reescrita é onde um não-objeto pode nascer, então
+   * o perfil passa pelo mesmo cliente. `senado_estrutura_organizacional` está na
+   * allowlist e lê o snapshot embarcado: não toca a rede.
+   */
+  it("perfil openai-app: a saída minimizada continua objeto e passa pelo Client", async () => {
+    const app = await conectarComoCliente(fabricar("openai-app"));
+    try {
+      const r = await chamarComoCliente(app, "senado_estrutura_organizacional", { unidade: "DGER", limite: 3 });
+      const sc = r.structuredContent as Record<string, unknown>;
+      expect(sc).toBeDefined();
+      expect(Array.isArray(sc)).toBe(false);
+      expect(sc.unidade).toMatchObject({ sigla: "DGER" });
+    } finally {
+      await app.close();
+    }
   });
 
   /**
@@ -207,5 +238,24 @@ describe("chamada real ponta a ponta", () => {
     expect(schema.safeParse([1, 2, 3]).success).toBe(false);
     expect(schema.safeParse("texto").success).toBe(false);
     expect(schema.safeParse(null).success).toBe(false);
+  });
+});
+
+// ==================== controle negativo, no percurso do cliente ====================
+//
+// O teste do zod acima prova o schema; este prova o CLIENTE. O servidor responde
+// certo e o resultado é quebrado NO FIO, entre servidor e cliente — como chegaria
+// de um servidor com defeito. Cada quebra tem de fazer a chamada falhar. As
+// quebras saem do schema listado; como ele não tem campo obrigatório, sobra uma:
+// `structuredContent` ausente numa tool que anuncia `outputSchema`. Não há quebra
+// de "campo a mais": o schema daqui é aberto (`additionalProperties: {}`), campo
+// extra é válido por desenho. O último veredito é a armadilha: sem `tools/list`
+// antes, o Client não valida — se o SDK mudar isso, o veredito acusa.
+
+describe("o validador do cliente reprova resultado quebrado no fio", () => {
+  it("senado_tabelas_referencia: toda quebra reprova, e a armadilha se confirma", async () => {
+    const vs = await controlesNegativos(() => fabricar(), "senado_tabelas_referencia", { tabela: "tipos-materia" });
+    expect(vs.length).toBeGreaterThanOrEqual(2);
+    for (const v of vs) expect(v.obtido, `${v.descricao}: ${v.mensagem ?? ""}`).toBe(v.esperado);
   });
 });
