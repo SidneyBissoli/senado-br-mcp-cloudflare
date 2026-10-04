@@ -56,6 +56,10 @@ export function robotsTxt(): string {
     "Disallow: /status",
     "Disallow: /metrics",
     "Disallow: /.well-known/",
+    // O server card é feito para scanners de diretório (Smithery) lerem. Pela
+    // RFC 9309 vale a regra mais longa que casa, então este Allow vence o
+    // Disallow acima só para ele.
+    "Allow: /.well-known/mcp/server-card.json",
     "",
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     "",

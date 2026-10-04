@@ -33,6 +33,15 @@ describe("robots.txt", () => {
     }
   });
 
+  it("libera o server card dentro do /.well-known/ fechado (regra mais longa vence, RFC 9309)", () => {
+    const linhas = robotsTxt().split("\n");
+    const fechado = "/.well-known/";
+    const card = "/.well-known/mcp/server-card.json";
+    expect(linhas).toContain(`Disallow: ${fechado}`);
+    expect(linhas).toContain(`Allow: ${card}`);
+    expect(card.startsWith(fechado) && card.length > fechado.length, "o caminho do Allow tem de ser o mais longo").toBe(true);
+  });
+
   it("é servido em /robots.txt, sem auth", async () => {
     const r = discoveryResponseForPath("/robots.txt");
     expect(r, "/robots.txt não é servido").not.toBeNull();
