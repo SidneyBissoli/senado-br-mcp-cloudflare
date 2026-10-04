@@ -268,6 +268,7 @@ npm run deploy
 | `/health` | GET | Health check — returns `ok` (always public) |
 | `/status` | GET | JSON: `status`, `version`, and last-deploy metadata (`deploy.id`/`tag`/`timestamp`) — liveness + current build, no MCP handshake needed (always public) |
 | `/metrics` | GET | JSON counters: requests, tool calls, cache hits/misses, upstream calls/retries/errors, auth failures (always public) |
+| `/.well-known/mcp/server-card.json` | GET | MCP server card for directory scanners (Smithery): `serverInfo`, `authentication`, tools/resources/prompts — generated from the live `full` profile by `@sbissoli/mcp-surface/card` (always public) |
 
 ## MCP Request Examples
 

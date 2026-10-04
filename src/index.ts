@@ -5,6 +5,10 @@
  */
 
 import { createMcpHandler } from "agents/mcp/server";
+import { autenticacaoDaTrava, capturarCard, cardEmCache } from "@sbissoli/mcp-surface/card";
+// Só a seção `semToken`: import nomeado deixa o esbuild descartar o resto da
+// trava (~1,1 MB de `declarada`) do bundle do Worker.
+import { semToken } from "../surface.lock.json";
 import { unknownCursorError } from "./pagination.js";
 import { checkAuth } from "./auth.js";
 import { createServer } from "./server.js";
@@ -24,6 +28,21 @@ import { openAiAppsChallengeResponseForPath } from "./openai-domain-verification
 
 /** Decoded once per isolate — server logo bytes referenced by serverInfo.icons. */
 const ICON_JPEG = Uint8Array.from(atob(ICON_JPEG_BASE64), (c) => c.charCodeAt(0));
+
+// Server card (`/.well-known/mcp/server-card.json`) para scanners de diretório
+// (Smithery) que o leem em vez de conectar ao /mcp. Gerado por
+// @sbissoli/mcp-surface/card a partir do initialize + listagens REAIS do mesmo
+// `createServer` que a trava captura (perfil `full`, o do /mcp), com
+// `authentication` lido da seção `semToken` da trava — o que a borda mediu.
+// Primeira montagem bem-sucedida fica por isolate; falha não fica.
+let serverCard: (() => Promise<string>) | undefined;
+function cardDoServidor(env: Env): () => Promise<string> {
+  return (serverCard ??= cardEmCache(() =>
+    capturarCard(createServer(env, undefined, { toolProfile: "full" }), {
+      authentication: autenticacaoDaTrava({ semToken }),
+    }),
+  ));
+}
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -102,6 +121,22 @@ export default {
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
+    }
+
+    // MCP server card — public like /status: discovery carries no credential.
+    if (url.pathname === "/.well-known/mcp/server-card.json") {
+      try {
+        return new Response(await cardDoServidor(env)(), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      } catch (err) {
+        logger.error("server_card_failed", { err: String(err) });
+        return new Response(JSON.stringify({ error: "server card unavailable" }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
     }
 
     // mcpindex.ai ownership challenge — public. Serves the temporary token from
