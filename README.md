@@ -752,7 +752,7 @@ Reads a bundled snapshot of the Senate's organizational tree (crawled from the i
 
 ### Group U — Deep Research (2 tools)
 
-The [OpenAI Deep Research contract](#chatgpt-deep-research): the only two tools without the `senado_` prefix, because the names are fixed by the contract. Registered through the same shim as the others (read-only annotations, permissive `outputSchema`, per-tool telemetry) and served on `/mcp` only — the curated ChatGPT app profile does not include them. The index (senators in office + active committees, ~300 documents) is built on first use from the same two list endpoints the `senado_listar_*` tools read, and kept for 24 h.
+The [OpenAI Deep Research contract](#chatgpt-deep-research): the only two tools without the `senado_` prefix, because the names are fixed by the contract. Registered through the same shim as the others (read-only annotations, the shared output envelope — open data plus required `provenance` + `attribution` —, per-tool telemetry) and served on `/mcp` only — the curated ChatGPT app profile does not include them. The index (senators in office + active committees, ~300 documents) is built on first use from the same two list endpoints the `senado_listar_*` tools read, and kept for 24 h.
 
 | Tool | Description |
 |------|-------------|

@@ -5,6 +5,7 @@
 
 import { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { ConciseBlockSchema } from "@sbissoli/mcp-provenance";
 import { registerReferenciaTools } from "./tools/referencia.js";
 import { registerSenadoresTools } from "./tools/senadores.js";
 import { registerMateriasTools } from "./tools/materias.js";
@@ -99,10 +100,23 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
   // reaches external systems (Senate APIs / e-Cidadania) whose data is an open, changing
   // set; and every tool returns a JSON object via toolResult(). Rather than repeat that
   // metadata at every call site, wrap the group modules' `server.tool(name, desc, shape, cb)`
-  // calls and route them through registerTool() with shared annotations and a permissive
-  // object outputSchema. toolResult() supplies the matching structuredContent. The callback
-  // is also wrapped with instrumentTool() so every invocation is counted per tool.
-  const outputSchema = z.object({}).passthrough();
+  // calls and route them through registerTool() with shared annotations and ONE shared
+  // outputSchema. The callback is also wrapped with instrumentTool() so every invocation
+  // is counted per tool.
+  //
+  // O schema de saída é o ENVELOPE COMUM (decisão do dono, 04/10/2026): aberto — a forma
+  // dos dados de cada tool segue sem contrato, como decidido em
+  // docs/_local/_checklist-melhorias-arquiteturais.pt-BR.md ("passthrough foi decisão
+  // deliberada") —, mas com o que TODA resposta de sucesso das 69 carrega obrigatório:
+  // `provenance` + `attribution`, que `resultWithProvenance`/`provenanceExtras` sempre
+  // montam. O bloco é o schema IMPORTADO do @sbissoli/mcp-provenance, nunca transcrito:
+  // a cópia à mão de um bloco selado derrubou quatro irmãos quando o contrato ganhou
+  // `retrieval`. `provenance` é objeto com uma fonte e LISTA quando a chamada passa
+  // várias (o índice do Deep Research), então os dois.
+  const outputSchema = z.looseObject({
+    provenance: z.union([ConciseBlockSchema, z.array(ConciseBlockSchema).min(1)]),
+    attribution: z.array(z.string()),
+  });
   const registerTool = server.registerTool.bind(server);
   const analytics = env.SENADO_ANALYTICS;
   // O shim é instalado sobre a instância e o resultado é NOMEADO: os módulos de

@@ -4,12 +4,50 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [3.13.0] - 2026-10-04
 
-Sem mudança de superfície nem de versão: só testes e dependência de
-desenvolvimento.
+Muda a superfície: o `outputSchema` das 69 tools (os dois perfis). Os dados
+continuam sem contrato de forma; o que passa a ser contrato é o envelope que
+toda resposta de sucesso já carregava.
+
+### Changed
+
+- **O schema de saída é o ENVELOPE COMUM, não mais um objeto vazio.** Até a
+  3.12.1 as 69 tools anunciavam `z.object({}).passthrough()`, sem campo
+  obrigatório nenhum, e o teste de contrato de saída não tinha o que quebrar
+  além de "structuredContent ausente". Agora o schema continua ABERTO no nível
+  de cima (a forma dos dados de cada tool segue sem contrato, como decidido
+  antes), mas exige `provenance` (o bloco concise do `@sbissoli/mcp-provenance`,
+  objeto com uma fonte e lista quando a chamada passa várias, como o índice do
+  Deep Research) e `attribution` (lista de URLs). O bloco é o schema IMPORTADO
+  do pacote (`ConciseBlockSchema`), nunca transcrito: a cópia à mão de um bloco
+  selado derrubou quatro irmãos quando o contrato ganhou `retrieval`. Decisão
+  do dono em 04/10/2026, entre envelope, envelope + schemas por tool nas mais
+  usadas, só as tools de dinheiro, e não mexer.
+- Consequência em runtime: o SDK v2 valida a saída do servidor, então
+  resultado de sucesso sem proveniência vira `isError`. Auditado antes:
+  todo sucesso das 69 passa por `resultWithProvenance` (92 chamadas) ou por
+  `provenanceExtras` (`search`/`fetch`); nenhum módulo de tool chama
+  `toolResult()`, e um teste agora prende isso.
 
 ### Tests
+
+- `tests/output-contract.test.ts` prende o envelope: UM schema nas 69 tools e
+  nos dois perfis, exatamente `provenance` + `attribution` obrigatórios, nível
+  de cima aberto, e o bloco de `provenance` igual ao do pacote convertido pelo
+  mesmo zod (deriva da fonte; subir o contrato muda os dois lados juntos).
+- Os controles negativos passam de 1 quebra para 7: `provenance` e
+  `attribution` ausentes, `attribution` de tipo errado, um bloco de
+  proveniência sem `citation` e um campo a mais dentro do bloco selado, além de
+  `structuredContent` ausente e da armadilha do `tools/list`.
+- Prova de que o portão pode falhar: trocar o `resultWithProvenance` de
+  `senado_tabelas_referencia` por um resultado sem proveniência faz o próprio
+  servidor responder `isError` ("provenance: Invalid input, attribution:
+  expected array, received undefined") e dois testes ficarem vermelhos.
+- Baseline de superfície `baselines/surface-stdio-3.13.0.json` (substitui o da
+  3.11.0); `surface.lock.json` e `lhm.plugin.json` regravados pelos scripts.
+
+### Tests — contrato com forma de cliente (mesclado depois da 3.12.1)
 
 - **O contrato de saída tem forma de cliente** (ideia de leitor,
   https://dev.to/arhancanli/comment/3g4i4). `tests/output-contract.test.ts`
@@ -20,10 +58,9 @@ desenvolvimento.
   usuário reprovaria. As chamadas que têm de dar certo passam por
   `chamarComoCliente`; entra um caso no perfil `openai-app`, cujo
   `structuredContent` é reescrito pelo minimizador depois do handler.
-- Controles negativos em `senado_tabelas_referencia`: `structuredContent`
-  ausente no fio tem de reprovar, e a armadilha (sem `tools/list` o `Client`
-  não valida) fica presa. Sem quebra de "campo a mais": o schema daqui é aberto
-  por desenho. Prova de que o portão pode falhar: anunciar no schema listado
+- Controles negativos em `senado_tabelas_referencia` (na época só
+  `structuredContent` ausente e a armadilha do `tools/list`; o envelope acima
+  os ampliou). Prova de que o portão pode falhar: anunciar no schema listado
   `tabela` como número (só no JSON Schema, sem o zod do servidor ver) faz o
   próprio `Client` recusar o resultado.
 

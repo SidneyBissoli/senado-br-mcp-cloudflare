@@ -721,7 +721,7 @@ Lê um retrato embutido da árvore organizacional do Senado (varrida do portal i
 
 ### Grupo U — Deep Research (2 ferramentas)
 
-O [contrato Deep Research da OpenAI](#chatgpt-deep-research): as únicas duas ferramentas sem o prefixo `senado_`, porque os nomes são fixados pelo contrato. Registradas pelo mesmo shim das outras (annotations somente-leitura, `outputSchema` permissivo, telemetria por ferramenta) e servidas só em `/mcp` — o perfil curado do app do ChatGPT não as inclui. O índice (senadores em exercício + comissões ativas, ~300 documentos) é construído no primeiro uso a partir dos mesmos dois endpoints de lista que as ferramentas `senado_listar_*` leem, e mantido por 24 h.
+O [contrato Deep Research da OpenAI](#chatgpt-deep-research): as únicas duas ferramentas sem o prefixo `senado_`, porque os nomes são fixados pelo contrato. Registradas pelo mesmo shim das outras (annotations somente-leitura, o envelope de saída comum — dados abertos com `provenance` + `attribution` obrigatórios —, telemetria por ferramenta) e servidas só em `/mcp` — o perfil curado do app do ChatGPT não as inclui. O índice (senadores em exercício + comissões ativas, ~300 documentos) é construído no primeiro uso a partir dos mesmos dois endpoints de lista que as ferramentas `senado_listar_*` leem, e mantido por 24 h.
 
 | Ferramenta | Descrição |
 |------|-------------|

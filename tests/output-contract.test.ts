@@ -8,18 +8,24 @@
  * produziu nove violações invisíveis: campos anuláveis anunciados como string.
  *
  * Aqui a exposição é ESTRUTURALMENTE diferente, e é isso que este arquivo
- * ancora: as 67 tools anunciam UM único schema permissivo
- * (`z.object({}).passthrough()`, que vai ao fio como
- * `{"type":"object","properties":{},"additionalProperties":{}}`), sem campo
- * obrigatório nenhum. Qualquer objeto JSON o satisfaz. A única forma de violá-lo
- * é devolver `structuredContent` que NÃO seja objeto — e `toolResult()` embrulha
- * array/primitivo/null em `{ result }` exatamente para isso.
+ * ancora: as 69 tools anunciam UM único schema, o ENVELOPE COMUM (decisão do
+ * dono, 04/10/2026). Ele é ABERTO — a forma dos dados de cada tool continua sem
+ * contrato, pela decisão anterior de manter o passthrough
+ * (`docs/_local/_checklist-melhorias-arquiteturais.pt-BR.md`, "não reabrir") —,
+ * mas EXIGE o que toda resposta de sucesso das 69 carrega: `provenance` (o
+ * bloco concise do `@sbissoli/mcp-provenance`, objeto ou lista) e
+ * `attribution`. Até a 3.12.1 o schema era `z.object({}).passthrough()`, sem
+ * obrigatório nenhum, e este teste não tinha o que quebrar além de
+ * "structuredContent ausente".
  *
- * Logo, o portão tem dois dentes, e são os dois que importam:
- *   1. o schema anunciado continua permissivo e uniforme nas 67 tools — se
- *      alguém apertá-lo (campo obrigatório, `additionalProperties: false`) sem
- *      passar por uma revisão de contrato, este teste cai;
- *   2. `toolResult()` nunca produz `structuredContent` que não seja objeto.
+ * O portão tem três dentes:
+ *   1. o schema é UM, idêntico nas 69 tools, aberto no nível de cima e com
+ *      exatamente `provenance` + `attribution` obrigatórios;
+ *   2. o bloco de `provenance` é o do PACOTE, comparado contra o próprio zod
+ *      dele — nunca transcrito (cópia à mão de bloco selado derrubou quatro
+ *      irmãos quando o contrato ganhou `retrieval`);
+ *   3. nenhum módulo de tool devolve `toolResult()`, que não leva proveniência e
+ *      viraria `isError` no próprio servidor (o SDK v2 valida a saída).
  *
  * Desde 04/10/2026 o teste tem FORMA DE CLIENTE (ideia de leitor,
  * https://dev.to/arhancanli/comment/3g4i4): o servidor de verdade
@@ -36,8 +42,12 @@
  * (ver `bcb-br-mcp/src/output-contract.test.ts`).
  */
 
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect, afterAll, beforeAll } from "vitest";
+import { z } from "zod";
 import type { Client } from "@modelcontextprotocol/client";
+import { ConciseBlockSchema } from "@sbissoli/mcp-provenance";
 import { chamarComoCliente, conectarComoCliente, controlesNegativos } from "@sbissoli/mcp-surface/cliente";
 import { createServer } from "../src/server.js";
 import { toolResult, toolError } from "../src/utils/validation.js";
@@ -47,22 +57,20 @@ const fabricar = (toolProfile: "full" | "openai-app" = "full") =>
   createServer({ CACHE_KV: {} as never } as never, undefined, { toolProfile });
 
 /**
- * O schema que as 67 tools publicam, como chega ao cliente — menos o `$schema`.
+ * O bloco de proveniência como o PRÓPRIO pacote o publica, convertido pelo mesmo
+ * zod — a referência contra a qual o schema listado é comparado. Deriva da
+ * fonte: subir o contrato de proveniência muda os dois lados juntos.
  *
  * O DIALETO NÃO É PINADO, e a razão foi medida: na migração para o SDK v2
  * (30/08/2026) o emissor passou de `draft-07` para `2020-12` sem que nada
  * nosso mudasse. Quem escolhe o dialeto é o SDK; pinar a string fazia este
  * teste reprovar uma troca de biblioteca como se fosse regressão do servidor.
- * O que o teste guarda é a FORMA — objeto aberto, sem propriedade nenhuma —,
- * que é o que torna a conformidade de saída automática. O `$schema` é conferido
- * à parte: tem de existir e ser um dialeto de JSON Schema, não um valor
- * específico.
+ * Por isso o `$schema` sai da comparação e é conferido à parte.
  */
-const SCHEMA_PERMISSIVO = {
-  type: "object",
-  properties: {},
-  additionalProperties: {},
-};
+const BLOCO_DO_PACOTE = (() => {
+  const { $schema: _dialeto, ...bloco } = z.toJSONSchema(ConciseBlockSchema) as Record<string, unknown>;
+  return bloco;
+})();
 
 let client: Client;
 let tools: Awaited<ReturnType<Client["listTools"]>>["tools"];
@@ -141,26 +149,63 @@ describe("outputSchema anunciado", () => {
     }
   });
 
-  it("é UM único schema permissivo, idêntico em todas — nenhuma tool pode violá-lo com um objeto", () => {
+  it("é UM único schema, idêntico em todas — o envelope comum", () => {
     const distintos = new Set(tools.map((t) => JSON.stringify(t.outputSchema)));
     expect(distintos.size, `schemas distintos: ${[...distintos].join(" | ")}`).toBe(1);
-    const { $schema, ...forma } = tools[0]!.outputSchema as Record<string, unknown> & {
-      $schema?: string;
-    };
-    expect(forma).toEqual(SCHEMA_PERMISSIVO);
+    const { $schema } = tools[0]!.outputSchema as { $schema?: string };
     expect($schema, "sumiu o $schema do outputSchema publicado").toMatch(/json-schema\.org/);
   });
 
-  it("não declara campo obrigatório nem fecha o objeto — é o que torna a conformidade automática", () => {
-    for (const tool of tools) {
-      const schema = tool.outputSchema as { required?: unknown; additionalProperties?: unknown };
-      expect(schema.required, `${tool.name} passou a exigir campos`).toBeUndefined();
-      expect(schema.additionalProperties, `${tool.name} fechou o objeto`).not.toBe(false);
+  it("exige exatamente provenance + attribution, e deixa os dados abertos", () => {
+    const schema = tools[0]!.outputSchema as {
+      required?: string[];
+      additionalProperties?: unknown;
+      properties?: Record<string, unknown>;
+    };
+    expect([...(schema.required ?? [])].sort()).toEqual(["attribution", "provenance"]);
+    // Aberto no nível de cima: a forma dos dados de cada tool não é contrato
+    // (decisão de manter o passthrough). Fechar aqui reprovaria toda tool.
+    expect(schema.additionalProperties, "o envelope fechou o objeto").not.toBe(false);
+    expect(Object.keys(schema.properties ?? {}).sort()).toEqual(["attribution", "provenance"]);
+    expect(schema.properties?.attribution).toEqual({ type: "array", items: { type: "string" } });
+  });
+
+  it("o bloco de provenance é o do PACOTE (objeto ou lista não vazia), não uma transcrição", () => {
+    const prov = (tools[0]!.outputSchema as { properties: { provenance: { anyOf: unknown[] } } }).properties
+      .provenance;
+    expect(prov.anyOf).toEqual([BLOCO_DO_PACOTE, { type: "array", minItems: 1, items: BLOCO_DO_PACOTE }]);
+  });
+
+  it("o perfil openai-app publica o mesmo envelope", async () => {
+    const app = await conectarComoCliente(fabricar("openai-app"));
+    try {
+      const { tools: doApp } = await app.listTools();
+      expect(doApp.length).toBeGreaterThan(0);
+      for (const t of doApp) expect(t.outputSchema, t.name).toEqual(tools[0]!.outputSchema);
+    } finally {
+      await app.close();
     }
   });
 });
 
-describe("toolResult — a única forma de violar o schema é não devolver objeto", () => {
+/**
+ * Com o envelope obrigatório, resultado sem proveniência é `isError` no
+ * próprio servidor (o SDK v2 valida a saída contra o schema). `toolResult()` não
+ * leva proveniência: ficou para o envelope de erro e para os testes, e nenhum
+ * módulo de tool pode devolvê-lo. Varredura do texto-fonte, que é onde a
+ * regressão entraria.
+ */
+describe("nenhuma tool devolve resultado sem proveniência", () => {
+  it("src/tools não chama toolResult()", () => {
+    const dir = join(import.meta.dirname, "..", "src", "tools");
+    const ofensores = readdirSync(dir)
+      .filter((f) => f.endsWith(".ts"))
+      .filter((f) => /\btoolResult\s*\(/.test(readFileSync(join(dir, f), "utf8")));
+    expect(ofensores, `módulos que devolvem toolResult(): ${ofensores.join(", ")}`).toEqual([]);
+  });
+});
+
+describe("toolResult — continua devolvendo objeto (envelope de erro e testes)", () => {
   const naoObjetos: Array<[string, unknown]> = [
     ["array", [1, 2, 3]],
     ["null", null],
@@ -202,6 +247,8 @@ describe("chamada real ponta a ponta", () => {
     expect(Array.isArray(sc)).toBe(false);
     expect(typeof sc).toBe("object");
     expect(sc.tabela).toBe("tipos-materia");
+    expect(sc.provenance, "o envelope chegou sem proveniência").toBeDefined();
+    expect(Array.isArray(sc.attribution)).toBe(true);
   });
 
   /**
@@ -219,43 +266,51 @@ describe("chamada real ponta a ponta", () => {
       expect(sc).toBeDefined();
       expect(Array.isArray(sc)).toBe(false);
       expect(sc.unidade).toMatchObject({ sigla: "DGER" });
+      expect(sc.provenance, "o minimizador tirou a proveniência").toBeDefined();
     } finally {
       await app.close();
     }
   });
 
-  /**
-   * Um teste que não pode falhar não vale nada. O SDK valida o
-   * `structuredContent` contra o `outputSchema` da tool antes de devolvê-lo —
-   * é esse o mecanismo em que este servidor se apoia. Aqui ele é exercido
-   * contra um valor que o schema NÃO admite (não-objeto), provando que a
-   * validação existe e reprova.
-   */
-  it("o SDK reprova structuredContent que não é objeto (prova de que a validação roda)", async () => {
-    const { z } = await import("zod");
-    const schema = z.object({}).passthrough();
-    expect(schema.safeParse({ qualquer: "coisa" }).success).toBe(true);
-    expect(schema.safeParse([1, 2, 3]).success).toBe(false);
-    expect(schema.safeParse("texto").success).toBe(false);
-    expect(schema.safeParse(null).success).toBe(false);
-  });
 });
 
 // ==================== controle negativo, no percurso do cliente ====================
 //
-// O teste do zod acima prova o schema; este prova o CLIENTE. O servidor responde
-// certo e o resultado é quebrado NO FIO, entre servidor e cliente — como chegaria
-// de um servidor com defeito. Cada quebra tem de fazer a chamada falhar. As
-// quebras saem do schema listado; como ele não tem campo obrigatório, sobra uma:
-// `structuredContent` ausente numa tool que anuncia `outputSchema`. Não há quebra
-// de "campo a mais": o schema daqui é aberto (`additionalProperties: {}`), campo
-// extra é válido por desenho. O último veredito é a armadilha: sem `tools/list`
-// antes, o Client não valida — se o SDK mudar isso, o veredito acusa.
+// O servidor responde certo e o resultado é quebrado NO FIO, entre servidor e
+// cliente — como chegaria de um servidor com defeito. Cada quebra tem de fazer a
+// chamada falhar. As quebras saem do schema listado: `structuredContent`
+// ausente, `provenance` e `attribution` ausentes, `attribution` de tipo errado.
+// As duas de baixo são deste envelope: um bloco de proveniência sem campo do
+// contrato, e um campo a mais DENTRO do bloco, que é selado (o nível de cima é
+// aberto por desenho — ali campo extra é válido). O último veredito é a
+// armadilha: sem `tools/list` antes, o Client não valida.
 
 describe("o validador do cliente reprova resultado quebrado no fio", () => {
   it("senado_tabelas_referencia: toda quebra reprova, e a armadilha se confirma", async () => {
-    const vs = await controlesNegativos(() => fabricar(), "senado_tabelas_referencia", { tabela: "tipos-materia" });
-    expect(vs.length).toBeGreaterThanOrEqual(2);
+    const vs = await controlesNegativos(() => fabricar(), "senado_tabelas_referencia", { tabela: "tipos-materia" }, [
+      {
+        descricao: "bloco de proveniência sem campo do contrato (citation)",
+        adulterar: (r) => {
+          const p = r.structuredContent?.provenance as Record<string, unknown> | undefined;
+          if (p) delete p.citation;
+        },
+      },
+      {
+        descricao: "campo a mais dentro do bloco selado de proveniência",
+        adulterar: (r) => {
+          const p = r.structuredContent?.provenance as Record<string, unknown> | undefined;
+          if (p) p.intruso = 1;
+        },
+      },
+    ]);
+    const descricoes = vs.map((v) => v.descricao);
+    expect(descricoes).toEqual(
+      expect.arrayContaining([
+        "campo obrigatório ausente (provenance)",
+        "campo obrigatório ausente (attribution)",
+        "campo de tipo errado (attribution)",
+      ]),
+    );
     for (const v of vs) expect(v.obtido, `${v.descricao}: ${v.mensagem ?? ""}`).toBe(v.esperado);
   });
 });
