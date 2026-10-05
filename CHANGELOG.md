@@ -4,6 +4,20 @@ All notable changes to this project are documented here. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); the project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- **Server card em `/.well-known/mcp/server-card.json`** (antes 404), público
+  como o `/status`. Gerado por `@sbissoli/mcp-surface/card` (devDependency
+  subiu para `^0.3.0`) a partir do `initialize` e das listagens reais do mesmo
+  `createServer` que a trava captura (perfil `full`), no formato da Smithery
+  (`serverInfo` com a versão); `authentication.required` sai da seção
+  `semToken` do `surface.lock.json`, a única parte da trava que entra no bundle.
+  `tests/server-card.test.ts` prova que o card normalizado tem o mesmo sha256 do
+  perfil `full` na seção `declarada`. Rota fora do MCP: a superfície e a trava
+  não mudam.
+
 ## [3.13.0] - 2026-10-04
 
 Muda a superfície: o `outputSchema` das 69 tools (os dois perfis). Os dados
