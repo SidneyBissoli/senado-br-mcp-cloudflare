@@ -21,6 +21,9 @@ All notable changes to this project are documented here. Format based on
   dependência do sdk v1 (o `qs`, por exemplo, via sdk → express) e, com ele
   fora, nenhum casa mais pacote algum da árvore. O lock não muda e o
   `npm audit` segue com 0 vulnerabilidades.
+- **`overrides` de `lodash` e `js-yaml`**, de 25/06/2026 (#41), para
+  transitivas profundas do sdk e do `agents` que já tinham saído da árvore
+  antes mesmo do sdk v1: nenhum pacote os instala nem depende deles.
 
 ## [3.15.2] - 2026-10-06
 
