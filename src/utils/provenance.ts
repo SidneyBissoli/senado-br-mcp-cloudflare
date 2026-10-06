@@ -1,19 +1,27 @@
 /**
- * Vetor A — Proveniência no payload, contrato v1.0 do portfólio.
+ * Vetor A — Proveniência no payload, contrato do portfólio (pacote
+ * `@sbissoli/mcp-provenance` 0.3.0: contrato v1.2 publicado, v1.1 emitida por padrão).
  *
  * pt-BR adapter over `@sbissoli/mcp-provenance`: o modelo canônico, os modos
  * (`concise`/`detailed`), o determinismo de serialização, o fuso e o rodapé vivem no
- * pacote (contrato v1.0 — ver `docs/contrato-proveniencia-v1.md` lá); este módulo mantém
+ * pacote (ver `docs/contrato-proveniencia-v1.md` lá); este módulo mantém
  * a API interna que as 20 tools consomem (`provenanceFor`, `resultWithProvenance`,
  * `withFieldSources`…), aceitando os nomes de entrada históricos do senado
  * (`dataset_id`, `reference_period`) e mapeando-os ao canônico (`dataset.id`,
  * `data_vintage`).
  *
- * O QUE O v1.0 MUDOU NA RESPOSTA (release 3.5.0 — ver README/CHANGELOG):
- *  - `structuredContent.provenance` e o espelho em `_meta` passam a ser a projeção
- *    **concise** do contrato: exatamente 6 chaves — `source`, `source_url`,
- *    `data_vintage` (ex-`reference_period`), `retrieved_at`, `citation`, `license` —
- *    com `null` explícito quando desconhecido (antes: campos opcionais omitidos).
+ * VERSÕES DO CONTRATO NA RESPOSTA (ver README/CHANGELOG):
+ *  - v1.0 (release 3.5.0): `structuredContent.provenance` e o espelho em `_meta`
+ *    passam a ser a projeção **concise** do contrato, com `null` explícito quando
+ *    desconhecido (antes: campos opcionais omitidos).
+ *  - v1.1 (release 3.11.0, a que este servidor EMITE — `contractVersion` default do
+ *    pacote): o concise tem exatamente 7 chaves — `source`, `source_url`,
+ *    `data_vintage` (ex-`reference_period`), `retrieved_at`, `citation`, `license` e
+ *    `retrieval` (diagnóstico medido da ida à origem, ou `null`).
+ *  - v1.2 (aceita pelos schemas desde o pacote 0.3.0, NÃO ligada aqui): acrescenta ao
+ *    concise a chave opcional `field_sources` (sub-fontes por campo; item com
+ *    `served_from_cache` opcional). O `outputSchema` já a declara; ligar
+ *    `contractVersion: "1.2"` é um passo separado.
  *  - O rodapé de texto segue a redação fixada do contrato: linha de fonte
  *    ("Fonte: … · url · dados de … · extraído em …"), linha de licença e o aviso ao
  *    leitor de que a referência completa pode ser solicitada na própria conversa.

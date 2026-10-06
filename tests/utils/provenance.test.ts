@@ -75,6 +75,10 @@ describe("buildProvenance (canonical v1.0 from historical input names)", () => {
       dataset_id: null,
       data_vintage: "2024",
       retrieved_at: "2025-12-31T22:00:00-03:00",
+      // Pacote 0.3.0: o item canônico ganhou `served_from_cache` (null quando não
+      // informado). Só o bloco canônico em memória; o concise emitido na v1.1 não
+      // leva field_sources, então nenhuma resposta muda.
+      served_from_cache: null,
     });
   });
 

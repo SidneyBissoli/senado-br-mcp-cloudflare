@@ -6,6 +6,37 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.14.0] - 2026-10-05
+
+Muda a superfície (o `outputSchema` das 69 tools, nos dois perfis), mas
+NENHUMA resposta muda. É o tempo 1 da subida para o contrato v1.2 da
+proveniência: o schema passa a aceitar a versão nova; ligá-la é o tempo 2.
+
+### Changed
+
+- **Proveniência 0.3.0 (contrato v1.2) no tempo 1.**
+  `@sbissoli/mcp-provenance` sobe de `^0.2.0` para `^0.3.0` e
+  `@sbissoli/mcp-upstream` de `^0.3.0` para `^0.4.0` (que aceita a
+  proveniência 0.2 ou 0.3; cópia única no `npm ls`). O pacote 0.3.0 continua
+  EMITINDO a v1.1 por padrão, byte a byte o que a 0.2.0 emitia, e o servidor
+  não liga `contractVersion: "1.2"`: o bloco concise segue com as mesmas 7
+  chaves e o `field_sources` que `senado_obter_materia` já calcula continua
+  só no bloco canônico validado, como antes.
+- O que muda é o schema publicado: o `ConciseBlockSchema` importado do pacote
+  passa a declarar a chave OPCIONAL `field_sources` (itens com `fields`,
+  `source_url`, `dataset_id`, `data_vintage`, `retrieved_at` e
+  `served_from_cache` opcional). Ela não entra em `required`, então toda
+  resposta atual continua válida. Na `surface.lock.json`, a única diferença
+  além da versão e do sha256 são essas 192 inserções (69 tools no perfil
+  `full` e 27 no `openai-app`, nas variantes objeto e lista do bloco); no
+  `lhm.plugin.json`, regenerado pelo script, as mesmas 138 do perfil `full`.
+- O bloco canônico em memória (não emitido: o servidor só emite `concise`)
+  passa a carregar `served_from_cache: null` em cada item de `field_sources`;
+  o teste que prende esse bloco foi ajustado. Conferido byte a byte contra a
+  0.2.0: `result()` e rodapé idênticos, com e sem `field_sources`.
+- Ligar a v1.2 (emitir `field_sources` no concise e acertar o `retrieved_at`
+  de topo de `senado_obter_materia`) fica para o tempo 2.
+
 ### Added
 
 - **Server card em `/.well-known/mcp/server-card.json`** (antes 404), público
