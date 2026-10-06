@@ -185,6 +185,9 @@ export function generateComentariosSqlBatches(
  * 'ok' run row — so the freshness signal still reflects the previous good run (tool serves the old
  * corpus flagged) and the next successful run reconciles it. Upserts are idempotent, so re-applying
  * is safe. Files must be applied in lexical order (callers zero-pad the index: out-x-001.sql, …).
+ *
+ * `tailStmts` (e.g. the ideias archive cursor upsert) go after every data statement and right
+ * before the run row, so they too only apply once all the data before them did.
  */
 export function generateLoadSqlBatches(
   annotated: Array<{ rec: SyncRecord; changed: boolean }>,
@@ -193,12 +196,14 @@ export function generateLoadSqlBatches(
   rowsChanged: number,
   entidade: string = DEFAULT_ENTIDADE,
   maxStmtsPerFile = 10000,
+  tailStmts: readonly string[] = [],
 ): string[] {
   const lines: string[] = [];
   for (const { rec, changed } of annotated) {
     lines.push(upsertStmt(entidade, rec, now));
     if (changed) lines.push(historyStmt(entidade, rec, now));
   }
+  lines.push(...tailStmts);
   lines.push(runRowStmt(now, "ok", rowsScraped, rowsChanged, null, entidade));
 
   const files: string[] = [];

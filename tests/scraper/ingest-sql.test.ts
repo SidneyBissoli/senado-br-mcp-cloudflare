@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { sqlValue, generateLoadSql, generateRunOnlySql } from "../../scripts/ingest-ecidadania/sql.js";
+import { sqlValue, generateLoadSql, generateRunOnlySql, generateLoadSqlBatches, cursorUpsertStmt } from "../../scripts/ingest-ecidadania/sql.js";
 import { deriveStatus } from "../../scripts/ingest-ecidadania/status.js";
 import { contentHash, type SyncRecord } from "../../src/scraper/pipeline.js";
 
@@ -91,5 +91,24 @@ describe("deriveStatus", () => {
     const set = new Set<number>([137929]);
     expect(deriveStatus(set, 137929)).toBe("aberta");
     expect(deriveStatus(set, 160575)).toBe("encerrada");
+  });
+});
+
+describe("generateLoadSqlBatches — tailStmts", () => {
+  const annotated = [1, 2, 3].map((id) => ({ rec: rec(id, `{"id":${id}}`), changed: false }));
+  const cursor = cursorUpsertStmt("ideias-s7", 400, 2, NOW);
+
+  it("a cauda vem depois de todos os dados e imediatamente antes da linha de run", () => {
+    const files = generateLoadSqlBatches(annotated, NOW, 3, 0, "ideias", 2, [cursor]);
+    const linhas = files.join("").trim().split("\n");
+    expect(linhas.at(-1)).toMatch(/^INSERT INTO ecidadania_scrape_runs/);
+    expect(linhas.at(-2)).toBe(cursor);
+    expect(linhas.slice(0, -2).every((l) => l.startsWith("INSERT INTO ecidadania_current"))).toBe(true);
+  });
+
+  it("sem cauda, o resultado é o de antes", () => {
+    const linhas = generateLoadSqlBatches(annotated, NOW, 3, 0, "ideias", 10).join("").trim().split("\n");
+    expect(linhas).toHaveLength(4);
+    expect(linhas.at(-1)).toMatch(/^INSERT INTO ecidadania_scrape_runs/);
   });
 });
