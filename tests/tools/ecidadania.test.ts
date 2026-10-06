@@ -427,6 +427,17 @@ describe("obterIdeiaInternal", () => {
     expect(result.plConvertido).toBe("SUG 10/2024");
   });
 
+  // 06/10/2026: ideia retirada do portal responde 410 ("Ideia Legislativa não encontrada!", medido em
+  // 32 ideias). A mensagem genérica mandava o cliente "verificar os parâmetros" — o id estava certo.
+  it("HTTP 410 diz que a ideia foi removida, sem sugerir parâmetro errado nem fonte fora", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("<html>Ideia Legislativa não encontrada!</html>", { status: 410 }));
+    const err = await obterIdeiaInternal(220396).catch((e: unknown) => e as Error & { retryable?: boolean });
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toMatch(/removido do portal \(HTTP 410\)/);
+    expect((err as Error).message).toMatch(/não é erro de parâmetro/);
+    expect((err as { retryable?: boolean }).retryable).toBe(false);
+  });
+
   // Regressão 06/10/2026: o mapeamento antigo só conhecia "convertid"/"encerrad" e lia o texto real
   // do bucket 9 ("Não acatada", medido na ideia 89939) como aberta.
   it("reads 'Não acatada' (situacao 9) as encerrada, not aberta", async () => {

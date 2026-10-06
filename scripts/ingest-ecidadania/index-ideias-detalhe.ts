@@ -22,12 +22,12 @@ import { writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { sleep } from "./http.js";
-import { buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania.js";
+import { STATUS_IDEIA_REMOVIDA, buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { criarDisjuntor } from "./breaker.js";
 import { readCurrentRange, readDetalheCursor, type CurrentPayloadRow } from "./d1.js";
 import { generateDetalheLoadSqlBatches, cursorUpsertStmt, generateRunOnlySql } from "./sql.js";
-import { fetchIdeiaDetalheCorpus } from "./detalhe.js";
+import { fetchIdeiaDetalheCorpus, ehRecursoRemovido } from "./detalhe.js";
 
 const ENTIDADE = "ideias";
 const CHUNK = Number(process.env.INGEST_IDEIAS_DETALHE_CHUNK) || 8000;
@@ -64,14 +64,22 @@ function writeRunOnly(now: string, status: string, rows: number, error: string):
   writeFileSync(join(OUT_DIR, `${OUT_PREFIX}001.sql`), generateRunOnlySql(now, status, rows, error, ENTIDADE));
 }
 
-/** Rebuild an IdeiaResumo preserving listing fields from the stored payload + fresh (or preserved) detail. */
-function rebuild(row: CurrentPayloadRow, detail: { dataPublicacao: string | null; autorUf: string | null; descricao: string | null; plConvertido: string | null } | null): SyncRecord {
+/**
+ * Rebuild an IdeiaResumo preserving listing fields from the stored payload + fresh (or preserved) detail.
+ * `removida` (detail answered 410) overrides the stored status — it is the only status this job writes:
+ * an idea retired from the portal leaves every listing, so no listing crawl would ever record it.
+ */
+function rebuild(
+  row: CurrentPayloadRow,
+  detail: { dataPublicacao: string | null; autorUf: string | null; descricao: string | null; plConvertido: string | null } | null,
+  removida = false,
+): SyncRecord {
   const prev = JSON.parse(row.payload_json) as Partial<IdeiaResumo>;
   const ideia = buildIdeiaResumo({
     id: row.id,
     titulo: prev.titulo,
     apoios: prev.apoios,
-    status: prev.status,
+    status: removida ? STATUS_IDEIA_REMOVIDA : prev.status,
     // detail fresco quando obtido; senão preserva o que já havia (não zera)
     dataPublicacao: detail ? detail.dataPublicacao : prev.dataPublicacao ?? null,
     autorUf: detail ? detail.autorUf : prev.autorUf ?? null,
@@ -112,20 +120,29 @@ async function main(): Promise<void> {
   const records: SyncRecord[] = [];
   let fetched = 0;
   let gaps = 0;
+  let removidas = 0;
   let lastId = afterId;
   for (const row of rows) {
     let detail = null;
+    let removida = false;
     try {
       detail = await fetchIdeiaDetalheCorpus(row.id);
       fetched++;
       disjuntor.sucesso();
     } catch (e) {
-      gaps++;
-      console.error(`[ideias-detalhe][gap] id=${row.id}: ${e instanceof Error ? e.message : String(e)}`);
-      disjuntor.falha(e, `id=${row.id}`);
+      if (ehRecursoRemovido(e)) {
+        // Resposta do portal (410), não falha de transporte: grava `removida`, preserva o resto.
+        removida = true;
+        removidas++;
+        disjuntor.sucesso();
+      } else {
+        gaps++;
+        console.error(`[ideias-detalhe][gap] id=${row.id}: ${e instanceof Error ? e.message : String(e)}`);
+        disjuntor.falha(e, `id=${row.id}`);
+      }
     }
     await sleep(DETAIL_DELAY_MS);
-    records.push(rebuild(row, detail));
+    records.push(rebuild(row, detail, removida));
     lastId = row.id;
   }
 
@@ -139,7 +156,7 @@ async function main(): Promise<void> {
     writeFileSync(join(OUT_DIR, `${OUT_PREFIX}${String(i + 1).padStart(3, "0")}.sql`), content);
   });
   console.log(
-    `[ideias-detalhe] processadas ${rows.length} (detalhe ok=${fetched} gaps=${gaps}), ${rowsChanged} alteradas; ` +
+    `[ideias-detalhe] processadas ${rows.length} (detalhe ok=${fetched} removidas=${removidas} gaps=${gaps}), ${rowsChanged} alteradas; ` +
       `cursor→${nextCursor}; ${files.length} arquivo(s)`,
   );
   process.exit(0);

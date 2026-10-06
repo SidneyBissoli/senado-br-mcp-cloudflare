@@ -10,7 +10,7 @@
  * discard the name at the source — only the UF is ever returned. This module never re-introduces it.
  */
 
-import { getText } from "./http.js";
+import { getText, HttpError } from "./http.js";
 import {
   ECIDADANIA_BASE,
   parseEventoDetalhe,
@@ -39,6 +39,16 @@ export async function fetchComentariosAudiencia(id: number): Promise<ComentarioA
     allowEmpty: true,
   });
   return parseComentariosAudiencia(html);
+}
+
+/**
+ * A página de detalhe respondeu 410 Gone: o portal REMOVEU o recurso. Medido em 06/10/2026 em 32
+ * ideias que sumiram das listas vivas — estável, com "Ideia Legislativa não encontrada!". É uma
+ * RESPOSTA do portal, não falha de transporte: vira status `removida`, nunca "tenta de novo amanhã".
+ * Classifica pelo tipo e pelo código, não pelo texto da mensagem.
+ */
+export function ehRecursoRemovido(e: unknown): boolean {
+  return e instanceof HttpError && e.status === 410;
 }
 
 /** Detalhe da ideia para o corpus (UF-only — sem nome do autor cidadão). */

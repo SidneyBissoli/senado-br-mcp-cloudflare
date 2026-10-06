@@ -252,11 +252,11 @@ const ideiasSchema: EntitySchema = {
     {
       name: "status",
       type: "string",
-      description: "Situação da ideia: \"aberta\" | \"encerrada\" | \"convertida\".",
+      description: "Situação da ideia: \"aberta\" | \"encerrada\" | \"convertida\" | \"removida\" (retirada do portal; demais campos = último estado conhecido).",
       sourceEndpoint: EP_IDEIAS_LISTING,
       sourceField: "(derivado) parâmetro GET situacao da listagem varrida",
       operationalization:
-        "A listagem é varrida por situacao=N; o status é o mapa SITUACAO_STATUS ({5,6,8}→aberta, {7,9}→encerrada, 10→convertida) do valor usado no crawl.",
+        "A listagem é varrida por situacao=N; o status é o mapa SITUACAO_STATUS ({5,6,8}→aberta, {7,9}→encerrada, 10→convertida) do valor usado no crawl. Ideia que sai das listas vivas tem a página de detalhe lida e recebe o status do texto de situação (mesmo mapa); \"removida\" quando o detalhe responde HTTP 410 (desde 06/10/2026).",
       derived: true,
     },
     {

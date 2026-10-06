@@ -2,7 +2,7 @@
   "identifier": "sidneybissoli-senado-br-mcp-cloudflare",
   "name": "Dados Abertos Senado BR - MCP",
   "icon": "🏛️",
-  "version": "3.14.0",
+  "version": "3.15.0",
   "description": "Independent MCP server for Brazilian Federal Senate open data — read-only tools, prompts and resources across the legislative process, Senate administration and the e-Cidadania portal. Cloudflare Workers, Streamable HTTP, no auth. Not affiliated with or endorsed by the Senate, OpenAI or ChatGPT. Responses in pt-BR. MIT licensed.",
   "author": "Sidney Bissoli",
   "authorUrl": "https://github.com/SidneyBissoli",
@@ -7154,7 +7154,7 @@
         "readOnlyHint": true,
         "title": "Listar ideias legislativas"
       },
-      "description": "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1, atualizado semanalmente; ~114 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`) e `url` (`autor` e `dataPublicacao` só aparecem no detalhe, vêm `null` aqui). Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
+      "description": "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1; ideias em andamento atualizadas diariamente; ~118 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`/`removida` — `removida` = retirada do portal, que não a publica mais; o corpus guarda o último estado conhecido) e `url` (`autor` e `dataPublicacao` só aparecem no detalhe, vêm `null` aqui). Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -7191,11 +7191,12 @@
             "type": "integer"
           },
           "status": {
-            "description": "Filtrar por status",
+            "description": "Filtrar por status (`removida` = retirada do portal)",
             "enum": [
               "aberta",
               "encerrada",
               "convertida",
+              "removida",
               "todas"
             ],
             "type": "string"
