@@ -16,6 +16,11 @@ All notable changes to this project are documented here. Format based on
   o `/server` v2. Só desenvolvimento: o pacote publicado e o Worker não a
   carregavam — o `wrangler deploy --dry-run` empacota sem resolvê-la, e o
   dump de superfície segue idêntico.
+- **Seis `overrides` órfãos:** `fast-uri`, `hono`, `@hono/node-server`,
+  `express-rate-limit`, `ip-address` e `qs`. Cada um corrigia um alerta de uma
+  dependência do sdk v1 (o `qs`, por exemplo, via sdk → express) e, com ele
+  fora, nenhum casa mais pacote algum da árvore. O lock não muda e o
+  `npm audit` segue com 0 vulnerabilidades.
 
 ## [3.15.2] - 2026-10-06
 
