@@ -6,6 +6,36 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Fixed
+
+- **Ingestão das ideias do e-Cidadania parada desde 02/10/2026.** O crawl
+  relia as ~1185 páginas da listagem todo dia, 1126 delas da situação 7
+  (encerradas sem apoio suficiente). O portal ficou ~6× mais lento para
+  montar página fria: em 06/10, 60 páginas da s7 deram média de 23,7 s
+  (julho: ~3,9 s), 23% acima de 30 s (média dessas 81,8 s, máx. 111,8 s), e
+  toda página lenta respondia em <0,75 s na repetição (cache do servidor).
+  Não é bloqueio de IP (o IP residencial vê o mesmo) nem crescimento do
+  corpus (+4% de páginas desde julho). A s7 sozinha passou a custar ~7,5 h
+  num job de 200 min: 03/10 e 05/10 cancelados no teto, 04/10 com o portal
+  fora (disjuntor, correto). O crawl passa a ser **incremental**:
+  - as situações vivas (5, 6, 8, 9, 10; ~60 páginas) seguem lidas inteiras
+    todo dia, então a trajetória diária de apoios em `_history` continua
+    completa;
+  - ideia `aberta` no D1 que sumiu das listas vivas tem a página de detalhe
+    lida (total final de apoios + situação); falha de leitura se repete no
+    run seguinte, sem estado extra;
+  - a s7 é varrida por cursor de página (`ideias-s7` em
+    `ecidadania_detalhe_cursor`), 100 páginas por run, só upsert;
+  - o piso catastrófico passa a comparar as abertas lidas com as abertas do
+    próprio D1; e se o portal cair depois do crawl vivo completo, o vivo é
+    gravado mesmo assim (antes um run era tudo ou nada sobre o acervo).
+- **`senado_ecidadania_obter_ideia` dizia "aberta" para ideia "Não
+  acatada"** (situação 9, que a listagem trata como encerrada). A tool e o
+  crawl passam a usar um só mapeamento, `statusFromSituacaoIdeia`, testado
+  contra os seis textos reais do portal (antes os testes usavam textos
+  inventados). `parseIdeiaDetalheCorpus` passa a devolver também `apoios` e
+  `status`.
+
 ## [3.14.0] - 2026-10-05
 
 Muda a superfície (o `outputSchema` das 69 tools, nos dois perfis), mas

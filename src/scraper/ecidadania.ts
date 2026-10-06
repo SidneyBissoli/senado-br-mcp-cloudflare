@@ -352,12 +352,46 @@ export function buildIdeiaResumo(fields: {
   };
 }
 
+/**
+ * Texto da situação na página de detalhe (`<em>` em section[title="Situação da Ideia"]) → vocabulário
+ * de status do corpus (aberta | encerrada | convertida), o MESMO que `SITUACAO_STATUS` atribui por
+ * bucket da listagem. Uma função só, usada pela tool ao vivo e pelo crawl de transições — antes
+ * cada um tinha o seu mapeamento, e o da tool lia "Não acatada" (bucket 9, encerrada) como aberta.
+ *
+ * Textos REAIS medidos em 06/10/2026, uma ideia por bucket:
+ *   s5 "Aberta" · s6 "Na comissão" · s8 "Aguardando envio à CDH"      → aberta
+ *   s7 "Encerrada - Sem apoio suficiente" · s9 "Não acatada"          → encerrada
+ *   s10 "Convertida em Proposição"                                     → convertida
+ *
+ * Comparação EXATA (sem caixa e sem acento), decisão do dono em 06/10/2026: texto novo do portal vira
+ * null e aparece no log, em vez de ser gravado no histórico com um status adivinhado por palavra-chave.
+ * Se o log mostrar um texto novo, acrescente-o aqui e no teste dos textos medidos.
+ */
+export function statusFromSituacaoIdeia(texto: string): string | null {
+  const t = texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+  if (t === "aberta" || t === "na comissao" || t === "aguardando envio a cdh") return "aberta";
+  if (t === "encerrada - sem apoio suficiente" || t === "nao acatada") return "encerrada";
+  if (t === "convertida em proposicao") return "convertida";
+  return null;
+}
+
 /** Campos detail-only da ideia para o corpus (v2). UF-only — SEM nome do autor cidadão. */
 export interface IdeiaDetalheCorpus {
   dataPublicacao: string | null;
   autorUf: string | null;
   descricao: string | null;
   plConvertido: string | null;
+  /** Total de apoios na leitura (null se o contador não foi achado — nunca 0 inventado). */
+  apoios: number | null;
+  /** `statusFromSituacaoIdeia` do texto da situação (null se ausente ou não reconhecido). */
+  status: string | null;
+}
+
+/** Texto cru da situação da ideia na página de detalhe, ou null se a seção não existe. */
+export function extractSituacaoIdeia(html: string): string | null {
+  const m = html.match(/title="Situa[çc][ãa]o da Ideia"[\s\S]*?<em>([^<]+)<\/em>/i);
+  // O portal manda o texto em UTF-8 literal ("Não acatada", medido 06/10/2026) — sem entidades.
+  return m ? m[1].replace(/\s+/g, " ").trim() : null;
 }
 
 /**
@@ -384,7 +418,13 @@ export function parseIdeiaDetalheCorpus(html: string): IdeiaDetalheCorpus {
     ? `${plMatch[1].toUpperCase().includes("SUGEST") ? "SUG" : plMatch[1].toUpperCase()} ${plMatch[2]}/${plMatch[3]}`
     : null;
 
-  return { dataPublicacao, autorUf, descricao, plConvertido };
+  const apoiosMatch = html.match(/class="contabilizacao"[^>]*>([^<]+)</);
+  const apoios = apoiosMatch ? parseBrNum(apoiosMatch[1]) : null;
+
+  const situacao = extractSituacaoIdeia(html);
+  const status = situacao === null ? null : statusFromSituacaoIdeia(situacao);
+
+  return { dataPublicacao, autorUf, descricao, plConvertido, apoios, status };
 }
 
 /** Fetch + parse the corpus-facing (UF-only) idea detail. */
@@ -430,14 +470,11 @@ export async function obterIdeiaInternal(id: number) {
   const apoiosMatch = html.match(/class="contabilizacao"[^>]*>([^<]+)</);
   const apoios = apoiosMatch ? parseBrNum(apoiosMatch[1]) : 0;
 
-  // Status: <em> inside section[title="Situação da Ideia"]
-  const statusMatch = html.match(/title="Situa[çc][ãa]o da Ideia"[\s\S]*?<em>([^<]+)<\/em>/i);
-  let status = "aberta";
-  if (statusMatch) {
-    const st = statusMatch[1].toLowerCase().trim();
-    if (st.includes("convertid") || st.includes("transformad")) status = "convertida";
-    else if (st.includes("encerrad")) status = "encerrada";
-  }
+  // Status: o mesmo mapeamento do corpus (statusFromSituacaoIdeia). Sem seção ou texto não
+  // reconhecido, mantém o "aberta" histórico desta tool — o default antigo, agora só para o
+  // desconhecido, não mais para "Não acatada".
+  const situacao = extractSituacaoIdeia(html);
+  const status = (situacao !== null ? statusFromSituacaoIdeia(situacao) : null) ?? "aberta";
 
   // Author: after "Ideia proposta por"
   const autorMatch = html.match(/Ideia proposta por<\/div>\s*<div[^>]*>\s*<span>([^<]+)<\/span>\s*<span>\s*\(([A-Z]{2})\)<\/span>/);

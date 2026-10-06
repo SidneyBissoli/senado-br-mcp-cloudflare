@@ -394,7 +394,7 @@ describe("obterIdeiaInternal", () => {
         <div style="margin-bottom:15px;">Descrição completa da ideia legislativa</div>
       </article>
       <span class="contabilizacao">17.978</span>
-      <section title="Situação da Ideia"><em>Apoiamento aberto</em></section>
+      <section title="Situação da Ideia"><em>Aberta</em></section>
       <div>Ideia proposta por</div>
       <div><span>João Silva</span> <span>(SP)</span></div>
       <p>42 comentários</p>
@@ -416,7 +416,7 @@ describe("obterIdeiaInternal", () => {
       <html>
       <article id="ideia-legislativa"><b><div style="font-size:24px;">Ideia</div></b><div>desc</div></article>
       <span class="contabilizacao">100</span>
-      <section title="Situação da Ideia"><em>Convertida em sugestão</em></section>
+      <section title="Situação da Ideia"><em>Convertida em Proposição</em></section>
       <p>SUGESTÃO nº 10 de 2024</p>
       </html>
     `;
@@ -425,6 +425,26 @@ describe("obterIdeiaInternal", () => {
     const result = await obterIdeiaInternal(600);
     expect(result.status).toBe("convertida");
     expect(result.plConvertido).toBe("SUG 10/2024");
+  });
+
+  // Regressão 06/10/2026: o mapeamento antigo só conhecia "convertid"/"encerrad" e lia o texto real
+  // do bucket 9 ("Não acatada", medido na ideia 89939) como aberta.
+  it("reads 'Não acatada' (situacao 9) as encerrada, not aberta", async () => {
+    const html = `
+      <html>
+      <article id="ideia-legislativa"><b><div style="font-size:24px;">Ideia</div></b><div>desc</div></article>
+      <span class="contabilizacao">134.165</span>
+      <section title="Situação da Ideia">
+        <i class="fa fa-info-circle fa-2x" aria-hidden="true"></i>
+        <em>Não acatada</em><br /><br />
+      </section>
+      </html>
+    `;
+    mockFetch.mockResolvedValueOnce(new Response(html, { status: 200 }));
+
+    const result = await obterIdeiaInternal(89939);
+    expect(result.status).toBe("encerrada");
+    expect(result.apoios).toBe(134165);
   });
 });
 
