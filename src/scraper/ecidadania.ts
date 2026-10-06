@@ -30,8 +30,8 @@ export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
  * frase, "falha de rede ao acessar" e "retornou HTTP 429/400/403" caíam em
  * `outro`. Sem ela, vale a frase, como sempre.
  */
-function ecidadaniaFetchError(message: string, retryable: boolean, classe?: ErrorClass): Error {
-  return Object.assign(new Error(message), classe ? { retryable, classe } : { retryable });
+function ecidadaniaFetchError(message: string, retryable: boolean, classe?: ErrorClass, hint?: string): Error {
+  return Object.assign(new Error(message), classe ? { retryable, classe } : { retryable }, hint ? { hint } : {});
 }
 const isTransientStatus = (status: number) => status >= 500 || status === 429;
 
@@ -121,9 +121,11 @@ async function idaEcidadania(path: string, headers: Record<string, string>, rotu
           // com "Ideia Legislativa não encontrada!", de forma estável). Não é parâmetro errado nem
           // fonte fora do ar — a mensagem genérica abaixo dizia as duas coisas.
           throw ecidadaniaFetchError(
-            `${rotulo}: o recurso ${path} foi removido do portal (HTTP 410). O identificador existiu, mas não está mais publicado; não é erro de parâmetro nem indisponibilidade da fonte.`,
+            // Sem ponto final: `ecidadaniaError` acrescenta ". As demais funcionalidades…".
+            `${rotulo}: o recurso ${path} foi removido do portal (HTTP 410). O identificador existiu, mas não está mais publicado; não é erro de parâmetro nem indisponibilidade da fonte`,
             false,
             "nao_encontrado",
+            "Não repita a chamada nem corrija o identificador: o portal retirou o recurso. Se for uma ideia legislativa, o último estado conhecido segue no corpus: `senado_ecidadania_listar_ideias` com `status: \"removida\"`.",
           );
         }
         throw ecidadaniaFetchError(
