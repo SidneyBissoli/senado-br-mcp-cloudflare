@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { errorFrom } from "../../src/utils/validation.js";
 
 describe("obter_evento comentarios splice (BUG-020)", () => {
   // The static detail scrape returns comentarios 0 (AJAX-loaded); splice from the corpus.
@@ -436,6 +437,17 @@ describe("obterIdeiaInternal", () => {
     expect((err as Error).message).toMatch(/removido do portal \(HTTP 410\)/);
     expect((err as Error).message).toMatch(/não é erro de parâmetro/);
     expect((err as { retryable?: boolean }).retryable).toBe(false);
+
+    // O ENVELOPE que o cliente recebe — o mesmo caminho de `ecidadaniaError` na tool. No ar, em
+    // 06/10/2026, a mensagem estava certa mas o `hint` ao lado ainda dizia "verifique os parâmetros
+    // … a fonte pode estar indisponível", e o sufixo produzia ponto duplo.
+    const env = errorFrom(err, "Erro ao acessar e-Cidadania", ". As demais funcionalidades (senadores, matérias, votações) continuam operacionais.")
+      .structuredContent as { error: string; retryable: boolean; hint: string };
+    expect(env.error).not.toMatch(/\.\./);
+    expect(env.retryable).toBe(false);
+    expect(env.hint).toMatch(/retirou o recurso/);
+    expect(env.hint).toMatch(/status: "removida"/);
+    expect(env.hint).not.toMatch(/verifique os parâmetros|indisponível/);
   });
 
   // Regressão 06/10/2026: o mapeamento antigo só conhecia "convertid"/"encerrad" e lia o texto real

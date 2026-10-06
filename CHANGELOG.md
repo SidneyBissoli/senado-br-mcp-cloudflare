@@ -6,6 +6,21 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.15.1] - 2026-10-06
+
+### Fixed
+
+- **O erro de ideia removida (410) ainda mandava "verificar os parâmetros".**
+  Medido no ar logo após o deploy da 3.15.0: a mensagem nova saía certa, mas
+  o campo `hint` ao lado continuava o genérico ("verifique os parâmetros …
+  a fonte oficial pode estar indisponível"), e a junção com o sufixo da
+  `ecidadaniaError` produzia ponto duplo. Causa: `errorFrom` herdava o
+  `retryable` da exceção, mas nunca o `hint`. Agora herda os dois, e o 410
+  traz o seu: não repetir nem corrigir o id; o último estado está em
+  `listar_ideias` com `status: "removida"`. O teste passa o erro real pelo
+  mesmo caminho da tool e confere o envelope inteiro (falha no código
+  anterior). Sem mudança de superfície.
+
 ## [3.15.0] - 2026-10-06
 
 Muda a superfície: `senado_ecidadania_listar_ideias` ganha o valor

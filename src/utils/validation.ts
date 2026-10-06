@@ -61,11 +61,18 @@ export function errorFrom(e: unknown, fallbackMessage: string, sufixo = "") {
   const retryable = e instanceof Error && "retryable" in e && typeof (e as any).retryable === "boolean"
     ? (e as any).retryable
     : false;
+  // O `hint` da exceção, quando ela traz um, vence o default — mesmo trato do `retryable`.
+  // Sem isto, um erro que sabe o que aconteceu (ex.: e-Cidadania 410 = recurso retirado)
+  // saía com a mensagem certa e, AO LADO, o hint genérico "verifique os parâmetros … a
+  // fonte pode estar indisponível" — que o contradizia (medido no ar em 06/10/2026).
+  const hint = e instanceof Error && "hint" in e && typeof (e as any).hint === "string"
+    ? (e as any).hint as string
+    : undefined;
   logger.error("tool_error", { message, retryable });
   // A classe de telemetria vai pelo TIPO do erro, fora do fio (ver
   // CLASSE_DO_ERRO em src/call-shape.ts); sem ela, vale a frase — último
   // recurso, só para exceção que não declara classe.
-  return anexarClasse(envelopeDeErro(message + sufixo, retryable), e);
+  return anexarClasse(envelopeDeErro(message + sufixo, retryable, hint), e);
 }
 
 export function toolResult(data: unknown) {
