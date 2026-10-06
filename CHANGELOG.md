@@ -6,6 +6,17 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Removed
+
+- **devDependency `@modelcontextprotocol/sdk` (v1).** Declarada desde o commit
+  inicial só para satisfazer o peer do `agents`, nunca importada; com o
+  `legacy-peer-deps` da 3.15.2 ela deixa de ser necessária. Saem 78 pacotes
+  da árvore (express, hono, ajv e o resto do fecho dela; nenhum outro muda de
+  versão) e, com eles, a segunda implementação do protocolo que convivia com
+  o `/server` v2. Só desenvolvimento: o pacote publicado e o Worker não a
+  carregavam — o `wrangler deploy --dry-run` empacota sem resolvê-la, e o
+  dump de superfície segue idêntico.
+
 ## [3.15.2] - 2026-10-06
 
 Só dependências: SDK do MCP 2.0.0 → 2.3.0 e `agents` 0.24.0 → 0.26.0.
