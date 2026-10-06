@@ -6,7 +6,36 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
-## [3.15.1] - 2026-10-06
+## [3.15.2] - 2026-10-06
+
+Só dependências: SDK do MCP 2.0.0 → 2.3.0 e `agents` 0.24.0 → 0.26.0.
+**Nenhuma resposta e nenhum esquema mudam** — o dump de superfície
+(`scripts/dump-surface.mjs --stdio`) saiu idêntico byte a byte entre o master
+anterior e o PR (956 683 bytes).
+
+### Security
+
+- **GHSA-6qxp-vccf-f47h (high)** em `@modelcontextprotocol/client` 2.0.0
+  e em `@modelcontextprotocol/sdk` 1.30.0 ("OAuth client could send
+  credentials to an authorization server chosen by the MCP server"): sobem a
+  2.3.0 e 1.32.0. Os dois são devDependencies, importados só pelos testes e
+  pelo juiz do eval (nenhum `src/` de runtime), sem OAuth — o pacote
+  publicado e o Worker nunca os carregaram.
+- `sharp` 0.35.4 → 0.35.5 (GHSA-wq5f-xc86-pv6w, librsvg), transitivo do
+  `wrangler`/`miniflare`, só de desenvolvimento.
+
+### Changed
+
+- **`@modelcontextprotocol/server` 2.0.0 → 2.3.0 e `agents` 0.24.0 →
+  0.26.0**; `wrangler` 4.140.0 → 4.147.0.
+- **`.npmrc` com `legacy-peer-deps=true`** (#114). O `agents` declara o SDK
+  2.0.0 e o `sdk` 1.30.0 como peers EXATOS; sem a flag, o PR de grupo do
+  Dependabot se dizia "server 2.0.0 → 2.3.0" mas o lock só subia o `agents`
+  e deixava o SDK travado em 2.0.0 — mesclar não curaria o alerta acima. Com
+  a flag o SDK vem do que o `package.json` declara e o `agents` resolve a
+  MESMA cópia 2.3.0, conferido em runtime antes do merge (mesma decisão do
+  ilo e do uis).
+
 
 Primeira publicação no npm desde a 3.14.0. A **3.15.0 foi numerada e nunca
 publicada** (subiu só para o Worker): quem atualiza da 3.14.0 recebe as duas
