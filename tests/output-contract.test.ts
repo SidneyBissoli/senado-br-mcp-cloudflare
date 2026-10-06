@@ -312,5 +312,9 @@ describe("o validador do cliente reprova resultado quebrado no fio", () => {
       ]),
     );
     for (const v of vs) expect(v.obtido, `${v.descricao}: ${v.mensagem ?? ""}`).toBe(v.esperado);
-  });
+    // Cada veredito sobe servidor + Client novos, e o Client recompila o schema
+    // listado (69 tools sob o envelope comum). Já ficava no limite dos 5 s padrão;
+    // com o nó opcional `field_sources` da proveniência v1.2 passou a estourar sob
+    // carga — derrubou o publish da 3.14.0 (06/10/2026) e passou na re-rodada.
+  }, 30_000);
 });
