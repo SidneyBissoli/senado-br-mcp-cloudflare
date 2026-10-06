@@ -14,6 +14,8 @@ import {
   parseIdeiaDetalheCorpus,
 } from "../../src/scraper/ecidadania.js";
 import ideiaDetalheHtml from "../fixtures/ecidadania/ideia-detalhe.html?raw";
+import { ehRecursoRemovido } from "../../scripts/ingest-ecidadania/detalhe.js";
+import { HttpError } from "../../scripts/ingest-ecidadania/http.js";
 
 describe("partição vivo × arquivo", () => {
   it("cobre todas as situações do dropdown, sem sobra nem repetição", () => {
@@ -124,5 +126,19 @@ describe("cursor do arquivo (s7)", () => {
 
   it("ao alcançar a última página fecha a passada e volta à página 1", () => {
     expect(avancarCursorArquivo({ pagina: 1100, voltas: 2 }, 1126, 1126)).toEqual({ pagina: 0, voltas: 3 });
+  });
+});
+
+describe("ehRecursoRemovido — 410 é resposta do portal, não falha", () => {
+  it("410 → removida", () => {
+    expect(ehRecursoRemovido(new HttpError("HTTP 410 for x", 410, false))).toBe(true);
+  });
+
+  it("404, 5xx, timeout e erro genérico não são remoção", () => {
+    expect(ehRecursoRemovido(new HttpError("HTTP 404 for x", 404, false))).toBe(false);
+    expect(ehRecursoRemovido(new HttpError("HTTP 503 for x", 503, true))).toBe(false);
+    expect(ehRecursoRemovido(new HttpError("curl: (28) Operation timed out", undefined, true))).toBe(false);
+    // Classifica pelo TIPO: a mesma frase num Error comum não conta.
+    expect(ehRecursoRemovido(new Error("HTTP 410 for x"))).toBe(false);
   });
 });

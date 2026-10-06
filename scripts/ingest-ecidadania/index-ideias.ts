@@ -35,12 +35,12 @@ import {
   inicioFatiaArquivo,
   avancarCursorArquivo,
 } from "./ideias-incremental.js";
-import { ECIDADANIA_BASE, buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania.js";
+import { ECIDADANIA_BASE, STATUS_IDEIA_REMOVIDA, buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
 import { readExistingMeta, readAllPayloads, readDetalheCursor } from "./d1.js";
 import { generateLoadSqlBatches, generateRunOnlySql, cursorUpsertStmt } from "./sql.js";
-import { fetchIdeiaDetalheCorpus } from "./detalhe.js";
+import { fetchIdeiaDetalheCorpus, ehRecursoRemovido } from "./detalhe.js";
 
 const ENTIDADE = "ideias";
 const PAGE_DELAY_MS = Number(process.env.INGEST_IDEIAS_PAGE_DELAY_MS) || Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
@@ -129,16 +129,18 @@ interface Transicao {
   id: number;
   apoios: number | null;
   status: string;
-  detalhe: { dataPublicacao: string | null; autorUf: string | null; descricao: string | null; plConvertido: string | null };
+  /** Ausente quando a ideia foi removida (410): não há página para ler, o guardado é preservado. */
+  detalhe?: { dataPublicacao: string | null; autorUf: string | null; descricao: string | null; plConvertido: string | null };
 }
 
 /**
  * Phase 2: read the detail page of each selected id. Stops at the time budget or a tripped breaker.
  * Appends to the caller's `lidas` as it goes, so readings made before a PortalForaError survive it.
  */
-async function lerTransicoes(ids: number[], deadline: number, lidas: Transicao[]): Promise<{ falhas: number; naoReconhecidas: number }> {
+async function lerTransicoes(ids: number[], deadline: number, lidas: Transicao[]): Promise<{ falhas: number; naoReconhecidas: number; removidas: number }> {
   let falhas = 0;
   let naoReconhecidas = 0;
+  let removidas = 0;
   for (const id of ids) {
     if (Date.now() >= deadline) {
       console.log(`[ideias][transicoes] orçamento de tempo esgotado após ${lidas.length + falhas + naoReconhecidas}/${ids.length}`);
@@ -161,13 +163,20 @@ async function lerTransicoes(ids: number[], deadline: number, lidas: Transicao[]
       }
     } catch (e) {
       if (e instanceof PortalForaError) throw e;
-      falhas++;
-      logPageFailure(ENTIDADE, `detalhe:${id}`, e);
-      disjuntor.falha(e, `detalhe:${id}`);
+      if (ehRecursoRemovido(e)) {
+        // O portal respondeu — e disse que a ideia foi retirada. Status final, não falha.
+        disjuntor.sucesso();
+        removidas++;
+        lidas.push({ id, apoios: null, status: STATUS_IDEIA_REMOVIDA });
+      } else {
+        falhas++;
+        logPageFailure(ENTIDADE, `detalhe:${id}`, e);
+        disjuntor.falha(e, `detalhe:${id}`);
+      }
     }
     await sleep(DETAIL_DELAY_MS);
   }
-  return { falhas, naoReconhecidas };
+  return { falhas, naoReconhecidas, removidas };
 }
 
 /** Phase 3 result: items read from the archive slice + the cursor to persist (null = unchanged). */
@@ -318,7 +327,7 @@ async function main(): Promise<void> {
   let fatia: FatiaArquivo = { items: [], paginas: "-", cursor: null };
   try {
     const t = await lerTransicoes(ids, deadline, transicoes);
-    console.log(`[ideias][transicoes] candidatas=${ids.length} lidas=${transicoes.length} falhas=${t.falhas} naoReconhecidas=${t.naoReconhecidas}`);
+    console.log(`[ideias][transicoes] candidatas=${ids.length} lidas=${transicoes.length} (removidas=${t.removidas}) falhas=${t.falhas} naoReconhecidas=${t.naoReconhecidas}`);
     fatia = await lerFatiaArquivo(deadline);
     console.log(`[ideias][arquivo] ${fatia.paginas} items=${fatia.items.length} cursor=${fatia.cursor ? `${fatia.cursor.pagina}/voltas=${fatia.cursor.voltas}` : "inalterado"}`);
   } catch (e) {

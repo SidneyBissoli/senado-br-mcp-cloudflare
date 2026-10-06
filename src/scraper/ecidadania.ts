@@ -116,6 +116,16 @@ async function idaEcidadania(path: string, headers: Record<string, string>, rotu
       }
       default: {
         const status = e.status ?? 502;
+        if (status === 410) {
+          // 410 Gone = o portal REMOVEU o recurso (medido 06/10/2026: ideias retiradas respondem 410
+          // com "Ideia Legislativa não encontrada!", de forma estável). Não é parâmetro errado nem
+          // fonte fora do ar — a mensagem genérica abaixo dizia as duas coisas.
+          throw ecidadaniaFetchError(
+            `${rotulo}: o recurso ${path} foi removido do portal (HTTP 410). O identificador existiu, mas não está mais publicado; não é erro de parâmetro nem indisponibilidade da fonte.`,
+            false,
+            "nao_encontrado",
+          );
+        }
         throw ecidadaniaFetchError(
           `${rotulo} retornou HTTP ${status} para ${path}`,
           isTransientStatus(status),
@@ -367,6 +377,13 @@ export function buildIdeiaResumo(fields: {
  * null e aparece no log, em vez de ser gravado no histórico com um status adivinhado por palavra-chave.
  * Se o log mostrar um texto novo, acrescente-o aqui e no teste dos textos medidos.
  */
+/**
+ * Status de corpus de uma ideia que o portal REMOVEU (detalhe responde HTTP 410). Não vem de texto de
+ * situação — o portal não publica nada sobre ela —, só da resposta 410. Decisão do dono (06/10/2026):
+ * manter o registro e o histórico no banco com este status, em vez de apagar ou deixar "aberta".
+ */
+export const STATUS_IDEIA_REMOVIDA = "removida";
+
 export function statusFromSituacaoIdeia(texto: string): string | null {
   const t = texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
   if (t === "aberta" || t === "na comissao" || t === "aguardando envio a cdh") return "aberta";

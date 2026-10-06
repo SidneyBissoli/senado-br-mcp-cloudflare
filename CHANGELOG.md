@@ -6,7 +6,39 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.15.0] - 2026-10-06
+
+Muda a superfície: `senado_ecidadania_listar_ideias` ganha o valor
+`removida` no filtro `status`, e a descrição dela muda (cadência diária,
+~118 mil ideias, o significado de `removida`). Mudança aditiva: nenhum valor
+antigo deixa de valer.
+
+### Added
+
+- **Status `removida` para ideias retiradas do portal.** O primeiro run do
+  crawl incremental (abaixo) leu o detalhe de 110 ideias que tinham saído das
+  listas vivas, e 32 responderam **HTTP 410**, de forma estável, com "Ideia
+  Legislativa não encontrada!". O crawl antigo nunca percebia isso: uma ideia
+  que sumia de todas as listas ficava `aberta` no D1 para sempre, e a
+  `listar_ideias` a servia como aberta. Agora o 410 é tratado como
+  **resposta** do portal (não como falha a repetir):
+  - as transições do crawl diário gravam `removida` na hora;
+  - o backfill de detalhe (que passa por todas as ~118 mil ideias, 3×/dia)
+    também grava `removida` ao encontrar 410, cobrindo as encerradas
+    removidas, que as transições nunca veem;
+  - registro e histórico ficam no banco com o último estado conhecido
+    (decisão do dono: ideias retiradas são dado de pesquisa que só este
+    banco preserva). O 410 é reconhecido pelo tipo e código do erro
+    (`ehRecursoRemovido`), não pelo texto.
+- O dicionário do dataset (`status`) passa a documentar o valor.
+
 ### Fixed
+
+- **`senado_ecidadania_obter_ideia` numa ideia removida** dizia "erro não
+  recuperável; verifique os parâmetros" e que "a fonte pode estar
+  indisponível". As duas coisas eram falsas. O 410 agora produz uma
+  mensagem própria: o recurso existiu e foi removido do portal (classe
+  `nao_encontrado`, sem repetição).
 
 - **Ingestão das ideias do e-Cidadania parada desde 02/10/2026.** O crawl
   relia as ~1185 páginas da listagem todo dia, 1126 delas da situação 7
