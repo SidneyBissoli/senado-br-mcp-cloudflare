@@ -109,17 +109,34 @@ jobs:
       # igual servindo a versão ANTERIOR — foi assim que 3.5.0 ficou no ar sem
       # ninguém notar. Este passo compara o que /status reporta com o
       # package.json e falha se divergirem, que é a deriva por definição.
+      #
+      # REPETE por até 3 min (06/10/2026). Antes era UMA leitura após `sleep 20`, e o
+      # Worker novo leva mais que isso para chegar à borda: no deploy da 3.15.1
+      # (run 37515023242) a leitura dos 20 s viu 3.15.0, o job falhou e PULOU o smoke
+      # e a conferência da superfície — um vermelho falso que ainda cegava as duas
+      # provas seguintes; 3 min depois o endpoint já servia 3.15.1. O /status
+      # responde `Cache-Control: no-store`, então o atraso é propagação, não cache.
+      # Deriva de verdade (deploy que não subiu) continua falhando, só que após o
+      # prazo, com a última versão vista.
       - if: steps.cf.outputs.ok == 'true'
         name: Versão hospedada bate com o package.json
         run: |
-          sleep 20
           ESPERADA=$(node -p "require('./package.json').version")
-          NO_AR=$(curl -sS --max-time 30 https://senado.sidneybissoli.com/status | node -p "JSON.parse(require('fs').readFileSync(0,'utf8')).version")
-          echo "package.json=$ESPERADA  hospedado=$NO_AR"
-          if [ "$ESPERADA" != "$NO_AR" ]; then
-            echo "::error::deriva: o endpoint serve $NO_AR e o repositório está em $ESPERADA"
-            exit 1
-          fi
+          PRAZO=180; INTERVALO=10; INICIO=$(date +%s); NO_AR="?"
+          while :; do
+            # Falha de rede ou JSON inválido não derruba o laço: vira "?" e tenta de novo.
+            NO_AR=$(curl -sS --max-time 30 https://senado.sidneybissoli.com/status 2>/dev/null \
+              | node -e "try{console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).version)}catch{console.log('?')}" \
+              || echo "?")
+            DECORRIDO=$(( $(date +%s) - INICIO ))
+            echo "t=${DECORRIDO}s  package.json=$ESPERADA  hospedado=$NO_AR"
+            [ "$ESPERADA" = "$NO_AR" ] && exit 0
+            if [ "$DECORRIDO" -ge "$PRAZO" ]; then
+              echo "::error::deriva: após ${PRAZO}s o endpoint serve $NO_AR e o repositório está em $ESPERADA"
+              exit 1
+            fi
+            sleep "$INTERVALO"
+          done
 
       # Fecha o ciclo: se o deploy subir um Worker quebrado, o job falha aqui e
       # não em silêncio na próxima vez que alguém abrir o endpoint.
