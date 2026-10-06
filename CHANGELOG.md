@@ -8,6 +8,11 @@ All notable changes to this project are documented here. Format based on
 
 ## [3.15.1] - 2026-10-06
 
+Primeira publicação no npm desde a 3.14.0. A **3.15.0 foi numerada e nunca
+publicada** (subiu só para o Worker): quem atualiza da 3.14.0 recebe as duas
+seções, esta e a de baixo — o crawl incremental de ideias, o status
+`removida` e este conserto.
+
 ### Fixed
 
 - **O erro de ideia removida (410) ainda mandava "verificar os parâmetros".**
