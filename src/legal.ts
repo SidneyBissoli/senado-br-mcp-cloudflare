@@ -76,7 +76,7 @@ const privacyBody = `
     <p>The service queries official public Senate endpoints and runs on Cloudflare infrastructure. It does not sell personal information. It may disclose operational information when required by law or to protect the service from abuse.</p>
 
     <h2>Your choices and contact</h2>
-    <p>Do not send sensitive personal information to the service. The service operator and contact for privacy requests is Sidney Bissoli, reachable at <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>. You may ask about privacy or request deletion of operational data that may be associated with you. Because the service primarily handles public data and aggregate logs, some records may not be individually identifiable.</p>
+    <p>Do not send sensitive personal information to the service. The service operator and contact for privacy requests is Sidney da Silva Pereira Bissoli, reachable at <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a>. You may ask about privacy or request deletion of operational data that may be associated with you. Because the service primarily handles public data and aggregate logs, some records may not be individually identifiable.</p>
 
     <h2>Changes</h2>
     <p>This policy may be updated as the service evolves. The date above identifies the current version.</p>
