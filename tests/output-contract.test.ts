@@ -274,6 +274,50 @@ describe("chamada real ponta a ponta", () => {
 
 });
 
+/**
+ * Tempo 1 da v1.3: o schema LISTADO já aceita as quatro chaves novas do concise
+ * (`notices`, `derived`, `derivation_note`, `revision`) antes de o servidor emiti-las —
+ * é o que permite ligar a 1.3 depois sem derrubar cliente que tenha guardado o schema.
+ * Prova no fio: o bloco recebe as quatro chaves entre servidor e cliente e a chamada
+ * passa pelo validador do `Client`; com `revision.status` fora do vocabulário fechado,
+ * reprova (o schema confere a chave, não a ignora).
+ */
+describe("o schema listado aceita um bloco v1.3 completo", () => {
+  const comChaves13 = (status: string) => (r: { structuredContent?: Record<string, unknown> }) => {
+    const p = r.structuredContent?.provenance as Record<string, unknown> | undefined;
+    if (!p) return;
+    p.notices = ["Aviso da fonte, verbatim."];
+    p.derived = true;
+    p.derivation_note = "Soma calculada pelo servidor.";
+    p.revision = { status, note: "pode ser corrigido depois" };
+  };
+
+  it("as quatro chaves passam pelo Client", async () => {
+    const c = await conectarComoCliente(fabricar(), { adulterar: comChaves13("current") });
+    try {
+      await c.listTools();
+      const r = await chamarComoCliente(c, "senado_tabelas_referencia", { tabela: "tipos-materia" });
+      const p = (r.structuredContent as Record<string, unknown>).provenance as Record<string, unknown>;
+      expect(p.revision).toEqual({ status: "current", note: "pode ser corrigido depois" });
+      expect(p.derived).toBe(true);
+    } finally {
+      await c.close();
+    }
+  }, 30_000);
+
+  it("revision.status fora do vocabulário reprova", async () => {
+    const c = await conectarComoCliente(fabricar(), { adulterar: comChaves13("obsoleto") });
+    try {
+      await c.listTools();
+      await expect(
+        chamarComoCliente(c, "senado_tabelas_referencia", { tabela: "tipos-materia" }),
+      ).rejects.toThrow();
+    } finally {
+      await c.close();
+    }
+  }, 30_000);
+});
+
 // ==================== controle negativo, no percurso do cliente ====================
 //
 // O servidor responde certo e o resultado é quebrado NO FIO, entre servidor e

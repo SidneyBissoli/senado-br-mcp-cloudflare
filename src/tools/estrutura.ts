@@ -43,6 +43,7 @@ export function provenanceEstrutura() {
     dataset_id: "estrutura-organizacional",
     reference_period: ESTRUTURA_VINTAGE.slice(0, 10),
     retrieved_at: ESTRUTURA_VINTAGE,
+    revision: SOURCES.SENADO_INSTITUCIONAL.revision,
   });
 }
 

@@ -6,6 +6,40 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.17.0] - 2026-10-08
+
+Proveniência: tempo 2 do contrato v1.2 e tempo 1 do v1.3 (`@sbissoli/mcp-provenance`
+0.4.0, `@sbissoli/mcp-upstream` 0.4.2).
+
+### Fixed
+
+- **Duas tools cairiam ao ligar a v1.2.** A partir da v1.2 a lib exige que o
+  `retrieved_at` do bloco seja o MAIS ANTIGO entre as sub-fontes (`field_sources`) e
+  lança `ProvenanceContractError` quando não é — o erro derrubaria a tool. Montavam o
+  topo à mão: `senado_servidores` com `subordinadasA` (topo = instante da folha, mais
+  novo que o snapshot do organograma) e `senado_obter_materia` na seção `detalhe`
+  (topo = leitura de `/processo/{id}`, feita DEPOIS da ementa e da relatoria). Conserto
+  na causa: o adaptador (`src/utils/provenance.ts`, `oldestRetrievedAt`) deriva o topo
+  como o mais antigo das sub-fontes em todo caminho que monta `field_sources`, e
+  nenhuma tool escolhe mais esse instante. A parte que era o topo (a folha; o detalhe
+  do processo) passa a ser sub-fonte própria, para que o seu instante não suma do
+  bloco. O instante do organograma continua o da extração real no portal
+  (`extraidoEm` do crawler), não `null` nem o da folha.
+
+### Changed
+
+- **Contrato v1.2 emitido** (`contractVersion: "1.2"`): as respostas que fundem
+  sub-fontes (as duas acima) passam a levar `field_sources` no bloco concise. As
+  demais seguem com as mesmas 7 chaves.
+- **Esquema declara as chaves da v1.3** (`notices`, `derived`, `derivation_note`,
+  `revision`), opcionais, vindas do `ConciseBlockSchema` do pacote — o servidor ainda
+  não as emite.
+- **`revision` informada por fonte** (vai ao fio quando o servidor emitir a v1.3):
+  `current` em todas; nas fontes administrativas (folha, CEAPS, contratos, execução
+  orçamentária) com a nota que as instructions já publicam — "podem ser corrigidos
+  depois"; nas demais, `note: null`.
+- Superfície declarada nova: trava, `server.json` e `lhm.plugin.json` regravados.
+
 ## [3.16.0] - 2026-10-08
 
 O que cada número é, e até quando. Um leitor do artigo do bcb no dev.to (Daniel

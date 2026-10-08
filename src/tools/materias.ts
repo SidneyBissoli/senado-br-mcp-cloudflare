@@ -135,6 +135,56 @@ export function parseDocumentoProcesso(d: any) {
  * Resolve codigoMateria → processo summary item via /processo?codigoMateria=.
  * Devolve também o `fetchedAt` do cache p/ a granularidade por-campo (o resumo dá a `ementa`).
  */
+/**
+ * Proveniência de `senado_obter_materia` secao=detalhe, que funde 3 endpoints: o detalhe
+ * (`/processo/{id}`, fonte de topo), a `ementa` do resumo (`/processo`) e o `relator` da
+ * relatoria (`/processo/relatoria`, só quando há relator), cada um com o seu instante real.
+ *
+ * Os três são lidos em momentos (e de entradas de cache) distintos, então o detalhe
+ * também entra como sub-fonte: o `retrieved_at` do topo é derivado pelo adaptador como o
+ * MAIS ANTIGO das três (contrato §3) e, sem este item, o instante do detalhe sumiria do
+ * bloco quando o resumo fosse mais velho. Antes da 3.17.0 o topo era o fetch do detalhe,
+ * feito DEPOIS das sub-fontes — com a v1.2 ligada, a lib lançaria e a tool cairia.
+ */
+export function provenanceMateriaDetalhe(
+  baseUrl: string,
+  a: {
+    codigoMateria: number;
+    idProcesso: string | number;
+    detalhe: { dataApresentacao?: string | null; ano?: number | null } & Record<string, unknown>;
+    detalheFetchedAt: string;
+    resumoFetchedAt: string;
+    /** Instante da relatoria; omitido quando a resposta não traz relator. */
+    relatoriaFetchedAt?: string;
+  },
+) {
+  const base = baseUrl.replace(/\/$/, "");
+  const dataset_id = `codigoMateria=${a.codigoMateria}`;
+  const fieldSources: FieldSource[] = [
+    {
+      fields: Object.keys(a.detalhe),
+      source_url: `${base}/processo/${a.idProcesso}`,
+      dataset_id,
+      retrieved_at: a.detalheFetchedAt,
+    },
+    { fields: ["ementa"], source_url: `${base}/processo`, dataset_id, retrieved_at: a.resumoFetchedAt },
+  ];
+  if (a.relatoriaFetchedAt !== undefined) {
+    fieldSources.push({
+      fields: ["relator"],
+      source_url: `${base}/processo/relatoria`,
+      dataset_id,
+      retrieved_at: a.relatoriaFetchedAt,
+    });
+  }
+  return provenanceFor("SENADO_LEGIS", baseUrl, `/processo/${a.idProcesso}`, {
+    dataset_id,
+    reference_period: a.detalhe.dataApresentacao || (a.detalhe.ano ? String(a.detalhe.ano) : undefined),
+    retrieved_at: a.detalheFetchedAt,
+    field_sources: fieldSources,
+  });
+}
+
 async function resolveProcesso(
   codigoMateria: number,
   baseUrl: string,
@@ -317,7 +367,8 @@ export function registerMateriasTools(server: SenadoToolHost, baseUrl: string) {
         // secao === "detalhe" (padrão) — funde 3 endpoints numa só resposta, então a
         // proveniência ganha granularidade por-campo (field_sources): a fonte de topo é o
         // detalhe (/processo/{id}); a `ementa` vem do resumo (/processo) e o `relator` da
-        // relatoria (/processo/relatoria), cada um com o seu retrieved_at real.
+        // relatoria (/processo/relatoria), cada um com o seu retrieved_at real; o do topo é
+        // o mais antigo dos três (ver `provenanceMateriaDetalhe`).
         const [resumoRes, relatoriasRes] = await Promise.all([
           resolveProcesso(params.codigoMateria, baseUrl),
           cachedFetchWithMeta(
@@ -336,24 +387,13 @@ export function registerMateriasTools(server: SenadoToolHost, baseUrl: string) {
         );
         const detalhe = parseProcessoDetalhe(detalheRes as any);
         const relator = pickRelatorAtual(ensureArray(relatoriasRes?.value));
-        const base = baseUrl.replace(/\/$/, "");
-        const dataset_id = `codigoMateria=${params.codigoMateria}`;
-        const fieldSources: FieldSource[] = [
-          { fields: ["ementa"], source_url: `${base}/processo`, dataset_id, retrieved_at: resumoRes.fetchedAt },
-        ];
-        if (relator) {
-          fieldSources.push({
-            fields: ["relator"],
-            source_url: `${base}/processo/relatoria`,
-            dataset_id,
-            retrieved_at: relatoriasRes?.fetchedAt,
-          });
-        }
-        const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/processo/${resumo.id}`, {
-          dataset_id,
-          reference_period: detalhe.dataApresentacao || (detalhe.ano ? String(detalhe.ano) : undefined),
-          retrieved_at: fetchedAt,
-          field_sources: fieldSources,
+        const prov = provenanceMateriaDetalhe(baseUrl, {
+          codigoMateria: params.codigoMateria,
+          idProcesso: resumo.id,
+          detalhe,
+          detalheFetchedAt: fetchedAt,
+          resumoFetchedAt: resumoRes.fetchedAt,
+          relatoriaFetchedAt: relator ? relatoriasRes?.fetchedAt : undefined,
         });
         return resultWithProvenance({
           ...detalhe,

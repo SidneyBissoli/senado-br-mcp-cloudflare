@@ -42,7 +42,7 @@ import {
   ESTRUTURA_VINTAGE,
   type CasamentoAproximado,
 } from "../estrutura/resolver.js";
-import { withFieldSources } from "../utils/provenance.js";
+import { withFieldSources, type Provenance } from "../utils/provenance.js";
 
 /** Parse a civil-servant list item (snake_case). */
 export function parseServidor(s: any) {
@@ -394,6 +394,37 @@ export function particionarPorUnidade(
   };
 }
 
+/**
+ * Proveniência de `senado_servidores` com `subordinadasA`: a classificação cruza a folha
+ * (fonte administrativa, buscada/cacheada nesta chamada — `prov`) com o organograma (fonte
+ * institucional, snapshot extraído do portal em `ESTRUTURA_VINTAGE` e embutido no bundle).
+ *
+ * O `retrieved_at` do snapshot é o instante REAL da extração no portal (o crawler o grava
+ * em `extraidoEm`), não uma data de build — então fica: zerá-lo para `null` diria "não sei
+ * quando foi extraído", o que é falso, e trocá-lo pelo instante da folha diria que o
+ * organograma foi lido agora, o que também é. Com ele, o topo passa a ser o mais antigo
+ * das duas (derivado pelo adaptador, contrato §3), e a folha entra como sub-fonte própria
+ * para que o seu instante não suma do bloco. Antes da 3.17.0 o topo era o da folha, mais
+ * novo que o snapshot — com a v1.2 ligada, a lib lançaria e a tool cairia.
+ */
+export function provenanceServidoresSubordinadas(prov: Provenance, situacao: string): Provenance {
+  return withFieldSources(prov, [
+    {
+      fields: ["servidores", "total", "count", "naoClassificados", "afastadosOuEmTransito"],
+      source_url: prov.source_url,
+      dataset_id: `servidores; situacao=${situacao}`,
+      retrieved_at: prov.retrieved_at,
+    },
+    {
+      fields: ["subordinadasA", "total", "naoClassificados"],
+      source_url: provenanceEstrutura().source_url,
+      dataset_id: "estrutura-organizacional",
+      reference_period: ESTRUTURA_VINTAGE.slice(0, 10),
+      retrieved_at: ESTRUTURA_VINTAGE,
+    },
+  ]);
+}
+
 export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: string) {
   // P1. senado_servidores
   server.tool(
@@ -438,15 +469,7 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
             return toolError(`Unidade '${params.subordinadasA}' não encontrada na estrutura organizacional.${dica}`, "nao_encontrado");
           }
           const { sob, naoClassificados, afastadosOuEmTransito } = particionarPorUnidade(lista, indice, alvo.cod);
-          // A classificação cruza a folha (fonte administrativa) com o organograma (fonte institucional).
-          const provComEstrutura = withFieldSources(prov, [
-            {
-              fields: ["subordinadasA", "total", "naoClassificados"],
-              source_url: provenanceEstrutura().source_url,
-              dataset_id: "estrutura-organizacional",
-              retrieved_at: ESTRUTURA_VINTAGE,
-            },
-          ]);
+          const provComEstrutura = provenanceServidoresSubordinadas(prov, situacao);
           return resultWithProvenance({
             situacao,
             subordinadasA: { sigla: alvo.sigla, nome: alvo.nome },
