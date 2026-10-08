@@ -38,6 +38,26 @@ export function parseValorBR(v: unknown): number {
   return parseBRL(v);
 }
 
+/**
+ * Data de POSIÇÃO do feed, do `Last-Modified` da resposta, em AAAA-MM-DD no
+ * horário de Brasília. As despesas são ACUMULADAS no exercício até essa data
+ * (uma linha por ação, sem mês: em 08/10/2026 o exercício 2026 trazia empenhado
+ * abaixo da dotação), e o corpo não a traz — sem ela, "2026" no `data_vintage`
+ * não dizia até quando. Cabeçalho ausente ou ilegível → null.
+ */
+export function posicaoDoFeed(lastModified: string | null | undefined): string | null {
+  if (!lastModified) return null;
+  const t = Date.parse(lastModified);
+  if (!Number.isFinite(t)) return null;
+  return new Date(t - 3 * 3600_000).toISOString().slice(0, 10);
+}
+
+/** `data_vintage` do feed: exercício pedido (se houver) e a data de posição. */
+export function vintageDoFeed(ano: number | undefined, posicao: string | null): string | undefined {
+  if (posicao === null) return ano ? String(ano) : undefined;
+  return ano ? `${ano} (posição de ${posicao})` : `posição de ${posicao}`;
+}
+
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 /** Normalize a despesa item (decimal-comma strings → numbers). */
@@ -213,7 +233,7 @@ export function registerOrcamentoSenadoTools(server: SenadoToolHost) {
   // S1. senado_execucao_orcamentaria
   server.tool(
     "senado_execucao_orcamentaria",
-    "Execução orçamentária do Senado: despesas (dotação, empenhado, liquidado, pago; desde 2013) ou receitas próprias (previstas e arrecadadas; desde 2012). Para maior/menor/média/mediana/distribuição/ranking ('quanto o Senado pagou/arrecadou com X', 'maior grupo de despesa') use `estatisticas=true`: SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma decrescente (grupos[0]=maior). A coluna de valor analisada é escolhida automaticamente conforme o `tipo`; o resultado já traz o rótulo legível dela em `campoAnalisado`. Retorna `{ tipo, modo, ano, totalLinhas, ... }`: nos modos agregados, `agregado[]` com `{ chave, ...valores }` ordenado por valor; em `detalhe`, `despesas[]`/`receitas[]` limitado por `limite` (padrão 100, com `aviso` ao truncar). Use `tipo=despesas` com `modo` por-ano/por-acao/por-grupo/por-fonte e `tipo=receitas` com por-origem; filtre por `ano` para reduzir o volume antes de pedir `detalhe`. Única ferramenta de orçamento interno do Senado; não confundir com `senado_orcamento_parlamentar` (emendas/ofícios parlamentares ao orçamento da União).",
+    "Execução orçamentária do Senado: despesas (dotação, empenhado, liquidado, pago; desde 2013) ou receitas próprias (previstas e arrecadadas; desde 2012). Para maior/menor/média/mediana/distribuição/ranking ('quanto o Senado pagou/arrecadou com X', 'maior grupo de despesa') use `estatisticas=true`: SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma decrescente (grupos[0]=maior). A coluna de valor analisada é escolhida automaticamente conforme o `tipo`; o resultado já traz o rótulo legível dela em `campoAnalisado`. Retorna `{ tipo, modo, ano, totalLinhas, ... }`: nos modos agregados, `agregado[]` com `{ chave, ...valores }` ordenado por valor; em `detalhe`, `despesas[]`/`receitas[]` limitado por `limite` (padrão 100, com `aviso` ao truncar). Use `tipo=despesas` com `modo` por-ano/por-acao/por-grupo/por-fonte e `tipo=receitas` com por-origem; filtre por `ano` para reduzir o volume antes de pedir `detalhe`. O que cada número é: nas despesas, dotação/empenhado/liquidado/pago são ACUMULADOS no exercício até a data de posição do arquivo (o `data_vintage` da proveniência diz qual) — o exercício corrente é parcial e cresce; nas receitas, `arrecadada` é o valor do mês e `prevista` vem lançada inteira no mês 1. São os valores que o Senado publica na data de posição; lançamentos podem ser corrigidos depois. Única ferramenta de orçamento interno do Senado; não confundir com `senado_orcamento_parlamentar` (emendas/ofícios parlamentares ao orçamento da União).",
     {
       tipo: z.enum(["despesas", "receitas"]).optional().default("despesas").describe("despesas = dotação e execução; receitas = receitas próprias"),
       ano: z.number().int().min(2012).max(2100).optional().describe("Filtrar por exercício financeiro"),
@@ -230,15 +250,28 @@ export function registerOrcamentoSenadoTools(server: SenadoToolHost) {
         const modo = params.modo ?? "por-ano";
         const limite = params.limite ?? 100;
         const feedPath = tipo === "despesas" ? PATH_DESPESAS : PATH_RECEITAS;
-        const { value: bruto, fetchedAt } = await cachedFetchWithMeta(
+        // O valor em cache leva o corpo E o Last-Modified; `v: 2` na chave para
+        // não ler uma entrada antiga, que guardava só o corpo.
+        const { value: feed, fetchedAt } = await cachedFetchWithMeta(
           "senado_execucao_orcamentaria",
-          { tipo },
+          { tipo, v: 2 },
           CACHE_STATIC,
-          () => upstreamFetch(feedPath, {}, FINANCEIRO_BASE, { noJsonSuffix: true }),
+          async () => {
+            let lastModified: string | null = null;
+            const corpo = await upstreamFetch(feedPath, {}, FINANCEIRO_BASE, {
+              noJsonSuffix: true,
+              onHeaders: (h) => {
+                lastModified = h.get("last-modified");
+              },
+            });
+            return { corpo, lastModified };
+          },
         );
+        const bruto = (feed as { corpo: unknown }).corpo;
+        const posicao = posicaoDoFeed((feed as { lastModified?: string | null }).lastModified);
         const prov = provenanceFor("SENADO_ORCAMENTO_EXEC", FINANCEIRO_BASE, feedPath, {
           dataset_id: `tipo=${tipo}`,
-          reference_period: params.ano ? String(params.ano) : undefined,
+          reference_period: vintageDoFeed(params.ano, posicao),
           retrieved_at: fetchedAt,
         });
 
