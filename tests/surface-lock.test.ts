@@ -22,10 +22,12 @@ import {
   CABECALHOS_MCP,
   capturarSuperficie,
   comHost,
+  conferirMetaDoServerJson,
   conferirSecao,
   corpoDoPedido,
   ipDaSonda,
   medirSemToken,
+  modoEscrita,
   sondaSemToken,
 } from "@sbissoli/mcp-surface";
 import { describe, expect, it } from "vitest";
@@ -61,7 +63,8 @@ const envs: Record<string, Env> = {
 
 // Organograma empacotado (src/estrutura): `tools/call` sem ir à rede do Senado,
 // e a tool existe nos dois perfis.
-const sonda = sondaSemToken({ name: "senado_estrutura_organizacional", arguments: { unidade: "DGER" } });
+const chamada = { name: "senado_estrutura_organizacional", arguments: { unidade: "DGER" } };
+const sonda = sondaSemToken(chamada);
 const rotas = [DEFAULT_MCP_ROUTE, SELF_MCP_ROUTE, OPENAI_APP_LEGACY_MCP_ROUTE, OPENAI_APP_MCP_ROUTE].map(r => `POST ${r}`);
 
 const medirBorda = () =>
@@ -105,4 +108,16 @@ describe("surface.lock.json", () => {
     const v = conferirSecao(trava, "semToken", m, versao);
     expect(v.ok, v.mensagem).toBe(true);
   }, 60_000);
+
+  // A impressão digital vai ao MCP Registry com a versão (_meta publisher-provided,
+  // SPEC.md do @sbissoli/mcp-surface), para o CLIENTE conferir na primeira
+  // conexão. Publica-se o perfil `full`, que é o servido no endpoint do
+  // server.json (`/mcp`); o `openai-app` não está nos `remotes`. Sem este teste,
+  // `surface:lock` regravaria a trava e o server.json seguiria publicando o sha
+  // antigo. Fora do modo de escrita: no `surface:lock` este arquivo roda ANTES do
+  // `mcp-surface registro`, que é quem grava o bloco a partir da trava nova.
+  it.skipIf(modoEscrita())("o server.json publica a impressão digital da trava (o que o registro mostra ao cliente)", () => {
+    const v = conferirMetaDoServerJson(`${raiz}server.json`, trava, { perfil: "full", chamada });
+    expect(v.ok, v.mensagem).toBe(true);
+  });
 });
