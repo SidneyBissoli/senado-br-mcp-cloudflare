@@ -1,6 +1,6 @@
 /**
  * Vetor A — Proveniência no payload, contrato do portfólio (pacote
- * `@sbissoli/mcp-provenance` 0.3.0: contrato v1.2 publicado, v1.1 emitida por padrão).
+ * `@sbissoli/mcp-provenance`; a versão EMITIDA é `provenanceContext.contractVersion`).
  *
  * pt-BR adapter over `@sbissoli/mcp-provenance`: o modelo canônico, os modos
  * (`concise`/`detailed`), o determinismo de serialização, o fuso e o rodapé vivem no
@@ -14,14 +14,17 @@
  *  - v1.0 (release 3.5.0): `structuredContent.provenance` e o espelho em `_meta`
  *    passam a ser a projeção **concise** do contrato, com `null` explícito quando
  *    desconhecido (antes: campos opcionais omitidos).
- *  - v1.1 (release 3.11.0, a que este servidor EMITE — `contractVersion` default do
- *    pacote): o concise tem exatamente 7 chaves — `source`, `source_url`,
+ *  - v1.1 (release 3.11.0): o concise tem 7 chaves fixas — `source`, `source_url`,
  *    `data_vintage` (ex-`reference_period`), `retrieved_at`, `citation`, `license` e
  *    `retrieval` (diagnóstico medido da ida à origem, ou `null`).
- *  - v1.2 (aceita pelos schemas desde o pacote 0.3.0, NÃO ligada aqui): acrescenta ao
- *    concise a chave opcional `field_sources` (sub-fontes por campo; item com
- *    `served_from_cache` opcional). O `outputSchema` já a declara; ligar
- *    `contractVersion: "1.2"` é um passo separado.
+ *  - v1.2 (EMITIDA desde a release 3.17.0): acrescenta ao concise a chave opcional
+ *    `field_sources` (sub-fontes por campo), só nas respostas que fundem recortes. Com
+ *    ela a lib COBRA que o `retrieved_at` do topo seja o mais antigo entre as sub-fontes
+ *    (lança `ProvenanceContractError`, o que derrubaria a tool) — por isso o adaptador
+ *    o deriva por construção (`oldestRetrievedAt`), nunca a tool à mão.
+ *  - v1.3 (declarada pelo `outputSchema` desde a 3.17.0, ainda NÃO emitida): `notices`,
+ *    `derived`/`derivation_note` e `revision`. A `revision` já é informada aqui, por
+ *    fonte (`SOURCES`), e a lib a descarta enquanto o servidor emitir 1.2.
  *  - O rodapé de texto segue a redação fixada do contrato: linha de fonte
  *    ("Fonte: … · url · dados de … · extraído em …"), linha de licença e o aviso ao
  *    leitor de que a referência completa pode ser solicitada na própria conversa.
@@ -63,9 +66,10 @@ export const provenanceContext = createProvenanceContext({
   locale: "pt-BR",
   timezone: { offset: "-03:00", label: "horário de Brasília" },
   defaultMode: "concise",
+  contractVersion: "1.2",
 });
 
-/** Envelope canônico v1.0 (pós-validação). */
+/** Envelope canônico do contrato (pós-validação). */
 export type Provenance = CanonicalProvenance;
 
 const BRASILIA = provenanceContext.timezone;
@@ -122,16 +126,60 @@ interface ExtraInput {
   retrieval?: RetrievalInput | null;
 }
 
-const extraToCanonical = (extra: ExtraInput = {}) => ({
-  ...(extra.dataset_id !== undefined ? { dataset: extra.dataset_id } : {}),
-  ...(extra.reference_period !== undefined ? { data_vintage: extra.reference_period } : {}),
-  ...(extra.retrieved_at !== undefined ? { retrieved_at: extra.retrieved_at } : {}),
-  ...(extra.api_version !== undefined ? { api_version: extra.api_version } : {}),
-  ...(extra.field_sources !== undefined
-    ? { field_sources: extra.field_sources.map(toCanonicalFieldSource) }
-    : {}),
-  retrieval: extra.retrieval !== undefined ? extra.retrieval : currentRetrieval(),
-});
+/**
+ * `retrieved_at` do topo de uma resposta que funde sub-fontes: o MAIS ANTIGO entre o
+ * topo informado e as sub-fontes (contrato §3, "nada aqui é mais velho que isto"). A
+ * partir da v1.2 a lib lança `ProvenanceContractError` se o topo for mais novo que
+ * alguma sub-fonte — e o erro derruba a tool. Derivar aqui, no único ponto por onde
+ * passam todas as `field_sources`, torna a regra verdadeira por construção: nenhuma
+ * tool escolhe o instante do topo à mão. Sub-fonte sem instante (`undefined`/`null`)
+ * não conta; sem topo informado, o mais antigo das sub-fontes substitui o "agora" que
+ * o builder usaria (que seria mais novo que elas).
+ */
+export function oldestRetrievedAt(
+  top: string | undefined,
+  fieldSources: ReadonlyArray<{ retrieved_at?: string | null }> | undefined,
+): string | undefined {
+  let oldest = top;
+  let oldestMs = top !== undefined ? Date.parse(top) : Number.NaN;
+  for (const fs of fieldSources ?? []) {
+    if (fs.retrieved_at == null) continue;
+    const ms = Date.parse(fs.retrieved_at);
+    if (Number.isNaN(ms)) continue;
+    if (oldest === undefined || Number.isNaN(oldestMs) || ms < oldestMs) {
+      oldest = fs.retrieved_at;
+      oldestMs = ms;
+    }
+  }
+  return oldest;
+}
+
+const extraToCanonical = (extra: ExtraInput = {}) => {
+  const retrieved_at = oldestRetrievedAt(extra.retrieved_at, extra.field_sources);
+  return {
+    ...(extra.dataset_id !== undefined ? { dataset: extra.dataset_id } : {}),
+    ...(extra.reference_period !== undefined ? { data_vintage: extra.reference_period } : {}),
+    ...(retrieved_at !== undefined ? { retrieved_at } : {}),
+    ...(extra.api_version !== undefined ? { api_version: extra.api_version } : {}),
+    ...(extra.field_sources !== undefined
+      ? { field_sources: extra.field_sources.map(toCanonicalFieldSource) }
+      : {}),
+    retrieval: extra.retrieval !== undefined ? extra.retrieval : currentRetrieval(),
+  };
+};
+
+/**
+ * Situação de revisão por fonte (contrato v1.3, `revision`; decisão do dono de 08/10/2026:
+ * `current` em todas as fontes do senado, `final` em nenhuma — só com prova da fonte).
+ * A `note` só repete o que o servidor JÁ diz nas instructions (`src/app-surface.ts`) sobre
+ * os dados administrativos; nas demais fontes não há texto publicado, então `null`.
+ * Enquanto o servidor emitir a v1.2 a lib descarta o campo do fio — fica no canônico.
+ */
+const REVISAO_VIGENTE = { status: "current", note: null } as const;
+const REVISAO_ADMINISTRATIVA = {
+  status: "current",
+  note: "Dados administrativos são os que o Senado publica no instante da extração e podem ser corrigidos depois.",
+} as const;
 
 /** Metadados estáticos por fonte upstream. source_url é montado por chamada (endpoint real). */
 export const SOURCES = {
@@ -141,6 +189,7 @@ export const SOURCES = {
     citation:
       "Fonte: Senado Federal, Portal de Dados Abertos (Legislativo) — legis.senado.leg.br/dadosabertos.",
     license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
+    revision: REVISAO_VIGENTE,
   },
   /** API administrativa — adm.senado.gov.br/adm-dadosabertos (CEAPS, folha, contratos…). */
   SENADO_ADM: {
@@ -148,6 +197,7 @@ export const SOURCES = {
     citation:
       "Fonte: Senado Federal, Portal de Dados Abertos (Administrativo) — adm.senado.gov.br/adm-dadosabertos.",
     license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
+    revision: REVISAO_ADMINISTRATIVA,
   },
   /** Portal institucional — estrutura organizacional (www12.senado.leg.br/institucional/estrutura). */
   SENADO_INSTITUCIONAL: {
@@ -155,12 +205,14 @@ export const SOURCES = {
     citation:
       "Fonte: Senado Federal, Portal Institucional — Estrutura Organizacional (www12.senado.leg.br/institucional/estrutura).",
     license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
+    revision: REVISAO_VIGENTE,
   },
   /** Portal e-Cidadania — www12.senado.leg.br/ecidadania. */
   ECIDADANIA: {
     source: "Senado Federal — Portal e-Cidadania",
     citation: "Fonte: Senado Federal, Portal e-Cidadania — www12.senado.leg.br/ecidadania.",
     license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
+    revision: REVISAO_VIGENTE,
   },
   /** Feed de execução orçamentária/financeira — www.senado.gov.br/bi-arqs/Arquimedes/Financeiro. */
   SENADO_ORCAMENTO_EXEC: {
@@ -168,6 +220,7 @@ export const SOURCES = {
     citation:
       "Fonte: Senado Federal — Dados Abertos Orçamentários (Arquimedes/Financeiro) — senado.gov.br.",
     license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
+    revision: REVISAO_ADMINISTRATIVA,
   },
   /** Acervo histórico de votos das consultas e-Cidadania — CSV Arquimedes (bi-arqs/.../ecidadania). */
   ECIDADANIA_ARQUIMEDES: {
@@ -175,6 +228,7 @@ export const SOURCES = {
     citation:
       "Fonte: Senado Federal — e-Cidadania, acervo de votos por matéria/UF (Arquimedes/DadosAbertos) — senado.gov.br.",
     license: "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.",
+    revision: REVISAO_VIGENTE,
   },
 } as const;
 
@@ -201,13 +255,16 @@ export function buildProvenance(input: {
   api_version?: string;
   field_sources?: FieldSource[];
   retrieval?: RetrievalInput | null;
+  /** Situação de revisão (v1.3) — passe a da fonte (`SOURCES.X.revision`). */
+  revision?: { status: "current" | "provisional" | "final"; note: string | null } | null;
 }): Provenance {
-  const { source, source_url, citation, license, ...extra } = input;
+  const { source, source_url, citation, license, revision, ...extra } = input;
   return provenanceContext.build({
     source,
     source_url,
     citation,
     license,
+    ...(revision !== undefined ? { revision } : {}),
     ...extraToCanonical(extra),
   });
 }
@@ -272,13 +329,16 @@ export function provenanceArquimedesVotos(
  */
 export function withFieldSources(prov: Provenance, fieldSources: FieldSource[]): Provenance {
   if (fieldSources.length === 0) return prov;
+  // O topo passa a ser o mais antigo entre ele e as sub-fontes (ver `oldestRetrievedAt`).
+  const retrieved_at = oldestRetrievedAt(prov.retrieved_at, fieldSources) ?? prov.retrieved_at;
   return provenanceContext.build({
     ...prov,
+    retrieved_at,
     field_sources: fieldSources.map(toCanonicalFieldSource),
   } as ProvenanceInput);
 }
 
-/** Rodapé de texto (contrato v1.0): fonte · url · vintage · extração, licença e aviso ao leitor. */
+/** Rodapé de texto do contrato: fonte · url · vintage · extração, licença e aviso ao leitor. */
 export const provenanceFooter = (p: Provenance | Provenance[]): string =>
   provenanceContext.footer(p);
 
