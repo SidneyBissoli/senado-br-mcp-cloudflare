@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseValorBR, parseDespesa, parseReceita, agregarDespesas, estatisticasExecucao } from "../../src/tools/orcamento-senado.js";
+import { parseValorBR, parseDespesa, parseReceita, agregarDespesas, estatisticasExecucao, posicaoDoFeed, vintageDoFeed } from "../../src/tools/orcamento-senado.js";
 
 describe("parseValorBR", () => {
   it("parses Brazilian decimal strings", () => {
@@ -136,5 +136,24 @@ describe("estatisticasExecucao", () => {
     expect(out.distribuicao).toBeDefined();
     expect(out.aviso).toMatch(/O agrupamento solicitado não se aplica a despesas/);
     expect(out.aviso).not.toMatch(/agruparPor|'origem'|tipo=/);
+  });
+});
+
+// Despesas são ACUMULADAS no exercício até a data de posição do feed, que só
+// vem no Last-Modified (medido em 08/10/2026: "Wed, 07 Oct 2026 16:33:40 GMT").
+describe("posicaoDoFeed / vintageDoFeed", () => {
+  it("lê o Last-Modified em AAAA-MM-DD no horário de Brasília", () => {
+    expect(posicaoDoFeed("Wed, 07 Oct 2026 16:33:40 GMT")).toBe("2026-10-07");
+    // 01:00 GMT ainda é o dia anterior em Brasília
+    expect(posicaoDoFeed("Thu, 08 Oct 2026 01:00:00 GMT")).toBe("2026-10-07");
+    expect(posicaoDoFeed(null)).toBeNull();
+    expect(posicaoDoFeed("ontem")).toBeNull();
+  });
+
+  it("o vintage diz o exercício E até quando", () => {
+    expect(vintageDoFeed(2026, "2026-10-07")).toBe("2026 (posição de 2026-10-07)");
+    expect(vintageDoFeed(undefined, "2026-10-07")).toBe("posição de 2026-10-07");
+    expect(vintageDoFeed(2026, null)).toBe("2026");
+    expect(vintageDoFeed(undefined, null)).toBeUndefined();
   });
 });

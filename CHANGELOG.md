@@ -6,6 +6,36 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.16.0] - 2026-10-08
+
+O que cada número é, e até quando. Um leitor do artigo do bcb no dev.to (Daniel
+Oliveira, sobre os dados XBRL da SEC) apontou que o período de cada número precisa vir
+com ele, inclusive quando ele é acumulado no ano, e que o servidor tem de dizer se o
+número pode ser revisto. Medido aqui, contra os feeds do Arquimedes:
+
+### Fixed
+
+- **`senado_execucao_orcamentaria`: o `data_vintage` não dizia até quando.** As despesas
+  são uma linha por ação no exercício, com dotação, empenhado, liquidado e pago
+  ACUMULADOS até a data de posição do arquivo (em 08/10/2026 o exercício 2026 trazia
+  empenhado abaixo da dotação); o corpo não traz a data, e o vintage dizia só "2026".
+  Agora ele traz a posição lida do `Last-Modified` do feed, em horário de Brasília:
+  `2026 (posição de 2026-10-07)`. O `upstreamFetch` ganhou o gancho opcional
+  `onHeaders`; o valor em cache passa a guardar corpo + `Last-Modified` (chave nova
+  `v: 2`, para não ler entrada antiga sem a data).
+
+### Changed
+
+- A descrição de `senado_execucao_orcamentaria` diz o que cada número é: despesas
+  acumuladas no exercício até a posição (o exercício corrente é parcial e cresce);
+  `arrecadada` é o valor do mês e `prevista` vem lançada inteira no mês 1. A hipótese de
+  previsão anual repetida por mês (somada 12 vezes) foi medida e NEGADA.
+- `senado_remuneracoes_servidores`: o `campo` padrão diz que a remuneração bruta é
+  calculada por este servidor, como soma das 7 verbas.
+- `instructions`: dados administrativos (CEAPS, remunerações, execução) são os que o
+  Senado publica no instante da extração e podem ser corrigidos depois.
+- Superfície declarada nova: trava, `server.json` e `lhm.plugin.json` regravados.
+
 ## [3.15.3] - 2026-10-07
 
 A impressão digital da superfície passa a ir **na entrada do MCP Registry**, para o

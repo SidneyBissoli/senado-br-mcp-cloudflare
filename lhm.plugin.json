@@ -2,7 +2,7 @@
   "identifier": "sidneybissoli-senado-br-mcp-cloudflare",
   "name": "Dados Abertos Senado BR - MCP",
   "icon": "🏛️",
-  "version": "3.15.3",
+  "version": "3.16.0",
   "description": "Independent MCP server for Brazilian Federal Senate open data — read-only tools, prompts and resources across the legislative process, Senate administration and the e-Cidadania portal. Cloudflare Workers, Streamable HTTP, no auth. Not affiliated with or endorsed by the Senate, OpenAI or ChatGPT. Responses in pt-BR. MIT licensed.",
   "author": "Sidney da Silva Pereira Bissoli",
   "authorUrl": "https://github.com/SidneyBissoli",
@@ -10069,7 +10069,7 @@
         "readOnlyHint": true,
         "title": "Execução orçamentária do Senado"
       },
-      "description": "Execução orçamentária do Senado: despesas (dotação, empenhado, liquidado, pago; desde 2013) ou receitas próprias (previstas e arrecadadas; desde 2012). Para maior/menor/média/mediana/distribuição/ranking ('quanto o Senado pagou/arrecadou com X', 'maior grupo de despesa') use `estatisticas=true`: SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma decrescente (grupos[0]=maior). A coluna de valor analisada é escolhida automaticamente conforme o `tipo`; o resultado já traz o rótulo legível dela em `campoAnalisado`. Retorna `{ tipo, modo, ano, totalLinhas, ... }`: nos modos agregados, `agregado[]` com `{ chave, ...valores }` ordenado por valor; em `detalhe`, `despesas[]`/`receitas[]` limitado por `limite` (padrão 100, com `aviso` ao truncar). Use `tipo=despesas` com `modo` por-ano/por-acao/por-grupo/por-fonte e `tipo=receitas` com por-origem; filtre por `ano` para reduzir o volume antes de pedir `detalhe`. Única ferramenta de orçamento interno do Senado; não confundir com `senado_orcamento_parlamentar` (emendas/ofícios parlamentares ao orçamento da União).",
+      "description": "Execução orçamentária do Senado: despesas (dotação, empenhado, liquidado, pago; desde 2013) ou receitas próprias (previstas e arrecadadas; desde 2012). Para maior/menor/média/mediana/distribuição/ranking ('quanto o Senado pagou/arrecadou com X', 'maior grupo de despesa') use `estatisticas=true`: SEM `agruparPor` = distribuição das linhas (min/máx/média/mediana/percentis) + top/bottom; COM `agruparPor` = grupos ranqueados por soma decrescente (grupos[0]=maior). A coluna de valor analisada é escolhida automaticamente conforme o `tipo`; o resultado já traz o rótulo legível dela em `campoAnalisado`. Retorna `{ tipo, modo, ano, totalLinhas, ... }`: nos modos agregados, `agregado[]` com `{ chave, ...valores }` ordenado por valor; em `detalhe`, `despesas[]`/`receitas[]` limitado por `limite` (padrão 100, com `aviso` ao truncar). Use `tipo=despesas` com `modo` por-ano/por-acao/por-grupo/por-fonte e `tipo=receitas` com por-origem; filtre por `ano` para reduzir o volume antes de pedir `detalhe`. O que cada número é: nas despesas, dotação/empenhado/liquidado/pago são ACUMULADOS no exercício até a data de posição do arquivo (o `data_vintage` da proveniência diz qual) — o exercício corrente é parcial e cresce; nas receitas, `arrecadada` é o valor do mês e `prevista` vem lançada inteira no mês 1. São os valores que o Senado publica na data de posição; lançamentos podem ser corrigidos depois. Única ferramenta de orçamento interno do Senado; não confundir com `senado_orcamento_parlamentar` (emendas/ofícios parlamentares ao orçamento da União).",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,
@@ -17493,7 +17493,7 @@
           },
           "campo": {
             "default": "bruto",
-            "description": "Verba analisada quando estatisticas=true (padrão: remuneração bruta). O resultado traz o rótulo legível em campoAnalisado.",
+            "description": "Verba analisada quando estatisticas=true (padrão: remuneração bruta — calculada por este servidor como soma das 7 verbas: básica, vantagens pessoais, função comissionada, gratificação natalina, horas extras, outras eventuais e abono de permanência). O resultado traz o rótulo legível em campoAnalisado.",
             "enum": [
               "bruto",
               "liquida",

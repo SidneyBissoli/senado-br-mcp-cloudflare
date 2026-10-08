@@ -492,7 +492,7 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
       mes: z.number().int().min(1).max(12).describe("Mês de referência"),
       modo: z.enum(["resumo", "detalhe"]).optional().default("resumo").describe("resumo = totais por tipo de folha (padrão); detalhe = composição individual. Ignorado quando estatisticas=true"),
       estatisticas: z.boolean().optional().default(false).describe("Computa estatísticas (min/máx/média/mediana/percentis) + ranking top/bottom sobre a folha inteira. Use para 'quem ganhou mais/menos', 'média', 'ranking'"),
-      campo: z.enum(CAMPOS_ESTATISTICA).optional().default("bruto").describe("Verba analisada quando estatisticas=true (padrão: remuneração bruta). O resultado traz o rótulo legível em campoAnalisado."),
+      campo: z.enum(CAMPOS_ESTATISTICA).optional().default("bruto").describe("Verba analisada quando estatisticas=true (padrão: remuneração bruta — calculada por este servidor como soma das 7 verbas: básica, vantagens pessoais, função comissionada, gratificação natalina, horas extras, outras eventuais e abono de permanência). O resultado traz o rótulo legível em campoAnalisado."),
       consolidarPorServidor: z.boolean().optional().default(true).describe("Soma as linhas (Normal+Suplementar) do mesmo servidor antes das estatísticas (padrão: true). Ignorado — forçado a false — quando agruparPor está definido"),
       agruparPor: z.enum(["tipoFolha"]).optional().describe("Quando estatisticas=true, devolve estatísticas por grupo (só `tipoFolha`); implica dados por linha (não consolidados)"),
       topN: z.number().int().min(1).max(100).optional().default(10).describe("Tamanho das listas top/bottom quando estatisticas=true (padrão: 10, máx: 100)"),

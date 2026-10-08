@@ -281,6 +281,13 @@ export interface UpstreamOptions {
    * `/discurso/texto-integral/{codigo}`.
    */
   text?: boolean;
+  /**
+   * Recebe os cabeçalhos da resposta bem-sucedida, antes do parse. Para a fonte
+   * que só diz a data de POSIÇÃO do dado no `Last-Modified` — os feeds de
+   * execução orçamentária do Arquimedes, cujos valores são acumulados no
+   * exercício até essa data e não trazem a data no corpo.
+   */
+  onHeaders?: (headers: Headers) => void;
 }
 
 /**
@@ -382,6 +389,7 @@ export async function upstreamFetch(
     inFlight--;
   }
   retriesFeitos(call.attempts - attemptsBefore);
+  options.onHeaders?.(response.headers);
 
   // Check response size via Content-Length header
   const contentLength = response.headers.get("content-length");
