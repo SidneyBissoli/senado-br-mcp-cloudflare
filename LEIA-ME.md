@@ -266,6 +266,21 @@ npm run deploy
 | `/health` | GET | Health check — retorna `ok` (sempre público) |
 | `/metrics` | GET | Contadores em JSON: requisições, chamadas de ferramentas, acertos/erros de cache, chamadas/retries/erros de upstream, falhas de auth (sempre público) |
 
+### Impressão digital da superfície, conferível pelo registro
+
+Cada release publica, na sua entrada do [MCP Registry](https://registry.modelcontextprotocol.io),
+o sha256 da superfície que `/mcp` serve (`initialize`, tools, resources e prompts do perfil
+`full`) e quais métodos respondem ali sem credencial. Mudar a superfície sem subir a versão
+reprova o build; a impressão digital no registro deixa o cliente conferir o mesmo do lado dele.
+Forma canônica e procedimento:
+[SPEC.md do `@sbissoli/mcp-surface`](https://github.com/SidneyBissoli/mcp-br-commons/blob/main/packages/mcp-surface/SPEC.md)
+(em inglês). Para conferir por conta própria (Node 18+, sem dependência):
+
+```sh
+curl -sO https://raw.githubusercontent.com/SidneyBissoli/mcp-br-commons/main/packages/mcp-surface/exemplos/verify.mjs
+node verify.mjs io.github.SidneyBissoli/senado-br-mcp-cloudflare
+```
+
 ## Exemplos de requisição MCP
 
 Todas as requisições vão para `POST /mcp` no formato JSON-RPC 2.0.

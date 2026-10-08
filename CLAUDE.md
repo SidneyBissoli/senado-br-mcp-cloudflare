@@ -88,6 +88,17 @@ na superfície: `npm run build && node scripts/dump-surface.mjs --stdio` e diff
 contra o baseline vigente; toda diferença precisa ser deliberada e listada no
 CHANGELOG. Ver `baselines/README.md`.
 
+**Impressão digital no MCP Registry (desde 3.15.3).** O `surface.lock.json`
+(`@sbissoli/mcp-surface`, `tests/surface-lock.test.ts`) trava os dois perfis e
+quem responde sem token; o `server.json` leva, sob `_meta` publisher-provided
+(forma `mcp-surface/1`), o sha do perfil `full` e o mapa sem token de `POST /mcp`,
+para o CLIENTE conferir pela entrada do registro. `npm run surface:lock` grava o
+bloco (`mcp-surface registro --perfil full`), o teste da trava reprova
+`server.json` defasado, e o `publish.yml` termina com `mcp-surface
+conferir-registro` (registro × ar, sem ler a trava). Mudou a superfície:
+`npm version <nível> --no-git-tag-version` → `npm run surface:lock` → commitar
+trava e `server.json` juntos.
+
 ## Evals
 
 `evals/` holds a tool-selection eval: 47 pt-BR fixtures (`evals/fixtures/queries.ts`) scored against the live catalog (`evals/catalog.ts` rebuilds it by running the registrars — keep its `GROUPS` in sync with `src/server.ts`). The catalog/fixtures/scorer core runs offline inside `npm test`. The live run (`npx tsx evals/run.ts`) calls the Anthropic Messages API with `ANTHROPIC_API_KEY` and **bills API usage separately from any Claude subscription — never run or suggest it unless the user explicitly asks**; there is a zero-API-cost alternative via Claude Code subagents (script + instructions in `docs/_local/eval-subagentes/`).

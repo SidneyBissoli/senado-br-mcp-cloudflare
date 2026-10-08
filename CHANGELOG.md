@@ -6,6 +6,29 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.15.3] - 2026-10-07
+
+A impressão digital da superfície passa a ir **na entrada do MCP Registry**, para o
+cliente conferir. **Nenhuma tool, resource, prompt ou resposta muda** — os dois
+perfis conferem com a trava de 3.15.0 (`full` `49fa35df0589`, `openai-app`
+`586481daa5c8`), medido ao vivo em 07/10/2026. Esta release também leva as
+limpezas de dependência que estavam em Unreleased (abaixo).
+
+### Added
+
+- `server.json` publica, sob `_meta["io.modelcontextprotocol.registry/publisher-provided"]`,
+  o sha256 da superfície declarada do perfil `full` (o servido em `/mcp`, o endpoint
+  dos `remotes`) e quem responde sem credencial ali (forma `mcp-surface/1`, SPEC.md
+  do `@sbissoli/mcp-surface` 0.5.0). Um host pode recalcular na primeira conexão e
+  recusar, ou pedir nova aprovação, se divergir. Ideia de dois leitores do artigo do
+  replay (Mike Dabydeen e Valentina Koniukhova, dev.to).
+- `npm run surface:lock` grava o bloco (`mcp-surface registro --perfil full`); o teste
+  da trava reprova `server.json` que publique outra coisa que a trava.
+- `publish.yml`: depois do `mcp-publisher publish`, `mcp-surface conferir-registro` lê
+  a entrada desta versão no registro e a compara com o endpoint no ar, como um
+  cliente faria, sem ler a trava.
+- README / LEIA-ME: como conferir por conta própria (`verify.mjs`, sem dependência).
+
 ### Removed
 
 - **devDependency `@modelcontextprotocol/sdk` (v1).** Declarada desde o commit

@@ -270,6 +270,21 @@ npm run deploy
 | `/metrics` | GET | JSON counters: requests, tool calls, cache hits/misses, upstream calls/retries/errors, auth failures (always public) |
 | `/.well-known/mcp/server-card.json` | GET | MCP server card for directory scanners (Smithery): `serverInfo`, `authentication`, tools/resources/prompts — generated from the live `full` profile by `@sbissoli/mcp-surface/card` (always public) |
 
+### Surface fingerprint, checkable from the registry
+
+Every release publishes, in its [MCP Registry](https://registry.modelcontextprotocol.io) entry,
+the sha256 of the surface `/mcp` serves (`initialize`, tools, resources, prompts of the `full`
+profile) and which methods answer there without a credential. A surface change without a
+version bump fails the build; the fingerprint in the registry lets a client check the same thing
+on its own side. Canonical form and procedure:
+[SPEC.md of `@sbissoli/mcp-surface`](https://github.com/SidneyBissoli/mcp-br-commons/blob/main/packages/mcp-surface/SPEC.md).
+To check it yourself (Node 18+, no dependencies):
+
+```sh
+curl -sO https://raw.githubusercontent.com/SidneyBissoli/mcp-br-commons/main/packages/mcp-surface/exemplos/verify.mjs
+node verify.mjs io.github.SidneyBissoli/senado-br-mcp-cloudflare
+```
+
 ## MCP Request Examples
 
 All requests go to `POST /mcp` with JSON-RPC 2.0 format.

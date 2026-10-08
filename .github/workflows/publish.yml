@@ -220,3 +220,13 @@ jobs:
       - name: Publicar no registro
         if: steps.check.outputs.found == 'true'
         run: ./mcp-publisher publish
+      # A conferência que um CLIENTE faria: lê a entrada desta versão no
+      # registro (o _meta publisher-provided que o server.json levou) e a compara
+      # com o endpoint no ar (perfil `full`, /mcp), sem ler o surface.lock.json.
+      # Versão do pacote tirada do lock, para o npx não pegar outra e sem
+      # `npm ci` neste job.
+      - name: Registro = endpoint no ar (como um cliente conferiria)
+        if: steps.check.outputs.found == 'true'
+        run: |
+          V=$(node -p "require('./package-lock.json').packages['node_modules/@sbissoli/mcp-surface'].version")
+          npx --yes "@sbissoli/mcp-surface@$V" conferir-registro
