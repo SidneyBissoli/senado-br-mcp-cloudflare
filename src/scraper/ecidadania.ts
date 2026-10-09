@@ -323,9 +323,53 @@ export async function obterConsultaInternal(id: number) {
 
 // ── Ideias ─────────────────────────────────────────────────────────────
 
+/**
+ * Prazo de apoios de uma ideia, em dias. O portal diz que "as ideias ficam abertas por 4 meses"
+ * (`/comofuncionaideia`) e publica UMA data só, a "Data limite para receber 20.000 apoios" — é ela
+ * que o campo `dataPublicacao` guarda (nome histórico; ver `AVISO_DATAS_IDEIA`). Medido em
+ * 09/10/2026 contra a data de proposição de 4 ideias convertidas (base de Pereira, UFPE 2024,
+ * github.com/theus0307/dissertacao): a data limite é SEMPRE a proposição + 120 dias exatos —
+ * SUG 49/2017 12/09/2017 → 10/01/2018; SUG 43/2019 14/10/2019 → 11/02/2020; SUG 49/2019
+ * 31/07/2019 → 28/11/2019; SUG 21/2020 02/06/2020 → 30/09/2020. "4 meses" de calendário erraria
+ * em 2 a 3 dias em todas.
+ */
+export const IDEIA_PRAZO_APOIOS_DIAS = 120;
+
+/**
+ * Aviso que acompanha as datas de ideia na saída das tools. Vai JUNTO do dado, não só na descrição
+ * da tool: a descrição é lida uma vez, o dado é lido a cada resposta, e a data limite de uma ideia
+ * aberta cai no futuro — sem o aviso o leitor conclui que o servidor errou.
+ */
+export const AVISO_DATAS_IDEIA =
+  "dataPublicacao é a data limite para receber os 20.000 apoios, a única data que o portal publica (o nome do campo é histórico); " +
+  "por isso cai no futuro em ideia aberta. dataCriacaoEstimada = data limite menos 120 dias, calculada pelo servidor " +
+  "(regra dos 4 meses do portal, medida em 4 ideias de 2017-2020): é estimativa, não dado da fonte.";
+
+/**
+ * Data provável de criação da ideia: data limite (ISO) − `IDEIA_PRAZO_APOIOS_DIAS`. Aritmética em UTC
+ * sobre o dia civil (sem fuso, sem horário de verão). Data ausente ou inválida → null, nunca uma data
+ * inventada (o `Date` "corrige" 31/02 para 03/03; aqui isso é rejeitado).
+ */
+export function estimarCriacaoIdeia(dataLimite: string | null | undefined): string | null {
+  if (!dataLimite) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dataLimite);
+  if (!m) return null;
+  const [ano, mes, dia] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const t = Date.UTC(ano, mes - 1, dia);
+  const d = new Date(t);
+  if (Number.isNaN(t) || d.getUTCFullYear() !== ano || d.getUTCMonth() !== mes - 1 || d.getUTCDate() !== dia) return null;
+  return new Date(t - IDEIA_PRAZO_APOIOS_DIAS * 86_400_000).toISOString().slice(0, 10);
+}
+
 export interface IdeiaResumo {
   id: number; titulo: string; apoios: number;
-  /** Detail-enriched fields (v2). Null until the detail crawl fills them. */
+  /**
+   * Detail-enriched fields (v2). Null until the detail crawl fills them.
+   * `dataPublicacao` is the "Data limite para receber 20.000 apoios" — the only date the portal
+   * publishes — NOT the creation date; the name is historical and kept for byte-compatibility of the
+   * persisted payload (and of dataset v2). The tools derive `dataCriacaoEstimada` from it at output
+   * time (`estimarCriacaoIdeia`); never add it here, or every row would read as "changed".
+   */
   dataPublicacao: string | null;
   /** UF do cidadão autor (SEM nome — conteúdo de cidadão). */
   autorUf: string | null;
