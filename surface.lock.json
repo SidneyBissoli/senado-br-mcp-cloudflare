@@ -1,8 +1,8 @@
 {
   "$comentario": "Impressão digital da superfície (@sbissoli/mcp-surface). Não editar à mão: `npm run surface:lock` regrava, e só aceita superfície nova sob versão nova.",
   "declarada": {
-    "versao": "3.17.0",
-    "sha256": "8a711e1cde22ccd6eb72b9b6208b0e4bbccf7f89893d10e11e2ac11bd0895f3c",
+    "versao": "3.18.0",
+    "sha256": "95eca7e7de3cf74fac3b80b29cb0102e17c244b860f14f644375572a8357f2fe",
     "conteudo": {
       "full": {
         "initialize": {
@@ -8674,7 +8674,7 @@
               "readOnlyHint": true,
               "title": "Listar ideias legislativas"
             },
-            "description": "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1; ideias em andamento atualizadas diariamente; ~118 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`/`removida` — `removida` = retirada do portal, que não a publica mais; o corpus guarda o último estado conhecido) e `url` (`autor` e `dataPublicacao` só aparecem no detalhe, vêm `null` aqui). Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
+            "description": "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1; ideias em andamento atualizadas diariamente; ~118 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias, avisoDatas }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`/`removida` — `removida` = retirada do portal, que não a publica mais; o corpus guarda o último estado conhecido), `url` e os campos lidos do detalhe quando o backfill já passou por ela (`dataPublicacao`, `autorUf`, `descricao`, `plConvertido`; `null` até lá). **Datas:** `dataPublicacao` é a DATA LIMITE para receber os 20.000 apoios — a única data que o portal publica; o nome do campo é histórico — e por isso cai no futuro em ideia aberta; `dataCriacaoEstimada` (= data limite − 120 dias, a regra dos 4 meses do portal) é calculada pelo servidor e é estimativa, não dado da fonte; `avisoDatas` repete isso na resposta. Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
             "inputSchema": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
@@ -9994,7 +9994,7 @@
               "readOnlyHint": true,
               "title": "Detalhar ideia legislativa"
             },
-            "description": "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `status`, `autor`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). O campo `comentarios` vem `null`: a página de ideia não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
+            "description": "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `dataCriacaoEstimada`, `avisoDatas`, `status`, `autor`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). **Datas:** `dataPublicacao` é a DATA LIMITE para receber os 20.000 apoios — a única data que o portal publica; o nome do campo é histórico — e por isso cai no futuro em ideia aberta; `dataCriacaoEstimada` (= data limite − 120 dias, a regra dos 4 meses do portal) é calculada pelo servidor e é estimativa, não dado da fonte. O campo `comentarios` vem `null`: a página de ideia não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
             "inputSchema": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
@@ -34397,7 +34397,7 @@
               "readOnlyHint": true,
               "title": "Listar ideias legislativas"
             },
-            "description": "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1; ideias em andamento atualizadas diariamente; ~118 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`/`removida` — `removida` = retirada do portal, que não a publica mais; o corpus guarda o último estado conhecido) e `url` (`autor` e `dataPublicacao` só aparecem no detalhe, vêm `null` aqui). Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
+            "description": "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1; ideias em andamento atualizadas diariamente; ~118 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias, avisoDatas }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`/`removida` — `removida` = retirada do portal, que não a publica mais; o corpus guarda o último estado conhecido), `url` e os campos lidos do detalhe quando o backfill já passou por ela (`dataPublicacao`, `autorUf`, `descricao`, `plConvertido`; `null` até lá). **Datas:** `dataPublicacao` é a DATA LIMITE para receber os 20.000 apoios — a única data que o portal publica; o nome do campo é histórico — e por isso cai no futuro em ideia aberta; `dataCriacaoEstimada` (= data limite − 120 dias, a regra dos 4 meses do portal) é calculada pelo servidor e é estimativa, não dado da fonte; `avisoDatas` repete isso na resposta. Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
             "inputSchema": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
@@ -35304,7 +35304,7 @@
               "readOnlyHint": true,
               "title": "Detalhar ideia legislativa"
             },
-            "description": "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `status`, `autor`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). O campo `comentarios` vem `null`: a página de ideia não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
+            "description": "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `dataCriacaoEstimada`, `avisoDatas`, `status`, `autor`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). **Datas:** `dataPublicacao` é a DATA LIMITE para receber os 20.000 apoios — a única data que o portal publica; o nome do campo é histórico — e por isso cai no futuro em ideia aberta; `dataCriacaoEstimada` (= data limite − 120 dias, a regra dos 4 meses do portal) é calculada pelo servidor e é estimativa, não dado da fonte. O campo `comentarios` vem `null`: a página de ideia não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
             "inputSchema": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,

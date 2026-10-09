@@ -47,7 +47,46 @@ import {
   formatIntBR,
   buildConsultaDetalheResult,
   OBTER_CONSULTA_DATAS_AVISO,
+  estimarCriacaoIdeia,
+  IDEIA_PRAZO_APOIOS_DIAS,
+  AVISO_DATAS_IDEIA,
 } from "../../src/tools/ecidadania.js";
+
+// 09/10/2026: `dataPublicacao` de ideia é a "Data limite para receber 20.000 apoios" — a única data
+// da página — e aparecia como publicação, no futuro para ideia aberta. A criação é derivada:
+// limite − 120 dias, medido exato em 4 ideias convertidas (proposição na base de Pereira/UFPE 2024).
+describe("estimarCriacaoIdeia (data limite − 120 dias)", () => {
+  it("o prazo é de 120 dias, não 4 meses de calendário", () => {
+    expect(IDEIA_PRAZO_APOIOS_DIAS).toBe(120);
+  });
+
+  it("reproduz as 4 ideias medidas (limite → proposição)", () => {
+    expect(estimarCriacaoIdeia("2018-01-10")).toBe("2017-09-12"); // SUG 49/2017
+    expect(estimarCriacaoIdeia("2020-02-11")).toBe("2019-10-14"); // SUG 43/2019
+    expect(estimarCriacaoIdeia("2019-11-28")).toBe("2019-07-31"); // SUG 49/2019
+    expect(estimarCriacaoIdeia("2020-09-30")).toBe("2020-06-02"); // SUG 21/2020
+  });
+
+  it("atravessa ano bissexto e virada de ano sem fuso", () => {
+    expect(estimarCriacaoIdeia("2024-03-01")).toBe("2023-11-02"); // 2024 é bissexto (29/02 conta)
+    expect(estimarCriacaoIdeia("2026-01-05")).toBe("2025-09-07");
+  });
+
+  it("ausente ou inválida → null, nunca data inventada", () => {
+    expect(estimarCriacaoIdeia(null)).toBeNull();
+    expect(estimarCriacaoIdeia(undefined)).toBeNull();
+    expect(estimarCriacaoIdeia("")).toBeNull();
+    expect(estimarCriacaoIdeia("10/01/2018")).toBeNull();
+    expect(estimarCriacaoIdeia("2026-02-31")).toBeNull(); // o Date "corrigiria" para 03/03
+    expect(estimarCriacaoIdeia("2026-13-01")).toBeNull();
+  });
+
+  it("o aviso diz o que cada data é e que a criação é estimativa", () => {
+    expect(AVISO_DATAS_IDEIA).toMatch(/data limite/);
+    expect(AVISO_DATAS_IDEIA).toMatch(/120 dias/);
+    expect(AVISO_DATAS_IDEIA).toMatch(/estimativa/);
+  });
+});
 
 describe("buildConsultaDetalheResult (achado #10)", () => {
   // A página visualizacaomateria não publica o período da consulta; o aviso

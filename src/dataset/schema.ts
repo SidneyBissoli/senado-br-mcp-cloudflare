@@ -262,12 +262,12 @@ const ideiasSchema: EntitySchema = {
     {
       name: "dataPublicacao",
       type: "date",
-      description: "Data limite para atingir os 20.000 apoios (única âncora temporal upstream da ideia).",
+      description: "Data limite para atingir os 20.000 apoios (única âncora temporal upstream da ideia). NÃO é a data de criação: o nome é histórico, mantido pela compatibilidade do esquema.",
       sourceEndpoint: EP_IDEIAS_DETALHE,
-      sourceField: "página de detalhe: bloco \"Data limite\" (DD/MM/AAAA)",
+      sourceField: "página de detalhe: bloco \"Data limite para receber 20.000 apoios\" (DD/MM/AAAA)",
       operationalization:
-        "extractDate sobre a data-limite exibida no detalhe (visualizacaoideia) → ISO YYYY-MM-DD; lido no crawl de detalhe. Reaberto na v2 (era null por design na v1).",
-      caveat: "Detail-only (v2): null nas ideias ainda não enriquecidas pelo backfill de detalhe (censura à esquerda residual nesses campos até o backfill completar).",
+        "extractDate sobre a data-limite exibida no detalhe (visualizacaoideia) → ISO YYYY-MM-DD; lido no crawl de detalhe. Reaberto na v2 (era null por design na v1). Data provável de criação = esta data − 120 dias (regra dos 4 meses do portal; medida exata em 4 ideias convertidas de 2017-2020 contra a base de Pereira, UFPE 2024) — derivação do leitor, não variável do dataset.",
+      caveat: "Em ideia aberta esta data está no futuro (é o fim do prazo de apoios). Detail-only (v2): null nas ideias ainda não enriquecidas pelo backfill de detalhe (censura à esquerda residual nesses campos até o backfill completar).",
     },
     {
       name: "autorUf",

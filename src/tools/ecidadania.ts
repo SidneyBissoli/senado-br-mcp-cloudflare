@@ -34,6 +34,9 @@ import {
   obterIdeiaInternal,
   listarEventosInternal,
   obterEventoInternal,
+  estimarCriacaoIdeia,
+  AVISO_DATAS_IDEIA,
+  IDEIA_PRAZO_APOIOS_DIAS,
   type ConsultaResumo,
   type IdeiaResumo,
   type EventoResumo,
@@ -42,6 +45,9 @@ import {
 
 // Re-export the scraper's pure/IO helpers so existing unit tests keep importing them from here.
 export {
+  estimarCriacaoIdeia,
+  AVISO_DATAS_IDEIA,
+  IDEIA_PRAZO_APOIOS_DIAS,
   ECIDADANIA_BASE,
   parseBrNum,
   extractId,
@@ -245,7 +251,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
   // G5. senado_ecidadania_listar_ideias
   server.tool(
     "senado_ecidadania_listar_ideias",
-    "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1; ideias em andamento atualizadas diariamente; ~118 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`/`removida` — `removida` = retirada do portal, que não a publica mais; o corpus guarda o último estado conhecido) e `url` (`autor` e `dataPublicacao` só aparecem no detalhe, vêm `null` aqui). Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
+    "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1; ideias em andamento atualizadas diariamente; ~118 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias, avisoDatas }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`/`removida` — `removida` = retirada do portal, que não a publica mais; o corpus guarda o último estado conhecido), `url` e os campos lidos do detalhe quando o backfill já passou por ela (`dataPublicacao`, `autorUf`, `descricao`, `plConvertido`; `null` até lá). **Datas:** `dataPublicacao` é a DATA LIMITE para receber os 20.000 apoios — a única data que o portal publica; o nome do campo é histórico — e por isso cai no futuro em ideia aberta; `dataCriacaoEstimada` (= data limite − 120 dias, a regra dos 4 meses do portal) é calculada pelo servidor e é estimativa, não dado da fonte; `avisoDatas` repete isso na resposta. Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
     {
       status: z.enum(["aberta", "encerrada", "convertida", "removida", "todas"]).optional().describe("Filtrar por status (`removida` = retirada do portal)"),
       ordenarPor: z.enum(["apoios", "data", "comentarios"]).optional().describe("Campo para ordenação (apoios é o disponível no corpus; data/comentarios só no detalhe)"),
@@ -268,8 +274,15 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
         const limite = params.limite ?? 20;
         const offset = ((params.pagina ?? 1) - 1) * limite;
         arr = arr.slice(offset, offset + limite);
+        // Derivado na SAÍDA, nunca no corpus: `IdeiaResumo` é o payload persistido (hash estável).
+        const ideias = arr.map((i) => ({ ...i, dataCriacaoEstimada: estimarCriacaoIdeia(i.dataPublicacao) }));
         return resultWithProvenance(
-          { count: arr.length, ideias: tagUntrustedList("ideias", arr as unknown as Record<string, unknown>[]), meta },
+          {
+            count: ideias.length,
+            ideias: tagUntrustedList("ideias", ideias as unknown as Record<string, unknown>[]),
+            avisoDatas: AVISO_DATAS_IDEIA,
+            meta,
+          },
           provLista("/principalideia", "ideias", meta),
         );
       } catch (e) { return ecidadaniaError(e); }
@@ -279,7 +292,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
   // G6. senado_ecidadania_obter_ideia
   server.tool(
     "senado_ecidadania_obter_ideia",
-    "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `status`, `autor`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). O campo `comentarios` vem `null`: a página de ideia não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
+    "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `dataCriacaoEstimada`, `avisoDatas`, `status`, `autor`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). **Datas:** `dataPublicacao` é a DATA LIMITE para receber os 20.000 apoios — a única data que o portal publica; o nome do campo é histórico — e por isso cai no futuro em ideia aberta; `dataCriacaoEstimada` (= data limite − 120 dias, a regra dos 4 meses do portal) é calculada pelo servidor e é estimativa, não dado da fonte. O campo `comentarios` vem `null`: a página de ideia não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
     { id: z.number().int().positive().describe("ID da ideia legislativa") },
     async (params) => {
       try {
@@ -288,7 +301,15 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
         );
         writeDetalheThrough(db, ctx, "ideias", params.id, r as Record<string, unknown>);
         // OBS-9: idea pages have no comments resource — serve null instead of a spurious 0.
-        const detalhe = { ...(r as Record<string, unknown>), comentarios: null };
+        // Datas: `dataCriacaoEstimada` e `avisoDatas` entram SÓ na resposta (não no write-through acima,
+        // que guarda o que a página diz).
+        const ideia = r as Awaited<ReturnType<typeof obterIdeiaInternal>>;
+        const detalhe = {
+          ...(r as Record<string, unknown>),
+          dataCriacaoEstimada: estimarCriacaoIdeia(ideia.dataPublicacao),
+          comentarios: null,
+          avisoDatas: AVISO_DATAS_IDEIA,
+        };
         return resultWithProvenance(
           tagUntrustedFields("ideias", detalhe),
           provDetalhe(r, `/visualizacaoideia?id=${params.id}`, `ideia=${params.id}`, fetchedAt),

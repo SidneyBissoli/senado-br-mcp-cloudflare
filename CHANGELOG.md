@@ -6,6 +6,28 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.18.0] - 2026-10-09
+
+### Fixed
+
+- **A "data de publicação" de uma ideia legislativa era a data limite dos apoios.** A
+  página de detalhe do e-Cidadania publica UMA data só, "Data limite para receber 20.000
+  apoios", e é ela que o campo `dataPublicacao` sempre guardou (o dicionário do dataset já
+  dizia isso; as descrições de `senado_ecidadania_listar_ideias` e
+  `senado_ecidadania_obter_ideia` não). Para ideia aberta a data cai no futuro (ideia
+  223676 → `2026-11-04`) e o leitor conclui que o servidor errou. Decisão do dono
+  (09/10/2026): manter o nome do campo — é o payload persistido do corpus e o esquema v2
+  do dataset no Zenodo — e dizer a verdade ao lado dele. As duas tools passam a devolver
+  `dataCriacaoEstimada` (data limite − 120 dias) e `avisoDatas` (o que cada data é, e que
+  a criação é estimativa); as descrições, o esquema do dataset (`src/dataset/schema.ts`),
+  o dicionário e as tabelas do README/LEIA-ME dizem o mesmo. O prazo é de **120 dias
+  exatos, não "4 meses" de calendário**: medido contra a data de proposição de 4 ideias
+  convertidas de 2017-2020 (base de Pereira, UFPE 2024) — 4 meses de calendário erraria em
+  2 a 3 dias em todas. A derivação (`estimarCriacaoIdeia`) é pura, em UTC, e devolve
+  `null` para data ausente ou inválida; o corpus e o write-through do detalhe não mudam
+  (o campo derivado entra só na resposta, para não reescrever ~118 mil linhas como
+  "alteradas"). Teste com as 4 ideias medidas, bissexto e datas inválidas.
+
 ## [3.17.0] - 2026-10-08
 
 Proveniência: tempo 2 do contrato v1.2 e tempo 1 do v1.3 (`@sbissoli/mcp-provenance`
