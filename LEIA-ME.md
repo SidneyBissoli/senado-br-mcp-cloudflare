@@ -33,6 +33,18 @@ Aponte um cliente para o endpoint e pergunte, em português:
 
 As respostas vêm ao vivo das APIs oficiais de dados abertos do Senado — valores exatos com procedência, não números chutados a partir do treino.
 
+## Comparação com as alternativas
+
+Outros servidores MCP brasileiros também tocam o Senado — o [mcp-brasil](https://github.com/Mcp-Brasil/mcp-brasil) e o [mcp-dados-br](https://github.com/lucianoon/mcp-dados-br) são agregadores multifonte, em que o Senado é uma fonte entre várias. A diferença está na cobertura e na forma de uso. Medido no código de cada um em 11/10/2026:
+
+| | Tools do Senado | Cobre | Onde roda |
+| --- | --- | --- | --- |
+| **senado-br-mcp** (este) | 69 | legislativo, administrativo (CEAPS, servidores, contratos, orçamento) e e-Cidadania, com proveniência em toda resposta | hospedado, sem instalar nem chave; ou `npx` |
+| [mcp-brasil](https://github.com/Mcp-Brasil/mcp-brasil) 0.14.0 | 26 | legislativo (senadores, matérias, votações de plenário, comissões, agenda) — e dezenas de outras fontes do governo | local ou auto-hospedado (Python) |
+| [mcp-dados-br](https://github.com/lucianoon/mcp-dados-br) 0.6.0 | 3 | senadores em exercício, lista de matérias, placar de votação — e IBGE, BCB, INMET, Câmara | local (Python) |
+
+**Prefira um agregador** quando a pergunta cruzar o Senado com a Câmara, o TSE ou o Portal da Transparência. **Prefira este servidor** para gastos (CEAPS), pessoal, contratos, orçamento, discursos, votações em comissão, vetos ou e-Cidadania — áreas que os outros não cobrem. Tabela completa por área, exemplos lado a lado e como remedir: [`docs/comparativo-alternativas.md`](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare/blob/master/docs/comparativo-alternativas.md).
+
 ## Como usar (hospedado — sem configuração)
 
 Este é um servidor **remoto, hospedado e de acesso aberto**. Para usá-lo, aponte qualquer cliente MCP para o endpoint
