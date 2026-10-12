@@ -6,6 +6,20 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.18.1] - 2026-10-11
+
+### Documentation
+
+- **Comparativo com as alternativas.** `docs/comparativo-alternativas.md` mede, no código de
+  cada projeto em 11/10/2026, o que mcp-brasil (26 tools do Senado), mcp-dados-br (3),
+  mcp-senado e congressbr cobrem do Senado, área por área, ao lado das 69 tools daqui; traz
+  dois exemplos lado a lado com números reais, quando preferir cada um e como remedir.
+  README e LEIA-ME ganham a seção curta "Compared with the alternatives" / "Comparação com
+  as alternativas", com links absolutos (o README é a página do npm).
+- `package.json` ganha `keywords` (estava sem nenhuma).
+- Superfície inalterada (sem mudança em tools, resources ou prompts). O master também leva
+  `@sbissoli/mcp-surface` ^0.6.0 (dependência de desenvolvimento, #123).
+
 ## [3.18.0] - 2026-10-09
 
 ### Fixed

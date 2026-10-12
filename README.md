@@ -35,6 +35,18 @@ Point a client at the endpoint and ask in plain language — English or Portugue
 
 The answers come live from the Senate's official open-data APIs — exact figures with provenance, not numbers guessed from training data.
 
+## Compared with the alternatives
+
+Other Brazilian MCP servers also touch the Senate — [mcp-brasil](https://github.com/Mcp-Brasil/mcp-brasil) and [mcp-dados-br](https://github.com/lucianoon/mcp-dados-br) are multi-source aggregators in which the Senate is one source among many. The difference is coverage and how you run it. Measured in each one's source code on 2026-10-11:
+
+| | Senate tools | Covers | Where it runs |
+| --- | --- | --- | --- |
+| **senado-br-mcp** (this) | 69 | legislative, administrative (CEAPS, staff, contracts, budget) and e-Cidadania, with provenance on every answer | hosted, no install or key; or `npx` |
+| [mcp-brasil](https://github.com/Mcp-Brasil/mcp-brasil) 0.14.0 | 26 | legislative (senators, bills, floor votes, committees, agenda) — plus dozens of other government sources | local or self-hosted (Python) |
+| [mcp-dados-br](https://github.com/lucianoon/mcp-dados-br) 0.6.0 | 3 | sitting senators, bill list, vote tally — plus IBGE, BCB, INMET, Chamber of Deputies | local (Python) |
+
+**Pick an aggregator** when the question crosses the Senate with the Chamber of Deputies, the electoral court (TSE) or the Transparency Portal. **Pick this server** for expenses (CEAPS), staff, contracts, budget, speeches, committee votes, vetoes or e-Cidadania — areas the others don't cover. Full per-area table, side-by-side examples and how to re-measure (in Portuguese): [`docs/comparativo-alternativas.md`](https://github.com/SidneyBissoli/senado-br-mcp-cloudflare/blob/master/docs/comparativo-alternativas.md).
+
 ## Use it (hosted — no setup)
 
 This is a **remote, hosted, open-access** server. To use it, point any MCP client at the Streamable
