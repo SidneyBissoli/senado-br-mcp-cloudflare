@@ -51,7 +51,7 @@ import { upstreamFetch } from "../throttle/upstream.js";
 import { ensureArray } from "../utils/validation.js";
 import { provenanceExtras, provenanceFor, type Provenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC } from "../types.js";
-import { extractParlamentares, fetchSenadorDetalhe, parseSenadorResumo } from "./senadores.js";
+import { extractParlamentares, fetchSenadorDetalhe, parseSenadorResumo, provenanceSenadorDetalhe } from "./senadores.js";
 import { RootNotFoundError } from "../utils/upstream-parse.js";
 import { classifyThrown } from "../call-shape.js";
 import { fetchComissaoColegiado, parseComissaoItem, parseComissaoResumo } from "./comissoes.js";
@@ -281,12 +281,9 @@ function handlers(baseUrl: string) {
         if (e instanceof RootNotFoundError) return null;
         throw e;
       }
-      const { path, fetchedAt, detalhe } = detalheSenador;
+      const { detalhe } = detalheSenador;
       if (!detalhe.codigo) return null;
-      const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
-        dataset_id: `codigoParlamentar=${codigo}`,
-        retrieved_at: fetchedAt,
-      });
+      const prov = provenanceSenadorDetalhe(baseUrl, codigo, detalheSenador);
       return {
         document: {
           id,

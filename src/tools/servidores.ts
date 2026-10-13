@@ -406,14 +406,22 @@ export function particionarPorUnidade(
  * das duas (derivado pelo adaptador, contrato §3), e a folha entra como sub-fonte própria
  * para que o seu instante não suma do bloco. Antes da 3.17.0 o topo era o da folha, mais
  * novo que o snapshot — com a v1.2 ligada, a lib lançaria e a tool cairia.
+ *
+ * `folhaDoCache` é o `fromCache` da leitura da folha; o snapshot embutido não é cache nem
+ * busca, então a sub-fonte dele não diz (`served_from_cache: null`).
  */
-export function provenanceServidoresSubordinadas(prov: Provenance, situacao: string): Provenance {
+export function provenanceServidoresSubordinadas(
+  prov: Provenance,
+  situacao: string,
+  folhaDoCache?: boolean,
+): Provenance {
   return withFieldSources(prov, [
     {
       fields: ["servidores", "total", "count", "naoClassificados", "afastadosOuEmTransito"],
       source_url: prov.source_url,
       dataset_id: `servidores; situacao=${situacao}`,
       retrieved_at: prov.retrieved_at,
+      served_from_cache: folhaDoCache,
     },
     {
       fields: ["subordinadasA", "total", "naoClassificados"],
@@ -441,7 +449,7 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
     async (params) => {
       try {
         const situacao = params.situacao ?? "ativos";
-        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+        const { value: response, fetchedAt, fromCache } = await cachedFetchWithMeta(
           "senado_servidores",
           { situacao },
           CACHE_SEMI_STATIC,
@@ -469,7 +477,7 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
             return toolError(`Unidade '${params.subordinadasA}' não encontrada na estrutura organizacional.${dica}`, "nao_encontrado");
           }
           const { sob, naoClassificados, afastadosOuEmTransito } = particionarPorUnidade(lista, indice, alvo.cod);
-          const provComEstrutura = provenanceServidoresSubordinadas(prov, situacao);
+          const provComEstrutura = provenanceServidoresSubordinadas(prov, situacao, fromCache);
           return resultWithProvenance({
             situacao,
             subordinadasA: { sigla: alvo.sigla, nome: alvo.nome },

@@ -11,7 +11,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch } from "../throttle/adm.js";
 import { errorFrom, ensureArray } from "../utils/validation.js";
-import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { leituraDoCache, provenanceFor, resultWithProvenance, withFieldSources, type Provenance } from "../utils/provenance.js";
 import {
   computarEstatisticas,
   arredondarEstatisticas,
@@ -200,12 +200,16 @@ export function estatisticasSuprimento(
 /**
  * Build a `codigo -> nome` map of supridos for a year, from the registry (tipo=supridos, ~1 MB),
  * so `atos-concessao` statistics can identify the beneficiary by NAME instead of the internal code.
- * Cached by year; a fetch failure degrades to an empty map (entries fall back to name = null).
+ * Cached by year; a fetch failure degrades to an empty map (entries fall back to name = null)
+ * and no `leitura` — the names then come from nowhere, so there is no sub-source to declare.
  */
-export async function nomesSupridos(ano: number, admBaseUrl: string): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
+export async function nomesSupridos(
+  ano: number,
+  admBaseUrl: string,
+): Promise<{ nomes: Map<string, string>; leitura?: { fetchedAt: string; fromCache: boolean } }> {
+  const nomes = new Map<string, string>();
   try {
-    const { value } = await cachedFetchWithMeta(
+    const { value, fetchedAt, fromCache } = await cachedFetchWithMeta(
       "senado_suprimento_fundos_nomes",
       { ano },
       CACHE_STATIC,
@@ -213,12 +217,61 @@ export async function nomesSupridos(ano: number, admBaseUrl: string): Promise<Ma
     );
     for (const s of ensureArray(value) as any[]) {
       const cod = s?.codigo != null ? String(s.codigo) : null;
-      if (cod && s?.nome) map.set(cod, String(s.nome));
+      if (cod && s?.nome) nomes.set(cod, String(s.nome));
     }
+    return { nomes, leitura: { fetchedAt, fromCache } };
   } catch {
     // best-effort enrichment; the ranking still works without names
+    return { nomes };
   }
-  return map;
+}
+
+/**
+ * Which fields of the `atos-concessao` statistics carry the suprido's NAME: the groups when
+ * grouping by suprido; nothing when grouping by another (valid) dimension; top/bottom otherwise
+ * (no grouping, or an invalid grouping that falls back to the row distribution).
+ */
+export function camposComNomeDeSuprido(agruparPor: string | undefined): string[] {
+  if (agruparPor === "suprido") return ["grupos"];
+  if (agruparPor != null && CHAVES_POR_TIPO["atos-concessao"][agruparPor]) return [];
+  return ["top", "bottom"];
+}
+
+/**
+ * Proveniência de `senado_suprimento_fundos` com `estatisticas` em atos de concessão: os atos
+ * (`prov`, topo) são cruzados com o cadastro de supridos do ano (`/supridos/{ano}`, outra
+ * entrada de cache) para identificar cada beneficiário pelo NOME. Até a 3.18.1 o instante do
+ * cadastro era descartado. Agora, quando os nomes aparecem na resposta, os atos e o cadastro
+ * viram sub-fontes e o topo é o mais antigo (adaptador, contrato §3). Sem leitura do cadastro
+ * (falhou) ou sem campo com nome (agrupado por outra dimensão), o bloco fica o dos atos.
+ */
+export function provenanceSuprimentoComNomes(
+  prov: Provenance,
+  atos: { fromCache: boolean },
+  ano: number,
+  admBaseUrl: string,
+  nomes: { leitura?: { fetchedAt: string; fromCache: boolean } },
+  agruparPor: string | undefined,
+): Provenance {
+  const campos = camposComNomeDeSuprido(agruparPor);
+  if (!nomes.leitura || campos.length === 0) return prov;
+  return withFieldSources(prov, [
+    {
+      fields: agruparPor === "suprido" ? ["total", "totalGrupos", "grupos"] : ["total", "distribuicao", "top", "bottom"],
+      source_url: prov.source_url,
+      dataset_id: prov.dataset.id ?? undefined,
+      reference_period: String(ano),
+      retrieved_at: prov.retrieved_at,
+      served_from_cache: atos.fromCache,
+    },
+    {
+      fields: campos,
+      source_url: `${admBaseUrl.replace(/\/$/, "")}/api/v1${PATHS["supridos"](ano)}`,
+      dataset_id: `suprimento; tipo=supridos; ano=${ano}`,
+      reference_period: String(ano),
+      ...leituraDoCache(nomes.leitura),
+    },
+  ]);
 }
 
 export function registerSupridosTools(server: SenadoToolHost, admBaseUrl: string) {
@@ -245,7 +298,7 @@ export function registerSupridosTools(server: SenadoToolHost, admBaseUrl: string
       try {
         const tipo = params.tipo ?? "supridos";
         const path = PATHS[tipo](params.ano);
-        const { value: response, fetchedAt } = await cachedFetchWithMeta(
+        const { value: response, fetchedAt, fromCache } = await cachedFetchWithMeta(
           "senado_suprimento_fundos",
           { ano: params.ano, tipo },
           CACHE_STATIC,
@@ -276,14 +329,14 @@ export function registerSupridosTools(server: SenadoToolHost, admBaseUrl: string
             }, prov);
           }
           // atos-concessao: join the supridos registry so entries carry the beneficiary's NAME.
-          const nomePorCodigo = tipo === "atos-concessao" ? await nomesSupridos(params.ano, admBaseUrl) : undefined;
+          const nomes = tipo === "atos-concessao" ? await nomesSupridos(params.ano, admBaseUrl) : undefined;
           return resultWithProvenance({
             ano: params.ano,
             tipo,
             modo: "estatisticas",
             total: lista.length,
-            ...estatisticasSuprimento(lista, { tipo, campo: params.campo, agruparPor: params.agruparPor, topN: params.topN ?? 10, nomePorCodigo }),
-          }, prov);
+            ...estatisticasSuprimento(lista, { tipo, campo: params.campo, agruparPor: params.agruparPor, topN: params.topN ?? 10, nomePorCodigo: nomes?.nomes }),
+          }, nomes ? provenanceSuprimentoComNomes(prov, { fromCache }, params.ano, admBaseUrl, nomes, params.agruparPor) : prov);
         }
 
         return resultWithProvenance({

@@ -14,7 +14,15 @@ import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { errorFrom } from "../utils/validation.js";
-import { provenanceEcidadania, provenanceArquimedesVotos, resultWithProvenance } from "../utils/provenance.js";
+import {
+  leituraDoCache,
+  provenanceEcidadania,
+  provenanceArquimedesVotos,
+  resultWithProvenance,
+  withFieldSources,
+  type FieldSource,
+  type Provenance,
+} from "../utils/provenance.js";
 import { tagUntrustedFields, tagUntrustedList, neutralizeUntrustedText, sanitizeScrapedText } from "../utils/untrusted.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 import type { Env } from "../types.js";
@@ -95,6 +103,76 @@ export function buildConsultaDetalheResult(r: Record<string, unknown>): Record<s
   return { ...r, comentarios: null, aviso: OBTER_CONSULTA_DATAS_AVISO };
 }
 
+/** URL canônica do item raspado (nível 3) quando o scraper a expõe; senão o caminho de fallback. */
+function urlDoItem(item: unknown, fallbackPath: string): string {
+  const url = (item as { url?: unknown } | null)?.url;
+  return typeof url === "string" && url.startsWith("http") ? url : fallbackPath;
+}
+
+/**
+ * Sub-fonte lida do corpus em D1 (`resolveList`): o instante é o `lastScrapedAt` da meta, o
+ * mesmo que `provLista` põe no topo das listas; o D1 não é cache, então `served_from_cache`
+ * fica de fora (sai `null`).
+ */
+export function subFonteDoCorpus(pathOrUrl: string, dataset_id: string, meta: unknown, fields: string[]): FieldSource {
+  const ts = (meta as { lastScrapedAt?: unknown } | null)?.lastScrapedAt;
+  return {
+    fields,
+    source_url: provenanceEcidadania(pathOrUrl).source_url,
+    dataset_id,
+    ...(typeof ts === "string" && ts ? { retrieved_at: ts } : {}),
+  };
+}
+
+/**
+ * Proveniência de `senado_ecidadania_obter_evento`. O detalhe é raspado ao vivo (cache próprio),
+ * mas a página estática não lê a contagem de `comentarios` (carregada por AJAX): ela vem do
+ * corpus em D1, lido noutro instante. Até a 3.18.1 o topo era só o do detalhe; agora, quando o
+ * corpus dá a contagem, as duas leituras viram sub-fontes e o topo é o mais antigo (adaptador,
+ * contrato §3). Evento fora do corpus = `comentarios: null`, sem sub-fonte.
+ */
+export function provenanceEventoDetalhe(
+  item: Record<string, unknown>,
+  id: number,
+  leitura: { fetchedAt: string; fromCache: boolean },
+  corpusMeta?: unknown,
+): Provenance {
+  const dataset_id = `evento=${id}`;
+  const prov = provenanceEcidadania(urlDoItem(item, `/visualizacaoaudiencia?id=${id}`), {
+    dataset_id,
+    retrieved_at: leitura.fetchedAt,
+  });
+  if (corpusMeta === undefined) return prov;
+  return withFieldSources(prov, [
+    {
+      fields: Object.keys(item).filter((k) => k !== "comentarios"),
+      source_url: prov.source_url,
+      dataset_id,
+      ...leituraDoCache(leitura),
+    },
+    subFonteDoCorpus("/principalaudiencia", "eventos", corpusMeta, ["comentarios"]),
+  ]);
+}
+
+/**
+ * Proveniência de `senado_ecidadania_sugerir_tema_enquete`: as sugestões cruzam DOIS corpora
+ * do D1 (consultas e ideias), cada um com o seu `lastScrapedAt`. Até a 3.18.1 o topo levava só
+ * o das consultas e o das ideias era descartado; agora cada corpus é sub-fonte das mesmas
+ * contagens e o topo é o mais antigo (adaptador, contrato §3).
+ */
+export function provenanceSugestaoEnquete(consultasMeta: unknown, ideiasMeta: unknown): Provenance {
+  const campos = ["sugestoes", "count", "totalAnalisados", "totalQualificados"];
+  const ts = (consultasMeta as { lastScrapedAt?: unknown } | null)?.lastScrapedAt;
+  const prov = provenanceEcidadania("/principalmateria", {
+    dataset_id: "consultas+ideias",
+    retrieved_at: typeof ts === "string" && ts ? ts : undefined,
+  });
+  return withFieldSources(prov, [
+    subFonteDoCorpus("/principalmateria", "consultas", consultasMeta, campos),
+    subFonteDoCorpus("/principalideia", "ideias", ideiasMeta, campos),
+  ]);
+}
+
 // ══════════════════════════════════════════════════════════════════════════
 // Tool registration
 // ══════════════════════════════════════════════════════════════════════════
@@ -126,9 +204,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
   // Detalhes são raspados ao vivo (via cachedFetch): use a URL canônica do próprio item quando
   // o scraper a expõe (nível 3), com o fetchedAt do cache como retrieved_at.
   function provDetalhe(item: unknown, fallbackPath: string, dataset_id: string, fetchedAt: string) {
-    const url = (item as { url?: unknown } | null)?.url;
-    const alvo = typeof url === "string" && url.startsWith("http") ? url : fallbackPath;
-    return provenanceEcidadania(alvo, { dataset_id, retrieved_at: fetchedAt });
+    return provenanceEcidadania(urlDoItem(item, fallbackPath), { dataset_id, retrieved_at: fetchedAt });
   }
 
   function ecidadaniaError(e: unknown) {
@@ -380,29 +456,32 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
     { id: z.number().int().positive().describe("Identificador do evento (campo `id` de senado_ecidadania_listar_eventos)") },
     async (params) => {
       try {
-        const { value: r, fetchedAt } = await cachedFetchWithMeta("ecidadania_evento", { id: params.id }, CACHE_ON_DEMAND, () =>
+        const leitura = await cachedFetchWithMeta("ecidadania_evento", { id: params.id }, CACHE_ON_DEMAND, () =>
           obterEventoInternal(params.id),
         );
-        writeDetalheThrough(db, ctx, "eventos", params.id, r as Record<string, unknown>);
+        const r = leitura.value as Record<string, unknown>;
+        writeDetalheThrough(db, ctx, "eventos", params.id, r);
         // The static detail scrape can't read the AJAX-loaded comentarios count (always 0);
         // the corpus carries the canonical count from the AJAX fragment (estudo A3 — the
         // listing count is spurious, 0 in ~82%). Splice it in, or null when the event is not
         // in the corpus (unknown, not a spurious 0).
-        const detalhe = { ...(r as Record<string, unknown>) };
+        const detalhe = { ...r };
+        let corpusMeta: unknown;
         try {
-          const { items } = await resolveList(
+          const { items, meta } = await resolveList(
             db, "eventos", corpusStaleMaxMin(),
             () => listarEventosInternal({ limite: 100 }),
             undefined, CORPUS_RESOLVE,
           );
           const corpusItem = (items as EventoResumo[]).find((e) => e.id === params.id);
           detalhe.comentarios = corpusItem ? corpusItem.comentarios : null;
+          if (corpusItem) corpusMeta = meta;
         } catch {
           detalhe.comentarios = null;
         }
         return resultWithProvenance(
           tagUntrustedFields("eventos", detalhe),
-          provDetalhe(r, `/visualizacaoaudiencia?id=${params.id}`, `evento=${params.id}`, fetchedAt),
+          provenanceEventoDetalhe(r, params.id, leitura, corpusMeta),
         );
       } catch (e) { return ecidadaniaError(e); }
     },
@@ -489,7 +568,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
           totalQualificados: sugestoes.length,
           sugestoes: retornadas,
           meta: { consultas: cRes.meta, ideias: iRes.meta },
-        }, provLista("/principalmateria", "consultas+ideias", cRes.meta));
+        }, provenanceSugestaoEnquete(cRes.meta, iRes.meta));
       } catch (e) { return ecidadaniaError(e); }
     },
   );

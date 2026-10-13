@@ -13,7 +13,7 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray, normalizeText, safeInt } from "../utils/validation.js";
 import { digArrayRoot, digObjectRoot } from "../utils/upstream-parse.js";
-import { provenanceFor, resultWithProvenance, toBrasiliaIso } from "../utils/provenance.js";
+import { leituraDoCache, provenanceFor, resultWithProvenance, toBrasiliaIso } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
 export function parseSenadorResumo(parlamentar: any) {
@@ -225,7 +225,7 @@ export function matchesNome(s: { nome: string; nomeCompleto: string }, nome: str
  */
 export async function fetchSenadorDetalhe(codigoSenador: number, baseUrl: string) {
   const path = `/senador/${codigoSenador}`;
-  const { value: response, fetchedAt } = await cachedFetchWithMeta(
+  const { value: response, fetchedAt, fromCache } = await cachedFetchWithMeta(
     "senado_obter_senador",
     { codigo: codigoSenador },
     CACHE_ON_DEMAND,
@@ -253,9 +253,12 @@ export async function fetchSenadorDetalhe(codigoSenador: number, baseUrl: string
   // É também o único endpoint que carrega os `Exercicios`, de onde sai o
   // `emExercicio` — lista vazia (falha do sub-endpoint) vira `null`, não `false`.
   let mandatosBrutos: unknown[] = [];
+  // Leitura dos mandatos, só quando ela de fato deu os campos `mandatos`/`emExercicio`
+  // (falha = lista vazia e `null`, que não vêm de fonte nenhuma).
+  let mandatosLeitura: { fetchedAt: string; fromCache: boolean } | undefined;
   try {
     const mandatosPath = `/senador/${codigoSenador}/mandatos`;
-    const { value: mResp } = await cachedFetchWithMeta(
+    const { value: mResp, fetchedAt: mFetchedAt, fromCache: mFromCache } = await cachedFetchWithMeta(
       "senado_obter_senador_mandatos",
       { codigo: codigoSenador },
       CACHE_ON_DEMAND,
@@ -266,6 +269,7 @@ export async function fetchSenadorDetalhe(codigoSenador: number, baseUrl: string
       [["MandatoParlamentar", "Parlamentar", "Mandatos", "Mandato"]],
       "senado_obter_senador:mandatos",
     );
+    mandatosLeitura = { fetchedAt: mFetchedAt, fromCache: mFromCache };
   } catch {
     // sub-endpoint unavailable — keep the (empty) mandatos from the detail
   }
@@ -273,12 +277,62 @@ export async function fetchSenadorDetalhe(codigoSenador: number, baseUrl: string
   return {
     path,
     fetchedAt,
+    fromCache,
+    mandatosLeitura,
     detalhe: {
       ...detalhe,
       emExercicio: derivarEmExercicio(mandatosBrutos, hoje),
       mandatos: mandatosBrutos.map(parseMandato),
     },
   };
+}
+
+/** Campos do detalhe que vêm de `/senador/{codigo}/mandatos`, não do detalhe biográfico. */
+const CAMPOS_DOS_MANDATOS = ["mandatos", "emExercicio"];
+
+/**
+ * Proveniência de `senado_obter_senador` (e do `fetch` `senador:` do Deep Research, que
+ * renderiza o mesmo registro no texto do documento). O registro funde DUAS leituras, cada
+ * uma de uma entrada de cache própria: o detalhe biográfico (`/senador/{codigo}`, topo) e os
+ * mandatos (`/senador/{codigo}/mandatos`), de onde saem `mandatos` e `emExercicio`. Até a
+ * 3.18.1 o instante dos mandatos era descartado e o topo era o do detalhe — com os mandatos
+ * em cache desde antes, o bloco dizia que `emExercicio` fora lido mais recentemente do que
+ * foi. Com as duas como sub-fontes o topo passa a ser o mais antigo (adaptador, contrato §3).
+ * Mandatos que falharam não viram sub-fonte: a resposta leva `[]` e `null`, sem fonte.
+ */
+export function provenanceSenadorDetalhe(
+  baseUrl: string,
+  codigoSenador: number,
+  leitura: {
+    path: string;
+    fetchedAt: string;
+    fromCache: boolean;
+    mandatosLeitura?: { fetchedAt: string; fromCache: boolean };
+    /** Só as chaves importam: elas nomeiam os campos de cada sub-fonte. */
+    detalhe: Record<string, unknown>;
+  },
+) {
+  const dataset_id = `codigoParlamentar=${codigoSenador}`;
+  const topo = { dataset_id, retrieved_at: leitura.fetchedAt };
+  if (!leitura.mandatosLeitura) return provenanceFor("SENADO_LEGIS", baseUrl, leitura.path, topo);
+  const base = baseUrl.replace(/\/$/, "");
+  return provenanceFor("SENADO_LEGIS", baseUrl, leitura.path, {
+    ...topo,
+    field_sources: [
+      {
+        fields: Object.keys(leitura.detalhe).filter((k) => !CAMPOS_DOS_MANDATOS.includes(k)),
+        source_url: `${base}${leitura.path}`,
+        dataset_id,
+        ...leituraDoCache(leitura),
+      },
+      {
+        fields: CAMPOS_DOS_MANDATOS,
+        source_url: `${base}${leitura.path}/mandatos`,
+        dataset_id,
+        ...leituraDoCache(leitura.mandatosLeitura),
+      },
+    ],
+  });
 }
 
 export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) {
@@ -335,12 +389,9 @@ export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) 
     },
     async (params) => {
       try {
-        const { path, fetchedAt, detalhe } = await fetchSenadorDetalhe(params.codigoSenador, baseUrl);
-        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
-          dataset_id: `codigoParlamentar=${params.codigoSenador}`,
-          retrieved_at: fetchedAt,
-        });
-        return resultWithProvenance(detalhe, prov);
+        const leitura = await fetchSenadorDetalhe(params.codigoSenador, baseUrl);
+        const prov = provenanceSenadorDetalhe(baseUrl, params.codigoSenador, leitura);
+        return resultWithProvenance(leitura.detalhe, prov);
       } catch (e) {
         return errorFrom(e, "Senador não encontrado");
       }

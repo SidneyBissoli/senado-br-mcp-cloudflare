@@ -27,10 +27,15 @@ import {
   PROVENANCE_META_KEY,
   ATTRIBUTION_META_KEY,
   oldestRetrievedAt,
+  leituraDoCache,
 } from "../../src/utils/provenance.js";
 import { createProvenanceContext, ProvenanceContractError } from "@sbissoli/mcp-provenance";
 import { provenanceMateriaDetalhe } from "../../src/tools/materias.js";
 import { provenanceServidoresSubordinadas } from "../../src/tools/servidores.js";
+import { provenanceSenadorDetalhe } from "../../src/tools/senadores.js";
+import { provenanceReunioesComissao } from "../../src/tools/comissoes.js";
+import { camposComNomeDeSuprido, provenanceSuprimentoComNomes } from "../../src/tools/supridos.js";
+import { provenanceEventoDetalhe, provenanceSugestaoEnquete } from "../../src/tools/ecidadania.js";
 import { provenanceEstrutura } from "../../src/tools/estrutura.js";
 import { ESTRUTURA_VINTAGE } from "../../src/estrutura/resolver.js";
 
@@ -388,6 +393,19 @@ describe("contract v1.2 on: merged responses never throw and the top is the olde
       const sc = resultWithProvenance({ ok: true }, p).structuredContent.provenance as Record<string, unknown>;
       expect(Array.isArray(sc.field_sources)).toBe(true);
     });
+
+    it("each sub-source says whether it came from cache", () => {
+      const p = provenanceMateriaDetalhe("https://legis/dadosabertos", {
+        codigoMateria: 42,
+        idProcesso: 7,
+        detalhe,
+        detalheFetchedAt: T3,
+        resumoFetchedAt: T1,
+        relatoriaFetchedAt: T2,
+        doCache: { detalhe: false, resumo: true, relatoria: true },
+      });
+      expect(p.field_sources!.map((f) => f.served_from_cache)).toEqual([false, true, true]);
+    });
   });
 
   describe("senado_servidores com subordinadasA (provenanceServidoresSubordinadas)", () => {
@@ -414,6 +432,163 @@ describe("contract v1.2 on: merged responses never throw and the top is the olde
       const p = provenanceServidoresSubordinadas(folha, "ativos");
       expect(ms(p.retrieved_at)).toBe(ms("2026-09-01T00:00:00.000Z"));
     });
+
+    it("says whether the payroll came from cache; the embedded snapshot does not say (null)", () => {
+      const folha = provenanceFor("SENADO_ADM", "https://adm", "/f", { retrieved_at: T3 });
+      const [daFolha, doOrganograma] = provenanceServidoresSubordinadas(folha, "ativos", true).field_sources!;
+      expect(daFolha.served_from_cache).toBe(true);
+      expect(doOrganograma.served_from_cache).toBeNull();
+    });
+  });
+});
+
+// ==================== instante por dependência: as 5 tools mistas (3.18.2) ====================
+//
+// Até a 3.18.1 cinco tools fundiam um campo lido de uma 2ª fonte (outra entrada de cache,
+// outro corpus) e DESCARTAVAM o instante dessa leitura: o topo saía o da 1ª, e a lib não
+// tinha como reclamar porque nenhuma sub-fonte era declarada. Cada caso abaixo põe a 2ª
+// leitura como a MAIS ANTIGA — exatamente o que o código antigo escondia.
+
+describe("tools que fundem uma 2ª leitura declaram as duas e o topo é a mais antiga", () => {
+  const novo = { fetchedAt: T3, fromCache: false };
+  const velhoDoCache = { fetchedAt: T1, fromCache: true };
+
+  it("leituraDoCache carries the instant and the cache flag", () => {
+    expect(leituraDoCache(velhoDoCache)).toEqual({ retrieved_at: T1, served_from_cache: true });
+  });
+
+  describe("senado_obter_senador (+ fetch senador:) — mandatos/emExercicio de /mandatos", () => {
+    const detalhe = { codigo: 5, nome: "Fulano", partido: "X", emExercicio: true, mandatos: [] };
+
+    it("mandatos cached before the detail: top = mandatos, both sub-sources with their cache flag", () => {
+      const p = provenanceSenadorDetalhe("https://legis/dadosabertos", 5, {
+        path: "/senador/5",
+        ...novo,
+        mandatosLeitura: velhoDoCache,
+        detalhe,
+      });
+      expect(ms(p.retrieved_at)).toBe(ms(T1));
+      expect(p.source_url).toBe("https://legis/dadosabertos/senador/5");
+      const [bio, mandatos] = p.field_sources!;
+      expect(bio.fields).toEqual(["codigo", "nome", "partido"]);
+      expect(ms(bio.retrieved_at!)).toBe(ms(T3));
+      expect(bio.served_from_cache).toBe(false);
+      expect(mandatos.source_url).toBe("https://legis/dadosabertos/senador/5/mandatos");
+      expect(mandatos.fields).toEqual(["mandatos", "emExercicio"]);
+      expect(mandatos.served_from_cache).toBe(true);
+    });
+
+    it("mandatos that failed are not a sub-source (the fields come from nowhere)", () => {
+      const p = provenanceSenadorDetalhe("https://legis/dadosabertos", 5, {
+        path: "/senador/5",
+        ...novo,
+        mandatosLeitura: undefined,
+        detalhe,
+      });
+      expect(p.field_sources).toBeNull();
+      expect(ms(p.retrieved_at)).toBe(ms(T3));
+    });
+  });
+
+  describe("senado_reunioes_comissao — janela que cruza o ano", () => {
+    it("two partitions: each is a sub-source with its own window; top = the older one (the 2nd)", () => {
+      const p = provenanceReunioesComissao("https://legis/dadosabertos", "CAE", "20251220", "20260110", [
+        { dataInicio: "20251220", dataFim: "20251231", ...novo },
+        { dataInicio: "20260101", dataFim: "20260110", ...velhoDoCache },
+      ]);
+      expect(ms(p.retrieved_at)).toBe(ms(T1));
+      expect(p.data_vintage).toBe("20251220/20260110");
+      expect(p.field_sources!.map((f) => f.source_url)).toEqual([
+        "https://legis/dadosabertos/comissao/agenda/20251220/20251231",
+        "https://legis/dadosabertos/comissao/agenda/20260101/20260110",
+      ]);
+      expect(p.field_sources!.map((f) => f.data_vintage)).toEqual(["20251220/20251231", "20260101/20260110"]);
+      expect(p.field_sources!.map((f) => f.served_from_cache)).toEqual([false, true]);
+    });
+
+    it("one partition: plain block, no sub-sources", () => {
+      const p = provenanceReunioesComissao("https://legis/dadosabertos", "CAE", "20260101", "20260110", [
+        { dataInicio: "20260101", dataFim: "20260110", ...novo },
+      ]);
+      expect(p.field_sources).toBeNull();
+    });
+  });
+
+  describe("senado_suprimento_fundos atos-concessao + estatísticas — nomes do cadastro", () => {
+    const atos = provenanceFor("SENADO_ADM", "https://adm", "/api/v1/supridos/atosConcessao/2025", {
+      dataset_id: "suprimento; tipo=atos-concessao; ano=2025",
+      retrieved_at: T3,
+    });
+
+    it("names in top/bottom: registry is a sub-source and, older, becomes the top", () => {
+      const p = provenanceSuprimentoComNomes(atos, { fromCache: false }, 2025, "https://adm", { leitura: velhoDoCache }, undefined);
+      expect(ms(p.retrieved_at)).toBe(ms(T1));
+      const [doAtos, doCadastro] = p.field_sources!;
+      expect(doAtos.source_url).toBe(atos.source_url);
+      expect(doAtos.served_from_cache).toBe(false);
+      expect(doCadastro.source_url).toBe("https://adm/api/v1/supridos/2025");
+      expect(doCadastro.fields).toEqual(["top", "bottom"]);
+      expect(doCadastro.served_from_cache).toBe(true);
+    });
+
+    it("grouped by suprido: the names are in the groups", () => {
+      const p = provenanceSuprimentoComNomes(atos, { fromCache: false }, 2025, "https://adm", { leitura: velhoDoCache }, "suprido");
+      expect(p.field_sources![1].fields).toEqual(["grupos"]);
+    });
+
+    it("grouped by another dimension, or registry unavailable: the block stays the acts' one", () => {
+      expect(camposComNomeDeSuprido("elementoDespesa")).toEqual([]);
+      expect(camposComNomeDeSuprido("fornecedor")).toEqual(["top", "bottom"]); // inválido p/ o tipo → sem agrupar
+      expect(provenanceSuprimentoComNomes(atos, { fromCache: false }, 2025, "https://adm", { leitura: velhoDoCache }, "elementoDespesa")).toBe(atos);
+      expect(provenanceSuprimentoComNomes(atos, { fromCache: false }, 2025, "https://adm", {}, undefined)).toBe(atos);
+    });
+  });
+
+  describe("senado_ecidadania_obter_evento — comentarios do corpus D1", () => {
+    const item = { id: 9, titulo: "Audiência", url: "https://www12.senado.leg.br/ecidadania/visualizacaoaudiencia?id=9", comentarios: 0 };
+
+    it("corpus older than the scrape: top = corpus; corpus has no cache notion (null)", () => {
+      const p = provenanceEventoDetalhe(item, 9, novo, { fonte: "d1", lastScrapedAt: T1 });
+      expect(ms(p.retrieved_at)).toBe(ms(T1));
+      const [doDetalhe, doCorpus] = p.field_sources!;
+      expect(doDetalhe.source_url).toBe(item.url);
+      expect(doDetalhe.fields).not.toContain("comentarios");
+      expect(doDetalhe.served_from_cache).toBe(false);
+      expect(doCorpus.fields).toEqual(["comentarios"]);
+      expect(doCorpus.source_url).toBe(`${ECIDADANIA_BASE_URL}/principalaudiencia`);
+      expect(doCorpus.served_from_cache).toBeNull();
+    });
+
+    it("event not in the corpus: no sub-sources", () => {
+      expect(provenanceEventoDetalhe(item, 9, novo).field_sources).toBeNull();
+    });
+  });
+
+  describe("senado_ecidadania_sugerir_tema_enquete — dois corpora", () => {
+    it("ideias older than consultas: top = ideias (was dropped before)", () => {
+      const p = provenanceSugestaoEnquete({ lastScrapedAt: T3 }, { lastScrapedAt: T1 });
+      expect(ms(p.retrieved_at)).toBe(ms(T1));
+      expect(p.field_sources!.map((f) => f.source_url)).toEqual([
+        `${ECIDADANIA_BASE_URL}/principalmateria`,
+        `${ECIDADANIA_BASE_URL}/principalideia`,
+      ]);
+      expect(p.field_sources!.map((f) => f.dataset_id)).toEqual(["consultas", "ideias"]);
+    });
+  });
+
+  it("served_from_cache reaches the concise block on the wire", () => {
+    const p = provenanceSugestaoEnquete({ lastScrapedAt: T3 }, { lastScrapedAt: T1 });
+    const s = provenanceSenadorDetalhe("https://x", 5, {
+      path: "/senador/5",
+      ...novo,
+      mandatosLeitura: velhoDoCache,
+      detalhe: { codigo: 5, mandatos: [], emExercicio: null },
+    });
+    const sc = resultWithProvenance({ ok: true }, s).structuredContent.provenance as {
+      field_sources: Array<{ served_from_cache: boolean | null }>;
+    };
+    expect(sc.field_sources.map((f) => f.served_from_cache)).toEqual([false, true]);
+    expect(p.field_sources!.every((f) => f.served_from_cache === null)).toBe(true);
   });
 });
 
