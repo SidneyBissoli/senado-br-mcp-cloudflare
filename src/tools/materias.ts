@@ -156,6 +156,8 @@ export function provenanceMateriaDetalhe(
     resumoFetchedAt: string;
     /** Instante da relatoria; omitido quando a resposta não traz relator. */
     relatoriaFetchedAt?: string;
+    /** Se cada leitura veio do cache do servidor (`fromCache`); omitido = não distingue. */
+    doCache?: { detalhe?: boolean; resumo?: boolean; relatoria?: boolean };
   },
 ) {
   const base = baseUrl.replace(/\/$/, "");
@@ -166,8 +168,15 @@ export function provenanceMateriaDetalhe(
       source_url: `${base}/processo/${a.idProcesso}`,
       dataset_id,
       retrieved_at: a.detalheFetchedAt,
+      served_from_cache: a.doCache?.detalhe,
     },
-    { fields: ["ementa"], source_url: `${base}/processo`, dataset_id, retrieved_at: a.resumoFetchedAt },
+    {
+      fields: ["ementa"],
+      source_url: `${base}/processo`,
+      dataset_id,
+      retrieved_at: a.resumoFetchedAt,
+      served_from_cache: a.doCache?.resumo,
+    },
   ];
   if (a.relatoriaFetchedAt !== undefined) {
     fieldSources.push({
@@ -175,6 +184,7 @@ export function provenanceMateriaDetalhe(
       source_url: `${base}/processo/relatoria`,
       dataset_id,
       retrieved_at: a.relatoriaFetchedAt,
+      served_from_cache: a.doCache?.relatoria,
     });
   }
   return provenanceFor("SENADO_LEGIS", baseUrl, `/processo/${a.idProcesso}`, {
@@ -188,8 +198,8 @@ export function provenanceMateriaDetalhe(
 async function resolveProcesso(
   codigoMateria: number,
   baseUrl: string,
-): Promise<{ item: any; fetchedAt: string }> {
-  const { value: response, fetchedAt } = await cachedFetchWithMeta(
+): Promise<{ item: any; fetchedAt: string; fromCache: boolean }> {
+  const { value: response, fetchedAt, fromCache } = await cachedFetchWithMeta(
     "_processo_por_materia",
     { codigoMateria },
     CACHE_ON_DEMAND,
@@ -199,7 +209,7 @@ async function resolveProcesso(
   if (!item || !(item as any).id) {
     throw new Error(`Matéria ${codigoMateria} não encontrada na API de processos`);
   }
-  return { item, fetchedAt };
+  return { item, fetchedAt, fromCache };
 }
 
 /**
@@ -379,7 +389,7 @@ export function registerMateriasTools(server: SenadoToolHost, baseUrl: string) {
           ).catch(() => null),
         ]);
         const resumo = resumoRes.item;
-        const { value: detalheRes, fetchedAt } = await cachedFetchWithMeta(
+        const { value: detalheRes, fetchedAt, fromCache } = await cachedFetchWithMeta(
           "senado_obter_materia",
           { idProcesso: resumo.id },
           CACHE_ON_DEMAND,
@@ -394,6 +404,7 @@ export function registerMateriasTools(server: SenadoToolHost, baseUrl: string) {
           detalheFetchedAt: fetchedAt,
           resumoFetchedAt: resumoRes.fetchedAt,
           relatoriaFetchedAt: relator ? relatoriasRes?.fetchedAt : undefined,
+          doCache: { detalhe: fromCache, resumo: resumoRes.fromCache, relatoria: relatoriasRes?.fromCache },
         });
         return resultWithProvenance({
           ...detalhe,

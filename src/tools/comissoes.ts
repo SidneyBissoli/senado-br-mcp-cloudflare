@@ -19,7 +19,7 @@ import { upstreamFetch, UpstreamError } from "../throttle/upstream.js";
 import { toolError, errorFrom, ensureArray, safeInt, toBool, normalizeText } from "../utils/validation.js";
 import { digArrayRoot } from "../utils/upstream-parse.js";
 import { escolherReuniao, ehReuniaoInexistente, mensagemCodigoInexistente } from "./resolver-reuniao.js";
-import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { leituraDoCache, provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
 export function formatDateYMD(d: Date): string {
@@ -139,6 +139,50 @@ export async function fetchComissaoColegiado(codigo: number, baseUrl: string) {
   const r = response as any;
   const colegiado = ensureArray(r?.ComissoesCongressoNacional?.Colegiados?.Colegiado)[0];
   return { path, fetchedAt, colegiado };
+}
+
+/** Um recorte de `/comissao/agenda/{di}/{df}` lido por `senado_reunioes_comissao`. */
+export interface ParteAgenda {
+  dataInicio: string;
+  dataFim: string;
+  fetchedAt: string;
+  fromCache: boolean;
+}
+
+/**
+ * Proveniência de `senado_reunioes_comissao`. A fonte não aceita janela que cruza o ano, então
+ * a tool lê um recorte por ano, cada um numa entrada de cache própria, e junta as reuniões.
+ * Com um recorte só, o bloco é o desse recorte. Com dois, cada um vira sub-fonte das MESMAS
+ * linhas (`reunioes`, `count`) com a sua janela e o seu instante, e o topo é o mais antigo
+ * (adaptador, contrato §3) — até a 3.18.1 o topo era sempre o do 1º recorte e o instante do
+ * 2º era descartado, mesmo quando ele estava em cache havia mais tempo.
+ */
+export function provenanceReunioesComissao(
+  baseUrl: string,
+  sigla: string,
+  di: string,
+  df: string,
+  partes: ParteAgenda[],
+) {
+  const dataset_id = `comissao=${sigla}`;
+  const [primeira] = partes;
+  const base = baseUrl.replace(/\/$/, "");
+  return provenanceFor("SENADO_LEGIS", baseUrl, `/comissao/agenda/${di}/${df}`, {
+    dataset_id,
+    reference_period: `${di}/${df}`,
+    retrieved_at: primeira.fetchedAt,
+    ...(partes.length > 1
+      ? {
+          field_sources: partes.map((p) => ({
+            fields: ["reunioes", "count"],
+            source_url: `${base}/comissao/agenda/${p.dataInicio}/${p.dataFim}`,
+            dataset_id,
+            reference_period: `${p.dataInicio}/${p.dataFim}`,
+            ...leituraDoCache(p),
+          })),
+        }
+      : {}),
+  });
 }
 
 export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) {
@@ -271,7 +315,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
         const yearDi = parseInt(di.slice(0, 4));
         const yearDf = parseInt(df.slice(0, 4));
         let todas: any[] = [];
-        let fetchedAt: string;
+        let partes: ParteAgenda[];
         if (yearDi === yearDf) {
           const res = await cachedFetchWithMeta(
             "senado_reunioes_comissao",
@@ -279,7 +323,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
             CACHE_DYNAMIC,
             () => upstreamFetch(`/comissao/agenda/${di}/${df}`, {}, baseUrl),
           );
-          fetchedAt = res.fetchedAt;
+          partes = [{ dataInicio: di, dataFim: df, ...res }];
           todas = ensureArray((res.value as any)?.AgendaReuniao?.reunioes?.reuniao);
         } else {
           // Split: [di..yearDi-12-31] + [yearDf-01-01..df]
@@ -295,7 +339,10 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
             CACHE_DYNAMIC,
             () => upstreamFetch(`/comissao/agenda/${yearDf}0101/${df}`, {}, baseUrl),
           );
-          fetchedAt = r1.fetchedAt;
+          partes = [
+            { dataInicio: di, dataFim: `${yearDi}1231`, ...r1 },
+            { dataInicio: `${yearDf}0101`, dataFim: df, ...r2 },
+          ];
           todas = [
             ...ensureArray((r1.value as any)?.AgendaReuniao?.reunioes?.reuniao),
             ...ensureArray((r2.value as any)?.AgendaReuniao?.reunioes?.reuniao),
@@ -315,11 +362,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
             tipo: re.tipo?.descricao || null,
             situacao: re.situacao || null,
           }));
-        const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/comissao/agenda/${di}/${df}`, {
-          dataset_id: `comissao=${sigla}`,
-          reference_period: `${di}/${df}`,
-          retrieved_at: fetchedAt,
-        });
+        const prov = provenanceReunioesComissao(baseUrl, sigla, di, df, partes);
         return resultWithProvenance(
           { sigla, periodo: { dataInicio: di, dataFim: df }, count: reunioes.length, reunioes },
           prov,

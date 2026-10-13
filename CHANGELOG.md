@@ -6,6 +6,37 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.18.2] - 2026-10-13
+
+### Fixed
+
+- **Cinco tools fundiam um campo lido de uma 2ª fonte e descartavam o instante dessa
+  leitura.** O `retrieved_at` do bloco saía o da 1ª leitura, e quando a 2ª estava em cache
+  havia mais tempo o bloco dizia que o campo era mais novo do que era (a lib não tinha como
+  reclamar: nenhuma sub-fonte era declarada). Agora cada uma declara as duas leituras em
+  `field_sources` e o topo é o mais antigo (contrato §3, derivado pelo adaptador):
+  - `senado_obter_senador` e o `fetch` `senador:` do Deep Research — `mandatos` e
+    `emExercicio` vêm de `/senador/{codigo}/mandatos`, outra entrada de cache;
+  - `senado_reunioes_comissao` com janela que cruza o ano — um recorte por ano, e o topo
+    era sempre o do 1º;
+  - `senado_suprimento_fundos` com `estatisticas` em `atos-concessao` — os nomes dos
+    beneficiários vêm do cadastro `/supridos/{ano}`;
+  - `senado_ecidadania_obter_evento` — `comentarios` vem do corpus em D1;
+  - `senado_ecidadania_sugerir_tema_enquete` — o instante do corpus de ideias era ignorado.
+- **`served_from_cache` saía `null` em toda sub-fonte.** A camada de cache já sabia
+  (`fromCache`); agora cada sub-fonte lida por ela diz `true`/`false`, inclusive nas duas
+  tools que já fundiam leituras (`senado_obter_materia` detalhe, `senado_servidores` com
+  `subordinadasA`). Snapshot embutido e corpus do D1 seguem `null` — não são cache.
+
+### Documentation
+
+- A regra decidida em 13/10/2026: só é sub-fonte a leitura que vira campo da resposta;
+  leitura só de resolução ou checagem (sigla → código, confirmação do pai) fica de fora,
+  para que uma tabela de siglas em cache não faça a resposta inteira parecer velha. No
+  comentário de `withFieldSources`, no README e no LEIA-ME. O README também deixa de dizer
+  que `field_sources` não sai no bloco `concise` (sai desde a 3.17.0).
+- Superfície inalterada (`tools/list` idêntico; trava `surface.lock` verde).
+
 ## [3.18.1] - 2026-10-11
 
 ### Documentation

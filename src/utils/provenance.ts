@@ -100,6 +100,12 @@ export interface FieldSource {
   dataset_id?: string;
   reference_period?: string;
   retrieved_at?: string;
+  /**
+   * `true` = servida do cache do servidor (L0/L1), `false` = buscada nesta chamada.
+   * Omitido = não distingue (snapshot embutido no bundle, corpus do D1) — sai `null`,
+   * nunca chutado. Para leituras de `cachedFetchWithMeta`, use `leituraDoCache`.
+   */
+  served_from_cache?: boolean | null;
 }
 
 const toCanonicalFieldSource = (fs: FieldSource) => ({
@@ -108,6 +114,18 @@ const toCanonicalFieldSource = (fs: FieldSource) => ({
   dataset_id: fs.dataset_id ?? null,
   data_vintage: fs.reference_period ?? null,
   retrieved_at: fs.retrieved_at ?? null,
+  served_from_cache: fs.served_from_cache ?? null,
+});
+
+/**
+ * Instante e origem de uma leitura de `cachedFetchWithMeta`, nos nomes da sub-fonte:
+ * `{ retrieved_at, served_from_cache }`. Entrada de cache sem envelope (anterior ao
+ * `fetchedAt` persistido) volta com `fromCache: true` e o instante de AGORA — o `true`
+ * continua verdadeiro; o instante é o melhor que a camada sabe.
+ */
+export const leituraDoCache = (m: { fetchedAt: string; fromCache: boolean }) => ({
+  retrieved_at: m.fetchedAt,
+  served_from_cache: m.fromCache,
 });
 
 /** Campos por chamada, nos nomes históricos do senado. */
@@ -326,6 +344,14 @@ export function provenanceArquimedesVotos(
  * tools cuja resposta funde campos de mais de um endpoint upstream — o `source_url` de topo
  * cobre o grosso do payload e cada `FieldSource` atribui os campos específicos à sua origem.
  * O envelope é re-validado inteiro no contrato (build).
+ *
+ * REGRA (decisão do dono, 13/10/2026): só entra como sub-fonte a leitura que VIRA CAMPO da
+ * resposta. Leitura só de resolução ou checagem — sigla→código da comissão, o id do processo
+ * antes da tramitação, a confirmação do pai em `senado_contratacao_detalhe` — fica de fora.
+ * Se entrasse, a regra do topo = mais antigo faria a resposta inteira dizer "dados de ontem"
+ * porque a tabela de siglas está em cache desde ontem, com os campos lidos agora (aviso falso
+ * de desatualização). Custo aceito: uma tradução errada por cache velho (código recriado na
+ * fonte) não aparece no bloco — risco baixo, os códigos são estáveis.
  */
 export function withFieldSources(prov: Provenance, fieldSources: FieldSource[]): Provenance {
   if (fieldSources.length === 0) return prov;
