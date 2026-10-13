@@ -83,7 +83,7 @@
     "@sbissoli/mcp-evals": "^0.2.1",
     "@sbissoli/mcp-surface": "^0.6.0",
     "@types/node": "^26.5.1",
-    "agents": "^0.26.0",
+    "agents": "^0.28.0",
     "exceljs": "^4.4.0",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
