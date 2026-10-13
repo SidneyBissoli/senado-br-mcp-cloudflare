@@ -121,7 +121,11 @@ export async function resolveList(
       items: live,
       meta: {
         fonte: "ao-vivo",
-        lastScrapedAt,
+        // The items were scraped NOW, so this is their age — not the stale D1's `lastScrapedAt`
+        // read above (until 3.18.2 it leaked here, and the tools' provenance said the live data
+        // was as old as the corpus, or carried no instant at all). An empty live list extracted
+        // nothing (consultas_votos' live path is a no-op `[]`), so it claims no instant.
+        lastScrapedAt: live.length > 0 ? new Date().toISOString() : null,
         possivelDesatualizacao: false,
         motivo: !db ? "d1-indisponivel" : d1Items.length === 0 ? "d1-vazio" : "d1-desatualizado",
       },
