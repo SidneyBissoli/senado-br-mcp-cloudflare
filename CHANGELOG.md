@@ -6,6 +6,22 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.18.3] - 2026-10-13
+
+### Fixed
+
+- **Lista do e-Cidadania buscada ao vivo saía com o instante do corpus velho.** Quando o
+  corpus em D1 está vazio, indisponível ou desatualizado, `resolveList` cai na raspagem ao
+  vivo do portal (`meta.fonte: "ao-vivo"`), mas repassava em `meta.lastScrapedAt` o instante
+  que tinha acabado de ler do D1 — o do corpus velho, ou `null` com o D1 vazio. As listas
+  (`provLista`) e as sub-fontes de `senado_ecidadania_obter_evento` e
+  `senado_ecidadania_sugerir_tema_enquete` leem esse campo, então a proveniência dizia que o
+  dado recém-raspado era tão velho quanto o corpus (ou não dizia instante nenhum); o `meta`
+  devolvido ao cliente dizia o mesmo. Agora a busca ao vivo carimba o instante da raspagem.
+  Lista ao vivo VAZIA não carimba nada (`null`): nada foi extraído — e o caminho "ao vivo" do
+  acervo de votos (`senado_ecidadania_consultas_votos`) é um `[]` sem rede. Conserto na
+  origem (`src/scraper/store.ts`), não em cada tool. Superfície inalterada.
+
 ## [3.18.2] - 2026-10-13
 
 ### Fixed

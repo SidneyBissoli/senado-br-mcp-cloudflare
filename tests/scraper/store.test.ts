@@ -65,6 +65,31 @@ describe("resolveList", () => {
     expect(meta.motivo).toBe("d1-indisponivel");
   });
 
+  it("live fallback stamps the live scrape instant, never the stale D1 one", async () => {
+    const antes = Date.now();
+    const live = vi.fn().mockResolvedValue([{ id: 9 }]);
+    const { meta } = await resolveList(fakeReadD1([row(STALE, { id: 1 })]), "ideias", 360, live, NOW);
+    expect(meta.fonte).toBe("ao-vivo");
+    expect(meta.lastScrapedAt).not.toBe(STALE);
+    expect(Date.parse(meta.lastScrapedAt!)).toBeGreaterThanOrEqual(antes);
+    expect(Date.parse(meta.lastScrapedAt!)).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("live fallback with D1 empty or unavailable also stamps the live instant (was null)", async () => {
+    const antes = Date.now();
+    const live = vi.fn().mockResolvedValue([{ id: 9 }]);
+    for (const db of [fakeReadD1([]), undefined]) {
+      const { meta } = await resolveList(db, "eventos", 360, live, NOW);
+      expect(Date.parse(meta.lastScrapedAt!)).toBeGreaterThanOrEqual(antes);
+    }
+  });
+
+  it("an empty live list claims no instant (nothing was extracted)", async () => {
+    const { meta } = await resolveList(fakeReadD1([row(STALE, { id: 1 })]), "ideias", 360, async () => [], NOW);
+    expect(meta.fonte).toBe("ao-vivo");
+    expect(meta.lastScrapedAt).toBeNull();
+  });
+
   it("serves stale D1 (flagged) when live also fails, instead of erroring", async () => {
     const live = vi.fn().mockRejectedValue(new Error("portal down"));
     const db = fakeReadD1([row(STALE, { id: 1 })]);
