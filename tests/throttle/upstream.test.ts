@@ -219,6 +219,58 @@ describe("upstreamFetch — política de repetição (3.11.0)", () => {
     }
   });
 
+  // Dublê de fetch, não `delay()` do nock: os cabeçalhos chegam e o corpo trava,
+  // soltando só quando o sinal da ida aborta (como fazem undici e Workers).
+  function cabecalhosSemCorpo(status = 200) {
+    mockFetch.mockImplementation(
+      (_url: string, init: { signal: AbortSignal }) =>
+        Promise.resolve(
+          new Response(
+            new ReadableStream({
+              start(c) {
+                init.signal.addEventListener("abort", () =>
+                  c.error(Object.assign(new Error("aborted"), { name: "AbortError" })),
+                );
+              },
+            }),
+            { status, headers: { "Content-Type": "application/json" } },
+          ),
+        ),
+    );
+  }
+
+  it("corpo que trava depois dos cabeçalhos sai como timeout de 10 s, sem repetir", async () => {
+    vi.useFakeTimers();
+    try {
+      cabecalhosSemCorpo();
+      const promessa = upstreamFetch("/corpo-lento");
+      const esperado = expect(promessa).rejects.toMatchObject({
+        status: 504,
+        retryable: true,
+        transport: true,
+        message: "[/corpo-lento] Timeout na requisição upstream (10s)",
+      });
+      await vi.advanceTimersByTimeAsync(10_500);
+      await esperado;
+      expect(mockFetch).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("o corpo do 404 também tem prazo (é lido para separar rota inexistente de chave ausente)", async () => {
+    vi.useFakeTimers();
+    try {
+      cabecalhosSemCorpo(404);
+      const promessa = upstreamFetch("/supridos/2005", {}, undefined, { on404: "absent" });
+      const esperado = expect(promessa).rejects.toMatchObject({ status: 504, transport: true });
+      await vi.advanceTimersByTimeAsync(10_500);
+      await esperado;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("4xx que não é 404 não repete e não é retryable", async () => {
     mockFetch.mockResolvedValueOnce(jsonResponse({}, 400));
     await expect(upstreamFetch("/x")).rejects.toMatchObject({
