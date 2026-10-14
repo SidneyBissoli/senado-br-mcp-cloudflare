@@ -236,6 +236,53 @@ export function upstreamCall(): UpstreamCall {
   return currentCall() ?? upstreamSenado.call();
 }
 
+/** O corpo não chegou inteiro dentro do orçamento da ida (ver `PrazoDoCorpo`). */
+export class CorpoForaDoPrazoError extends Error {
+  constructor() {
+    super("corpo da resposta fora do prazo");
+    this.name = "CorpoForaDoPrazoError";
+  }
+}
+
+/**
+ * O prazo da LEITURA DO CORPO de uma ida no modo `response`.
+ *
+ * No modo `response` o `@sbissoli/mcp-upstream` (0.4.x) desarma o cronômetro da
+ * tentativa quando chegam os CABEÇALHOS: o corpo, lido aqui depois, ficava sem
+ * prazo nenhum, e uma fonte que manda os cabeçalhos e trava no corpo pendurava a
+ * chamada até o Worker morrer. Medido em 13/10/2026 ao subir o nock do medical
+ * (o `delay()` do nock 15 passou a segurar o corpo, não os cabeçalhos).
+ *
+ * O `signal` entra na ida e o pacote o combina ao dele; quem o aborta é SÓ
+ * `texto()`, depois dos cabeçalhos — durante a ida ele nunca dispara, então a
+ * classificação do pacote (timeout × abortado, a contagem do `retrieval`) não
+ * muda. O prazo do corpo é o que sobra do orçamento TOTAL da ida, contado do
+ * início dela: cabeçalhos + corpo cabem nos mesmos 10 s, como sempre se disse.
+ */
+export class PrazoDoCorpo {
+  readonly #controller = new AbortController();
+  readonly #inicio = Date.now();
+
+  /** Para passar na ida (`call.response(url, { signal })`). */
+  get signal(): AbortSignal {
+    return this.#controller.signal;
+  }
+
+  /** Lê o corpo como texto; estourando o orçamento, lança `CorpoForaDoPrazoError`. */
+  async texto(response: Response): Promise<string> {
+    const resta = UPSTREAM_POLICY.budgetMs - (Date.now() - this.#inicio);
+    const timer = setTimeout(() => this.#controller.abort(), Math.max(0, resta));
+    try {
+      return await response.text();
+    } catch (e) {
+      if (this.#controller.signal.aborted) throw new CorpoForaDoPrazoError();
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}
+
 /**
  * O `retrieval` medido nesta chamada de tool — `null` fora de um coletor ou
  * quando a resposta veio inteira do cache (nenhuma ida). É o que
@@ -346,6 +393,20 @@ export async function upstreamFetch(
     for (let i = 1; i < attempts; i++) incr("upstreamRetries");
   };
 
+  const prazo = new PrazoDoCorpo();
+  const lerCorpo = async (r: Response): Promise<string> => {
+    try {
+      return await prazo.texto(r);
+    } catch (e) {
+      if (e instanceof CorpoForaDoPrazoError) {
+        incr("upstreamErrors");
+        logger.error("upstream_error", { path, status: 504, message: "corpo fora do prazo" });
+        throw new UpstreamError(`[${path}] Timeout na requisição upstream (${UPSTREAM_TIMEOUT_MS / 1000}s)`, 504, true, true);
+      }
+      throw e;
+    }
+  };
+
   let response: Response;
   inFlight++;
   try {
@@ -355,6 +416,7 @@ export async function upstreamFetch(
         Accept: options.accept ?? "application/json",
         "User-Agent": USER_AGENT,
       },
+      signal: prazo.signal,
     });
   } catch (err) {
     if (!(err instanceof PkgUpstreamError)) throw err;
@@ -363,7 +425,7 @@ export async function upstreamFetch(
     if (err.kind === "not_found" && options.on404 && err.response) {
       incr("upstreamCalls");
       log("upstream", path, 404, Date.now() - startTime, err.attempts - 1);
-      const corpo404 = await err.response.text();
+      const corpo404 = await lerCorpo(err.response);
       if (rotaInexistente(corpo404)) {
         throw new UpstreamError(
           `[${path}] ${MSG_ROTA_INEXISTENTE} — o caminho montado não existe na API do Senado.`,
@@ -401,7 +463,7 @@ export async function upstreamFetch(
     );
   }
 
-  const text = await response.text();
+  const text = await lerCorpo(response);
   if (text.length > maxSize) {
     throw new UpstreamError(
       `[${path}] Resposta upstream excede o limite de ${Math.round(maxSize / 1024 / 1024)} MB`,

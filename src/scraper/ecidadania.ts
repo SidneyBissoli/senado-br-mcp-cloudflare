@@ -13,7 +13,7 @@
 import { UpstreamError as PkgUpstreamError } from "@sbissoli/mcp-upstream";
 import { UPSTREAM_TIMEOUT_MS } from "../types.js";
 import { USER_AGENT } from "../version.js";
-import { upstreamCall } from "../throttle/upstream.js";
+import { CorpoForaDoPrazoError, PrazoDoCorpo, upstreamCall } from "../throttle/upstream.js";
 import type { ErrorClass } from "../call-shape.js";
 
 export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
@@ -44,14 +44,13 @@ export async function fetchPage(
   path: string,
   opts: { ajax?: boolean; allowEmpty?: boolean } = {},
 ): Promise<string> {
-  const resp = await idaEcidadania(
+  const text = await idaEcidadania(
     path,
     opts.ajax
       ? { Accept: "text/html,*/*", "User-Agent": USER_AGENT, "X-Requested-With": "XMLHttpRequest" }
       : { Accept: "text/html", "User-Agent": USER_AGENT },
     "e-Cidadania",
   );
-  const text = await resp.text();
   // AJAX comment fragments are legitimately empty for events with zero comments — allowEmpty
   // lets the caller treat "" as a valid (empty) result instead of a transient failure.
   if (!opts.allowEmpty && !text.trim()) {
@@ -65,7 +64,7 @@ export async function fetchPage(
  * Ensures the response is valid JSON and an array.
  */
 export async function fetchEcidadaniaJson(endpoint: string): Promise<any[]> {
-  const resp = await idaEcidadania(
+  const corpo = await idaEcidadania(
     endpoint,
     { Accept: "application/json", "User-Agent": USER_AGENT },
     "e-Cidadania REST API",
@@ -73,7 +72,7 @@ export async function fetchEcidadaniaJson(endpoint: string): Promise<any[]> {
 
   let data: unknown;
   try {
-    data = await resp.json();
+    data = JSON.parse(corpo);
   } catch {
     throw ecidadaniaFetchError(`e-Cidadania REST API retornou JSON inválido para ${endpoint}`, true);
   }
@@ -95,21 +94,25 @@ export async function fetchEcidadaniaJson(endpoint: string): Promise<any[]> {
  * descartável e a política vale igual. O token bucket NÃO se aplica: é outro
  * host, e o portal nunca passou por ele. As mensagens e o `retryable` são os
  * de antes — `ecidadaniaError` (tools) e o pipeline os leem.
+ *
+ * Devolve o CORPO, lido aqui sob o que sobra dos 10 s (`PrazoDoCorpo`): no modo
+ * `response` o pacote só cobre até os cabeçalhos, e um portal que trava no
+ * corpo pendurava a chamada (e o cron) sem prazo.
  */
-async function idaEcidadania(path: string, headers: Record<string, string>, rotulo: string): Promise<Response> {
+async function idaEcidadania(path: string, headers: Record<string, string>, rotulo: string): Promise<string> {
   const url = `${ECIDADANIA_BASE}${path}`;
+  const prazo = new PrazoDoCorpo();
+  const foraDoPrazo = () =>
+    ecidadaniaFetchError(`${rotulo}: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${path}`, true, "fonte");
+  let resp: Response;
   try {
-    return await upstreamCall().response(url, { headers });
+    resp = await upstreamCall().response(url, { headers, signal: prazo.signal });
   } catch (e) {
     if (!(e instanceof PkgUpstreamError)) throw e;
     switch (e.kind) {
       case "timeout":
       case "aborted":
-        throw ecidadaniaFetchError(
-          `${rotulo}: timeout (${UPSTREAM_TIMEOUT_MS / 1000}s) ao acessar ${path}`,
-          true,
-          "fonte",
-        );
+        throw foraDoPrazo();
       case "network": {
         const causa = e.cause instanceof Error ? e.cause.message : String(e.cause ?? "desconhecido");
         throw ecidadaniaFetchError(`${rotulo}: falha de rede ao acessar ${path} (${causa})`, true, "fonte");
@@ -135,6 +138,12 @@ async function idaEcidadania(path: string, headers: Record<string, string>, rotu
         );
       }
     }
+  }
+  try {
+    return await prazo.texto(resp);
+  } catch (e) {
+    if (e instanceof CorpoForaDoPrazoError) throw foraDoPrazo();
+    throw e;
   }
 }
 

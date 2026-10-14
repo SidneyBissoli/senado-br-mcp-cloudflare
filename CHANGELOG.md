@@ -6,6 +6,23 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.18.4] - 2026-10-14
+
+### Fixed
+
+- **O corpo da resposta não tinha prazo.** As idas à API do Senado (`upstreamFetch`) e ao
+  e-Cidadania (`fetchPage`, `fetchEcidadaniaJson`) usam o `@sbissoli/mcp-upstream` no modo
+  `response`, que desarma o cronômetro quando chegam os CABEÇALHOS. O corpo, lido depois
+  aqui, ficava sem prazo nenhum: uma fonte que mandasse os cabeçalhos e travasse no corpo
+  pendurava a chamada (e o cron do e-Cidadania) até o Worker morrer. Agora `PrazoDoCorpo`
+  lê o corpo sob o que sobra do orçamento de 10 s da ida (cabeçalhos + corpo, como o
+  cabeçalho do módulo sempre disse), inclusive o corpo do 404 que separa rota inexistente
+  de chave ausente. Estourado, sai o MESMO erro de timeout de antes (504, `retryable`,
+  `transport`; no e-Cidadania, "timeout (10s) ao acessar …"). O sinal só é abortado depois
+  dos cabeçalhos, então a classificação e a contagem do `retrieval` feitas pelo pacote não
+  mudam. Achado em 13/10/2026 numa varredura dos irmãos, ao subir o nock do
+  `medical-terminologies-mcp`. Superfície inalterada.
+
 ## [3.18.3] - 2026-10-13
 
 ### Fixed
