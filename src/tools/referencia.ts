@@ -11,7 +11,7 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray } from "../utils/validation.js";
 import { digArrayRoot } from "../utils/upstream-parse.js";
-import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { NOTA_DERIVACAO_LEGISLATURA, NOTA_DERIVACAO_LEGISLATURA_PADRAO, NOTA_DERIVACAO_SOMAS, derivado, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
 import { CACHE_STATIC } from "../types.js";
 
 export const TIPOS_MATERIA = [
@@ -73,6 +73,16 @@ export function deriveLegislaturaAtual(parlamentares: any[]) {
   }
   // Fallback to the 57th legislatura (2023-2027)
   return { numero: 57, periodo: "2023-2027", dataInicio: "2023-02-01", dataFim: "2027-01-31" };
+}
+
+/**
+ * `tabela=legislatura-atual` (contract v1.3): period and dates are always the server's arithmetic;
+ * when the source sends no legislatura number the number itself is the server's fallback, and the
+ * note says so.
+ */
+export function provenanceDaLegislatura(prov: Provenance, parlamentares: any[]): Provenance {
+  const doFonte = Boolean(parlamentares[0]?.Mandato?.PrimeiraLegislaturaDoMandato?.NumeroLegislatura);
+  return derivado(prov, doFonte ? NOTA_DERIVACAO_LEGISLATURA : NOTA_DERIVACAO_LEGISLATURA_PADRAO);
 }
 
 /** Tally seated senators per party (sigla → count). */
@@ -149,7 +159,7 @@ export function registerReferenciaTools(server: SenadoToolHost, baseUrl: string)
             });
             return resultWithProvenance(
               { tabela: params.tabela, count: partidos.length, totalSenadores: parlamentares.length, partidos },
-              prov,
+              derivado(prov, NOTA_DERIVACAO_SOMAS),
             );
           }
 
@@ -162,7 +172,7 @@ export function registerReferenciaTools(server: SenadoToolHost, baseUrl: string)
             });
             return resultWithProvenance(
               { tabela: params.tabela, count: ufs.length, totalSenadores: parlamentares.length, ufs },
-              prov,
+              derivado(prov, NOTA_DERIVACAO_SOMAS),
             );
           }
 
@@ -174,7 +184,7 @@ export function registerReferenciaTools(server: SenadoToolHost, baseUrl: string)
             });
             return resultWithProvenance(
               { tabela: params.tabela, ...deriveLegislaturaAtual(parlamentares) },
-              prov,
+              provenanceDaLegislatura(prov, parlamentares),
             );
           }
 

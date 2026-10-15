@@ -14,7 +14,7 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
 import { errorFrom, ensureArray, parseBRL } from "../utils/validation.js";
 import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
-import { derivadoDeEstatisticas, provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { NOTA_DERIVACAO_BRUTO, NOTA_DERIVACAO_SOMAS, NOTA_DERIVACAO_SUBORDINADAS, derivado, derivadoDeEstatisticas, provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import {
   computarEstatisticas,
   arredondarEstatisticas,
@@ -80,6 +80,19 @@ export function resumoRemuneracao(r: any) {
       num(r.gratificacao_natalina) + num(r.horas_extras) + num(r.outras_eventuais) + num(r.abono_permanencia)) * 100) / 100,
   };
 }
+
+/**
+ * Provenance of the non-statistics remuneration modes (contract v1.3): `detalhe` carries the
+ * server-summed `bruto` per row; `resumo` (the default) sums and averages that `bruto` per
+ * `tipoFolha`, so its note names both calculations.
+ */
+export const provenanceDaRemuneracao = (prov: Provenance, modo: "resumo" | "detalhe"): Provenance =>
+  modo === "detalhe"
+    ? derivado(prov, NOTA_DERIVACAO_BRUTO)
+    : derivado(prov, `${NOTA_DERIVACAO_SOMAS} ${NOTA_DERIVACAO_BRUTO}`);
+
+/** Overtime outside `estatisticas`: `valorTotal` at the top is the server's sum of the rows. */
+export const provenanceDasHorasExtras = (prov: Provenance): Provenance => derivado(prov, NOTA_DERIVACAO_SOMAS);
 
 /** The 7 columns that sum into `bruto` (identical composition to `resumoRemuneracao`). */
 const COMPONENTES_BRUTO = [
@@ -415,7 +428,7 @@ export function provenanceServidoresSubordinadas(
   situacao: string,
   folhaDoCache?: boolean,
 ): Provenance {
-  return withFieldSources(prov, [
+  return derivado(withFieldSources(prov, [
     {
       fields: ["servidores", "total", "count", "naoClassificados", "afastadosOuEmTransito"],
       source_url: prov.source_url,
@@ -430,7 +443,7 @@ export function provenanceServidoresSubordinadas(
       reference_period: ESTRUTURA_VINTAGE.slice(0, 10),
       retrieved_at: ESTRUTURA_VINTAGE,
     },
-  ]);
+  ]), NOTA_DERIVACAO_SUBORDINADAS);
 }
 
 export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: string) {
@@ -571,7 +584,7 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
             total: itens.length,
             ...(itens.length > limite ? { aviso: `Exibindo ${limite} de ${itens.length} registros. Filtre por nome ou use modo=resumo.` } : {}),
             remuneracoes: itens.slice(0, limite).map(resumoRemuneracao),
-          }, prov);
+          }, provenanceDaRemuneracao(prov, "detalhe"));
         }
 
         const porFolha = new Map<string, { registros: number; totalBruto: number }>();
@@ -591,7 +604,7 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
             mediaBruta: Math.round((g.totalBruto / g.registros) * 100) / 100,
           }))
           .sort((a, b) => b.totalBruto - a.totalBruto);
-        return resultWithProvenance({ ano: params.ano, mes: params.mes, totalRegistros: itens.length, resumo }, prov);
+        return resultWithProvenance({ ano: params.ano, mes: params.mes, totalRegistros: itens.length, resumo }, provenanceDaRemuneracao(prov, "resumo"));
       } catch (e) {
         return errorFrom(e, "Erro ao consultar remunerações");
       }
@@ -645,7 +658,7 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
           total: itens.length,
           valorTotal,
           horasExtras: itens.slice(0, limite),
-        }, prov);
+        }, provenanceDasHorasExtras(prov));
       } catch (e) {
         return errorFrom(e, "Erro ao consultar horas extras");
       }

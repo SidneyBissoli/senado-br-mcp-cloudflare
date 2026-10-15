@@ -19,7 +19,7 @@ import { upstreamFetch, UpstreamError } from "../throttle/upstream.js";
 import { toolError, errorFrom, ensureArray, safeInt, toBool, normalizeText } from "../utils/validation.js";
 import { digArrayRoot } from "../utils/upstream-parse.js";
 import { escolherReuniao, ehReuniaoInexistente, mensagemCodigoInexistente } from "./resolver-reuniao.js";
-import { leituraDoCache, provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { NOTA_DERIVACAO_SOMAS, derivadoSe, leituraDoCache, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
 export function formatDateYMD(d: Date): string {
@@ -184,6 +184,14 @@ export function provenanceReunioesComissao(
       : {}),
   });
 }
+
+/**
+ * `senado_distribuicao_materias` (contract v1.3): in `relatoria` the source sends one row per
+ * (parlamentar, unidade) and the server sums `Quantidade` per parlamentar — derived; in `autoria`
+ * each count is the source's own (ordering only).
+ */
+export const provenanceDaDistribuicao = (prov: Provenance, tipo: string): Provenance =>
+  derivadoSe(prov, tipo === "relatoria", NOTA_DERIVACAO_SOMAS);
 
 export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) {
   // E1. senado_listar_comissoes
@@ -677,7 +685,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
           tipo,
           count: parlamentares.length,
           parlamentares,
-        }, prov);
+        }, provenanceDaDistribuicao(prov, tipo));
       } catch (e) {
         return errorFrom(e, "Erro ao obter distribuição de matérias");
       }

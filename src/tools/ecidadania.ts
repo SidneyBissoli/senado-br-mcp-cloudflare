@@ -17,6 +17,12 @@ import { errorFrom } from "../utils/validation.js";
 import {
   leituraDoCache,
   provenanceEcidadania,
+  NOTA_DERIVACAO_DATA_ESTIMADA,
+  NOTA_DERIVACAO_PERCENTUAIS,
+  NOTA_DERIVACAO_RANKING_ECIDADANIA,
+  NOTA_DERIVACAO_SOMAS,
+  derivado,
+  derivadoSe,
   provenanceArquimedesVotos,
   resultWithProvenance,
   withFieldSources,
@@ -155,6 +161,19 @@ export function provenanceEventoDetalhe(
 }
 
 /**
+ * Contract v1.3 `derived` on e-Cidadania responses. Every consulta carries percentages the server
+ * computes (`buildConsultaResumo`), and `totalVotos` too when the source sends no total; the
+ * analysis and the poll suggestion add their own polarisation/consensus metrics and ranking on top;
+ * an idea's creation date is an estimate; the historical archive's national totals are summed from
+ * the per-UF rows of the CSV.
+ */
+export const NOTA_DERIVACAO_ANALISE_CONSULTAS = `${NOTA_DERIVACAO_RANKING_ECIDADANIA} ${NOTA_DERIVACAO_PERCENTUAIS}`;
+export const provenanceDasConsultas = (prov: Provenance): Provenance => derivado(prov, NOTA_DERIVACAO_PERCENTUAIS);
+export const provenanceDaAnaliseDeConsultas = (prov: Provenance): Provenance => derivado(prov, NOTA_DERIVACAO_ANALISE_CONSULTAS);
+export const provenanceDasIdeias = (prov: Provenance, ideias: ReadonlyArray<{ dataCriacaoEstimada?: string | null }>): Provenance =>
+  derivadoSe(prov, ideias.some((i) => i.dataCriacaoEstimada != null), NOTA_DERIVACAO_DATA_ESTIMADA);
+export const provenanceDosVotosHistoricos = (prov: Provenance): Provenance => derivado(prov, NOTA_DERIVACAO_SOMAS);
+/**
  * Proveniência de `senado_ecidadania_sugerir_tema_enquete`: as sugestões cruzam DOIS corpora
  * do D1 (consultas e ideias), cada um com o seu `lastScrapedAt`. Até a 3.18.1 o topo levava só
  * o das consultas e o das ideias era descartado; agora cada corpus é sub-fonte das mesmas
@@ -167,10 +186,10 @@ export function provenanceSugestaoEnquete(consultasMeta: unknown, ideiasMeta: un
     dataset_id: "consultas+ideias",
     retrieved_at: typeof ts === "string" && ts ? ts : undefined,
   });
-  return withFieldSources(prov, [
+  return derivado(withFieldSources(prov, [
     subFonteDoCorpus("/principalmateria", "consultas", consultasMeta, campos),
     subFonteDoCorpus("/principalideia", "ideias", ideiasMeta, campos),
-  ]);
+  ]), NOTA_DERIVACAO_ANALISE_CONSULTAS);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -241,7 +260,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
         const out = filtered.slice(offset, offset + limite);
         return resultWithProvenance(
           { count: out.length, consultas: tagUntrustedList("consultas", out as unknown as Record<string, unknown>[]), meta },
-          provLista("/principalmateria", "consultas", meta),
+          provenanceDasConsultas(provLista("/principalmateria", "consultas", meta)),
         );
       } catch (e) { return ecidadaniaError(e); }
     },
@@ -261,7 +280,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
         const detalhe = buildConsultaDetalheResult(r as Record<string, unknown>);
         return resultWithProvenance(
           tagUntrustedFields("consultas", detalhe),
-          provDetalhe(r, `/visualizacaomateria?id=${params.id}`, `consulta=${params.id}`, fetchedAt),
+          provenanceDasConsultas(provDetalhe(r, `/visualizacaomateria?id=${params.id}`, `consulta=${params.id}`, fetchedAt)),
         );
       } catch (e) { return ecidadaniaError(e); }
     },
@@ -318,7 +337,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
         }
         return resultWithProvenance(
           { modo, criterio, count: filtered.length, consultas: tagUntrustedList("consultas", filtered as unknown as Record<string, unknown>[]), meta },
-          provLista("/principalmateria", "consultas", meta),
+          provenanceDaAnaliseDeConsultas(provLista("/principalmateria", "consultas", meta)),
         );
       } catch (e) { return ecidadaniaError(e); }
     },
@@ -359,7 +378,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
             avisoDatas: AVISO_DATAS_IDEIA,
             meta,
           },
-          provLista("/principalideia", "ideias", meta),
+          provenanceDasIdeias(provLista("/principalideia", "ideias", meta), ideias),
         );
       } catch (e) { return ecidadaniaError(e); }
     },
@@ -388,7 +407,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
         };
         return resultWithProvenance(
           tagUntrustedFields("ideias", detalhe),
-          provDetalhe(r, `/visualizacaoideia?id=${params.id}`, `ideia=${params.id}`, fetchedAt),
+          provenanceDasIdeias(provDetalhe(r, `/visualizacaoideia?id=${params.id}`, `ideia=${params.id}`, fetchedAt), [detalhe]),
         );
       } catch (e) { return ecidadaniaError(e); }
     },
@@ -634,10 +653,10 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
         }
         return resultWithProvenance(
           payload,
-          provenanceArquimedesVotos({
+          provenanceDosVotosHistoricos(provenanceArquimedesVotos({
             reference_period: referencePeriod ?? undefined,
             retrieved_at: typeof meta.lastScrapedAt === "string" && meta.lastScrapedAt ? meta.lastScrapedAt : undefined,
-          }),
+          })),
         );
       } catch (e) { return ecidadaniaError(e); }
     },
