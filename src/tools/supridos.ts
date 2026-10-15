@@ -11,7 +11,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch } from "../throttle/adm.js";
 import { errorFrom, ensureArray } from "../utils/validation.js";
-import { leituraDoCache, provenanceFor, resultWithProvenance, withFieldSources, type Provenance } from "../utils/provenance.js";
+import { derivadoDeEstatisticas, leituraDoCache, provenanceFor, resultWithProvenance, withFieldSources, type Provenance } from "../utils/provenance.js";
 import {
   computarEstatisticas,
   arredondarEstatisticas,
@@ -336,7 +336,7 @@ export function registerSupridosTools(server: SenadoToolHost, admBaseUrl: string
             modo: "estatisticas",
             total: lista.length,
             ...estatisticasSuprimento(lista, { tipo, campo: params.campo, agruparPor: params.agruparPor, topN: params.topN ?? 10, nomePorCodigo: nomes?.nomes }),
-          }, nomes ? provenanceSuprimentoComNomes(prov, { fromCache }, params.ano, admBaseUrl, nomes, params.agruparPor) : prov);
+          }, derivadoDeEstatisticas(nomes ? provenanceSuprimentoComNomes(prov, { fromCache }, params.ano, admBaseUrl, nomes, params.agruparPor) : prov));
         }
 
         return resultWithProvenance({

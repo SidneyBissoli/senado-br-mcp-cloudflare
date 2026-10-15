@@ -14,7 +14,7 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
 import { errorFrom, ensureArray, parseBRL } from "../utils/validation.js";
 import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
-import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { derivadoDeEstatisticas, provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import {
   computarEstatisticas,
   arredondarEstatisticas,
@@ -405,7 +405,7 @@ export function particionarPorUnidade(
  * organograma foi lido agora, o que também é. Com ele, o topo passa a ser o mais antigo
  * das duas (derivado pelo adaptador, contrato §3), e a folha entra como sub-fonte própria
  * para que o seu instante não suma do bloco. Antes da 3.17.0 o topo era o da folha, mais
- * novo que o snapshot — com a v1.2 ligada, a lib lançaria e a tool cairia.
+ * novo que o snapshot — com a regra da v1.2 (que a 1.3 mantém), a lib lançaria e a tool cairia.
  *
  * `folhaDoCache` é o `fromCache` da leitura da folha; o snapshot embutido não é cache nem
  * busca, então a sub-fonte dele não diz (`served_from_cache: null`).
@@ -559,7 +559,7 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
               agruparPor: params.agruparPor,
               topN: params.topN ?? 10,
             }),
-          }, prov);
+          }, derivadoDeEstatisticas(prov));
         }
 
         if ((params.modo ?? "resumo") === "detalhe") {
@@ -636,7 +636,7 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
             total: itens.length,
             valorTotal,
             ...estatisticasHorasExtras(itens, { agruparPor: params.agruparPor, topN: params.topN ?? 10 }),
-          }, prov);
+          }, derivadoDeEstatisticas(prov));
         }
         return resultWithProvenance({
           ano: params.ano,

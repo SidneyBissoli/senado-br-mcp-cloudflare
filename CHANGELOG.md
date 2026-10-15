@@ -6,6 +6,32 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.18.5] - 2026-10-15
+
+Tempo 2 do contrato de proveniência 1.3: o que a 3.17.0 passou a ACEITAR no esquema
+passa a SAIR nas respostas, como manda o rollout em dois tempos. O `tools/list` não muda
+(`surface.lock.json` idêntico).
+
+### Changed
+
+- **O servidor emite o contrato 1.3.** O bloco `concise` leva `revision` em toda resposta
+  (`current` em todas as fontes; nas fontes administrativa e orçamentária, a nota de que o
+  Senado pode corrigir o dado publicado, a mesma frase das instructions). Nenhuma fonte do
+  Senado publica aviso junto com o dado, então `notices` não sai; o rodapé de texto do caso
+  comum não muda.
+- **Os modos `estatisticas` dizem que são cálculo do servidor.** Em
+  `senado_remuneracoes_servidores`, `senado_horas_extras`, `senado_ceaps`,
+  `senado_execucao_orcamentaria` e `senado_suprimento_fundos`, o bloco leva `derived: true`
+  + `derivation_note` fixa (distribuição, agregados e rankings computados pelo servidor; os
+  valores individuais seguem os do Senado), e o rodapé ganha a linha "Valores calculados
+  pelo servidor…". Nos atos de concessão com nomes, a marca vem por cima das sub-fontes, que
+  ficam como estavam. Fora desses modos, `derived` fica ausente.
+
+### Documentation
+
+- README e LEIA-ME: a tabela do bloco `concise` passa a listar todas as chaves do contrato
+  1.3 (`retrieval`, `field_sources`, `derived`/`derivation_note`, `revision`).
+
 ## [3.18.4] - 2026-10-14
 
 ### Fixed

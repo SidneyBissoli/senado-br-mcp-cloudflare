@@ -15,7 +15,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray, safeInt, parseBRL } from "../utils/validation.js";
-import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { derivadoDeEstatisticas, provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import {
   computarEstatisticas,
   arredondarEstatisticas,
@@ -285,7 +285,7 @@ export function registerOrcamentoSenadoTools(server: SenadoToolHost) {
             ano: params.ano ?? null,
             totalLinhas: itens.length,
             ...estatisticasExecucao(itens, { tipo, campo: params.campo, agruparPor: params.agruparPor, topN: params.topN ?? 10 }),
-          }, prov);
+          }, derivadoDeEstatisticas(prov));
         }
 
         if (tipo === "despesas") {

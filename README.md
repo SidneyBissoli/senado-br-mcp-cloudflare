@@ -553,18 +553,24 @@ Coverage spans all four upstream sources, each with its own `source`/`citation`/
 - **Senado Federal — Execução Orçamentária e Financeira** — Arquimedes/Financeiro feed at `senado.gov.br`
 - **Senado Federal — Portal e-Cidadania** — `www12.senado.leg.br/ecidadania`
 
-Fields of the `concise` block (per response — one tool, one source; keys in this fixed order, `null` when the source does not expose the value):
+Fields of the `concise` block (contract v1.3 since 3.18.5; per response — one tool, one source; keys in this fixed order; the first seven are always present, with `null` when the source does not expose the value; the optional ones are **absent**, never empty, when they do not apply):
 
 | Field | Meaning |
 |-------|---------|
 | `source` | Official source name (e.g. *Senado Federal — Dados Abertos (Legislativo)*) |
 | `source_url` | Canonical endpoint/item URL consulted (e.g. `…/processo/{id}`) |
 | `data_vintage` | Vintage/competência of the data (e.g. `2024-03-15`, `2019`) — named `reference_period` before v3.5.0 |
-| `retrieved_at` | ISO-8601 of the **upstream extraction** — carried through the cache, so it reflects when the data was actually fetched, not the build or the cache-hit time |
+| `retrieved_at` | ISO-8601 of the **upstream extraction** — carried through the cache, so it reflects when the data was actually fetched, not the build or the cache-hit time; on merged responses, the oldest of the parts |
+| `retrieval` | Measured diagnostics of the trip to the source (attempts, outcome), or `null` when nothing was fetched in the call (pure cache, local data) — since 3.11.0 (v1.1) |
 | `citation` | Ready-to-use citation string (human-readable) |
 | `license` | Source terms (Dados Abertos do Senado Federal) |
+| `field_sources` | *Optional.* Per-field sub-sources, each with its own extraction instant — only on responses that merge reads (v1.2, since 3.17.0; see below) |
+| `derived` / `derivation_note` | *Optional.* `true` + a fixed note when the server computed the values — the `estatisticas` modes (distribution, aggregates, rankings) of `senado_remuneracoes_servidores`, `senado_horas_extras`, `senado_ceaps`, `senado_execucao_orcamentaria` and `senado_suprimento_fundos`; the individual values they cite remain the Senate's own |
+| `revision` | Whether the figure may still change at the source: `status` is `current` for every Senate source (the version in force at extraction; none is claimed `final`), and `note` says, for the administrative and budget sources, that the Senate may correct published data later |
 
-The canonical model behind the block also carries `dataset.id` (item/series identifier, e.g. `codigoMateria=137808`) and `api_version`; those are validated on every build and inform `attribution` (below), but are not part of the `concise` projection. Per-field `field_sources` are (contract v1.2, since 3.17.0), on the responses that merge reads.
+No Senate source publishes notices alongside the data, so `notices` (also part of v1.3) does not appear. The text footer gains a line only for exceptions — here, the computed-values line on the `estatisticas` modes.
+
+The canonical model behind the block also carries `dataset.id` (item/series identifier, e.g. `codigoMateria=137808`) and `api_version`; those are validated on every build and inform `attribution` (below), but are not part of the `concise` projection.
 
 In addition to the `provenance` envelope, `structuredContent` carries a top-level **`attribution`** list — the distinct source URLs behind the response. This mirrors the naming proposed in [modelcontextprotocol#711](https://github.com/modelcontextprotocol/modelcontextprotocol/issues/711) (where `attribution` is a list of source references at the response level), so the server stays forward-compatible if that RFC lands; the richer `provenance` object remains this server's own extension.
 

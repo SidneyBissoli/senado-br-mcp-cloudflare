@@ -5,7 +5,8 @@
  * `concise` projection of the contract version the server chose
  * (`provenanceContext.contractVersion`), timestamps are Brasília (-03:00), the block's
  * `retrieved_at` is the OLDEST of its sub-sources (v1.2), each source carries its
- * decided `revision` (v1.3, not on the wire yet), and the three emission channels keep
+ * decided `revision` and the estatisticas modes are `derived` (v1.3, on the wire since
+ * 3.18.5), and the three emission channels keep
  * their roles. The contract itself (schema validation, determinism, footer wording) is
  * tested in the package.
  */
@@ -28,6 +29,8 @@ import {
   ATTRIBUTION_META_KEY,
   oldestRetrievedAt,
   leituraDoCache,
+  derivadoDeEstatisticas,
+  NOTA_DERIVACAO_ESTATISTICAS,
 } from "../../src/utils/provenance.js";
 import { createProvenanceContext, ProvenanceContractError } from "@sbissoli/mcp-provenance";
 import { provenanceMateriaDetalhe } from "../../src/tools/materias.js";
@@ -222,7 +225,7 @@ describe("provenanceFooter (contract v1.0 wording)", () => {
 });
 
 describe("resultWithProvenance (three channels, concise projection)", () => {
-  it("emits the 7-key concise block in structuredContent when nothing is merged (v1.2 adds field_sources only on merged responses)", () => {
+  it("emits the 7 fixed keys + revision when nothing is merged or computed (v1.3: field_sources, notices and derived stay absent)", () => {
     const prov = provenanceFor("SENADO_LEGIS", "https://x", "/votacao");
     const res = resultWithProvenance({ count: 2, votacoes: [] }, prov);
     expect(res.structuredContent).toMatchObject({ count: 2 });
@@ -234,6 +237,7 @@ describe("resultWithProvenance (three channels, concise projection)", () => {
       "retrieval",
       "citation",
       "license",
+      "revision",
     ]);
     expect(res.structuredContent.provenance).toMatchObject({
       source: SOURCES.SENADO_LEGIS.source,
@@ -298,8 +302,8 @@ describe("provenanceContext configuration", () => {
     expect(provenanceContext.defaultMode).toBe("concise");
   });
 
-  it("emits contract v1.2 (time 2 of 1.2), not yet 1.3", () => {
-    expect(provenanceContext.contractVersion).toBe("1.2");
+  it("emits contract v1.3 (time 2 of 1.3)", () => {
+    expect(provenanceContext.contractVersion).toBe("1.3");
   });
 });
 
@@ -592,9 +596,9 @@ describe("tools que fundem uma 2ª leitura declaram as duas e o topo é a mais a
   });
 });
 
-// ==================== v1.3: revision informada (fora do fio enquanto emite 1.2) ====================
+// ==================== v1.3 no fio: revision sempre, derived nas estatísticas ====================
 
-describe("revision (contract v1.3) is carried by the canonical block", () => {
+describe("revision (contract v1.3) is carried by the canonical block and emitted", () => {
   const NOTA_ADM =
     "Dados administrativos são os que o Senado publica no instante da extração e podem ser corrigidos depois.";
 
@@ -617,13 +621,57 @@ describe("revision (contract v1.3) is carried by the canonical block", () => {
     for (const s of Object.values(SOURCES)) expect(s.revision.status).not.toBe("final");
   });
 
-  it("the concise block emitted today (1.2) does not carry revision; a 1.3 context would", () => {
+  it("the emitted concise block carries revision; with nothing computed, no derived and no notices", () => {
     const p = provenanceFor("SENADO_ADM", "https://adm", "/x");
     const sc = resultWithProvenance({ ok: true }, p).structuredContent.provenance as Record<string, unknown>;
-    expect(sc).not.toHaveProperty("revision");
-    const ctx13 = createProvenanceContext({ metaNamespace: "t", locale: "pt-BR", contractVersion: "1.3", defaultMode: "concise" });
-    const p13 = ctx13.from(SOURCES.SENADO_ADM, { source_url: "https://adm/x" });
-    const sc13 = ctx13.result({ ok: true }, p13).structuredContent.provenance as unknown as Record<string, unknown>;
-    expect(sc13.revision).toEqual({ status: "current", note: NOTA_ADM });
+    expect(sc.revision).toEqual({ status: "current", note: NOTA_ADM });
+    expect(sc).not.toHaveProperty("derived");
+    expect(sc).not.toHaveProperty("derivation_note");
+    expect(sc).not.toHaveProperty("notices");
+  });
+
+  it("the common case gains no footer line (revision is not an exception)", () => {
+    const p = provenanceFor("SENADO_LEGIS", "https://x", "/votacao", { retrieved_at: "2026-06-22T12:00:00Z" });
+    expect(provenanceFooter(p)).not.toMatch(/calculados|Avisos|preliminares/);
+  });
+});
+
+describe("derived (contract v1.3): the estatisticas modes say the server computed", () => {
+  const prov = () =>
+    provenanceFor("SENADO_ADM", "https://adm", "/api/v1/senadores/despesas_ceaps/2025", {
+      dataset_id: "ceaps; ano=2025",
+      reference_period: "2025",
+      retrieved_at: "2026-10-15T12:00:00Z",
+    });
+
+  it("marks derived + the fixed note, after revision in schema order", () => {
+    const sc = resultWithProvenance({ ok: true }, derivadoDeEstatisticas(prov())).structuredContent
+      .provenance as Record<string, unknown>;
+    expect(sc.derived).toBe(true);
+    expect(sc.derivation_note).toBe(NOTA_DERIVACAO_ESTATISTICAS);
+    expect(Object.keys(sc)).toEqual([
+      "source", "source_url", "data_vintage", "retrieved_at", "retrieval", "citation", "license",
+      "derived", "derivation_note", "revision",
+    ]);
+  });
+
+  it("the text footer gains the computed-values line", () => {
+    const footer = provenanceFooter(derivadoDeEstatisticas(prov()));
+    expect(footer).toContain(NOTA_DERIVACAO_ESTATISTICAS);
+  });
+
+  it("keeps field_sources and the oldest-top rule when wrapping a merged block", () => {
+    const merged = provenanceSuprimentoComNomes(
+      prov(),
+      { fromCache: false },
+      2025,
+      "https://adm",
+      { leitura: { fetchedAt: "2026-10-14T09:00:00Z", fromCache: true } },
+      undefined,
+    );
+    const d = derivadoDeEstatisticas(merged);
+    expect(d.field_sources).toHaveLength(2);
+    expect(d.retrieved_at).toBe(merged.retrieved_at);
+    expect(d.derived).toBe(true);
   });
 });
