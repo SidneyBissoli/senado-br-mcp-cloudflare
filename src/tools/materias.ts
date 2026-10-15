@@ -144,7 +144,7 @@ export function parseDocumentoProcesso(d: any) {
  * também entra como sub-fonte: o `retrieved_at` do topo é derivado pelo adaptador como o
  * MAIS ANTIGO das três (contrato §3) e, sem este item, o instante do detalhe sumiria do
  * bloco quando o resumo fosse mais velho. Antes da 3.17.0 o topo era o fetch do detalhe,
- * feito DEPOIS das sub-fontes — com a v1.2 ligada, a lib lançaria e a tool cairia.
+ * feito DEPOIS das sub-fontes — com a regra da v1.2 (que a 1.3 mantém), a lib lançaria e a tool cairia.
  */
 export function provenanceMateriaDetalhe(
   baseUrl: string,

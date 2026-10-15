@@ -17,14 +17,16 @@
  *  - v1.1 (release 3.11.0): o concise tem 7 chaves fixas — `source`, `source_url`,
  *    `data_vintage` (ex-`reference_period`), `retrieved_at`, `citation`, `license` e
  *    `retrieval` (diagnóstico medido da ida à origem, ou `null`).
- *  - v1.2 (EMITIDA desde a release 3.17.0): acrescenta ao concise a chave opcional
- *    `field_sources` (sub-fontes por campo), só nas respostas que fundem recortes. Com
- *    ela a lib COBRA que o `retrieved_at` do topo seja o mais antigo entre as sub-fontes
- *    (lança `ProvenanceContractError`, o que derrubaria a tool) — por isso o adaptador
- *    o deriva por construção (`oldestRetrievedAt`), nunca a tool à mão.
- *  - v1.3 (declarada pelo `outputSchema` desde a 3.17.0, ainda NÃO emitida): `notices`,
- *    `derived`/`derivation_note` e `revision`. A `revision` já é informada aqui, por
- *    fonte (`SOURCES`), e a lib a descarta enquanto o servidor emitir 1.2.
+ *  - v1.2 (release 3.17.0): acrescenta ao concise a chave opcional `field_sources`
+ *    (sub-fontes por campo), só nas respostas que fundem recortes. Com ela a lib COBRA
+ *    que o `retrieved_at` do topo seja o mais antigo entre as sub-fontes (lança
+ *    `ProvenanceContractError`, o que derrubaria a tool) — por isso o adaptador o deriva
+ *    por construção (`oldestRetrievedAt`), nunca a tool à mão.
+ *  - v1.3 (EMITIDA desde a release 3.18.5; o `outputSchema` a aceitava desde a 3.17.0):
+ *    o concise leva `revision` SEMPRE (por fonte, em `SOURCES`) e `derived` +
+ *    `derivation_note` nos modos `estatisticas` (`derivadoDeEstatisticas`). `notices`
+ *    não sai: nenhuma fonte do senado publica aviso junto com o dado. Sem cálculo, as
+ *    chaves opcionais ficam AUSENTES, não vazias.
  *  - O rodapé de texto segue a redação fixada do contrato: linha de fonte
  *    ("Fonte: … · url · dados de … · extraído em …"), linha de licença e o aviso ao
  *    leitor de que a referência completa pode ser solicitada na própria conversa.
@@ -66,7 +68,7 @@ export const provenanceContext = createProvenanceContext({
   locale: "pt-BR",
   timezone: { offset: "-03:00", label: "horário de Brasília" },
   defaultMode: "concise",
-  contractVersion: "1.2",
+  contractVersion: "1.3",
 });
 
 /** Envelope canônico do contrato (pós-validação). */
@@ -191,7 +193,7 @@ const extraToCanonical = (extra: ExtraInput = {}) => {
  * `current` em todas as fontes do senado, `final` em nenhuma — só com prova da fonte).
  * A `note` só repete o que o servidor JÁ diz nas instructions (`src/app-surface.ts`) sobre
  * os dados administrativos; nas demais fontes não há texto publicado, então `null`.
- * Enquanto o servidor emitir a v1.2 a lib descarta o campo do fio — fica no canônico.
+ * Sai no concise de toda resposta (v1.3).
  */
 const REVISAO_VIGENTE = { status: "current", note: null } as const;
 const REVISAO_ADMINISTRATIVA = {
@@ -361,6 +363,27 @@ export function withFieldSources(prov: Provenance, fieldSources: FieldSource[]):
     ...prov,
     retrieved_at,
     field_sources: fieldSources.map(toCanonicalFieldSource),
+  } as ProvenanceInput);
+}
+
+/**
+ * Nota fixa dos modos `estatisticas` (mesma redação do ibge-br-mcp, adaptada à fonte):
+ * a distribuição, os agregados e o ranking são cálculo deste servidor; cada valor
+ * individual citado é o que o Senado publica.
+ */
+export const NOTA_DERIVACAO_ESTATISTICAS =
+  "Estatísticas (distribuição, agregados e rankings) computadas pelo servidor a partir dos registros brutos retornados pela fonte; os valores individuais permanecem os originais do Senado Federal.";
+
+/**
+ * Marca o bloco como derivado (contrato v1.3): `derived: true` + a nota fixa dos modos
+ * `estatisticas`. Aplique por último, sobre o bloco já completo (inclusive o de
+ * `withFieldSources`); o envelope é re-validado inteiro no contrato (build).
+ */
+export function derivadoDeEstatisticas(prov: Provenance): Provenance {
+  return provenanceContext.build({
+    ...prov,
+    derived: true,
+    derivation_note: NOTA_DERIVACAO_ESTATISTICAS,
   } as ProvenanceInput);
 }
 

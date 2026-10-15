@@ -14,7 +14,7 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
 import { errorFrom, ensureArray, normalizeText, parseBRL } from "../utils/validation.js";
 import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
-import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { derivadoDeEstatisticas, provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import {
   computarEstatisticas,
   arredondarEstatisticas,
@@ -194,7 +194,7 @@ export function registerSenadoresAdminTools(server: SenadoToolHost, admBaseUrl: 
             totalDespesas: filtrado.length,
             valorTotal: totalGeral,
             ...estatisticasCeaps(filtrado, { agruparPor: params.agruparPor, topN: params.topN ?? 10 }),
-          }, prov);
+          }, derivadoDeEstatisticas(prov));
         }
 
         const limite = params.limite ?? 100;
