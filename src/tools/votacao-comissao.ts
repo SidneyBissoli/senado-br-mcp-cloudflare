@@ -9,7 +9,7 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolError, errorFrom, buildParams, ensureArray, normalizeText } from "../utils/validation.js";
 import { digArrayRoot } from "../utils/upstream-parse.js";
-import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { NOTA_DERIVACAO_PLACAR_COMISSAO, derivadoSe, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
 import { CACHE_DYNAMIC } from "../types.js";
 
 const VOTACAO_COMISSAO_ROOT = [["VotacoesComissao", "Votacoes", "Votacao"]];
@@ -18,7 +18,7 @@ const VOTACAO_COMISSAO_ROOT = [["VotacoesComissao", "Votacoes", "Votacao"]];
 export function parseVotacaoComissao(v: any) {
   const votacao = v.Votacao || v;
   const votosRaw = ensureArray(votacao.Votos?.Voto ?? votacao.votos);
-  let totalSim = 0, totalNao = 0, totalAbstencao = 0;
+  let totalSim = 0, totalNao = 0, totalAbstencao = 0; // recontagem, usada só se a fonte não publicar
   const votos = votosRaw.map((vt: any) => {
     const q = normalizeText(vt.QualidadeVoto || vt.DescricaoVoto || vt.voto);
     if (q === "s" || q === "sim") totalSim++;
@@ -38,10 +38,43 @@ export function parseVotacaoComissao(v: any) {
     reuniao: votacao.CodigoReuniao || null,
     materia: votacao.IdentificacaoMateria || votacao.DescricaoIdentificacaoMateria || null,
     descricao: votacao.DescricaoVotacao || votacao.descricaoVotacao || null,
-    totalSim, totalNao, totalAbstencao,
+    ...placarDaComissao(votacao, { sim: totalSim, nao: totalNao, abstencao: totalAbstencao }),
     votos,
   };
 }
+
+const totalPublicado = (v: unknown): number | null => {
+  if (v === undefined || v === null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+/**
+ * Committee tally: the source's `TotalVotosSim/Nao/Abstencao` when it publishes them (it does on
+ * every vote measured — 395 of 395 at the CCJ on 15/10/2026), the recount of the nominal votes
+ * only when all three are missing, then flagged `placarComputado`. Until 3.18.5 the parser always
+ * recounted, and 5 of those 395 came out different from the published tally: the source repeats
+ * the nominal list in some votes (24/25 counted against 12/13 published) and counts an "A" vote
+ * as no abstention in others. The published number is the source's own; the recount is not.
+ */
+export function placarDaComissao(
+  votacao: any,
+  recontagem: { sim: number; nao: number; abstencao: number },
+): { totalSim: number; totalNao: number; totalAbstencao: number; placarComputado?: true } {
+  const sim = totalPublicado(votacao?.TotalVotosSim);
+  const nao = totalPublicado(votacao?.TotalVotosNao);
+  const abstencao = totalPublicado(votacao?.TotalVotosAbstencao);
+  if (sim !== null || nao !== null || abstencao !== null) {
+    return { totalSim: sim ?? 0, totalNao: nao ?? 0, totalAbstencao: abstencao ?? 0 };
+  }
+  return { totalSim: recontagem.sim, totalNao: recontagem.nao, totalAbstencao: recontagem.abstencao, placarComputado: true };
+}
+
+/** `derived` (contract v1.3) only when some item's tally had to be counted from the votes. */
+export const provenanceDaVotacaoComissao = (
+  prov: Provenance,
+  votacoes: ReadonlyArray<{ placarComputado?: boolean }>,
+): Provenance => derivadoSe(prov, votacoes.some((v) => v.placarComputado === true), NOTA_DERIVACAO_PLACAR_COMISSAO);
 
 /**
  * Filter parsed committee votes locally by reunion date. The upstream serves the full
@@ -67,7 +100,7 @@ export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: st
       "`por: comissao` → exige `siglaComissao`; lista as votações daquela comissão. " +
       "`por: senador` → exige `codigoSenador`; lista os votos do senador em comissões (filtro opcional `comissao`). " +
       "`por: materia` → exige `sigla`, `numero` e `ano` (ex.: PL 2630/2020); lista as votações da proposição em comissões (filtro opcional `comissao`). " +
-      "Em todos os casos aceita período opcional `dataInicio`/`dataFim` (YYYYMMDD, filtrado pela data da reunião) e retorna `{ por, ...contexto, count, votacoes }`, cada votação com `codigo`, `data`, `comissao`, `reuniao`, `materia`, `descricao`, totais computados dos votos (`totalSim`/`totalNao`/`totalAbstencao`) e `votos` (senador, partido, voto). Sem paginação. Períodos amplos podem estourar o tempo-limite da consulta (erro de timeout): prefira janelas de até 3 meses e divida períodos maiores em chamadas sucessivas. " +
+      "Em todos os casos aceita período opcional `dataInicio`/`dataFim` (YYYYMMDD, filtrado pela data da reunião) e retorna `{ por, ...contexto, count, votacoes }`, cada votação com `codigo`, `data`, `comissao`, `reuniao`, `materia`, `descricao`, totais publicados pela fonte (`totalSim`/`totalNao`/`totalAbstencao`; contados dos votos, com `placarComputado: true`, só quando a fonte não os traz) e `votos` (senador, partido, voto). Sem paginação. Períodos amplos podem estourar o tempo-limite da consulta (erro de timeout): prefira janelas de até 3 meses e divida períodos maiores em chamadas sucessivas. " +
       "Obtenha siglas via `senado_listar_comissoes`, `codigoSenador` via `senado_listar_senadores`; para votações no plenário use `senado_votos_materia`. Atenção: o `codigo` de cada votação de comissão pertence a um espaço de numeração próprio e NÃO é válido em `senado_obter_votacao` (que é exclusivo de plenário) — podem coincidir numericamente, mas apontam para votações diferentes.",
     {
       por: z.enum(["comissao", "senador", "materia"]).optional().default("comissao").describe("Eixo da consulta: comissao, senador ou materia"),
@@ -111,7 +144,7 @@ export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: st
           });
           return resultWithProvenance(
             { por, codigoSenador: params.codigoSenador, count: votacoes.length, votacoes },
-            prov,
+            provenanceDaVotacaoComissao(prov, votacoes),
           );
         }
 
@@ -144,7 +177,7 @@ export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: st
           });
           return resultWithProvenance(
             { por, materia: `${sigla} ${params.numero}/${params.ano}`, count: votacoes.length, votacoes },
-            prov,
+            provenanceDaVotacaoComissao(prov, votacoes),
           );
         }
 
@@ -173,7 +206,7 @@ export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: st
             ? `${params.dataInicio}/${params.dataFim}` : undefined,
           retrieved_at: fetchedAt,
         });
-        return resultWithProvenance({ por, siglaComissao: sigla, count: votacoes.length, votacoes }, prov);
+        return resultWithProvenance({ por, siglaComissao: sigla, count: votacoes.length, votacoes }, provenanceDaVotacaoComissao(prov, votacoes));
       } catch (e) {
         return errorFrom(e, "Erro ao obter votações em comissões");
       }

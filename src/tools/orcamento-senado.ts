@@ -15,7 +15,7 @@ import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray, safeInt, parseBRL } from "../utils/validation.js";
-import { derivadoDeEstatisticas, provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { NOTA_DERIVACAO_SOMAS, derivadoDeEstatisticas, derivadoSe, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
 import {
   computarEstatisticas,
   arredondarEstatisticas,
@@ -93,6 +93,10 @@ export function parseReceita(r: any) {
 }
 
 /** Aggregate normalized despesas by a key, summing the five value columns. */
+/** Todo modo fora de `detalhe` soma por grupo (por-ano, o padrão, também): é cálculo do servidor. */
+export const provenanceDaExecucao = (prov: Provenance, modo: string): Provenance =>
+  derivadoSe(prov, modo !== "detalhe", NOTA_DERIVACAO_SOMAS);
+
 export function agregarDespesas(itens: ReturnType<typeof parseDespesa>[], chave: (d: any) => string) {
   const grupos = new Map<string, any>();
   for (const d of itens) {
@@ -306,7 +310,7 @@ export function registerOrcamentoSenadoTools(server: SenadoToolHost) {
             if (modo === "por-ano") agregado = agregado.sort((a, b) => String(a.chave).localeCompare(String(b.chave)));
             resultado = { agregado: agregado.slice(0, limite) };
           }
-          return resultWithProvenance({ tipo, modo, ano: params.ano ?? null, totalLinhas: itens.length, ...resultado }, prov);
+          return resultWithProvenance({ tipo, modo, ano: params.ano ?? null, totalLinhas: itens.length, ...resultado }, provenanceDaExecucao(prov, modo));
         }
 
         // receitas
@@ -336,7 +340,7 @@ export function registerOrcamentoSenadoTools(server: SenadoToolHost) {
             : agregado.sort((a, b) => a.chave.localeCompare(b.chave));
           resultado = { agregado: agregado.slice(0, limite) };
         }
-        return resultWithProvenance({ tipo, modo, ano: params.ano ?? null, totalLinhas: itens.length, ...resultado }, prov);
+        return resultWithProvenance({ tipo, modo, ano: params.ano ?? null, totalLinhas: itens.length, ...resultado }, provenanceDaExecucao(prov, modo));
       } catch (e) {
         return errorFrom(e, "Erro ao consultar execução orçamentária");
       }

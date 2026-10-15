@@ -13,7 +13,7 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { toolError, errorFrom, buildParams, ensureArray } from "../utils/validation.js";
 import { computarPlacar } from "../utils/placar.js";
-import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { NOTA_DERIVACAO_PLACAR, derivadoSe, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 
 /** Convert YYYYMMDD → YYYY-MM-DD (required by /votacao endpoint). */
@@ -48,6 +48,14 @@ export function expandirResultado(code: any): { resultado: string | null; result
   const raw = String(code).trim();
   return { resultado: RESULTADO_VOTACAO[raw.toUpperCase()] ?? raw, resultadoCodigo: raw };
 }
+
+/**
+ * Provenance of a plenary vote response (contract v1.3): `derived` only when at least one item's
+ * tally was counted from the nominal votes (`placarComputado`); totals the source publishes are
+ * copied and do not mark the block.
+ */
+export const provenanceDaVotacao = (prov: Provenance, votacoes: ReadonlyArray<{ placarComputado?: boolean }>): Provenance =>
+  derivadoSe(prov, votacoes.some((v) => v.placarComputado === true), NOTA_DERIVACAO_PLACAR);
 
 /** Parse a single vote item from the /votacao endpoint (flat camelCase). */
 export function parseVotacaoItem(v: any, includeVotos = false) {
@@ -155,8 +163,8 @@ export function registerVotacoesTools(server: SenadoToolHost, baseUrl: string) {
             reference_period: votacoes[0]?.data || undefined,
             retrieved_at: fetchedAt,
           });
-          if (votacoes.length === 1) return resultWithProvenance(votacoes[0], prov);
-          return resultWithProvenance({ codigoSessao: codigo, count: votacoes.length, votacoes }, prov);
+          if (votacoes.length === 1) return resultWithProvenance(votacoes[0], provenanceDaVotacao(prov, votacoes));
+          return resultWithProvenance({ codigoSessao: codigo, count: votacoes.length, votacoes }, provenanceDaVotacao(prov, votacoes));
         }
 
         // PASSO 2 — vazio não é resposta: o número pode ser do OUTRO espaço.
@@ -177,11 +185,11 @@ export function registerVotacoesTools(server: SenadoToolHost, baseUrl: string) {
           const votacao = parseVotacaoItem(achado, true);
           return resultWithProvenance(
             votacao,
-            provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
+            provenanceDaVotacao(provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
               dataset_id: `${CAMPO_VOTACAO}=${codigo}`,
               reference_period: votacao.data || undefined,
               retrieved_at: fetchedAtJanela,
-            }),
+            }), [votacao]),
           );
         }
 
@@ -231,7 +239,7 @@ export function registerVotacoesTools(server: SenadoToolHost, baseUrl: string) {
         });
         return resultWithProvenance(
           { codigoMateria: params.codigoMateria, count: votacoes.length, votacoes },
-          prov,
+          provenanceDaVotacao(prov, votacoes),
         );
       } catch (e) {
         return errorFrom(e, "Erro ao obter votações da matéria");
@@ -290,7 +298,7 @@ export function registerVotacoesTools(server: SenadoToolHost, baseUrl: string) {
           reference_period: di && df ? `${di}/${df}` : di || df || undefined,
           retrieved_at: fetchedAt,
         });
-        return resultWithProvenance({ count: votacoes.length, votacoes }, prov);
+        return resultWithProvenance({ count: votacoes.length, votacoes }, provenanceDaVotacao(prov, votacoes));
       } catch (e) {
         return errorFrom(e, "Erro na busca de votações");
       }

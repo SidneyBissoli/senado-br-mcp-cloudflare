@@ -6,6 +6,54 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.19.0] - 2026-10-15
+
+A marca de cálculo do contrato 1.3 deixa de valer só para os modos `estatisticas` e passa a
+cobrir TODA resposta em que o servidor calcula em vez de copiar. Na 3.18.5, a soma da CEAPS
+(`valorTotal`, e o modo `por-senador`, que é o padrão), os agregados da execução orçamentária
+(o `por-ano`, também padrão), o `bruto` das remunerações e os percentuais do e-Cidadania saíam
+com cara de número da fonte. MINOR porque a descrição de `senado_votacao_comissao` mudou
+(`surface.lock.json` regravado).
+
+### Changed
+
+- **`derived` + `derivation_note` na classe inteira**, com uma nota em português por TIPO de
+  cálculo (o rodapé ganha a linha "Valores calculados pelo servidor…" com ela):
+  - somas, contagens e médias por grupo: `senado_ceaps` fora de `estatisticas` (todo modo leva
+    o `valorTotal` somado), `senado_execucao_orcamentaria` nos modos agregados (receitas e
+    despesas; `detalhe` fica sem a marca), `senado_remuneracoes_servidores` `modo=resumo`
+    (nota das somas + a do bruto), `senado_horas_extras` fora de `estatisticas`
+    (`valorTotal`), `senado_distribuicao_materias` `tipo=relatoria` (a fonte manda uma linha
+    por parlamentar e unidade; `autoria` é o número da fonte), `senado_tabelas_referencia`
+    `partidos` e `ufs`, `senado_ecidadania_consultas_votos` (totais nacionais somados das
+    linhas por UF do CSV);
+  - o `bruto` das remunerações (`modo=detalhe`), soma das sete verbas;
+  - `senado_servidores` com `subordinadasA`: atribuição de cada lotação ao organograma e a
+    contagem, um piso;
+  - placar contado dos votos nominais, só quando a fonte não publica o total: votação aberta
+    no plenário (`senado_obter_votacao`, `senado_votos_materia`, `senado_search_votacoes`; a
+    marca sai quando algum item da resposta foi contado) e votação de comissão sem totais;
+  - e-Cidadania: percentuais (e o total, quando a fonte não o traz) em
+    `senado_ecidadania_listar_consultas` e `senado_ecidadania_obter_consulta`; consenso,
+    polarização e ordem por participação em `senado_ecidadania_consultas_analise` e
+    `senado_ecidadania_sugerir_tema_enquete`; a data de criação estimada em
+    `senado_ecidadania_listar_ideias` e `senado_ecidadania_obter_ideia`;
+  - período e datas da legislatura atual (`senado_tabelas_referencia`), com nota própria
+    quando a fonte não informa o número e o servidor assume a 57ª.
+  
+  Fica sem a marca o que é número da fonte: listas cruas, o `detalhe` da execução, placares
+  publicados, a contagem de registros devolvidos.
+
+### Fixed
+
+- **`senado_votacao_comissao` passa a copiar o placar que a fonte publica**
+  (`TotalVotosSim`/`TotalVotosNao`/`TotalVotosAbstencao`) em vez de recontar sempre os votos.
+  Medido ao vivo na CCJ em 15/10/2026: as 395 votações trazem os totais, e em 5 a recontagem
+  saía diferente (a lista nominal vem repetida em duas, 24/25 contra 12/13 publicados; em três
+  há um voto "A" que a fonte não conta como abstenção). A recontagem fica só para a votação
+  sem totais, marcada com `placarComputado: true` e com `derived`. A descrição da tool, que
+  dizia "totais computados dos votos", foi corrigida.
+
 ## [3.18.5] - 2026-10-15
 
 Tempo 2 do contrato de proveniência 1.3: o que a 3.17.0 passou a ACEITAR no esquema

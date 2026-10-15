@@ -14,7 +14,7 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { admFetch, admFetchLarge } from "../throttle/adm.js";
 import { errorFrom, ensureArray, normalizeText, parseBRL } from "../utils/validation.js";
 import { unwrapAdmEnvelope } from "../utils/upstream-parse.js";
-import { derivadoDeEstatisticas, provenanceFor, resultWithProvenance } from "../utils/provenance.js";
+import { NOTA_DERIVACAO_SOMAS, derivado, derivadoDeEstatisticas, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
 import {
   computarEstatisticas,
   arredondarEstatisticas,
@@ -56,6 +56,9 @@ export function filtrarCeaps(itens: any[], f: CeapsFiltros): any[] {
 }
 
 /** Aggregate CEAPS items by a key extractor. */
+/** Toda resposta fora de `estatisticas` leva `valorTotal` (soma do servidor), em qualquer modo. */
+export const provenanceDoCeaps = (prov: Provenance): Provenance => derivado(prov, NOTA_DERIVACAO_SOMAS);
+
 export function agregarCeaps(itens: any[], chave: (d: any) => string | number, extra?: (d: any) => Record<string, unknown>) {
   const grupos = new Map<string | number, { total: number; qtd: number; extra?: Record<string, unknown> }>();
   for (const d of itens) {
@@ -222,7 +225,7 @@ export function registerSenadoresAdminTools(server: SenadoToolHost, admBaseUrl: 
           totalDespesas: filtrado.length,
           valorTotal: totalGeral,
           ...resultado,
-        }, prov);
+        }, provenanceDoCeaps(prov));
       } catch (e) {
         return errorFrom(e, "Erro ao consultar despesas CEAPS");
       }

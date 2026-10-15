@@ -375,16 +375,61 @@ export const NOTA_DERIVACAO_ESTATISTICAS =
   "Estatísticas (distribuição, agregados e rankings) computadas pelo servidor a partir dos registros brutos retornados pela fonte; os valores individuais permanecem os originais do Senado Federal.";
 
 /**
- * Marca o bloco como derivado (contrato v1.3): `derived: true` + a nota fixa dos modos
- * `estatisticas`. Aplique por último, sobre o bloco já completo (inclusive o de
- * `withFieldSources`); o envelope é re-validado inteiro no contrato (build).
+ * Notas fixas dos demais cálculos do servidor (contrato v1.3, 3.19.0). Uma por TIPO de
+ * cálculo, não por tool: o leitor precisa saber o que foi calculado, não onde.
  */
-export function derivadoDeEstatisticas(prov: Provenance): Provenance {
+/** Somas, contagens e médias por grupo (modos agregados, `valorTotal`, contagens por unidade/partido/UF). */
+export const NOTA_DERIVACAO_SOMAS =
+  "Totais, contagens e médias por grupo calculados pelo servidor a partir dos registros da fonte; os valores individuais permanecem os originais do Senado Federal.";
+/** `bruto` das remunerações: soma dos sete componentes da folha. */
+export const NOTA_DERIVACAO_BRUTO =
+  "A remuneração bruta é a soma, feita pelo servidor, dos sete componentes publicados pela fonte, que permanecem os originais.";
+/** Servidores sob uma unidade: classificação de cada lotação no organograma, feita pelo servidor. */
+export const NOTA_DERIVACAO_SUBORDINADAS =
+  "Servidores atribuídos a cada unidade e contados pelo servidor, cruzando a lotação de cada um com o organograma publicado; o total é um piso (lotações não reconhecidas ficam de fora).";
+/** Placar de votação do plenário contado dos votos nominais (votação aberta sem totais na fonte). */
+export const NOTA_DERIVACAO_PLACAR =
+  "Totais de votos contados pelo servidor a partir dos votos nominais, porque a fonte não publica o placar desta votação.";
+/** Placar de votação de comissão contado dos votos, quando a fonte não traz os totais. */
+export const NOTA_DERIVACAO_PLACAR_COMISSAO =
+  "Totais de votos de pelo menos uma votação contados pelo servidor a partir dos votos de cada parlamentar, porque a fonte não publicou o placar dela.";
+/** Percentuais (e o total, quando ausente) das consultas públicas do e-Cidadania. */
+export const NOTA_DERIVACAO_PERCENTUAIS =
+  "Percentuais de sim e não, e o total de votos quando a fonte não o publica, calculados pelo servidor a partir dos votos da fonte.";
+/** Polarização, consenso e ordem por participação no e-Cidadania. */
+export const NOTA_DERIVACAO_RANKING_ECIDADANIA =
+  "Polarização, consenso e ordem por participação calculados pelo servidor a partir dos votos e apoios publicados pela fonte.";
+/** Data de criação estimada das ideias legislativas. */
+export const NOTA_DERIVACAO_DATA_ESTIMADA =
+  "A data de criação é estimada pelo servidor (fim do prazo de apoio menos 120 dias); a fonte não a publica.";
+/** Legislatura sem número na fonte: o próprio número é o padrão do servidor. */
+export const NOTA_DERIVACAO_LEGISLATURA_PADRAO =
+  "A fonte não informou a legislatura: o servidor assume a 57ª (2023–2027) e calcula o período e as datas.";
+/** Período e datas da legislatura derivados do número dela. */
+export const NOTA_DERIVACAO_LEGISLATURA =
+  "Período e datas da legislatura calculados pelo servidor a partir do número publicado pela fonte (mandatos de quatro anos).";
+
+/**
+ * Marca o bloco como derivado (contrato v1.3): `derived: true` + a nota dada. Aplique por
+ * último, sobre o bloco já completo (inclusive o de `withFieldSources`); o envelope é
+ * re-validado inteiro no contrato (build).
+ */
+export function derivado(prov: Provenance, nota: string): Provenance {
   return provenanceContext.build({
     ...prov,
     derived: true,
-    derivation_note: NOTA_DERIVACAO_ESTATISTICAS,
+    derivation_note: nota,
   } as ProvenanceInput);
+}
+
+/** `derivado` só quando `calculou`; senão o bloco volta intacto (sem `derived`). */
+export function derivadoSe(prov: Provenance, calculou: boolean, nota: string): Provenance {
+  return calculou ? derivado(prov, nota) : prov;
+}
+
+/** `derivado` com a nota dos modos `estatisticas`. */
+export function derivadoDeEstatisticas(prov: Provenance): Provenance {
+  return derivado(prov, NOTA_DERIVACAO_ESTATISTICAS);
 }
 
 /** Rodapé de texto do contrato: fonte · url · vintage · extração, licença e aviso ao leitor. */
