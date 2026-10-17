@@ -237,8 +237,8 @@ const ideiasSchema: EntitySchema = {
       type: "string",
       description: "Título da ideia legislativa.",
       sourceEndpoint: EP_IDEIAS_LISTING,
-      sourceField: "article.resumo-ideia > section > a (texto da âncora)",
-      operationalization: "Texto da âncora da seção, com entidades HTML decodificadas.",
+      sourceField: "li.resumo-ideia > a > h4 (até 11/10/2026: article.resumo-ideia > section > a)",
+      operationalization: "Texto do <h4> do bloco (antes de 12/10/2026, da âncora da seção), com entidades HTML decodificadas.",
     },
     {
       name: "apoios",
@@ -246,8 +246,8 @@ const ideiasSchema: EntitySchema = {
       unit: "apoios",
       description: "Número de apoios recebidos pela ideia.",
       sourceEndpoint: EP_IDEIAS_LISTING,
-      sourceField: "article.resumo-ideia > figure.grafico-ideia-legislativa > footer > span[1] (\"N apoios\")",
-      operationalization: "Primeiro <span> do footer do figure.grafico-ideia-legislativa (\"253.804 apoios\"); número BR via parseBrNum. O span de meta (limiar) é ignorado.",
+      sourceField: "li.resumo-ideia > a > figure.componente-grafico-ideia > figcaption > span.contabilizacao (\"N apoios confirmados\"; até 11/10/2026: article.resumo-ideia > figure.grafico-ideia-legislativa > footer > span[1])",
+      operationalization: "Número do span.contabilizacao (\"253.804 apoios confirmados\"; antes de 12/10/2026, primeiro <span> do footer do figure.grafico-ideia-legislativa); número BR via parseBrNum. O span de meta (\"Meta de 20.000 apoios\") é ignorado.",
     },
     {
       name: "status",

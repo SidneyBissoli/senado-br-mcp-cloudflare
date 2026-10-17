@@ -6,6 +6,18 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Fixed
+
+- **Ingestão das ideias do e-Cidadania parada de 12 a 17/10/2026.** Em 12/10 o portal trocou a
+  marcação da listagem `pesquisaideia` (`<article class="resumo-ideia">` → `<li>`, título em
+  `<h4>`, apoios em `span.contabilizacao` "N apoios confirmados"); o parser achava 0 itens em
+  páginas de tamanho normal e o gate do crawl vivo, corretamente, recusou gravar — seis runs
+  diários falharam e o cursor da situação 7 ficou parado. O parser agora divide os blocos pela
+  classe, não pela tag, e lê as duas formas (fixture real de cada uma). Deriva PARCIAL também
+  passa a falhar alto: um bloco com id mas sem título ou sem contagem lança erro (→ retry →
+  falha de página → gate), em vez de gravar título vazio e 0 apoios. `src/dataset/schema.ts`
+  e o dicionário do dataset descrevem a origem nova dos campos `titulo` e `apoios`.
+
 ## [3.19.0] - 2026-10-15
 
 A marca de cálculo do contrato 1.3 deixa de valer só para os modos `estatisticas` e passa a
