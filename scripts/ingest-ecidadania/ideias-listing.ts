@@ -6,14 +6,19 @@
  * inline on the listing, but the listing is filterable by `situacao=N` (GET) — so the orchestrator
  * crawls per situacao value and tags each item's status. This module is a pure parser of one page.
  *
- * Each idea renders as one `<article class="resumo-ideia">` block:
- *   <article class="resumo-ideia">
- *     <section><a href="visualizacaoideia?id=80429">TÍTULO</a></section>
- *     <figure class="grafico-ideia-legislativa">
- *        <footer><span>253.804 apoios</span><span>20.000</span></footer>  <!-- apoios, threshold -->
- *     </figure>
- *   </article>
- * (the threshold span — 20.000 — is the support goal and is ignored.)
+ * Each idea renders as one `class="resumo-ideia"` block. Since 12/10/2026 the portal serves:
+ *   <li class="resumo-ideia">
+ *     <a href="visualizacaoideia?id=80429">
+ *       <h4>TÍTULO</h4>
+ *       <figure class="componente-grafico-ideia">
+ *         <figcaption><span class="contabilizacao">253.804 apoios confirmados</span>
+ *                     <span>Meta de 20.000 apoios</span></figcaption>
+ *       </figure>
+ *     </a>
+ *   </li>
+ * Until 11/10/2026 it was `<article class="resumo-ideia">` with the title in `<section><a>` and the
+ * count in the first `<footer><span>N apoios</span>`. Both forms are parsed (fixtures for each), and
+ * the block split keys on the class, not on the tag. The support goal (20.000) is always ignored.
  */
 
 import { extractId, parseBrNum } from "../../src/scraper/ecidadania.js";
@@ -36,20 +41,32 @@ export interface IdeiaListingItem {
   apoios: number;
 }
 
-/** Parse one ideas listing page. Pure. Blocks missing a parseable id are skipped. */
+/** Parse one ideas listing page. Pure. Blocks missing a parseable id are skipped; a block with an
+ *  id but no title or no count throws (unknown markup — see below). */
 export function parseIdeiaListingPage(html: string): IdeiaListingItem[] {
-  const blocks = html.split(/<article class="resumo-ideia">/i).slice(1);
+  const blocks = html.split(/<[a-z]+\b[^>]*\bclass="resumo-ideia"[^>]*>/i).slice(1);
   const items: IdeiaListingItem[] = [];
   for (const block of blocks) {
     const id = extractId(block);
     if (id === null) continue;
-    const tituloMatch = block.match(/<section>\s*<a[^>]*>([^<]+)<\/a>/i);
-    // First footer span: "253.804 apoios". The second span (threshold) is ignored.
-    const apoiosMatch = block.match(/<footer>\s*<span>([\d.]+)\s*apoios/i);
+    const tituloMatch =
+      block.match(/<h4[^>]*>([^<]+)<\/h4>/i) ?? block.match(/<section>\s*<a[^>]*>([^<]+)<\/a>/i);
+    // The count, never the goal ("Meta de 20.000 apoios"): the contabilizacao span, or (old form)
+    // the first footer span.
+    const apoiosMatch =
+      block.match(/class="contabilizacao"[^>]*>\s*([\d.]+)\s*apoios/i) ??
+      block.match(/<footer>\s*<span>([\d.]+)\s*apoios/i);
+    // A block found by its id but missing the title or the count is a partial markup drift: fail
+    // the page (→ retry → page failure → the crawl gate) instead of writing "" / 0 into the corpus.
+    if (!tituloMatch || !apoiosMatch) {
+      throw new Error(
+        `forma desconhecida no bloco id=${id}: ${!tituloMatch ? "título" : "apoios"} não encontrado`,
+      );
+    }
     items.push({
       id,
-      titulo: tituloMatch ? decodeEntities(tituloMatch[1]) : "",
-      apoios: apoiosMatch ? parseBrNum(apoiosMatch[1]) : 0,
+      titulo: decodeEntities(tituloMatch[1]),
+      apoios: parseBrNum(apoiosMatch[1]),
     });
   }
   return items;

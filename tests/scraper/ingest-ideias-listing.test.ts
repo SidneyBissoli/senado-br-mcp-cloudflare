@@ -16,6 +16,7 @@ import {
 import { buildIdeiaResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash } from "../../src/scraper/pipeline.js";
 import ideiasHtml from "../fixtures/ecidadania/ideias-listing-p1.html?raw";
+import ideiasHtml2026 from "../fixtures/ecidadania/ideias-listing-2026-10.html?raw";
 
 describe("parseIdeiaListingPage", () => {
   const items = parseIdeiaListingPage(ideiasHtml);
@@ -40,6 +41,33 @@ describe("parseIdeiaListingPage", () => {
 
   it("returns an empty array for markup with no idea blocks", () => {
     expect(parseIdeiaListingPage("<html><body>nada</body></html>")).toEqual([]);
+  });
+
+  it("throws on a block with an id but an unknown title/count markup (partial drift)", () => {
+    const html = '<li class="resumo-ideia"><a href="visualizacaoideia?id=5"><h5>x</h5></a></li>';
+    expect(() => parseIdeiaListingPage(html)).toThrow(/forma desconhecida no bloco id=5/);
+  });
+});
+
+// The listing the portal serves since 12/10/2026 (<li>, <h4>, span.contabilizacao) — literal cuts
+// of the live pages, captured 17/10/2026. The 0-item pages of this form stalled ingestion 12–17/10.
+describe("parseIdeiaListingPage — form since 12/10/2026", () => {
+  const items = parseIdeiaListingPage(ideiasHtml2026);
+
+  it("extracts one item per resumo-ideia block, whatever the tag", () => {
+    expect(items.map((i) => i.id)).toEqual([80429, 108297]);
+  });
+
+  it("reads the confirmed count, never the 20.000 goal", () => {
+    expect(items.map((i) => i.apoios)).toEqual([253804, 77902]);
+  });
+
+  it("reads the title from <h4>", () => {
+    expect(items[0].titulo).toBe("Fim do auxílio moradia para deputados, juízes senadores.");
+  });
+
+  it("still finds the last page (&amp;p= links)", () => {
+    expect(findLastPageIdeias(ideiasHtml2026)).toBe(59);
   });
 });
 
