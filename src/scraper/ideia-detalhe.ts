@@ -419,14 +419,16 @@ export function statusDaLinhaDoTempo(d: IdeiaDetalhe): StatusIdeia {
   return "aberta";
 }
 
-/** Os quatro campos de detalhe que o corpus guarda (`IdeiaResumo`), na forma histórica. */
+/** Os campos de detalhe que o corpus guarda (`IdeiaResumo`): os quatro históricos + as proposições. */
 export interface IdeiaDetalheParaCorpus {
   /** Nome histórico: é a data LIMITE para receber apoios, não a de publicação (`AVISO_DATAS_IDEIA`). */
   dataPublicacao: string | null;
   autorUf: string | null;
   descricao: string | null;
-  /** Formato que o histórico guardava ("SUG 6/2025"): a Sugestão gerada; o resto é da fase A6. */
+  /** Formato que o histórico guardava ("SUG 6/2025"): a Sugestão gerada, e só ela. */
   plConvertido: string | null;
+  /** As proposições da linha do tempo (`[]` = página lida, nenhuma); `null` = página não lida. */
+  proposicoes: ProposicaoDaIdeia[] | null;
 }
 
 /** Limite histórico da descrição no corpus (o leitor antigo cortava aqui; mantém o hash das linhas). */
@@ -439,6 +441,7 @@ export function detalheParaCorpus(d: IdeiaDetalhe): IdeiaDetalheParaCorpus {
     autorUf: d.autorUf,
     descricao: d.descricao ? d.descricao.substring(0, DESCRICAO_CORPUS_MAX) : null,
     plConvertido: d.sugestao ? `SUG ${d.sugestao.numero}/${d.sugestao.ano}` : null,
+    proposicoes: d.proposicoes,
   };
 }
 

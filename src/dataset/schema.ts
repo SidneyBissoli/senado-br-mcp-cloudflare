@@ -291,11 +291,21 @@ const ideiasSchema: EntitySchema = {
     {
       name: "plConvertido",
       type: "string",
-      description: "Proposição gerada pela ideia (ex.: \"SUG 12/2024\"), quando convertida.",
+      description: "Sugestão gerada pela ideia na CDH (ex.: \"SUG 12/2024\"). Apesar do nome histórico, NÃO é o projeto de lei: os projetos estão em `proposicoes`.",
       sourceEndpoint: EP_IDEIAS_DETALHE,
-      sourceField: "página de detalhe: identificação da proposição (SUG/PL nº); desde a 3.20.0, o acontecimento \"Essa ideia gerou a Sugestão nº N, de AAAA\" da linha do tempo",
-      operationalization: "Até a 3.19: regex de identificação de proposição no detalhe. Desde a 3.20.0 (página redesenhada): a Sugestão gerada, \"SUG N/AAAA\"; as proposições em que a ideia virou (pela CDH ou adotada por parlamentar) saem só no detalhe ao vivo (senado_ecidadania_obter_ideia). Leitura sem Sugestão não apaga valor já gravado.",
-      caveat: "Detail-only (v2): null nas ideias ainda não enriquecidas ou não convertidas.",
+      sourceField: "página de detalhe: o acontecimento \"Essa ideia gerou a Sugestão nº N, de AAAA\" da linha do tempo (desde a 3.20.0)",
+      operationalization: "Desde a 3.20.0 (página redesenhada): a Sugestão gerada, \"SUG N/AAAA\". Até a 3.19 um regex de identificação de proposição deixou valores de outro tipo (PL/PEC, alguns com ano impossível); na 3.21.0 esses 11 foram relidos da página e retirados do campo (os projetos foram para `proposicoes`). Leitura sem Sugestão não apaga valor já gravado.",
+      caveat: "Detail-only (v2): null nas ideias sem Sugestão ou ainda não lidas pelo leitor da 3.20.0.",
+    },
+    {
+      name: "proposicoes",
+      type: "object",
+      description: "Proposições em que a ideia foi transformada, pela CDH ou adotada por parlamentar (lista; uma ideia pode ter várias).",
+      sourceEndpoint: EP_IDEIAS_DETALHE,
+      sourceField: "página de detalhe: acontecimentos de transformação da linha do tempo (\"Ideia transformada em …\", adoção por Senador(a)/Deputado(a)) e o link de cada proposição",
+      operationalization:
+        "Copiadas da linha do tempo, na ordem dela; cada item: ordem, data, transformadaPor (Comissão/Senador/Deputado, como publicado), sexo (gênero gramatical do cargo publicado), parlamentar e parlamentarUf (agentes públicos), tipoSigla, tipoNome, numero, ano, complemento, url. [] = página lida sem proposição. Lista guardada com itens não é apagada por leitura vazia.",
+      caveat: "Detail-only (3.21.0): null nas ideias ainda não lidas pelo leitor da 3.21.0 (a cobertura cresce com o backfill diário de detalhe).",
     },
     {
       name: "url",

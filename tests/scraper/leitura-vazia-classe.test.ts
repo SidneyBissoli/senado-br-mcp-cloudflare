@@ -13,6 +13,7 @@
 import { describe, it, expect } from "vitest";
 import {
   mesclarCampo,
+  mesclarLista,
   apagarComMotivo,
   ehVazio,
   lerBrNum,
@@ -57,6 +58,10 @@ import p19 from "../fixtures/ecidadania/ideias-detalhe-2026-10/substitutivo-6588
 // As 20 páginas 200 da amostra de 17/10 (a 410 não tem conteúdo de ideia).
 const PAGINAS_NOVAS: string[] = [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17, p18, p19];
 
+const PROPOSICAO_GUARDADA = {
+  ordem: 3, data: "2021-05-04", transformadaPor: "Comissão" as const, sexo: null, parlamentar: null, parlamentarUf: null,
+  tipoSigla: "PL", tipoNome: "Projeto de Lei", numero: 1234, ano: 2021, complemento: null, url: "https://www25.senado.leg.br/web/atividade/materias/-/materia/1",
+};
 const IDEIA_GUARDADA = buildIdeiaResumo({
   id: 101185,
   titulo: "Título guardado",
@@ -65,9 +70,10 @@ const IDEIA_GUARDADA = buildIdeiaResumo({
   autorUf: "SP",
   descricao: "Descrição guardada",
   plConvertido: "SUG 1/2020",
+  proposicoes: [PROPOSICAO_GUARDADA],
   status: "encerrada",
 });
-const DETALHE_VAZIO = { dataPublicacao: null, autorUf: null, descricao: null, plConvertido: null };
+const DETALHE_VAZIO = { dataPublicacao: null, autorUf: null, descricao: null, plConvertido: null, proposicoes: [] };
 const payload = (r: { payloadJson: string }) => JSON.parse(r.payloadJson) as IdeiaResumo;
 
 describe("mesclarCampo — a regra", () => {
@@ -90,6 +96,17 @@ describe("mesclarCampo — a regra", () => {
   it("apagar exige pedido explícito com motivo", () => {
     expect(mesclarCampo(apagarComMotivo("ideia removida pelo portal"), "SP")).toBeNull();
     expect(() => apagarComMotivo("  ")).toThrow(/motivo/);
+  });
+
+  it("mesclarLista: [] lido é 'lida, nenhuma', mas nunca apaga a lista guardada com itens", () => {
+    expect(mesclarLista([], ["a"])).toEqual(["a"]);
+    expect(mesclarLista(null, ["a"])).toEqual(["a"]);
+    expect(mesclarLista(["b"], ["a"])).toEqual(["b"]);
+    expect(mesclarLista([], undefined)).toEqual([]);
+    expect(mesclarLista(null, [])).toEqual([]);
+    // Nunca lida: fica de fora do payload (linhas antigas mantêm o hash).
+    expect(mesclarLista(null, undefined)).toBeUndefined();
+    expect(mesclarLista(undefined, null)).toBeUndefined();
   });
 
   it("lerBrNum devolve null para ausente/lixo, onde parseBrNum devolveria 0", () => {
@@ -223,12 +240,27 @@ describe("o caso de 12/10/2026, com as páginas reais — pelo leitor NOVO (A4)"
     }
   });
 
+  it("o backfill guarda as proposições da página; página sem proposição grava [] (lida, nenhuma)", () => {
+    const nunca = buildIdeiaResumo({ id: 5, titulo: "t", status: "encerrada" });
+    expect("proposicoes" in nunca).toBe(false);
+    for (const d of lidas) {
+      const r = payload(registroDetalheIdeia(JSON.stringify(nunca), 5, d));
+      expect(r.proposicoes).toEqual(d.proposicoes);
+    }
+    expect(lidas.some((d) => d.proposicoes!.length >= 2)).toBe(true);
+    expect(lidas.some((d) => d.proposicoes!.length === 0)).toBe(true);
+  });
+
   it("o vigia aprova a rodada", () => {
     // O guardado de cada página tem Sugestão só quando a página tem: o leitor novo põe em plConvertido
     // apenas a Sugestão (adoção por parlamentar fica para a A6), e um guardado inventado mediria nada.
     const pares = lidas.map((d) => ({
       lido: { ...d } as Record<string, unknown>,
-      guardado: { ...IDEIA_GUARDADA, plConvertido: d.plConvertido ? IDEIA_GUARDADA.plConvertido : null } as unknown as Record<string, unknown>,
+      guardado: {
+        ...IDEIA_GUARDADA,
+        plConvertido: d.plConvertido ? IDEIA_GUARDADA.plConvertido : null,
+        proposicoes: d.proposicoes?.length ? IDEIA_GUARDADA.proposicoes : [],
+      } as unknown as Record<string, unknown>,
     }));
     const v = vigiarCampos(pares, CAMPOS_DETALHE_IDEIA, { nMinimo: pares.length });
     expect(v.quedas.map((q) => q.campo)).toEqual([]);

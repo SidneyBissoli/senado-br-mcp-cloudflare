@@ -6,6 +6,35 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.21.0] - 2026-10-18
+
+O corpus passa a guardar em que projetos a ideia foi transformada. Até aqui o projeto (PL, PEC,
+Indicação…) só aparecia na consulta ao vivo de uma ideia; o banco que alimenta
+`senado_ecidadania_listar_ideias` e o dataset guardava só `plConvertido`, que, apesar do nome,
+traz desde a 3.20.0 a Sugestão gerada na CDH ("SUG 12/2017"), e não o projeto de lei. Medido em
+18/10/2026 nas 119.198 ideias: 278 tinham `plConvertido`; 267 eram Sugestões, 7 projetos e 4 lixo
+com ano impossível ("PL 1/0674"), sobras do leitor anterior a 12/10. MINOR: um campo novo,
+aditivo; nenhum campo existente muda de tipo ou de nulidade.
+
+### Added
+
+- **`proposicoes` no corpus das ideias**: a lista das proposições da linha do tempo, na ordem
+  dela, com o mesmo formato da consulta ao vivo (tipo, número, ano, quem transformou, parlamentar e
+  UF, data, link). Uma ideia pode ter várias (até 3 medidas). O campo fica ausente até o backfill
+  diário de detalhe ler a ideia; `[]` = lida, sem proposição. A chave ausente, e não `null`, mantém
+  byte-idêntico o payload das linhas ainda não lidas, então o `_history` não ganha 119 mil versões
+  de uma vez.
+- `mesclarLista`: lista vazia lida conta como "lida, nenhuma", mas nunca apaga uma lista guardada
+  com itens (mesma regra de `mesclarCampo`). O vigia por campo passa a conferir `proposicoes`.
+- Texto oficial das proposições (nome do parlamentar e do tipo) passa pela sanitização silenciosa,
+  na listagem e no detalhe ao vivo.
+
+### Changed
+
+- Dicionário do dataset e descrição de `senado_ecidadania_listar_ideias`: `plConvertido` é a
+  Sugestão, não o projeto; `proposicoes` documentado. O dicionário gerado
+  (`docs/dataset-dictionary.md`) estava defasado desde a 3.20.0 e foi regenerado.
+
 ## [3.20.1] - 2026-10-18
 
 O autor de ideia que mora fora do país deixa de sair sem localidade. A página da ideia escreve

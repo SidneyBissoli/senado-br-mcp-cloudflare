@@ -305,7 +305,7 @@ describe("statusDaLinhaDoTempo — contra o bucket REAL de cada captura (A4)", (
 describe("detalheParaCorpus e apoiosPublicados — a forma histórica do corpus", () => {
   it("data limite no nome histórico, UF sem nome, Sugestão no formato do histórico", () => {
     expect(detalheParaCorpus(lerIdeiaDetalhe(aberta))).toEqual({
-      dataPublicacao: "2026-10-23", autorUf: "RJ", descricao: expect.stringMatching(/^Tendo em vista/), plConvertido: null,
+      dataPublicacao: "2026-10-23", autorUf: "RJ", descricao: expect.stringMatching(/^Tendo em vista/), plConvertido: null, proposicoes: [],
     });
     expect(detalheParaCorpus(lerIdeiaDetalhe(emAvaliacao)).plConvertido).toBe("SUG 21/2019");
     expect(JSON.stringify(detalheParaCorpus(lerIdeiaDetalhe(aberta)))).not.toContain("NILTON");

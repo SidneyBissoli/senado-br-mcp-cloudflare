@@ -31,7 +31,7 @@ describe("leituraDoDetalhe e statusDaTransicao — transições pelo leitor novo
     const l = leituraDoDetalhe(lerIdeiaDetalhe(semApoio));
     expect(l.apoios).toBe(17255);
     expect(l.statusDerivado).toBe("encerrada");
-    expect(l.detalhe).toEqual({ dataPublicacao: "2018-06-26", autorUf: expect.stringMatching(/^[A-Z]{2}$/), descricao: expect.any(String), plConvertido: null });
+    expect(l.detalhe).toEqual({ dataPublicacao: "2018-06-26", autorUf: expect.stringMatching(/^[A-Z]{2}$/), descricao: expect.any(String), plConvertido: null, proposicoes: [] });
   });
 
   it("a categoria da listagem prevalece sobre o derivado; sem ela, o derivado é marcado", () => {

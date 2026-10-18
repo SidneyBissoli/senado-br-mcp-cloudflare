@@ -119,6 +119,13 @@ describe("buildIdeiaResumo byte-compatibility", () => {
     ]);
   });
 
+  it("leaves proposicoes out until read, and puts it right after plConvertido once read", () => {
+    expect(JSON.stringify(buildIdeiaResumo({ id: 1 }))).not.toContain("proposicoes");
+    expect(Object.keys(buildIdeiaResumo({ id: 1, proposicoes: [] }))).toEqual([
+      "id", "titulo", "apoios", "dataPublicacao", "autorUf", "descricao", "plConvertido", "proposicoes", "status", "url",
+    ]);
+  });
+
   it("defaults the detail-only fields to null", () => {
     const r = buildIdeiaResumo({ id: 7, titulo: "x", apoios: 3, status: "aberta" });
     expect(r.autorUf).toBeNull();

@@ -280,7 +280,7 @@ export const ideiasHighlightCfg: HighlightConfig<IdeiaResumo, IdeiaDestaque> = {
   metrica: (i) => i.apoios,
   comissao: () => null,
   // Preserves the corpus-authoritative detail fields (dataPublicacao/autorUf/descricao/plConvertido,
-  // v2) so the 2h apoios splice never wipes them; apoios only when the REST item carried it.
+  // v2; proposicoes, 3.21) so the 2h apoios splice never wipes them; apoios only when the REST item carried it.
   splice: (corpus, fresh) => {
     if (!corpus) {
       return fresh.apoios === null ? null : buildIdeiaResumo({ id: fresh.id, titulo: fresh.titulo, apoios: fresh.apoios });
@@ -293,6 +293,7 @@ export const ideiasHighlightCfg: HighlightConfig<IdeiaResumo, IdeiaDestaque> = {
       autorUf: corpus.autorUf,
       descricao: corpus.descricao,
       plConvertido: corpus.plConvertido,
+      proposicoes: corpus.proposicoes,
       status: corpus.status,
       url: corpus.url,
     });
