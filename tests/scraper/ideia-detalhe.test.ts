@@ -8,7 +8,10 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { lerIdeiaDetalhe, partesDaProposicao, textoDoHtml, IdeiaDetalheForaDoMoldeError, type TipoAcontecimento } from "../../src/scraper/ideia-detalhe.js";
+import {
+  lerIdeiaDetalhe, partesDaProposicao, textoDoHtml, statusDaLinhaDoTempo, detalheParaCorpus, apoiosPublicados,
+  IdeiaDetalheForaDoMoldeError, type TipoAcontecimento,
+} from "../../src/scraper/ideia-detalhe.js";
 import aberta from "../fixtures/ecidadania/ideias-detalhe-2026-10/aberta-221186.html?raw";
 import oficinaMedio from "../fixtures/ecidadania/ideias-detalhe-2026-10/oficina-medio-240545.html?raw";
 import oficinaSuperior from "../fixtures/ecidadania/ideias-detalhe-2026-10/oficina-superior-220801.html?raw";
@@ -250,6 +253,50 @@ describe("lerIdeiaDetalhe — fora do molde", () => {
 
   it("sem o contador de apoios: null, nunca 0", () => {
     expect(lerIdeiaDetalhe(trocar(aberta, /<span class="contabilizacao">[^<]*<\/span>/, "")).apoios).toBeNull();
+  });
+});
+
+describe("statusDaLinhaDoTempo — contra o bucket REAL de cada captura (A4)", () => {
+  // Bucket da listagem de cada ideia, medido em 17/10/2026 (amostra de docs/_local). s5/s6/s8 → aberta,
+  // s7/s9 → encerrada, s10 → convertida — o mapa de SITUACAO_STATUS.
+  const BUCKET: Record<string, 5 | 6 | 7 | 8 | 9 | 10> = {
+    aberta: 5, oficinaMedio: 5, oficinaSuperior: 7, oficinaOutros: 7, oficinaEspecial: 10, semApoio: 7, aguardando: 8,
+    emAvaliacao: 6, rejeitada: 9, rejeitadaAdotada: 9, cdhPec: 10, cdhPls: 10, cdhPlp: 10, cdhIns: 10, adotadaSem20mil: 10,
+    adotadaDeputada: 10, adotadaInc: 6, adotadaPrc: 10, requerimento: 10, substitutivo: 10,
+  };
+  const STATUS = { 5: "aberta", 6: "aberta", 8: "aberta", 7: "encerrada", 9: "encerrada", 10: "convertida" } as const;
+
+  it("acerta a categoria do portal nas 20 capturas", () => {
+    expect(Object.keys(BUCKET).sort()).toEqual(Object.keys(TODAS).sort());
+    for (const [nome, html] of Object.entries(TODAS)) {
+      expect(statusDaLinhaDoTempo(lerIdeiaDetalhe(html)), nome).toBe(STATUS[BUCKET[nome]]);
+    }
+  });
+
+  it("adoção com a Sugestão ainda na CDH segue aberta (s6), não convertida", () => {
+    expect(lerIdeiaDetalhe(adotadaInc).proposicoes).toHaveLength(1);
+    expect(statusDaLinhaDoTempo(lerIdeiaDetalhe(adotadaInc))).toBe("aberta");
+  });
+});
+
+describe("detalheParaCorpus e apoiosPublicados — a forma histórica do corpus", () => {
+  it("data limite no nome histórico, UF sem nome, Sugestão no formato do histórico", () => {
+    expect(detalheParaCorpus(lerIdeiaDetalhe(aberta))).toEqual({
+      dataPublicacao: "2026-10-23", autorUf: "RJ", descricao: expect.stringMatching(/^Tendo em vista/), plConvertido: null,
+    });
+    expect(detalheParaCorpus(lerIdeiaDetalhe(emAvaliacao)).plConvertido).toBe("SUG 21/2019");
+    expect(JSON.stringify(detalheParaCorpus(lerIdeiaDetalhe(aberta)))).not.toContain("NILTON");
+  });
+
+  it("descrição cortada no limite histórico de 2000", () => {
+    const d = { ...lerIdeiaDetalhe(aberta), descricao: "x".repeat(2500) };
+    expect(detalheParaCorpus(d).descricao).toHaveLength(2000);
+  });
+
+  it("apoios: o contador, senão o número do encerramento, senão null", () => {
+    const d = lerIdeiaDetalhe(semApoio);
+    expect(apoiosPublicados({ ...d, apoios: null })).toBe(17255);
+    expect(apoiosPublicados({ ...lerIdeiaDetalhe(aberta), apoios: null })).toBeNull();
   });
 });
 

@@ -23,6 +23,9 @@
  */
 
 export class IdeiaDetalheForaDoMoldeError extends Error {
+  /** Repetir não muda a página; quem conserta é o leitor (telemetria: `defeito`, ver `anexarClasse`). */
+  readonly retryable = false;
+  readonly classe = "defeito";
   constructor(message: string) {
     super(`detalhe da ideia fora do molde medido: ${message}`);
     this.name = "IdeiaDetalheForaDoMoldeError";
@@ -360,4 +363,66 @@ export function lerIdeiaDetalhe(html: string): IdeiaDetalhe {
 
   if (ideia.dataProposta === null) throw new IdeiaDetalheForaDoMoldeError('Linha do Tempo sem "Ideia proposta por"');
   return ideia;
+}
+
+// ── ponte para o corpus e para a situação (fase A4) ───────────────────────
+
+/** Vocabulário de status do corpus — o mesmo que `SITUACAO_STATUS` atribui por bucket da listagem. */
+export type StatusIdeia = "aberta" | "encerrada" | "convertida";
+
+/**
+ * Status DERIVADO da linha do tempo, para quando a categoria da listagem não está à mão. É
+ * classificação NOSSA — a categoria do portal (bucket da listagem) sempre prevalece sobre ele, e quem
+ * o usa marca a resposta como derivada.
+ *
+ * Regra medida em 17/10/2026 sobre a amostra de 336 ideias com bucket conhecido
+ * (`docs/_local/ideias-linha-do-tempo-2026-10-17/`): acerta 335. A divergência é irredutível — 103929
+ * (s10) e 136304 (s9) têm a MESMA linha do tempo (adoção por parlamentar e, depois, a CDH decidindo
+ * não transformar a Sugestão); o portal as classificou diferente.
+ *   - decisão da CDH transformando, ou "transformada em" sem autor          → convertida (s10)
+ *   - CDH decidiu não transformar                                            → encerrada (s9)
+ *   - Sugestão sem decisão da CDH (mesmo adotada por parlamentar)            → aberta (s6, na comissão)
+ *   - adotada por parlamentar fora da Sugestão                               → convertida (s10)
+ *   - período de apoio encerrado                                             → encerrada (s7)
+ *   - o resto (só proposta/prazo/oficina/meta)                               → aberta (s5, s8)
+ */
+export function statusDaLinhaDoTempo(d: IdeiaDetalhe): StatusIdeia {
+  const tem = (t: TipoAcontecimento) => d.linhaDoTempo.some((e) => e.tipo === t);
+  if (tem("cdhTransformou") || tem("transformadaEm")) return "convertida";
+  if (tem("cdhNaoTransformou")) return "encerrada";
+  if (tem("sugestao")) return "aberta";
+  if (tem("adocao")) return "convertida";
+  if (tem("prazoEncerrado")) return "encerrada";
+  return "aberta";
+}
+
+/** Os quatro campos de detalhe que o corpus guarda (`IdeiaResumo`), na forma histórica. */
+export interface IdeiaDetalheParaCorpus {
+  /** Nome histórico: é a data LIMITE para receber apoios, não a de publicação (`AVISO_DATAS_IDEIA`). */
+  dataPublicacao: string | null;
+  autorUf: string | null;
+  descricao: string | null;
+  /** Formato que o histórico guardava ("SUG 6/2025"): a Sugestão gerada; o resto é da fase A6. */
+  plConvertido: string | null;
+}
+
+/** Limite histórico da descrição no corpus (o leitor antigo cortava aqui; mantém o hash das linhas). */
+const DESCRICAO_CORPUS_MAX = 2000;
+
+/** `IdeiaDetalhe` → campos do corpus. UF-only: o nome do autor cidadão não vai para o corpus. */
+export function detalheParaCorpus(d: IdeiaDetalhe): IdeiaDetalheParaCorpus {
+  return {
+    dataPublicacao: d.prazoApoios,
+    autorUf: d.autorUf,
+    descricao: d.descricao ? d.descricao.substring(0, DESCRICAO_CORPUS_MAX) : null,
+    plConvertido: d.sugestao ? `SUG ${d.sugestao.numero}/${d.sugestao.ano}` : null,
+  };
+}
+
+/**
+ * Apoios publicados: o contador da página, ou o número do acontecimento "Período de apoio encerrado"
+ * (os dois são da fonte). Null se nenhum dos dois aparece — nunca 0 inventado.
+ */
+export function apoiosPublicados(d: IdeiaDetalhe): number | null {
+  return d.apoios ?? d.encerramento?.apoios ?? null;
 }

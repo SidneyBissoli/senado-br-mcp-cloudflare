@@ -8,12 +8,9 @@ import {
   avancarCursorArquivo,
 } from "../../scripts/ingest-ecidadania/ideias-incremental.js";
 import { SITUACAO_STATUS } from "../../scripts/ingest-ecidadania/ideias-listing.js";
-import {
-  statusFromSituacaoIdeia,
-  extractSituacaoIdeia,
-  parseIdeiaDetalheCorpus,
-} from "../../src/scraper/ecidadania.js";
-import ideiaDetalheHtml from "../fixtures/ecidadania/ideia-detalhe.html?raw";
+import { leituraDoDetalhe, statusDaTransicao } from "../../scripts/ingest-ecidadania/ideias-registro.js";
+import { lerIdeiaDetalhe, IdeiaDetalheForaDoMoldeError } from "../../src/scraper/ideia-detalhe.js";
+import semApoio from "../fixtures/ecidadania/ideias-detalhe-2026-10/sem-apoio-101185.html?raw";
 import { ehRecursoRemovido } from "../../scripts/ingest-ecidadania/detalhe.js";
 import { HttpError } from "../../scripts/ingest-ecidadania/http.js";
 
@@ -29,43 +26,21 @@ describe("partição vivo × arquivo", () => {
   });
 });
 
-describe("statusFromSituacaoIdeia — os seis textos REAIS (medidos 06/10/2026, um por bucket)", () => {
-  // Cada texto deve dar o MESMO status que a listagem atribui ao bucket de onde a ideia veio.
-  const medidos: Array<[number, string]> = [
-    [5, "Aberta"],
-    [6, "Na comissão"],
-    [7, "Encerrada - Sem apoio suficiente"],
-    [8, "Aguardando envio à CDH"],
-    [9, "Não acatada"],
-    [10, "Convertida em Proposição"],
-  ];
-  for (const [situacao, texto] of medidos) {
-    it(`s${situacao} "${texto}" → ${SITUACAO_STATUS[situacao]}`, () => {
-      expect(statusFromSituacaoIdeia(texto)).toBe(SITUACAO_STATUS[situacao]);
-    });
-  }
-
-  it("texto desconhecido → null (não adivinha)", () => {
-    expect(statusFromSituacaoIdeia("Situação que o portal ainda não usava")).toBeNull();
-  });
-});
-
-describe("parseIdeiaDetalheCorpus — apoios e situação (fixture real)", () => {
-  const d = parseIdeiaDetalheCorpus(ideiaDetalheHtml);
-
-  it("lê o contador de apoios", () => {
-    expect(d.apoios).toBe(15943);
+describe("leituraDoDetalhe e statusDaTransicao — transições pelo leitor novo (A4)", () => {
+  it("lê apoios, os quatro campos históricos e o status derivado da linha do tempo", () => {
+    const l = leituraDoDetalhe(lerIdeiaDetalhe(semApoio));
+    expect(l.apoios).toBe(17255);
+    expect(l.statusDerivado).toBe("encerrada");
+    expect(l.detalhe).toEqual({ dataPublicacao: "2018-06-26", autorUf: expect.stringMatching(/^[A-Z]{2}$/), descricao: expect.any(String), plConvertido: null });
   });
 
-  it("lê a situação pelo mapeamento compartilhado", () => {
-    expect(extractSituacaoIdeia(ideiaDetalheHtml)).toBe("Aberta");
-    expect(d.status).toBe("aberta");
+  it("a categoria da listagem prevalece sobre o derivado; sem ela, o derivado é marcado", () => {
+    expect(statusDaTransicao("aberta", "encerrada")).toEqual({ status: "encerrada", derivado: false });
+    expect(statusDaTransicao("encerrada", undefined)).toEqual({ status: "encerrada", derivado: true });
   });
 
-  it("sem contador e sem seção: null, nunca 0 nem aberta inventados", () => {
-    const vazio = parseIdeiaDetalheCorpus("<html><body>nada</body></html>");
-    expect(vazio.apoios).toBeNull();
-    expect(vazio.status).toBeNull();
+  it("página fora do molde lança — a transição não grava status adivinhado", () => {
+    expect(() => leituraDoDetalhe(lerIdeiaDetalhe("<html><body>nada</body></html>"))).toThrow(IdeiaDetalheForaDoMoldeError);
   });
 });
 

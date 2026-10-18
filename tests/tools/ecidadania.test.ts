@@ -50,7 +50,15 @@ import {
   estimarCriacaoIdeia,
   IDEIA_PRAZO_APOIOS_DIAS,
   AVISO_DATAS_IDEIA,
+  AVISO_DATAS_IDEIA_DETALHE,
+  montarDetalheDaIdeia,
 } from "../../src/tools/ecidadania.js";
+import { lerIdeiaDetalhe, IdeiaDetalheForaDoMoldeError } from "../../src/scraper/ideia-detalhe.js";
+import { classeAnexada } from "../../src/call-shape.js";
+import { tagUntrustedFields, neutralizeUntrustedText } from "../../src/utils/untrusted.js";
+import ideiaAberta from "../fixtures/ecidadania/ideias-detalhe-2026-10/aberta-221186.html?raw";
+import ideiaSemApoio from "../fixtures/ecidadania/ideias-detalhe-2026-10/sem-apoio-101185.html?raw";
+import ideiaRejeitadaAdotada from "../fixtures/ecidadania/ideias-detalhe-2026-10/rejeitada-adotada-136304.html?raw";
 
 // 09/10/2026: `dataPublicacao` de ideia é a "Data limite para receber 20.000 apoios" — a única data
 // da página — e aparecia como publicação, no futuro para ideia aberta. A criação é derivada:
@@ -426,45 +434,21 @@ describe("obterIdeiaInternal", () => {
     vi.unstubAllGlobals();
   });
 
-  it("parses ideia detail from HTML", async () => {
-    const html = `
-      <html>
-      <article id="ideia-legislativa">
-        <b><div style="font-size:24px;">Proibir obsolescência programada</div></b>
-        <div style="margin-bottom:15px;">Descrição completa da ideia legislativa</div>
-      </article>
-      <span class="contabilizacao">17.978</span>
-      <section title="Situação da Ideia"><em>Aberta</em></section>
-      <div>Ideia proposta por</div>
-      <div><span>João Silva</span> <span>(SP)</span></div>
-      <p>42 comentários</p>
-      </html>
-    `;
-    mockFetch.mockResolvedValueOnce(new Response(html, { status: 200 }));
-
-    const result = await obterIdeiaInternal(500);
-    expect(result.id).toBe(500);
-    expect(result.titulo).toContain("obsolescência");
-    expect(result.apoios).toBe(17978);
-    expect(result.status).toBe("aberta");
-    expect(result.autor).toBe("João Silva (SP)");
-    expect(result.comentarios).toBe(42);
+  it("lê a página redesenhada (12/10/2026) pelo leitor novo", async () => {
+    mockFetch.mockResolvedValueOnce(new Response(ideiaAberta, { status: 200 }));
+    const lida = await obterIdeiaInternal(221186);
+    expect(lida).toMatchObject({ apoios: 5145, autorNome: "NILTON R. D. A.", autorUf: "RJ", dataProposta: "2026-06-25", prazoApoios: "2026-10-23" });
   });
 
-  it("detects convertida status", async () => {
-    const html = `
-      <html>
-      <article id="ideia-legislativa"><b><div style="font-size:24px;">Ideia</div></b><div>desc</div></article>
-      <span class="contabilizacao">100</span>
-      <section title="Situação da Ideia"><em>Convertida em Proposição</em></section>
-      <p>SUGESTÃO nº 10 de 2024</p>
-      </html>
-    `;
-    mockFetch.mockResolvedValueOnce(new Response(html, { status: 200 }));
-
-    const result = await obterIdeiaInternal(600);
-    expect(result.status).toBe("convertida");
-    expect(result.plConvertido).toBe("SUG 10/2024");
+  it("página fora do molde (o markup antigo, sem linha do tempo) lança não retentável, classe defeito", async () => {
+    const antigo = `<html><article id="ideia-legislativa"><b><div>Ideia</div></b><div>desc</div></article>
+      <section title="Situação da Ideia"><em>Aberta</em></section></html>`;
+    mockFetch.mockResolvedValueOnce(new Response(antigo, { status: 200 }));
+    const err = await obterIdeiaInternal(500).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(IdeiaDetalheForaDoMoldeError);
+    const env = errorFrom(err, "Erro ao acessar e-Cidadania");
+    expect((env.structuredContent as { retryable: boolean }).retryable).toBe(false);
+    expect(classeAnexada(env)).toBe("defeito");
   });
 
   // 06/10/2026: ideia retirada do portal responde 410 ("Ideia Legislativa não encontrada!", medido em
@@ -489,24 +473,52 @@ describe("obterIdeiaInternal", () => {
     expect(env.hint).not.toMatch(/verifique os parâmetros|indisponível/);
   });
 
-  // Regressão 06/10/2026: o mapeamento antigo só conhecia "convertid"/"encerrad" e lia o texto real
-  // do bucket 9 ("Não acatada", medido na ideia 89939) como aberta.
-  it("reads 'Não acatada' (situacao 9) as encerrada, not aberta", async () => {
-    const html = `
-      <html>
-      <article id="ideia-legislativa"><b><div style="font-size:24px;">Ideia</div></b><div>desc</div></article>
-      <span class="contabilizacao">134.165</span>
-      <section title="Situação da Ideia">
-        <i class="fa fa-info-circle fa-2x" aria-hidden="true"></i>
-        <em>Não acatada</em><br /><br />
-      </section>
-      </html>
-    `;
-    mockFetch.mockResolvedValueOnce(new Response(html, { status: 200 }));
+});
 
-    const result = await obterIdeiaInternal(89939);
-    expect(result.status).toBe("encerrada");
-    expect(result.apoios).toBe(134165);
+describe("montarDetalheDaIdeia — saída de obter_ideia (A4, aditiva)", () => {
+  const aberta = lerIdeiaDetalhe(ideiaAberta);
+
+  it("a situação vem do corpus (categoria do portal) quando existe; senão é derivada e dita", () => {
+    const rej = lerIdeiaDetalhe(ideiaRejeitadaAdotada);
+    expect(montarDetalheDaIdeia(136304, rej, "encerrada")).toMatchObject({ status: "encerrada", origemStatus: "categoria do portal (listagem)" });
+    // Mesmo com o derivado discordando, o do corpus prevalece.
+    expect(montarDetalheDaIdeia(136304, rej, "convertida").status).toBe("convertida");
+    expect(montarDetalheDaIdeia(221186, aberta, null)).toMatchObject({ status: "aberta", origemStatus: "derivado da linha do tempo" });
+  });
+
+  it("campos que já existiam mantêm tipo e não-nulidade, e vêm primeiro na ordem antiga", () => {
+    const r = montarDetalheDaIdeia(221186, aberta, "aberta");
+    expect(Object.keys(r).slice(0, 13)).toEqual([
+      "id", "titulo", "descricao", "apoios", "dataPublicacao", "status", "origemStatus", "autor", "url", "problema", "solucao", "comentarios", "dataEncerramento",
+    ]);
+    expect(r).toMatchObject({ id: 221186, apoios: 5145, dataPublicacao: "2026-10-23", autor: "NILTON R. D. A. (RJ)", comentarios: null, dataEncerramento: null, plConvertido: null });
+    expect(typeof r.descricao).toBe("string");
+    const sem = montarDetalheDaIdeia(1, { ...aberta, descricao: null, apoios: null }, "aberta");
+    expect(sem.descricao).toBe("");
+    expect(sem.apoios).toBe(0);
+    expect(sem.avisos.at(-1)).toMatch(/não publica a contagem de apoios/);
+  });
+
+  it("campos novos: data de proposição da fonte, linha do tempo, Sugestão e encerramento", () => {
+    const enc = montarDetalheDaIdeia(101185, lerIdeiaDetalhe(ideiaSemApoio), "encerrada");
+    expect(enc.dataEncerramento).toBe("2018-06-26");
+    expect(enc.encerramento).toEqual({ data: "2018-06-26", apoios: 17255, terminouEm: "2018-06-26" });
+    expect(enc.linhaDoTempo.map((e) => e.tipo)).toEqual(["prazoEncerrado", "prazo", "proposta"]);
+    const r = montarDetalheDaIdeia(136304, lerIdeiaDetalhe(ideiaRejeitadaAdotada), "encerrada");
+    expect(r.plConvertido).toBe("SUG 11/2020");
+    expect(r.proposicoes).toHaveLength(3);
+    expect(r.dataProposta).toBe("2020-06-01");
+    expect(r.avisoDatas).toBe(AVISO_DATAS_IDEIA_DETALHE);
+  });
+
+  it("texto de cidadão demarcado: título, descrição, autor, nome e o texto da linha do tempo", () => {
+    const r = tagUntrustedFields("ideias", montarDetalheDaIdeia(221186, aberta, "aberta"));
+    const cru = montarDetalheDaIdeia(221186, aberta, "aberta");
+    for (const campo of ["titulo", "descricao", "autor", "autorNome"] as const) {
+      expect(r[campo], campo).toBe(neutralizeUntrustedText(cru[campo] as string));
+      expect(r[campo], campo).not.toBe(cru[campo]);
+    }
+    expect(r.linhaDoTempo[1].texto).toBe(neutralizeUntrustedText("Ideia proposta por NILTON R. D. A. (RJ)"));
   });
 });
 

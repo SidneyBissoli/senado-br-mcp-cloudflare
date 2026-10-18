@@ -38,11 +38,14 @@ import {
 import { ECIDADANIA_BASE, STATUS_IDEIA_REMOVIDA } from "../../src/scraper/ecidadania.js";
 import { planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
-import { registroIdeia, CAMPOS_LISTAGEM_IDEIA, CAMPOS_TRANSICAO_IDEIA, type DetalheIdeiaLido } from "./ideias-registro.js";
+import {
+  registroIdeia, leituraDoDetalhe, statusDaTransicao, CAMPOS_LISTAGEM_IDEIA, CAMPOS_TRANSICAO_IDEIA, type DetalheIdeiaLido,
+} from "./ideias-registro.js";
+import { IdeiaDetalheForaDoMoldeError } from "../../src/scraper/ideia-detalhe.js";
 import { parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
 import { readExistingMeta, readAllPayloads, readDetalheCursor } from "./d1.js";
 import { generateLoadSqlBatches, generateRunOnlySql, cursorUpsertStmt } from "./sql.js";
-import { fetchIdeiaDetalheCorpus, ehRecursoRemovido } from "./detalhe.js";
+import { fetchIdeiaDetalhe, ehRecursoRemovido } from "./detalhe.js";
 
 const ENTIDADE = "ideias";
 const PAGE_DELAY_MS = Number(process.env.INGEST_IDEIAS_PAGE_DELAY_MS) || Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
@@ -130,6 +133,10 @@ async function crawlVivo(): Promise<CrawlResult> {
 interface Transicao {
   id: number;
   apoios: number | null;
+  /**
+   * `removida` (410) ou o status DERIVADO da linha do tempo; a categoria da listagem, se o id aparecer
+   * na fatia do arquivo desta rodada, o substitui no merge (`statusDaTransicao`).
+   */
   status: string;
   /** Ausente quando a ideia foi removida (410): não há página para ler, o guardado é preservado. */
   detalhe?: DetalheIdeiaLido;
@@ -155,23 +162,22 @@ async function lerTransicoes(
       break;
     }
     try {
-      const d = await fetchIdeiaDetalheCorpus(id);
+      const l = leituraDoDetalhe(await fetchIdeiaDetalhe(id));
       disjuntor.sucesso();
-      paginas.push({ id, lido: { ...d } });
-      if (d.status === null) {
-        // Situação ausente ou texto novo: não adivinhar. A linha guardada fica como está.
-        naoReconhecidas++;
-        console.warn(`[ideias][transicoes] id=${id}: situação não reconhecida na página de detalhe`);
-      } else {
-        lidas.push({
-          id,
-          apoios: d.apoios,
-          status: d.status,
-          detalhe: { dataPublicacao: d.dataPublicacao, autorUf: d.autorUf, descricao: d.descricao, plConvertido: d.plConvertido },
-        });
-      }
+      paginas.push({ id, lido: { ...l.detalhe, apoios: l.apoios, status: l.statusDerivado } });
+      lidas.push({ id, apoios: l.apoios, status: l.statusDerivado, detalhe: l.detalhe });
     } catch (e) {
       if (e instanceof PortalForaError) throw e;
+      if (e instanceof IdeiaDetalheForaDoMoldeError) {
+        // O portal respondeu com uma página que o leitor não reconhece: não adivinhar, a linha guardada
+        // fica como está. Entra no vigia como leitura vazia — muitas assim reprovam a fase.
+        disjuntor.sucesso();
+        naoReconhecidas++;
+        paginas.push({ id, lido: Object.fromEntries(CAMPOS_TRANSICAO_IDEIA.map((c) => [c, null])) });
+        console.warn(`[ideias][transicoes] id=${id}: ${e.message}`);
+        await sleep(DETAIL_DELAY_MS);
+        continue;
+      }
       if (ehRecursoRemovido(e)) {
         // O portal respondeu — e disse que a ideia foi retirada. Status final, não falha.
         disjuntor.sucesso();
@@ -332,9 +338,8 @@ async function main(): Promise<void> {
     writeRunOnly(now, "anomalo", crawl.items.length, err);
     process.exit(1);
   }
-  // Transições: queda descarta só a FASE — as fases 2 e 3 nunca bloqueiam o vivo (cabeçalho). O
-  // detalhe redesenhado de 12/10 cai aqui até a A4 ligar o leitor novo; reprovar o run inteiro
-  // pararia também a listagem, que está sã, e o cursor da s7.
+  // Transições: queda descarta só a FASE — as fases 2 e 3 nunca bloqueiam o vivo (cabeçalho);
+  // reprovar o run inteiro pararia também a listagem, que está sã, e o cursor da s7.
   const vigiaTransicoes = vigiarCampos(
     paginasTransicao.map((p) => parLido(p.lido, existingPayloads.get(p.id))),
     CAMPOS_TRANSICAO_IDEIA,
@@ -351,12 +356,21 @@ async function main(): Promise<void> {
   }
 
   // ── merge: vivo > transição > arquivo (o primeiro que leu o id ganha); campo a campo, vazio não apaga ──
+  // Status de transição: a categoria da listagem quando a fatia do arquivo mostrou o id nesta rodada
+  // (o vivo, por construção, não mostrou); senão o derivado da linha do tempo, contado à parte.
   const records = new Map<number, SyncRecord>();
   for (const it of crawl.items) records.set(it.id, registroIdeia(it.id, it, existingPayloads.get(it.id)));
+  const bucketNaFatia = new Map(fatia.items.map((it) => [it.id, it]));
+  const origemStatus = { listagem: 0, linhaDoTempo: 0 };
   for (const t of transicoes) {
     if (records.has(t.id)) continue;
-    records.set(t.id, registroIdeia(t.id, { apoios: t.apoios, status: t.status }, existingPayloads.get(t.id), t.detalhe));
+    const doBucket = t.detalhe ? bucketNaFatia.get(t.id) : undefined;
+    const s = t.detalhe ? statusDaTransicao(t.status, doBucket?.status) : { status: t.status, derivado: false };
+    if (t.detalhe) origemStatus[s.derivado ? "linhaDoTempo" : "listagem"]++;
+    const fresh = { titulo: doBucket?.titulo, apoios: doBucket?.apoios ?? t.apoios, status: s.status };
+    records.set(t.id, registroIdeia(t.id, fresh, existingPayloads.get(t.id), t.detalhe));
   }
+  console.log(`[ideias][transicoes] status da listagem: ${origemStatus.listagem}; status da linha do tempo: ${origemStatus.linhaDoTempo}`);
   for (const it of fatia.items) {
     if (!records.has(it.id)) records.set(it.id, registroIdeia(it.id, it, existingPayloads.get(it.id)));
   }

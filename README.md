@@ -688,7 +688,7 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 | `senado_ecidadania_obter_consulta` | Detalhe de uma consulta: votos, autor, relator, comentários |
 | `senado_ecidadania_consultas_analise` | Analisa o conjunto completo de consultas **abertas** via `modo` (consenso/polarizada); `status` padrão `aberta` |
 | `senado_ecidadania_listar_ideias` | Ideias legislativas de cidadãos; ranking das mais apoiadas via `ordenarPor: apoios` |
-| `senado_ecidadania_obter_ideia` | Detalhe de uma ideia: texto, apoios, status de conversão em projeto |
+| `senado_ecidadania_obter_ideia` | Detalhe de uma ideia: texto, apoios, data em que foi proposta, linha do tempo (meta, Sugestão, decisão da CDH, encerramento) e proposições em que virou |
 | `senado_ecidadania_listar_eventos` | Eventos interativos (audiências, sabatinas, lives); ranking dos mais comentados via `ordenarPor` |
 | `senado_ecidadania_obter_evento` | Detalhe de um evento: pauta, convidados, link de vídeo |
 | `senado_ecidadania_sugerir_tema_enquete` | Sugere temas para enquete mensal a partir de critérios configuráveis |

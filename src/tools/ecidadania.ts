@@ -21,6 +21,7 @@ import {
   NOTA_DERIVACAO_PERCENTUAIS,
   NOTA_DERIVACAO_RANKING_ECIDADANIA,
   NOTA_DERIVACAO_SOMAS,
+  NOTA_DERIVACAO_STATUS_IDEIA,
   derivado,
   derivadoSe,
   provenanceArquimedesVotos,
@@ -32,7 +33,8 @@ import {
 import { tagUntrustedFields, tagUntrustedList, neutralizeUntrustedText, sanitizeScrapedText } from "../utils/untrusted.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 import type { Env } from "../types.js";
-import { resolveList, writeDetalheThrough } from "../scraper/store.js";
+import { readCurrentStatus, resolveList, writeDetalheThrough } from "../scraper/store.js";
+import { apoiosPublicados, detalheParaCorpus, statusDaLinhaDoTempo, type IdeiaDetalhe } from "../scraper/ideia-detalhe.js";
 import {
   ECIDADANIA_BASE,
   parseBrNum,
@@ -50,6 +52,7 @@ import {
   obterEventoInternal,
   estimarCriacaoIdeia,
   AVISO_DATAS_IDEIA,
+  AVISO_DATAS_IDEIA_DETALHE,
   IDEIA_PRAZO_APOIOS_DIAS,
   type ConsultaResumo,
   type IdeiaResumo,
@@ -61,6 +64,7 @@ import {
 export {
   estimarCriacaoIdeia,
   AVISO_DATAS_IDEIA,
+  AVISO_DATAS_IDEIA_DETALHE,
   IDEIA_PRAZO_APOIOS_DIAS,
   ECIDADANIA_BASE,
   parseBrNum,
@@ -172,7 +176,75 @@ export const provenanceDasConsultas = (prov: Provenance): Provenance => derivado
 export const provenanceDaAnaliseDeConsultas = (prov: Provenance): Provenance => derivado(prov, NOTA_DERIVACAO_ANALISE_CONSULTAS);
 export const provenanceDasIdeias = (prov: Provenance, ideias: ReadonlyArray<{ dataCriacaoEstimada?: string | null }>): Provenance =>
   derivadoSe(prov, ideias.some((i) => i.dataCriacaoEstimada != null), NOTA_DERIVACAO_DATA_ESTIMADA);
-export const provenanceDosVotosHistoricos = (prov: Provenance): Provenance => derivado(prov, NOTA_DERIVACAO_SOMAS);
+/**
+ * Proveniência de `senado_ecidadania_obter_ideia`. O detalhe é lido ao vivo; a situação vem do corpus
+ * em D1 (categoria do portal, lida noutro instante → sub-fonte, topo = o mais antigo) ou, fora do
+ * corpus, é derivada da linha do tempo. A data estimada é sempre derivada quando há data limite.
+ */
+export function provenanceDaIdeia(
+  prov: Provenance,
+  detalhe: Record<string, unknown>,
+  statusDoCorpus: { scrapedAt: string } | null,
+  leitura: { fetchedAt: string; fromCache: boolean },
+): Provenance {
+  const comFontes = statusDoCorpus
+    ? withFieldSources(prov, [
+        { fields: Object.keys(detalhe).filter((k) => k !== "status"), source_url: prov.source_url, dataset_id: `ideia=${detalhe.id}`, ...leituraDoCache(leitura) },
+        subFonteDoCorpus("/principalideia", "ideias", { lastScrapedAt: statusDoCorpus.scrapedAt }, ["status"]),
+      ])
+    : prov;
+  const notas = [
+    ...(detalhe.dataCriacaoEstimada != null ? [NOTA_DERIVACAO_DATA_ESTIMADA] : []),
+    ...(statusDoCorpus ? [] : [NOTA_DERIVACAO_STATUS_IDEIA]),
+  ];
+  return notas.length ? derivado(comFontes, notas.join(" ")) : comFontes;
+}
+
+/**
+ * Resposta de `senado_ecidadania_obter_ideia` a partir da leitura do leitor novo (fase A4). Campos que
+ * já existiam mantêm tipo e não-nulidade (saída que passa a aceitar null seria MAJOR): `descricao` ""
+ * quando ausente, `apoios` 0 quando a página não publica contagem (com aviso), `status` sempre preenchido,
+ * `autor` "NOME (UF)". Os novos vêm depois, na ordem da leitura.
+ */
+export function montarDetalheDaIdeia(id: number, d: IdeiaDetalhe, statusDoCorpus: string | null) {
+  const apoios = apoiosPublicados(d);
+  const avisos = [...d.avisos, ...(apoios === null ? ["a página não publica a contagem de apoios desta ideia; apoios saiu 0 por compatibilidade"] : [])];
+  const autor = d.autorNome ? `${d.autorNome}${d.autorUf ? ` (${d.autorUf})` : ""}` : null;
+  return {
+    id,
+    titulo: d.titulo,
+    descricao: d.descricao ?? "",
+    apoios: apoios ?? 0,
+    dataPublicacao: d.prazoApoios,
+    status: statusDoCorpus ?? statusDaLinhaDoTempo(d),
+    origemStatus: statusDoCorpus ? "categoria do portal (listagem)" : "derivado da linha do tempo",
+    autor,
+    url: `${ECIDADANIA_BASE}/visualizacaoideia?id=${id}`,
+    problema: null,
+    solucao: null,
+    // OBS-9: a página de ideia não tem recurso de comentários — null, não um 0 espúrio.
+    comentarios: null,
+    dataEncerramento: d.encerramento?.data ?? null,
+    plConvertido: detalheParaCorpus(d).plConvertido,
+    dataCriacaoEstimada: estimarCriacaoIdeia(d.prazoApoios),
+    avisoDatas: AVISO_DATAS_IDEIA_DETALHE,
+    autorNome: d.autorNome,
+    autorUf: d.autorUf,
+    dataProposta: d.dataProposta,
+    prazoApoios: d.prazoApoios,
+    dataMeta: d.dataMeta,
+    meta: d.meta,
+    sugestao: d.sugestao,
+    decisaoCdh: d.decisaoCdh,
+    encerramento: d.encerramento,
+    oficina: d.oficina,
+    proposicoes: d.proposicoes,
+    linhaDoTempo: d.linhaDoTempo,
+    avisos,
+  };
+}
+
+export const provenanceDosVotosHistoricos =(prov: Provenance): Provenance => derivado(prov, NOTA_DERIVACAO_SOMAS);
 /**
  * Proveniência de `senado_ecidadania_sugerir_tema_enquete`: as sugestões cruzam DOIS corpora
  * do D1 (consultas e ideias), cada um com o seu `lastScrapedAt`. Até a 3.18.1 o topo levava só
@@ -346,7 +418,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
   // G5. senado_ecidadania_listar_ideias
   server.tool(
     "senado_ecidadania_listar_ideias",
-    "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1; ideias em andamento atualizadas diariamente; ~118 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias, avisoDatas }`, cada ideia com `id`, `titulo`, `apoios`, `status` (`aberta`/`encerrada`/`convertida`/`removida` — `removida` = retirada do portal, que não a publica mais; o corpus guarda o último estado conhecido), `url` e os campos lidos do detalhe quando o backfill já passou por ela (`dataPublicacao`, `autorUf`, `descricao`, `plConvertido`; `null` até lá). **Datas:** `dataPublicacao` é a DATA LIMITE para receber os 20.000 apoios — a única data que o portal publica; o nome do campo é histórico — e por isso cai no futuro em ideia aberta; `dataCriacaoEstimada` (= data limite − 120 dias, a regra dos 4 meses do portal) é calculada pelo servidor e é estimativa, não dado da fonte; `avisoDatas` repete isso na resposta. Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, se virou projeto de lei) chame `senado_ecidadania_obter_ideia` com o `id`.",
+    "Lista ideias legislativas propostas por cidadãos no e-Cidadania — **conjunto completo** (corpus persistido em D1; ideias em andamento atualizadas diariamente; ~118 mil ideias, incluindo encerradas e convertidas em proposição). Retorna `{ count, ideias, avisoDatas }`, cada ideia com `id`, `titulo`, `apoios`, `status` (a categoria da listagem do portal em que a ideia aparece: `aberta` = \"Aberta\", \"Na comissão\" ou \"Aguardando envio à CDH\"; `encerrada` = \"Encerrada – sem apoio suficiente\" ou \"Não acatada\" pela CDH; `convertida` = \"Transformada em proposição\"; `removida` = retirada do portal, que não a publica mais — o corpus guarda o último estado conhecido), `url` e os campos lidos do detalhe quando o backfill já passou por ela (`dataPublicacao`, `autorUf`, `descricao`, `plConvertido`; `null` até lá). **Datas:** `dataPublicacao` é a DATA LIMITE para receber os 20.000 apoios — a única data que o corpus guarda; o nome do campo é histórico — e por isso cai no futuro em ideia aberta; `dataCriacaoEstimada` (= data limite − 120 dias, a regra dos 4 meses do portal) é calculada pelo servidor e é estimativa, não dado da fonte; a data REAL da proposição sai em `senado_ecidadania_obter_ideia` (`dataProposta`); `avisoDatas` repete isso na resposta. Aceita filtro por `status` e `limite` (padrão 20). Para um ranking das mais apoiadas, ordene por apoios (`ordenarPor: \"apoios\"`, `ordem: \"desc\"`). Para o detalhe completo de uma ideia (texto, autor, linha do tempo, Sugestão, decisão da CDH, proposições em que virou) chame `senado_ecidadania_obter_ideia` com o `id`.",
     {
       status: z.enum(["aberta", "encerrada", "convertida", "removida", "todas"]).optional().describe("Filtrar por status (`removida` = retirada do portal)"),
       ordenarPor: z.enum(["apoios", "data", "comentarios"]).optional().describe("Campo para ordenação (apoios é o disponível no corpus; data/comentarios só no detalhe)"),
@@ -387,27 +459,26 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
   // G6. senado_ecidadania_obter_ideia
   server.tool(
     "senado_ecidadania_obter_ideia",
-    "Obtém o detalhe de uma ideia legislativa do e-Cidadania. Retorna um objeto com `id`, `titulo`, `descricao` (texto completo, truncado em ~2000 caracteres), `apoios`, `dataPublicacao`, `dataCriacaoEstimada`, `avisoDatas`, `status`, `autor`, `url` e `plConvertido` (sigla/número quando virou projeto de lei). **Datas:** `dataPublicacao` é a DATA LIMITE para receber os 20.000 apoios — a única data que o portal publica; o nome do campo é histórico — e por isso cai no futuro em ideia aberta; `dataCriacaoEstimada` (= data limite − 120 dias, a regra dos 4 meses do portal) é calculada pelo servidor e é estimativa, não dado da fonte. O campo `comentarios` vem `null`: a página de ideia não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
+    "Obtém o detalhe de uma ideia legislativa do e-Cidadania, lido ao vivo da página da ideia. Retorna `id`, `titulo`, `descricao`, `apoios`, `status`, `origemStatus`, `autor` (\"NOME (UF)\", o nome abreviado como o portal publica), `url`, `plConvertido` (a Sugestão gerada, \"SUG n/ano\"), `dataEncerramento` (fim do período de apoio, quando encerrado) e os campos da linha do tempo do portal: `dataProposta` (data em que a ideia foi proposta, publicada pela fonte), `prazoApoios` (data limite para os 20.000 apoios), `dataMeta`/`meta` (quando alcançou a meta), `sugestao` (número, ano, data e link da Sugestão), `decisaoCdh` (a CDH transformou ou não a Sugestão), `encerramento` (apoios recebidos e fim do período), `oficina` (ideia de Oficina Legislativa), `proposicoes` (cada proposição em que a ideia virou — pela CDH ou adotada por senador/deputado —, com sigla, número, ano, parlamentar e link), `linhaDoTempo` (os acontecimentos como publicados, mais recente primeiro) e `avisos` (acontecimento que o servidor não reconheceu, copiado sem interpretação). **Situação:** `status` é a categoria do portal guardada no corpus (`aberta`/`encerrada`/`convertida`/`removida`, as mesmas de `senado_ecidadania_listar_ideias`); se a ideia ainda não está no corpus, o servidor a classifica pela linha do tempo e `origemStatus` diz isso. **Datas:** use `dataProposta`; `dataPublicacao` é a data limite (nome histórico, igual a `prazoApoios`) e `dataCriacaoEstimada` é estimativa mantida por compatibilidade. `comentarios`, `problema` e `solucao` vêm `null`: a página não os publica. Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
     { id: z.number().int().positive().describe("ID da ideia legislativa") },
     async (params) => {
       try {
-        const { value: r, fetchedAt } = await cachedFetchWithMeta("ecidadania_ideia", { id: params.id }, CACHE_ON_DEMAND, () =>
+        // v2: a chave muda com o formato — o L1 guardaria a leitura do leitor antigo.
+        const { value: lida, fetchedAt, fromCache } = await cachedFetchWithMeta("ecidadania_ideia_v2", { id: params.id }, CACHE_ON_DEMAND, () =>
           obterIdeiaInternal(params.id),
         );
-        writeDetalheThrough(db, ctx, "ideias", params.id, r as Record<string, unknown>);
-        // OBS-9: idea pages have no comments resource — serve null instead of a spurious 0.
-        // Datas: `dataCriacaoEstimada` e `avisoDatas` entram SÓ na resposta (não no write-through acima,
-        // que guarda o que a página diz).
-        const ideia = r as Awaited<ReturnType<typeof obterIdeiaInternal>>;
-        const detalhe = {
-          ...(r as Record<string, unknown>),
-          dataCriacaoEstimada: estimarCriacaoIdeia(ideia.dataPublicacao),
-          comentarios: null,
-          avisoDatas: AVISO_DATAS_IDEIA,
-        };
+        // A situação é a categoria do portal guardada no corpus (bucket da listagem), lida a cada chamada.
+        const doCorpus = await readCurrentStatus(db, "ideias", params.id);
+        const detalhe = montarDetalheDaIdeia(params.id, lida, doCorpus?.status ?? null);
+        writeDetalheThrough(db, ctx, "ideias", params.id, detalhe);
         return resultWithProvenance(
           tagUntrustedFields("ideias", detalhe),
-          provenanceDasIdeias(provDetalhe(r, `/visualizacaoideia?id=${params.id}`, `ideia=${params.id}`, fetchedAt), [detalhe]),
+          provenanceDaIdeia(
+            provDetalhe(detalhe, `/visualizacaoideia?id=${params.id}`, `ideia=${params.id}`, fetchedAt),
+            detalhe,
+            doCorpus,
+            { fetchedAt, fromCache },
+          ),
         );
       } catch (e) { return ecidadaniaError(e); }
     },

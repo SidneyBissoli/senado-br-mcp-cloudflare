@@ -8,13 +8,27 @@
 import { STATUS_IDEIA_REMOVIDA, buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { mesclarCampo } from "../../src/scraper/mesclar.js";
+import { apoiosPublicados, detalheParaCorpus, statusDaLinhaDoTempo, type IdeiaDetalhe, type IdeiaDetalheParaCorpus } from "../../src/scraper/ideia-detalhe.js";
 
-/** Os quatro campos que só a página de detalhe traz. */
-export interface DetalheIdeiaLido {
-  dataPublicacao: string | null;
-  autorUf: string | null;
-  descricao: string | null;
-  plConvertido: string | null;
+/** Os quatro campos que só a página de detalhe traz (forma histórica, ver `detalheParaCorpus`). */
+export type DetalheIdeiaLido = IdeiaDetalheParaCorpus;
+
+/**
+ * Leitura de uma página de detalhe para os escritores do corpus: os quatro campos na forma histórica,
+ * os apoios publicados e o status DERIVADO da linha do tempo (classificação nossa — só vale quando a
+ * listagem não mostrou o id na rodada; ver `statusDaTransicao`).
+ */
+export function leituraDoDetalhe(d: IdeiaDetalhe): { detalhe: DetalheIdeiaLido; apoios: number | null; statusDerivado: string } {
+  return { detalhe: detalheParaCorpus(d), apoios: apoiosPublicados(d), statusDerivado: statusDaLinhaDoTempo(d) };
+}
+
+/**
+ * Status de uma transição: a categoria do portal (bucket da listagem em que o id apareceu NESTA rodada)
+ * quando existe; senão o derivado da linha do tempo. Nunca o contrário — o derivado não sobrescreve
+ * uma categoria publicada (regra do dono de 17/10/2026: classificação da fonte se guarda).
+ */
+export function statusDaTransicao(derivado: string, doBucket: string | undefined): { status: string; derivado: boolean } {
+  return doBucket !== undefined ? { status: doBucket, derivado: false } : { status: derivado, derivado: true };
 }
 
 /** Campos que o vigia confere no backfill de detalhe. */
