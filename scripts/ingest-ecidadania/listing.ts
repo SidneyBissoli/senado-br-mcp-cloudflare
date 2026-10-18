@@ -28,7 +28,10 @@ import { parseBrNum, extractId } from "../../src/scraper/ecidadania.js";
 export interface ListingItem {
   /** e-Cidadania matter code (== codigoMateria), from visualizacaomateria?id=. */
   codigoMateria: number;
-  /** null quando o bloco não traz o placar — nunca 0 inventado (o escritor mantém o guardado). */
+  /**
+   * 0 quando o portal escreve 0 × 0 (bloco sem gráfico, com o link vazio); null quando o bloco não
+   * traz o placar de outro jeito — nunca 0 inventado (o escritor mantém o guardado).
+   */
   votosSim: number | null;
   votosNao: number | null;
   /** Short identification (e.g. "PL 5064/2023"), when present on the listing. */
@@ -68,11 +71,17 @@ export function parseConsultaListingPage(html: string): ListingItem[] {
     const votesMatch = block.match(
       /<figure[^>]*class="grafico-consulta-publica"[^>]*>\s*<header>\s*<span>([\d.]+)<\/span>\s*<span>([\d.]+)<\/span>/i,
     );
+    // 0 × 0 is how the portal writes a consultation without votes: no figure, and the anchor that
+    // would wrap it comes EMPTY. Measured 18/10/2026: 2 513 of 7 690 blocks (pages 52–77) have that
+    // shape, and 20 of 20 sampled detail pages show "0" / "0". Only this exact shape reads as 0; any
+    // other block without the figure stays null (the writer keeps the stored value).
+    const semVotos = !votesMatch &&
+      new RegExp(`<a href="visualizacaomateria\\?id=${codigoMateria}">\\s*</a>`, "i").test(block);
 
     items.push({
       codigoMateria,
-      votosSim: votesMatch ? parseBrNum(votesMatch[1]) : null,
-      votosNao: votesMatch ? parseBrNum(votesMatch[2]) : null,
+      votosSim: votesMatch ? parseBrNum(votesMatch[1]) : semVotos ? 0 : null,
+      votosNao: votesMatch ? parseBrNum(votesMatch[2]) : semVotos ? 0 : null,
       identificacao: identMatch ? decodeEntities(identMatch[1]) : null,
       ementa: ementaMatch ? decodeEntities(ementaMatch[1]) : null,
     });

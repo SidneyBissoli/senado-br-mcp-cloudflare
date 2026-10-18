@@ -9,6 +9,7 @@
 import { describe, it, expect } from "vitest";
 import { parseConsultaListingPage, findLastPage } from "../../scripts/ingest-ecidadania/listing.js";
 import listingHtml from "../fixtures/ecidadania/consultas-listing-p1.html?raw";
+import semVotosHtml from "../fixtures/ecidadania/consultas-listing-sem-votos.html?raw";
 
 describe("parseConsultaListingPage", () => {
   const items = parseConsultaListingPage(listingHtml);
@@ -25,6 +26,14 @@ describe("parseConsultaListingPage", () => {
     expect(items[0]).toMatchObject({ votosSim: 714736, votosNao: 1005358 });
     expect(items[1]).toMatchObject({ votosSim: 351491, votosNao: 8839 });
     expect(items[2]).toMatchObject({ votosSim: 344917, votosNao: 10363 });
+  });
+
+  it("reads 0 × 0 from the portal's no-vote block (no figure, empty anchor)", () => {
+    // Real capture of pesquisamateria?p=77 (18/10/2026); the detail pages show "0" / "0".
+    expect(parseConsultaListingPage(semVotosHtml)).toEqual([
+      expect.objectContaining({ codigoMateria: 139693, votosSim: 0, votosNao: 0 }),
+      expect.objectContaining({ codigoMateria: 139692, votosSim: 0, votosNao: 0 }),
+    ]);
   });
 
   it("captures identificacao and ementa from the listing anchors", () => {
