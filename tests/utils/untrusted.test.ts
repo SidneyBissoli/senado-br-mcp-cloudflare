@@ -205,6 +205,16 @@ describe("tagUntrustedFields", () => {
     expect(out.plConvertido).toBe("PL 99/2024");
     expect(out.apoios).toBe(100);
   });
+
+  it("ideias: texto oficial das proposições (parlamentar, tipo) só sanitizado, sem demarcar", () => {
+    const sujo = "Dep. Fulano​‮";
+    const item = { id: 5, proposicoes: [{ ordem: 1, parlamentar: sujo, tipoNome: "Projeto de Lei", complemento: null, numero: 1, ano: 2024 }] };
+    const out = tagUntrustedFields("ideias", item);
+    expect(out.proposicoes[0].parlamentar).toBe(sanitizeScrapedText(sujo));
+    expect(out.proposicoes[0].parlamentar).not.toContain(UNTRUSTED_OPEN);
+    expect(out.proposicoes[0]).toMatchObject({ ordem: 1, tipoNome: "Projeto de Lei", complemento: null, numero: 1 });
+    expect(item.proposicoes[0].parlamentar).toBe(sujo); // não muta o persistido
+  });
 });
 
 describe("tagUntrustedList", () => {

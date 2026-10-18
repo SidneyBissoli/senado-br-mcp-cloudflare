@@ -107,6 +107,20 @@ const OFFICIAL_ARRAY_FIELDS: Record<string, readonly string[]> = {
  */
 const CITIZEN_ARRAY_FIELDS: Record<string, readonly string[]> = { ideias: ["avisos"] };
 const CITIZEN_OBJECT_ARRAY_FIELDS: Record<string, Record<string, readonly string[]>> = { ideias: { linhaDoTempo: ["texto"] } };
+/** Texto oficial dentro das proposições da ideia (nome do parlamentar e do tipo, copiados da página). */
+const OFFICIAL_OBJECT_ARRAY_FIELDS: Record<string, Record<string, readonly string[]>> = {
+  ideias: { proposicoes: ["parlamentar", "tipoNome", "complemento"] },
+};
+
+function applyObjectArray(arr: unknown, campos: readonly string[], fn: (s: string) => string): unknown {
+  if (!Array.isArray(arr)) return arr;
+  return arr.map((el) => {
+    if (!el || typeof el !== "object") return el;
+    const copia: Record<string, unknown> = { ...(el as Record<string, unknown>) };
+    for (const c of campos) if (c in copia) copia[c] = applyField(copia[c], fn);
+    return copia;
+  });
+}
 
 export type EcidadaniaEntidade = keyof typeof CITIZEN_STRING_FIELDS;
 
@@ -137,14 +151,10 @@ export function tagUntrustedFields<T extends Record<string, unknown>>(
     if (f in out) out[f] = applyStringArray(out[f], neutralizeUntrustedText);
   }
   for (const [f, campos] of Object.entries(CITIZEN_OBJECT_ARRAY_FIELDS[entidade] ?? {})) {
-    const arr = out[f];
-    if (!Array.isArray(arr)) continue;
-    out[f] = arr.map((el) => {
-      if (!el || typeof el !== "object") return el;
-      const copia: Record<string, unknown> = { ...(el as Record<string, unknown>) };
-      for (const c of campos) if (c in copia) copia[c] = applyField(copia[c], neutralizeUntrustedText);
-      return copia;
-    });
+    if (f in out) out[f] = applyObjectArray(out[f], campos, neutralizeUntrustedText);
+  }
+  for (const [f, campos] of Object.entries(OFFICIAL_OBJECT_ARRAY_FIELDS[entidade] ?? {})) {
+    if (f in out) out[f] = applyObjectArray(out[f], campos, sanitizeScrapedText);
   }
   return out as T;
 }

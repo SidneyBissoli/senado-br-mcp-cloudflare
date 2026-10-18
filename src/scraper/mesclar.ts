@@ -55,6 +55,20 @@ export function mesclarCampo<T>(lido: T | null | undefined | Apagado, guardado: 
 }
 
 /**
+ * Mesclagem de um campo LISTA em que a lista vazia lida é informação ("a página foi lida e não traz
+ * nenhum"), distinta do campo ausente ("ainda não lida"). Lista com itens lida substitui; senão fica a
+ * guardada com itens; senão `[]` se alguém leu (agora ou antes); senão `undefined` (o campo fica de fora
+ * do payload, e as linhas nunca lidas mantêm o hash de antes). Lista guardada com itens nunca vira `[]`.
+ * `null` lido = não leu (fetch falhou, ou escritor que não lê a página).
+ */
+export function mesclarLista<T>(lido: T[] | null | undefined, guardado: T[] | null | undefined): T[] | undefined {
+  if (Array.isArray(lido) && lido.length > 0) return lido;
+  if (Array.isArray(guardado) && guardado.length > 0) return guardado;
+  if (Array.isArray(lido) || Array.isArray(guardado)) return [];
+  return undefined;
+}
+
+/**
  * Número no formato brasileiro ("1.234.567") ou null quando não há número para ler. Par do
  * `parseBrNum` (que devolve 0 para ausente/lixo e por isso não serve a escritor do corpus: ausência
  * vira medida, e o 0 inventado sobrescreve a contagem guardada).

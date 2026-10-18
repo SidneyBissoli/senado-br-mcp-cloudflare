@@ -16,7 +16,7 @@ import { USER_AGENT } from "../version.js";
 import { CorpoForaDoPrazoError, PrazoDoCorpo, upstreamCall } from "../throttle/upstream.js";
 import type { ErrorClass } from "../call-shape.js";
 import { lerBrNum, mesclarCampo } from "./mesclar.js";
-import { lerIdeiaDetalhe, type IdeiaDetalhe } from "./ideia-detalhe.js";
+import { lerIdeiaDetalhe, type IdeiaDetalhe, type ProposicaoDaIdeia } from "./ideia-detalhe.js";
 
 export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
 
@@ -418,7 +418,14 @@ export interface IdeiaResumo {
   /** UF do cidadão autor (SEM nome — conteúdo de cidadão). */
   autorUf: string | null;
   descricao: string | null;
+  /** Nome histórico: desde a 3.20.0 guarda a Sugestão gerada ("SUG 6/2025"), não um projeto de lei. */
   plConvertido: string | null;
+  /**
+   * Proposições em que a ideia foi transformada (pela CDH ou adotada por parlamentar), copiadas da
+   * linha do tempo, na ordem dela (3.21.0, fase A6). AUSENTE = a página ainda não foi lida pelo leitor
+   * de 3.21; `[]` = lida, sem proposição. Ausente, e não null, para as linhas não lidas manterem o hash.
+   */
+  proposicoes?: ProposicaoDaIdeia[];
   status: string; url: string;
 }
 
@@ -437,6 +444,7 @@ export function buildIdeiaResumo(fields: {
   id: number; titulo?: string; apoios?: number;
   dataPublicacao?: string | null; autorUf?: string | null;
   descricao?: string | null; plConvertido?: string | null;
+  proposicoes?: ProposicaoDaIdeia[];
   status?: string; url?: string;
 }): IdeiaResumo {
   return {
@@ -447,6 +455,8 @@ export function buildIdeiaResumo(fields: {
     autorUf: fields.autorUf ?? null,
     descricao: fields.descricao ?? null,
     plConvertido: fields.plConvertido ?? null,
+    // Só entra quando lida: a chave ausente deixa o payload das linhas antigas byte-idêntico.
+    ...(fields.proposicoes !== undefined ? { proposicoes: fields.proposicoes } : {}),
     status: fields.status || "aberta",
     url: fields.url || `${ECIDADANIA_BASE}/visualizacaoideia?id=${fields.id}`,
   };

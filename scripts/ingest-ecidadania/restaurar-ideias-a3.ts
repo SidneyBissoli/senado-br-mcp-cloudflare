@@ -72,7 +72,7 @@ function main(): void {
     else divergentes++;
 
     const prev = JSON.parse(a.payload_json) as Record<string, unknown>;
-    const lido: DetalheIdeiaLido = { autorUf: null, dataPublicacao: null, descricao: null, plConvertido: null };
+    const lido: DetalheIdeiaLido = { autorUf: null, dataPublicacao: null, descricao: null, plConvertido: null, proposicoes: null };
     for (const k of CAMPOS) {
       const h = a[`h_${k}`];
       if ((prev[k] ?? "") === "" && h) {

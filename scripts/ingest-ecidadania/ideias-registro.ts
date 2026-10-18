@@ -7,7 +7,7 @@
 
 import { STATUS_IDEIA_REMOVIDA, buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash, type SyncRecord } from "../../src/scraper/pipeline.js";
-import { mesclarCampo } from "../../src/scraper/mesclar.js";
+import { mesclarCampo, mesclarLista } from "../../src/scraper/mesclar.js";
 import { apoiosPublicados, detalheParaCorpus, statusDaLinhaDoTempo, type IdeiaDetalhe, type IdeiaDetalheParaCorpus } from "../../src/scraper/ideia-detalhe.js";
 
 /** Os quatro campos que só a página de detalhe traz (forma histórica, ver `detalheParaCorpus`). */
@@ -32,7 +32,7 @@ export function statusDaTransicao(derivado: string, doBucket: string | undefined
 }
 
 /** Campos que o vigia confere no backfill de detalhe. */
-export const CAMPOS_DETALHE_IDEIA = ["dataPublicacao", "autorUf", "descricao", "plConvertido"] as const;
+export const CAMPOS_DETALHE_IDEIA = ["dataPublicacao", "autorUf", "descricao", "plConvertido", "proposicoes"] as const;
 /** Campos que o vigia confere nas transições (detalhe + contagem e situação da mesma página). */
 export const CAMPOS_TRANSICAO_IDEIA = [...CAMPOS_DETALHE_IDEIA, "apoios", "status"] as const;
 /** Campos que o vigia confere na listagem (vivo + fatia do arquivo). */
@@ -72,6 +72,7 @@ export function registroIdeia(
       autorUf: mesclarCampo(detalhe?.autorUf, p?.autorUf),
       descricao: mesclarCampo(detalhe?.descricao, p?.descricao),
       plConvertido: mesclarCampo(detalhe?.plConvertido, p?.plConvertido),
+      proposicoes: mesclarLista(detalhe?.proposicoes, p?.proposicoes),
     }),
   );
 }
@@ -95,6 +96,7 @@ export function registroDetalheIdeia(payloadJson: string, id: number, detail: De
       autorUf: mesclarCampo(detail?.autorUf, prev.autorUf),
       descricao: mesclarCampo(detail?.descricao, prev.descricao),
       plConvertido: mesclarCampo(detail?.plConvertido, prev.plConvertido),
+      proposicoes: mesclarLista(detail?.proposicoes, prev.proposicoes),
     }),
   );
 }
