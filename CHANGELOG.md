@@ -17,6 +17,28 @@ All notable changes to this project are documented here. Format based on
   passa a falhar alto: um bloco com id mas sem título ou sem contagem lança erro (→ retry →
   falha de página → gate), em vez de gravar título vazio e 0 apoios. `src/dataset/schema.ts`
   e o dicionário do dataset descrevem a origem nova dos campos `titulo` e `apoios`.
+- **Leitura vazia nunca mais apaga valor guardado no corpus do e-Cidadania.** O crawler de detalhe
+  das ideias gravava `detail ? detail.x : prev.x`: uma página lida com sucesso mas com o campo
+  vazio substituía o valor guardado. Com a página redesenhada de 12/10/2026, isso apagou 21.265
+  UFs e 21.535 datas em cinco dias, com o workflow verde (medido no `ecidadania_history`: de 01/09 a
+  12/10 nenhum campo preenchido virou null; de 13/10 em diante, 98–99% por rodada). Agora todos os
+  escritores do corpus passam cada campo por uma regra só, `mesclarCampo` (`src/scraper/mesclar.ts`):
+  leitura vazia mantém o valor guardado, e apagar exige pedido explícito com motivo. Os escritores
+  cobertos: crawler de detalhe e crawl do corpus das ideias (listagem, transições, fatia do arquivo),
+  splice de 2 h das três entidades, ingestão de consultas e enriquecimento de eventos. Esse último
+  também apagava os seis campos de detalhe quando o fetch falhava, e trocava a contagem canônica de
+  comentários pela da listagem, que é a degradada. Contagem ausente deixou de virar 0: um destaque
+  REST sem `apoiamentos` ou sem placar, ou um bloco da listagem de consultas sem o gráfico de votos,
+  agora dá `null` (`lerBrNum`), e o valor guardado fica.
+- **Vigia de taxa de leitura por campo em cada rodada.** A mesclagem impede o apagão, mas também
+  esconderia a deriva, porque o valor velho fica no lugar. Por isso cada job agora mede, por campo,
+  quantos dos valores que o corpus já tinha a leitura desta rodada ainda trouxe. Se essa taxa fica
+  abaixo de 90% com pelo menos 50 valores guardados, o job reprova a rodada (`anomalo`, nada gravado;
+  no detalhe, o cursor também não avança). O limiar vem da medição: retenção de 100% no regime são
+  das ideias, de 1% a 2% na quebra de 12/10 e de 96% ou mais nos eventos ao longo de todo o
+  histórico. Nas transições das ideias, a reprovação descarta só a fase, porque as fases 2 e 3
+  nunca bloqueiam o crawl vivo; até o leitor novo ser ligado, ela dispara ali todo dia, no log. O
+  vigia não cobre o splice de 2 h, que lê uns 5 itens e fica abaixo do mínimo de 50.
 
 ### Added
 

@@ -32,6 +32,10 @@ import { classifyRun, parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
 import { readExistingMeta, readLastGoodRows, readComentarioHashes, readAllPayloads, readDetalheCursor } from "./d1.js";
 import { generateLoadSql, generateRunOnlySql, generateComentariosSqlBatches, cursorUpsertStmt, type ComentarioRecord } from "./sql.js";
 import { fetchEventoDetalhe, fetchComentariosAudiencia, toComentarioRecord, planComentariosSync } from "./detalhe.js";
+import { mesclarCampo, vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
+
+/** Campos do detalhe que o vigia confere a cada rodada. */
+const CAMPOS_DETALHE_EVENTO = ["data", "hora", "comissaoNomeCompleto", "local", "descricao", "videoUrl"] as const;
 
 const ENTIDADE = "eventos";
 const PAGE_DELAY_MS = Number(process.env.INGEST_EVENTOS_PAGE_DELAY_MS) || Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
@@ -97,6 +101,8 @@ interface EnrichResult {
   detailFails: number;
   commentFails: number;
   enrichedCount: number;
+  /** Detalhe lido × payload guardado, por evento da fatia já enriquecido antes — entrada do vigia. */
+  leituras: Array<{ lido: Record<string, unknown>; guardado: Record<string, unknown> }>;
 }
 
 /** SyncRecord de um evento a partir do EventoResumo montado. */
@@ -125,8 +131,8 @@ function preserveEvento(it: EventoListingItem, prevJson: string | undefined): Ev
     titulo: it.titulo,
     comissao: it.comissao,
     status: it.status,
-    data: prev?.data ?? it.data,
-    hora: prev?.hora ?? it.hora,
+    data: mesclarCampo(prev?.data, it.data),
+    hora: mesclarCampo(prev?.hora, it.hora),
     comissaoNomeCompleto: prev?.comissaoNomeCompleto ?? null,
     local: prev?.local ?? null,
     descricao: prev?.descricao ?? null,
@@ -152,6 +158,7 @@ async function enrichSlice(
   let commentFails = 0;
   let enrichedCount = 0;
   let done = 0;
+  const leituras: EnrichResult["leituras"] = [];
 
   for (const it of items) {
     if (!sliceIds.has(it.id)) {
@@ -160,9 +167,12 @@ async function enrichSlice(
       continue;
     }
 
+    const prevJson = existingPayloads.get(it.id);
+    const prevEv = prevJson ? (JSON.parse(prevJson) as Partial<EventoResumo>) : undefined;
     let detalhe = null;
     try {
       detalhe = await fetchEventoDetalhe(it.id);
+      if (prevEv) leituras.push({ lido: { ...detalhe }, guardado: prevEv as Record<string, unknown> });
       disjuntor.sucesso();
     } catch (e) {
       detailFails++;
@@ -194,12 +204,13 @@ async function enrichSlice(
       comentariosListagem: it.comentarios,
       detalhe,
       comentariosCanon,
+      guardado: prevEv,
     })));
     enrichedCount++;
     if (++done % 250 === 0) console.log(`[eventos][enrich] ${done}/${sliceIds.size}`);
   }
 
-  return { eventoRecords, comentarioRecords, detailFails, commentFails, enrichedCount };
+  return { eventoRecords, comentarioRecords, detailFails, commentFails, enrichedCount, leituras };
 }
 
 async function main(): Promise<void> {
@@ -249,7 +260,7 @@ async function main(): Promise<void> {
   const existingPayloads = readAllPayloads(ENTIDADE);
   console.log(`[eventos][slice] enriquecendo ${sliceIds.size} de ${crawl.items.length} (cursor ${afterId}→${nextCursor}, passadas=${fullPasses})`);
 
-  const { eventoRecords, comentarioRecords, detailFails, commentFails, enrichedCount } = await enrichSlice(
+  const { eventoRecords, comentarioRecords, detailFails, commentFails, enrichedCount, leituras } = await enrichSlice(
     crawl.items,
     sliceIds,
     existingPayloads,
@@ -258,6 +269,18 @@ async function main(): Promise<void> {
     `[eventos][enrich] ${enrichedCount} enriquecidos, ${comentarioRecords.length} comentários; ` +
       `gaps: detalhe=${detailFails} comentarios=${commentFails}`,
   );
+
+  // Vigia: dos campos de detalhe que o corpus já tinha, quantos a leitura desta rodada ainda trouxe.
+  // Medido 17/10/2026 no history (16 mil versões desde 06/2026): perdas de 1% a 4% por campo, nunca
+  // em massa — o limiar comum (90%, n ≥ 50) fica longe do regime são.
+  const vigia = vigiarCampos(leituras, CAMPOS_DETALHE_EVENTO);
+  console.log(`[eventos][vigia] ${descreverVigia(vigia)}`);
+  if (!vigia.ok) {
+    const err = `taxa de leitura do detalhe despencou: ${descreverVigia({ ...vigia, campos: vigia.quedas })}`;
+    console.error(`[eventos][gate] verdict=anomalo — ${err} — corpus NÃO será sobrescrito, cursor parado`);
+    writeFileSync(OUT_PATH, generateRunOnlySql(now, "anomalo", crawl.items.length, err, ENTIDADE));
+    process.exit(1);
+  }
 
   // Corpus load (rows_scraped = crawled listing count, the floor baseline) + cursor no fim.
   const existingHashes = new Map(readExistingMeta(ENTIDADE).map((r) => [r.id, r.content_hash]));

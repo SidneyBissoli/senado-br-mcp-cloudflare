@@ -35,6 +35,7 @@ import { selectRestatus, buildRestatusRecords } from "./restatus.js";
 import { generateLoadSql, generateRunOnlySql } from "./sql.js";
 import { fetchConsultaDetalheCorpus } from "./detalhe.js";
 import { criarDisjuntor } from "./breaker.js";
+import { mesclarCampo, vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
 
 const SENADO_BASE_URL = process.env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
 const PAGE_DELAY_MS = Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
@@ -70,8 +71,8 @@ async function enrichConsulta(
   const prev = existing.get(id);
   let autoria: string | null = null;
   let relator: string | null = null;
-  if (prev) {
-    const p = JSON.parse(prev) as Partial<ConsultaResumo>;
+  const p = prev ? (JSON.parse(prev) as Partial<ConsultaResumo>) : undefined;
+  if (p) {
     if ("autoria" in p) {
       autoria = p.autoria ?? null;
       relator = p.relator ?? null;
@@ -89,14 +90,16 @@ async function enrichConsulta(
     }
     await sleep(DETAIL_DELAY_MS);
   }
+  // Campo a campo, vazio lido mantém o guardado (src/scraper/mesclar.ts). Placar ausente em consulta
+  // nova (nada guardado) segue 0, o padrão histórico do builder.
   return buildConsultaResumo({
     id,
-    materia: it.identificacao ?? undefined,
-    ementa: it.ementa ?? undefined,
-    votosSim: it.votosSim,
-    votosNao: it.votosNao,
-    autoria,
-    relator,
+    materia: mesclarCampo(it.identificacao, p?.materia) ?? undefined,
+    ementa: mesclarCampo(it.ementa, p?.ementa) ?? undefined,
+    votosSim: mesclarCampo(it.votosSim, p?.votosSim) ?? 0,
+    votosNao: mesclarCampo(it.votosNao, p?.votosNao) ?? 0,
+    autoria: mesclarCampo(autoria, p?.autoria),
+    relator: mesclarCampo(relator, p?.relator),
     status,
   });
 }
@@ -181,6 +184,26 @@ async function main(): Promise<void> {
   // 3. Normalize + hash (canonical ConsultaResumo via shared builder; metrica_principal = totalVotos).
   //    v2: enrich with detail-only autoria/relator, preserving already-enriched rows (immutable).
   const existingPayloads = readAllPayloads("consultas");
+
+  // Vigia da listagem: dos campos que o corpus já tinha, quantos a leitura de hoje ainda trouxe.
+  // Queda brusca = o leitor deixou de reconhecer a página (o caso das ideias em 12/10/2026).
+  const vigia = vigiarCampos(
+    crawl.items.map((it) => {
+      const prev = existingPayloads.get(it.codigoMateria);
+      return {
+        lido: { materia: it.identificacao, ementa: it.ementa, votosSim: it.votosSim, votosNao: it.votosNao },
+        guardado: prev ? (JSON.parse(prev) as Record<string, unknown>) : undefined,
+      };
+    }),
+    ["materia", "ementa", "votosSim", "votosNao"],
+  );
+  console.log(`[consultas][vigia] ${descreverVigia(vigia)}`);
+  if (!vigia.ok) {
+    const err = `taxa de leitura da listagem despencou: ${descreverVigia({ ...vigia, campos: vigia.quedas })}`;
+    console.error(`[gate] verdict=anomalo — ${err} — corpus NÃO será sobrescrito`);
+    writeFileSync(OUT_PATH, generateRunOnlySql(now, "anomalo", crawl.items.length, err));
+    process.exit(1);
+  }
   const pendentes = crawl.items.filter((it) => needsEnrich(existingPayloads.get(it.codigoMateria))).length;
   const records: SyncRecord[] = [];
   let fetched = 0;

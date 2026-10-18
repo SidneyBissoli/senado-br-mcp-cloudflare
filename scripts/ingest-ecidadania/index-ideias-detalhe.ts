@@ -22,8 +22,9 @@ import { writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { sleep } from "./http.js";
-import { STATUS_IDEIA_REMOVIDA, buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania.js";
-import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
+import { planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
+import { vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
+import { registroDetalheIdeia, CAMPOS_DETALHE_IDEIA, type DetalheIdeiaLido } from "./ideias-registro.js";
 import { criarDisjuntor } from "./breaker.js";
 import { readCurrentRange, readDetalheCursor, type CurrentPayloadRow } from "./d1.js";
 import { generateDetalheLoadSqlBatches, cursorUpsertStmt, generateRunOnlySql } from "./sql.js";
@@ -65,37 +66,13 @@ function writeRunOnly(now: string, status: string, rows: number, error: string):
 }
 
 /**
- * Rebuild an IdeiaResumo preserving listing fields from the stored payload + fresh (or preserved) detail.
- * `removida` (detail answered 410) overrides the stored status — it is the only status this job writes:
- * an idea retired from the portal leaves every listing, so no listing crawl would ever record it.
+ * Rebuild preserving listing fields from the stored payload + the fresh detail, field by field
+ * (`registroDetalheIdeia`: an empty reading never wipes a stored value). `removida` (detail answered
+ * 410) overrides the stored status — the only status this job writes: an idea retired from the portal
+ * leaves every listing, so no listing crawl would ever record it.
  */
-function rebuild(
-  row: CurrentPayloadRow,
-  detail: { dataPublicacao: string | null; autorUf: string | null; descricao: string | null; plConvertido: string | null } | null,
-  removida = false,
-): SyncRecord {
-  const prev = JSON.parse(row.payload_json) as Partial<IdeiaResumo>;
-  const ideia = buildIdeiaResumo({
-    id: row.id,
-    titulo: prev.titulo,
-    apoios: prev.apoios,
-    status: removida ? STATUS_IDEIA_REMOVIDA : prev.status,
-    // detail fresco quando obtido; senão preserva o que já havia (não zera)
-    dataPublicacao: detail ? detail.dataPublicacao : prev.dataPublicacao ?? null,
-    autorUf: detail ? detail.autorUf : prev.autorUf ?? null,
-    descricao: detail ? detail.descricao : prev.descricao ?? null,
-    plConvertido: detail ? detail.plConvertido : prev.plConvertido ?? null,
-  });
-  const payloadJson = JSON.stringify(ideia);
-  return {
-    entityId: ideia.id,
-    sourceUrl: ideia.url,
-    payloadJson,
-    status: ideia.status,
-    metrica: ideia.apoios,
-    comissao: null,
-    contentHash: contentHash(payloadJson),
-  };
+function rebuild(row: CurrentPayloadRow, detail: DetalheIdeiaLido | null, removida = false): SyncRecord {
+  return registroDetalheIdeia(row.payload_json, row.id, detail, removida);
 }
 
 async function main(): Promise<void> {
@@ -118,6 +95,8 @@ async function main(): Promise<void> {
 
   const disjuntor = criarDisjuntor();
   const records: SyncRecord[] = [];
+  // Leitura crua × guardado, por id lido com sucesso — a entrada do vigia (o mesclado nunca cai).
+  const leituras: Array<{ lido: Record<string, unknown>; guardado: Record<string, unknown> }> = [];
   let fetched = 0;
   let gaps = 0;
   let removidas = 0;
@@ -128,6 +107,7 @@ async function main(): Promise<void> {
     try {
       detail = await fetchIdeiaDetalheCorpus(row.id);
       fetched++;
+      leituras.push({ lido: { ...detail }, guardado: JSON.parse(row.payload_json) as Record<string, unknown> });
       disjuntor.sucesso();
     } catch (e) {
       if (ehRecursoRemovido(e)) {
@@ -144,6 +124,19 @@ async function main(): Promise<void> {
     await sleep(DETAIL_DELAY_MS);
     records.push(rebuild(row, detail, removida));
     lastId = row.id;
+  }
+
+  // Vigia: a mesclagem impede que a leitura vazia apague, mas também a esconderia. Queda brusca da
+  // taxa de leitura de um campo = o leitor deixou de reconhecer a página → nada gravado, cursor parado
+  // (o mesmo chunk volta no próximo run, depois do conserto).
+  const vigia = vigiarCampos(leituras, CAMPOS_DETALHE_IDEIA);
+  console.log(`[ideias-detalhe][vigia] ${descreverVigia(vigia)}`);
+  if (!vigia.ok) {
+    const err = `taxa de leitura despencou: ${descreverVigia({ ...vigia, campos: vigia.quedas })}`;
+    console.error(`[ideias-detalhe][gate] verdict=anomalo — ${err} — nada será gravado, cursor parado`);
+    cleanOldOutputs();
+    writeRunOnly(now, "anomalo", rows.length, err);
+    process.exit(1);
   }
 
   // Cursor avança para o último id processado (ou fica em `afterId` se o chunk veio vazio).
