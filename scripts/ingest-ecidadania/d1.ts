@@ -15,7 +15,7 @@ import { execSync } from "node:child_process";
 const DB_NAME = "senado-ecidadania";
 
 /** Run a read-only query and return the `results` rows. SQL must be static (no untrusted input). */
-function queryD1<T = Record<string, unknown>>(sql: string, attempts = 2): T[] {
+export function queryD1<T = Record<string, unknown>>(sql: string, attempts = 2): T[] {
   // --no-install so npx never tries to fetch wrangler; capture stderr so a failure surfaces the real
   // Cloudflare/wrangler message instead of a bare "Command failed". Retry once for transient API errors.
   const cmd = `npx --no-install wrangler d1 execute ${DB_NAME} --remote --json --command "${sql}"`;
