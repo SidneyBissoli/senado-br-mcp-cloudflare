@@ -28,7 +28,8 @@ import { registroDetalheIdeia, CAMPOS_DETALHE_IDEIA, type DetalheIdeiaLido } fro
 import { criarDisjuntor } from "./breaker.js";
 import { readCurrentRange, readDetalheCursor, type CurrentPayloadRow } from "./d1.js";
 import { generateDetalheLoadSqlBatches, cursorUpsertStmt, generateRunOnlySql } from "./sql.js";
-import { fetchIdeiaDetalheCorpus, ehRecursoRemovido } from "./detalhe.js";
+import { fetchIdeiaDetalhe, ehRecursoRemovido } from "./detalhe.js";
+import { detalheParaCorpus, IdeiaDetalheForaDoMoldeError } from "../../src/scraper/ideia-detalhe.js";
 
 const ENTIDADE = "ideias";
 const CHUNK = Number(process.env.INGEST_IDEIAS_DETALHE_CHUNK) || 8000;
@@ -100,17 +101,25 @@ async function main(): Promise<void> {
   let fetched = 0;
   let gaps = 0;
   let removidas = 0;
+  let naoReconhecidas = 0;
   let lastId = afterId;
   for (const row of rows) {
-    let detail = null;
+    let detail: DetalheIdeiaLido | null = null;
     let removida = false;
     try {
-      detail = await fetchIdeiaDetalheCorpus(row.id);
+      detail = detalheParaCorpus(await fetchIdeiaDetalhe(row.id));
       fetched++;
       leituras.push({ lido: { ...detail }, guardado: JSON.parse(row.payload_json) as Record<string, unknown> });
       disjuntor.sucesso();
     } catch (e) {
-      if (ehRecursoRemovido(e)) {
+      if (e instanceof IdeiaDetalheForaDoMoldeError) {
+        // Página que o leitor não reconhece: nada desta leitura é gravado (o guardado fica), e ela entra
+        // no vigia como leitura vazia — muitas assim reprovam o run.
+        naoReconhecidas++;
+        leituras.push({ lido: Object.fromEntries(CAMPOS_DETALHE_IDEIA.map((c) => [c, null])), guardado: JSON.parse(row.payload_json) as Record<string, unknown> });
+        console.warn(`[ideias-detalhe][fora-do-molde] id=${row.id}: ${e.message}`);
+        disjuntor.sucesso();
+      } else if (ehRecursoRemovido(e)) {
         // Resposta do portal (410), não falha de transporte: grava `removida`, preserva o resto.
         removida = true;
         removidas++;
@@ -149,7 +158,7 @@ async function main(): Promise<void> {
     writeFileSync(join(OUT_DIR, `${OUT_PREFIX}${String(i + 1).padStart(3, "0")}.sql`), content);
   });
   console.log(
-    `[ideias-detalhe] processadas ${rows.length} (detalhe ok=${fetched} removidas=${removidas} gaps=${gaps}), ${rowsChanged} alteradas; ` +
+    `[ideias-detalhe] processadas ${rows.length} (detalhe ok=${fetched} removidas=${removidas} foraDoMolde=${naoReconhecidas} gaps=${gaps}), ${rowsChanged} alteradas; ` +
       `cursor→${nextCursor}; ${files.length} arquivo(s)`,
   );
   process.exit(0);

@@ -10,13 +10,13 @@
 import { describe, it, expect } from "vitest";
 import {
   parseComentariosAudiencia,
-  parseIdeiaDetalheCorpus,
   parseConsultaDetalheCorpus,
   parseEventoDetalhe,
   buildEventoResumoEnriquecido,
 } from "../../src/scraper/ecidadania.js";
 import comentariosHtml from "../fixtures/ecidadania/comentarios-audiencia.html?raw";
-import ideiaDetalheHtml from "../fixtures/ecidadania/ideia-detalhe.html?raw";
+import ideiaAberta from "../fixtures/ecidadania/ideias-detalhe-2026-10/aberta-221186.html?raw";
+import { detalheParaCorpus, lerIdeiaDetalhe } from "../../src/scraper/ideia-detalhe.js";
 import consultaDetalheHtml from "../fixtures/ecidadania/consulta-detalhe.html?raw";
 import eventoDetalheHtml from "../fixtures/ecidadania/evento-detalhe.html?raw";
 
@@ -69,12 +69,12 @@ describe("parseComentariosAudiencia — nível-comentário (UF-only)", () => {
   });
 });
 
-describe("parseIdeiaDetalheCorpus — UF-only, sem nome do autor cidadão", () => {
-  const d = parseIdeiaDetalheCorpus(ideiaDetalheHtml);
+describe("detalheParaCorpus — UF-only, sem nome do autor cidadão (leitor novo, A4)", () => {
+  const d = detalheParaCorpus(lerIdeiaDetalhe(ideiaAberta));
 
-  it("nunca retorna o nome do autor (só a UF, quando houver)", () => {
-    if (d.autorUf !== null) expect(d.autorUf).toMatch(/^[A-Z]{2}$/);
-    expect(Object.values(d).every((v) => typeof v !== "string" || !/\bproposta por\b/i.test(v))).toBe(true);
+  it("nunca retorna o nome do autor (só a UF)", () => {
+    expect(d.autorUf).toBe("RJ");
+    expect(JSON.stringify(d)).not.toMatch(/NILTON|proposta por/i);
   });
 });
 

@@ -59,6 +59,27 @@ export async function readCurrent(
 }
 
 /**
+ * One current row of an entity: its denormalized `status` and when it was scraped, or null when the id
+ * is not in the corpus (or D1 is absent/unavailable — the caller then derives what it needs).
+ */
+export async function readCurrentStatus(
+  db: D1Database | undefined,
+  entidade: Entidade,
+  entityId: number,
+): Promise<{ status: string; scrapedAt: string } | null> {
+  if (!db) return null;
+  try {
+    const row = await db
+      .prepare("SELECT status, scraped_at FROM ecidadania_current WHERE entidade = ? AND entity_id = ?")
+      .bind(entidade, entityId)
+      .first<{ status: string | null; scraped_at: string }>();
+    return row && row.status ? { status: row.status, scrapedAt: row.scraped_at } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Resolve a list with the D1-first / live-fallback policy above.
  * `liveScrape` is the existing live path (e.g. listarConsultasInternal).
  *

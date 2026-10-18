@@ -7,7 +7,7 @@
  * `autorUf`/`dataPublicacao` null em páginas lidas com sucesso, e o backfill (`detail ? detail.x :
  * prev.x`) apagou ~21 mil UFs e datas com o workflow verde. O teste percorre cada escritor com um
  * payload guardado completo e uma leitura VAZIA; e passa as fixtures reais da página nova pelo leitor
- * antigo para provar as duas defesas sobre o caso que aconteceu.
+ * novo (A4) para provar que a rodada real volta a gravar e a ser aprovada.
  */
 
 import { describe, it, expect } from "vitest";
@@ -26,11 +26,11 @@ import {
   buildEventoResumo,
   buildEventoResumoEnriquecido,
   buildIdeiaResumo,
-  parseIdeiaDetalheCorpus,
   type IdeiaResumo,
 } from "../../src/scraper/ecidadania.js";
 import { consultasHighlightCfg, eventosHighlightCfg, ideiasHighlightCfg } from "../../src/scraper/pipeline.js";
 import { registroDetalheIdeia, registroIdeia, CAMPOS_DETALHE_IDEIA } from "../../scripts/ingest-ecidadania/ideias-registro.js";
+import { detalheParaCorpus, lerIdeiaDetalhe } from "../../src/scraper/ideia-detalhe.js";
 import { parseConsultaListingPage } from "../../scripts/ingest-ecidadania/listing.js";
 
 import p0 from "../fixtures/ecidadania/ideias-detalhe-2026-10/aberta-221186.html?raw";
@@ -197,35 +197,38 @@ describe("vigia de taxa de leitura por campo", () => {
   });
 });
 
-describe("o caso de 12/10/2026, com as páginas reais", () => {
+describe("o caso de 12/10/2026, com as páginas reais — pelo leitor NOVO (A4)", () => {
+  // Até a A4 este bloco passava as 20 páginas pelo leitor ANTIGO e provava as duas defesas: o backfill
+  // mantinha UF e data guardadas, e o vigia reprovava a rodada (retenção 0). Com o leitor novo ligado
+  // (fase A4), a prova se inverte: as páginas são lidas, a mesclagem grava o que leu e o vigia APROVA.
   const paginas = PAGINAS_NOVAS;
+  const lidas = paginas.map((html) => detalheParaCorpus(lerIdeiaDetalhe(html)));
 
-  it("o leitor ANTIGO não acha UF nem data na página nova (o que apagou o corpus)", () => {
-    expect(paginas.length).toBe(20);
-    for (const html of paginas) {
-      const d = parseIdeiaDetalheCorpus(html);
-      expect(d.autorUf).toBeNull();
-      expect(d.dataPublicacao).toBeNull();
+  it("o leitor novo acha UF e data limite nas 20 páginas", () => {
+    expect(lidas.length).toBe(20);
+    for (const d of lidas) {
+      expect(d.autorUf).toMatch(/^[A-Z]{2}$/);
+      expect(d.dataPublicacao).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
   });
 
-  it("defesa 1: o backfill passa a manter UF e data guardadas", () => {
-    for (const html of paginas) {
-      const d = parseIdeiaDetalheCorpus(html);
+  it("o backfill grava o que leu (nunca o vazio)", () => {
+    for (const d of lidas) {
       const r = payload(registroDetalheIdeia(JSON.stringify(IDEIA_GUARDADA), IDEIA_GUARDADA.id, d));
-      expect(r.autorUf).toBe("SP");
-      expect(r.dataPublicacao).toBe("2020-01-10");
+      expect(r.autorUf).toBe(d.autorUf);
+      expect(r.dataPublicacao).toBe(d.dataPublicacao);
     }
   });
 
-  it("defesa 2: o vigia reprova a rodada, nomeando UF e data", () => {
-    const pares = paginas.map((html) => ({
-      lido: { ...parseIdeiaDetalheCorpus(html) } as Record<string, unknown>,
-      guardado: IDEIA_GUARDADA as unknown as Record<string, unknown>,
+  it("o vigia aprova a rodada", () => {
+    // O guardado de cada página tem Sugestão só quando a página tem: o leitor novo põe em plConvertido
+    // apenas a Sugestão (adoção por parlamentar fica para a A6), e um guardado inventado mediria nada.
+    const pares = lidas.map((d) => ({
+      lido: { ...d } as Record<string, unknown>,
+      guardado: { ...IDEIA_GUARDADA, plConvertido: d.plConvertido ? IDEIA_GUARDADA.plConvertido : null } as unknown as Record<string, unknown>,
     }));
     const v = vigiarCampos(pares, CAMPOS_DETALHE_IDEIA, { nMinimo: pares.length });
-    expect(v.ok).toBe(false);
-    expect(v.quedas.map((q) => q.campo)).toEqual(expect.arrayContaining(["autorUf", "dataPublicacao"]));
-    for (const q of v.quedas.filter((x) => x.campo === "autorUf" || x.campo === "dataPublicacao")) expect(q.retencao).toBe(0);
+    expect(v.quedas.map((q) => q.campo)).toEqual([]);
+    expect(v.ok).toBe(true);
   });
 });

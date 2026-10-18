@@ -17,7 +17,8 @@ import consultasListaJson from "../fixtures/ecidadania/consultas-lista.json?raw"
 import ideiasListaJson from "../fixtures/ecidadania/ideias-lista.json?raw";
 import eventosListaJson from "../fixtures/ecidadania/eventos-lista.json?raw";
 import consultaDetalheHtml from "../fixtures/ecidadania/consulta-detalhe.html?raw";
-import ideiaDetalheHtml from "../fixtures/ecidadania/ideia-detalhe.html?raw";
+// Página redesenhada em 12/10/2026 (linha do tempo); a captura anterior (ideia-detalhe.html) era do molde antigo.
+import ideiaDetalheHtml from "../fixtures/ecidadania/ideias-detalhe-2026-10/aberta-221186.html?raw";
 import eventoDetalheHtml from "../fixtures/ecidadania/evento-detalhe.html?raw";
 
 const mockFetch = vi.fn();
@@ -112,11 +113,11 @@ describe("contract: consulta detail HTML", () => {
 describe("contract: ideia detail HTML", () => {
   it("extracts core fields from real markup", async () => {
     stubWith(ideiaDetalheHtml);
-    const r = await obterIdeiaInternal(215666);
-    expect(r.id).toBe(215666);
-    expect(["aberta", "encerrada", "convertida"]).toContain(r.status);
-    expect(typeof r.apoios).toBe("number");
+    const r = await obterIdeiaInternal(221186);
     expect(r.titulo.length).toBeGreaterThan(0);
+    expect(typeof r.apoios).toBe("number");
+    expect(r.dataProposta).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(r.linhaDoTempo.length).toBeGreaterThan(0);
   });
 });
 

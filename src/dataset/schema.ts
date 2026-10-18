@@ -256,7 +256,7 @@ const ideiasSchema: EntitySchema = {
       sourceEndpoint: EP_IDEIAS_LISTING,
       sourceField: "(derivado) parâmetro GET situacao da listagem varrida",
       operationalization:
-        "A listagem é varrida por situacao=N; o status é o mapa SITUACAO_STATUS ({5,6,8}→aberta, {7,9}→encerrada, 10→convertida) do valor usado no crawl. Ideia que sai das listas vivas tem a página de detalhe lida e recebe o status do texto de situação (mesmo mapa); \"removida\" quando o detalhe responde HTTP 410 (desde 06/10/2026).",
+        "A listagem é varrida por situacao=N; o status é o mapa SITUACAO_STATUS ({5,6,8}→aberta, {7,9}→encerrada, 10→convertida) do valor usado no crawl. Ideia que sai das listas vivas tem a página de detalhe lida: até 12/10/2026 recebia o status do texto de situação (mesmo mapa); a página redesenhada não publica mais a situação, e desde a 3.20.0 o status vem da categoria da listagem quando a ideia aparece na fatia da situacao 7 da mesma rodada e, senão, é classificado pela linha do tempo do detalhe (regra que reproduz a categoria do portal em 335 de 336 ideias medidas em 17/10/2026). \"removida\" quando o detalhe responde HTTP 410 (desde 06/10/2026).",
       derived: true,
     },
     {
@@ -264,7 +264,7 @@ const ideiasSchema: EntitySchema = {
       type: "date",
       description: "Data limite para atingir os 20.000 apoios (única âncora temporal upstream da ideia). NÃO é a data de criação: o nome é histórico, mantido pela compatibilidade do esquema.",
       sourceEndpoint: EP_IDEIAS_DETALHE,
-      sourceField: "página de detalhe: bloco \"Data limite para receber 20.000 apoios\" (DD/MM/AAAA)",
+      sourceField: "página de detalhe: até 12/10/2026 o bloco \"Data limite para receber 20.000 apoios\"; depois, a linha do tempo \"Essa ideia pode receber apoios até DD/MM/AAAA\"",
       operationalization:
         "extractDate sobre a data-limite exibida no detalhe (visualizacaoideia) → ISO YYYY-MM-DD; lido no crawl de detalhe. Reaberto na v2 (era null por design na v1). Data provável de criação = esta data − 120 dias (regra dos 4 meses do portal; medida exata em 4 ideias convertidas de 2017-2020 contra a base de Pereira, UFPE 2024) — derivação do leitor, não variável do dataset.",
       caveat: "Em ideia aberta esta data está no futuro (é o fim do prazo de apoios). Detail-only (v2): null nas ideias ainda não enriquecidas pelo backfill de detalhe (censura à esquerda residual nesses campos até o backfill completar).",
@@ -274,7 +274,7 @@ const ideiasSchema: EntitySchema = {
       type: "string",
       description: "UF do cidadão autor da ideia (SEM nome — conteúdo de cidadão).",
       sourceEndpoint: EP_IDEIAS_DETALHE,
-      sourceField: "página de detalhe: \"Ideia proposta por … (UF)\" — apenas o \"(UF)\"",
+      sourceField: "página de detalhe: \"Ideia proposta por … (UF)\" (na linha do tempo desde 12/10/2026) — apenas o \"(UF)\"",
       operationalization:
         "Extrai só a sigla de UF entre parênteses; o NOME do cidadão é descartado NA ORIGEM (nunca gravado no corpus). Postura de privacidade: conteúdo de cidadão → só UF.",
       caveat: "Detail-only (v2): null nas ideias ainda não enriquecidas. Nome do autor deliberadamente não coletado.",
@@ -293,8 +293,8 @@ const ideiasSchema: EntitySchema = {
       type: "string",
       description: "Proposição gerada pela ideia (ex.: \"SUG 12/2024\"), quando convertida.",
       sourceEndpoint: EP_IDEIAS_DETALHE,
-      sourceField: "página de detalhe: identificação da proposição (SUG/PL nº)",
-      operationalization: "Regex de identificação de proposição no detalhe; null quando a ideia não gerou proposição.",
+      sourceField: "página de detalhe: identificação da proposição (SUG/PL nº); desde a 3.20.0, o acontecimento \"Essa ideia gerou a Sugestão nº N, de AAAA\" da linha do tempo",
+      operationalization: "Até a 3.19: regex de identificação de proposição no detalhe. Desde a 3.20.0 (página redesenhada): a Sugestão gerada, \"SUG N/AAAA\"; as proposições em que a ideia virou (pela CDH ou adotada por parlamentar) saem só no detalhe ao vivo (senado_ecidadania_obter_ideia). Leitura sem Sugestão não apaga valor já gravado.",
       caveat: "Detail-only (v2): null nas ideias ainda não enriquecidas ou não convertidas.",
     },
     {

@@ -16,6 +16,7 @@ import { USER_AGENT } from "../version.js";
 import { CorpoForaDoPrazoError, PrazoDoCorpo, upstreamCall } from "../throttle/upstream.js";
 import type { ErrorClass } from "../call-shape.js";
 import { lerBrNum, mesclarCampo } from "./mesclar.js";
+import { lerIdeiaDetalhe, type IdeiaDetalhe } from "./ideia-detalhe.js";
 
 export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
 
@@ -374,9 +375,19 @@ export const IDEIA_PRAZO_APOIOS_DIAS = 120;
  * aberta cai no futuro — sem o aviso o leitor conclui que o servidor errou.
  */
 export const AVISO_DATAS_IDEIA =
-  "dataPublicacao é a data limite para receber os 20.000 apoios, a única data que o portal publica (o nome do campo é histórico); " +
+  "dataPublicacao é a data limite para receber os 20.000 apoios, a única data que o corpus guarda (o nome do campo é histórico); " +
   "por isso cai no futuro em ideia aberta. dataCriacaoEstimada = data limite menos 120 dias, calculada pelo servidor " +
-  "(regra dos 4 meses do portal, medida em 4 ideias de 2017-2020): é estimativa, não dado da fonte.";
+  "(regra dos 4 meses do portal, medida em 4 ideias de 2017-2020): é estimativa, não dado da fonte. " +
+  "A data real em que a ideia foi proposta sai em senado_ecidadania_obter_ideia (dataProposta).";
+
+/**
+ * Aviso de datas do DETALHE: desde o redesenho de 12/10/2026 a página publica a data de proposição
+ * na linha do tempo. `dataCriacaoEstimada` fica por compatibilidade.
+ */
+export const AVISO_DATAS_IDEIA_DETALHE =
+  "dataProposta é a data em que a ideia foi proposta, publicada pela fonte — use esta. dataPublicacao (= prazoApoios) é a " +
+  "data limite para receber os 20.000 apoios (o nome do campo é histórico). dataCriacaoEstimada (data limite menos 120 dias, " +
+  "calculada pelo servidor) é estimativa mantida por compatibilidade.";
 
 /**
  * Data provável de criação da ideia: data limite (ISO) − `IDEIA_PRAZO_APOIOS_DIAS`. Aritmética em UTC
@@ -442,92 +453,11 @@ export function buildIdeiaResumo(fields: {
 }
 
 /**
- * Texto da situação na página de detalhe (`<em>` em section[title="Situação da Ideia"]) → vocabulário
- * de status do corpus (aberta | encerrada | convertida), o MESMO que `SITUACAO_STATUS` atribui por
- * bucket da listagem. Uma função só, usada pela tool ao vivo e pelo crawl de transições — antes
- * cada um tinha o seu mapeamento, e o da tool lia "Não acatada" (bucket 9, encerrada) como aberta.
- *
- * Textos REAIS medidos em 06/10/2026, uma ideia por bucket:
- *   s5 "Aberta" · s6 "Na comissão" · s8 "Aguardando envio à CDH"      → aberta
- *   s7 "Encerrada - Sem apoio suficiente" · s9 "Não acatada"          → encerrada
- *   s10 "Convertida em Proposição"                                     → convertida
- *
- * Comparação EXATA (sem caixa e sem acento), decisão do dono em 06/10/2026: texto novo do portal vira
- * null e aparece no log, em vez de ser gravado no histórico com um status adivinhado por palavra-chave.
- * Se o log mostrar um texto novo, acrescente-o aqui e no teste dos textos medidos.
- */
-/**
  * Status de corpus de uma ideia que o portal REMOVEU (detalhe responde HTTP 410). Não vem de texto de
  * situação — o portal não publica nada sobre ela —, só da resposta 410. Decisão do dono (06/10/2026):
  * manter o registro e o histórico no banco com este status, em vez de apagar ou deixar "aberta".
  */
 export const STATUS_IDEIA_REMOVIDA = "removida";
-
-export function statusFromSituacaoIdeia(texto: string): string | null {
-  const t = texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
-  if (t === "aberta" || t === "na comissao" || t === "aguardando envio a cdh") return "aberta";
-  if (t === "encerrada - sem apoio suficiente" || t === "nao acatada") return "encerrada";
-  if (t === "convertida em proposicao") return "convertida";
-  return null;
-}
-
-/** Campos detail-only da ideia para o corpus (v2). UF-only — SEM nome do autor cidadão. */
-export interface IdeiaDetalheCorpus {
-  dataPublicacao: string | null;
-  autorUf: string | null;
-  descricao: string | null;
-  plConvertido: string | null;
-  /** Total de apoios na leitura (null se o contador não foi achado — nunca 0 inventado). */
-  apoios: number | null;
-  /** `statusFromSituacaoIdeia` do texto da situação (null se ausente ou não reconhecido). */
-  status: string | null;
-}
-
-/** Texto cru da situação da ideia na página de detalhe, ou null se a seção não existe. */
-export function extractSituacaoIdeia(html: string): string | null {
-  const m = html.match(/title="Situa[çc][ãa]o da Ideia"[\s\S]*?<em>([^<]+)<\/em>/i);
-  // O portal manda o texto em UTF-8 literal ("Não acatada", medido 06/10/2026) — sem entidades.
-  return m ? m[1].replace(/\s+/g, " ").trim() : null;
-}
-
-/**
- * Pure parser of an idea detail page (`visualizacaoideia?id=`) for the CORPUS — extracts only the
- * four detail fields, keeping ONLY the UF of the citizen author (name discarded at source, never
- * returned). Distinct from `obterIdeiaInternal` (the live tool), which still surfaces the portal's
- * semi-anonymized author string; this corpus path never touches the name.
- */
-export function parseIdeiaDetalheCorpus(html: string): IdeiaDetalheCorpus {
-  const text = stripHtml(html);
-
-  // "Ideia proposta por <span>NOME</span> <span>(UF)</span>" — capturamos SÓ a UF.
-  const autorMatch = html.match(/Ideia proposta por<\/div>\s*<div[^>]*>\s*<span>[^<]+<\/span>\s*<span>\s*\(([A-Z]{2})\)<\/span>/);
-  const autorUf = autorMatch ? autorMatch[1] : null;
-
-  const dataMatch = html.match(/Data limite[\s\S]*?<div[^>]*>\s*(\d{2}\/\d{2}\/\d{4})\s*<\/div>/i);
-  const dataPublicacao = dataMatch ? extractDate(dataMatch[1]) : null;
-
-  const descMatch = html.match(/<b><div[^>]*>[^<]+<\/div><\/b>\s*<div[^>]*>([\s\S]*?)<\/div>/);
-  const descricao = descMatch ? stripHtml(descMatch[1]).substring(0, 2000) || null : null;
-
-  const plMatch = text.match(/(SUGEST[ÃA]O|PEC|PL|PLP)\s*n?º?\s*(\d+)\s*(?:de\s*)?(\d{4})/i);
-  const plConvertido = plMatch
-    ? `${plMatch[1].toUpperCase().includes("SUGEST") ? "SUG" : plMatch[1].toUpperCase()} ${plMatch[2]}/${plMatch[3]}`
-    : null;
-
-  const apoiosMatch = html.match(/class="contabilizacao"[^>]*>([^<]+)</);
-  const apoios = apoiosMatch ? parseBrNum(apoiosMatch[1]) : null;
-
-  const situacao = extractSituacaoIdeia(html);
-  const status = situacao === null ? null : statusFromSituacaoIdeia(situacao);
-
-  return { dataPublicacao, autorUf, descricao, plConvertido, apoios, status };
-}
-
-/** Fetch + parse the corpus-facing (UF-only) idea detail. */
-export async function obterIdeiaDetalheCorpus(id: number): Promise<IdeiaDetalheCorpus> {
-  const html = await fetchPage(`/visualizacaoideia?id=${id}`);
-  return parseIdeiaDetalheCorpus(html);
-}
 
 /** Leitura crua de um destaque REST de ideia (ver `ConsultaDestaque`): apoios ausente = null. */
 export interface IdeiaDestaque {
@@ -557,49 +487,14 @@ export async function listarIdeiasInternal(params: { status?: string; limite?: n
   return ideias.slice(0, limite);
 }
 
-export async function obterIdeiaInternal(id: number) {
-  const html = await fetchPage(`/visualizacaoideia?id=${id}`);
-  const text = stripHtml(html);
-
-  // Title: <b><div style="font-size:24px;...">TITLE</div></b> inside article#ideia-legislativa
-  const tituloMatch = html.match(/id="ideia-legislativa"[\s\S]*?<b><div[^>]*>([^<]+)<\/div><\/b>/);
-  const titulo = tituloMatch ? stripHtml(tituloMatch[1]) : "";
-
-  // Description: first <div style="margin-bottom:15px;"> after the title that has content
-  const descMatch = html.match(/<b><div[^>]*>[^<]+<\/div><\/b>\s*<div[^>]*>([\s\S]*?)<\/div>/);
-  const descricao = descMatch ? stripHtml(descMatch[1]).substring(0, 2000) : "";
-
-  // Support count: <span class="contabilizacao">17.978</span>
-  const apoiosMatch = html.match(/class="contabilizacao"[^>]*>([^<]+)</);
-  const apoios = apoiosMatch ? parseBrNum(apoiosMatch[1]) : 0;
-
-  // Status: o mesmo mapeamento do corpus (statusFromSituacaoIdeia). Sem seção ou texto não
-  // reconhecido, mantém o "aberta" histórico desta tool — o default antigo, agora só para o
-  // desconhecido, não mais para "Não acatada".
-  const situacao = extractSituacaoIdeia(html);
-  const status = (situacao !== null ? statusFromSituacaoIdeia(situacao) : null) ?? "aberta";
-
-  // Author: after "Ideia proposta por"
-  const autorMatch = html.match(/Ideia proposta por<\/div>\s*<div[^>]*>\s*<span>([^<]+)<\/span>\s*<span>\s*\(([A-Z]{2})\)<\/span>/);
-
-  // Date limit
-  const dataMatch = html.match(/Data limite[\s\S]*?<div[^>]*>\s*(\d{2}\/\d{2}\/\d{4})\s*<\/div>/i);
-  const dataPublicacao = dataMatch ? extractDate(dataMatch[1]) : extractDate(text);
-
-  const comentarioMatch = text.match(/(\d+)\s*coment[aá]rio/i);
-  const plMatch = text.match(/(SUGEST[ÃA]O|PEC|PL|PLP)\s*n?º?\s*(\d+)\s*(?:de\s*)?(\d{4})/i);
-
-  return {
-    id, titulo, descricao, apoios, dataPublicacao, status,
-    autor: autorMatch ? `${autorMatch[1].trim()} (${autorMatch[2]})` : null,
-    url: `${ECIDADANIA_BASE}/visualizacaoideia?id=${id}`,
-    problema: null, solucao: null,
-    comentarios: comentarioMatch ? parseInt(comentarioMatch[1]) : 0,
-    dataEncerramento: null,
-    plConvertido: plMatch
-      ? `${plMatch[1].toUpperCase().includes("SUGEST") ? "SUG" : plMatch[1].toUpperCase()} ${plMatch[2]}/${plMatch[3]}`
-      : null,
-  };
+/**
+ * Detalhe de uma ideia ao vivo (`senado_ecidadania_obter_ideia`), pelo leitor da página redesenhada
+ * em 12/10/2026 (`lerIdeiaDetalhe`). Devolve a leitura como o portal publica; a situação NÃO sai daqui
+ * (a página não a publica) — a tool a toma do corpus ou a deriva da linha do tempo. Página fora do
+ * molde lança `IdeiaDetalheForaDoMoldeError` (não retentável); 410 lança antes, em `fetchPage`.
+ */
+export async function obterIdeiaInternal(id: number): Promise<IdeiaDetalhe> {
+  return lerIdeiaDetalhe(await fetchPage(`/visualizacaoideia?id=${id}`));
 }
 
 // ── Eventos ─────────────────────────────────────────────────────────────

@@ -77,7 +77,7 @@ function applyStringArray(value: unknown, fn: TextTransform): unknown {
  */
 const CITIZEN_STRING_FIELDS: Record<string, readonly string[]> = {
   consultas: [],
-  ideias: ["titulo", "descricao", "autor"],
+  ideias: ["titulo", "descricao", "autor", "autorNome"],
   eventos: [],
   consultas_votos: [],
 };
@@ -100,6 +100,13 @@ const OFFICIAL_STRING_FIELDS: Record<string, readonly string[]> = {
 const OFFICIAL_ARRAY_FIELDS: Record<string, readonly string[]> = {
   eventos: ["pauta", "convidados"],
 };
+
+/**
+ * Texto de cidadão dentro de estruturas do detalhe da ideia (fase A4): os acontecimentos da linha do
+ * tempo copiam o texto da página (com o nome do autor), e um aviso cita o item não reconhecido.
+ */
+const CITIZEN_ARRAY_FIELDS: Record<string, readonly string[]> = { ideias: ["avisos"] };
+const CITIZEN_OBJECT_ARRAY_FIELDS: Record<string, Record<string, readonly string[]>> = { ideias: { linhaDoTempo: ["texto"] } };
 
 export type EcidadaniaEntidade = keyof typeof CITIZEN_STRING_FIELDS;
 
@@ -125,6 +132,19 @@ export function tagUntrustedFields<T extends Record<string, unknown>>(
   }
   for (const f of officialArrays) {
     if (f in out) out[f] = applyStringArray(out[f], sanitizeScrapedText);
+  }
+  for (const f of CITIZEN_ARRAY_FIELDS[entidade] ?? []) {
+    if (f in out) out[f] = applyStringArray(out[f], neutralizeUntrustedText);
+  }
+  for (const [f, campos] of Object.entries(CITIZEN_OBJECT_ARRAY_FIELDS[entidade] ?? {})) {
+    const arr = out[f];
+    if (!Array.isArray(arr)) continue;
+    out[f] = arr.map((el) => {
+      if (!el || typeof el !== "object") return el;
+      const copia: Record<string, unknown> = { ...(el as Record<string, unknown>) };
+      for (const c of campos) if (c in copia) copia[c] = applyField(copia[c], neutralizeUntrustedText);
+      return copia;
+    });
   }
   return out as T;
 }

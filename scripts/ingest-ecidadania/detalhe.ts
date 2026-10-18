@@ -6,8 +6,8 @@
  * backoff) and feed the PURE parsers exported by `src/scraper/ecidadania.ts` — the same parsers the
  * live Worker tools use, so there is one tested extraction per source.
  *
- * PRIVACIDADE: the citizen-content parsers (`parseIdeiaDetalheCorpus`, `parseComentariosAudiencia`)
- * discard the name at the source — only the UF is ever returned. This module never re-introduces it.
+ * PRIVACIDADE: the citizen-content parsers discard the name before the corpus — `parseComentariosAudiencia`
+ * at the source, the idea detail through `detalheParaCorpus` (UF-only). This module never re-introduces it.
  */
 
 import { getText, HttpError } from "./http.js";
@@ -15,13 +15,12 @@ import {
   ECIDADANIA_BASE,
   parseEventoDetalhe,
   parseComentariosAudiencia,
-  parseIdeiaDetalheCorpus,
   parseConsultaDetalheCorpus,
   type EventoDetalhe,
   type ComentarioAudiencia,
-  type IdeiaDetalheCorpus,
   type ConsultaDetalheCorpus,
 } from "../../src/scraper/ecidadania.js";
+import { lerIdeiaDetalhe, type IdeiaDetalhe } from "../../src/scraper/ideia-detalhe.js";
 import { contentHash, type SyncRecord } from "../../src/scraper/pipeline.js";
 import type { ComentarioRecord } from "./sql.js";
 
@@ -51,10 +50,14 @@ export function ehRecursoRemovido(e: unknown): boolean {
   return e instanceof HttpError && e.status === 410;
 }
 
-/** Detalhe da ideia para o corpus (UF-only — sem nome do autor cidadão). */
-export async function fetchIdeiaDetalheCorpus(id: number): Promise<IdeiaDetalheCorpus> {
+/**
+ * Detalhe da ideia (página redesenhada em 12/10/2026, leitor da fase A1). Lança
+ * `IdeiaDetalheForaDoMoldeError` para página que não reconhece — quem chama conta e não grava. O
+ * corpus recebe só `detalheParaCorpus` (UF-only): o nome do autor lido aqui nunca vai para o corpus.
+ */
+export async function fetchIdeiaDetalhe(id: number): Promise<IdeiaDetalhe> {
   const html = await getText(`${ECIDADANIA_BASE}/visualizacaoideia?id=${id}`, { accept: "text/html" });
-  return parseIdeiaDetalheCorpus(html);
+  return lerIdeiaDetalhe(html);
 }
 
 /** Detalhe da consulta para o corpus (autoria/relator — agentes públicos, nome mantido). */

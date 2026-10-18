@@ -6,7 +6,77 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.20.0] - 2026-10-18
+
+O detalhe das ideias legislativas volta a ser lido. Em 12/10/2026 o portal redesenhou a página da
+ideia: a seção "Situação da Ideia" virou uma "Linha do Tempo" de acontecimentos datados. Desde
+então, `senado_ecidadania_obter_ideia` devolvia sempre `status: "aberta"` e uma data qualquer da
+página, e a coleta diária não reconhecia a situação de nenhuma ideia que saía das listas vivas.
+Esta versão junta a recuperação inteira: a listagem volta a ser lida (#131), a leitura vazia deixa
+de apagar valor guardado (#133), os valores apagados são restaurados do histórico (#134), e o leitor
+novo da página (#132) passa a servir a tool, a coleta das transições e o crawler de detalhe (A4).
+MINOR porque é aditiva: os campos que já existiam mantêm tipo e não-nulidade, e só as descrições de
+`senado_ecidadania_listar_ideias` e `senado_ecidadania_obter_ideia` mudaram (`surface.lock.json`
+regravado). Dump da superfície (stdio da 3.20.0 contra a produção na 3.19.0): só essas duas
+descrições diferem; as outras 67 tools, os 4 prompts e os 5 resources são idênticos.
+
+### Changed
+
+- **`senado_ecidadania_obter_ideia` lê a página redesenhada** (`lerIdeiaDetalhe`). Campos que já
+  existiam: `status` agora é a categoria do portal guardada no corpus (o bucket da listagem em que
+  a ideia aparece) e, para ideia fora do corpus, é classificado pela linha do tempo, caso em que a
+  proveniência sai `derived` com nota própria (`NOTA_DERIVACAO_STATUS_IDEIA`) e o campo novo
+  `origemStatus` diz de onde veio; `dataPublicacao` volta a ser a data limite (era a primeira data
+  qualquer da página); `autor` é "NOME (UF)", como o portal publica; `dataEncerramento`, sempre
+  `null` até aqui, traz o fim do período de apoio quando encerrado; `plConvertido` é a Sugestão
+  gerada ("SUG n/ano"). `descricao`, `apoios` e `status` continuam não nulos (`""`, `0` com aviso, e
+  a classificação pela linha do tempo, respectivamente). A situação no corpus é lida a cada chamada
+  e entra como sub-fonte da proveniência. A chave de cache passa a `ecidadania_ideia_v2`.
+- **Transições das ideias pelo leitor novo** (`scripts/ingest-ecidadania/index-ideias.ts`). A ideia
+  `aberta` que sai das listas vivas tem a página lida pelo leitor novo; o status é a categoria da
+  listagem quando a ideia aparece na fatia da situação 7 da mesma rodada e, só na falta dela, o
+  derivado da linha do tempo (`statusDaTransicao`: o derivado nunca sobrescreve uma categoria
+  publicada). O log conta as duas origens (`status da listagem: n; status da linha do tempo: n`).
+  Página fora do molde conta como não reconhecida, entra no vigia como leitura vazia e não grava.
+- **Crawler de detalhe das ideias pelo leitor novo** (`index-ideias-detalhe.ts`; o workflow segue
+  desligado). Com isso o leitor antigo (`parseIdeiaDetalheCorpus`, `extractSituacaoIdeia`,
+  `statusFromSituacaoIdeia`, o `obterIdeiaInternal` por regex) sai do código.
+- **Descrição de `senado_ecidadania_listar_ideias`** diz quais situações do portal caem em cada
+  `status` (`aberta` = "Aberta", "Na comissão", "Aguardando envio à CDH"; `encerrada` = "Encerrada –
+  sem apoio suficiente", "Não acatada"; `convertida` = "Transformada em proposição") e aponta
+  `dataProposta` em `obter_ideia` como a data real de proposição. O `avisoDatas` da lista diz o mesmo.
+
+### Added
+
+- **Campos novos em `senado_ecidadania_obter_ideia`**, todos copiados da linha do tempo:
+  `autorNome`, `autorUf`, `dataProposta` (a data em que a ideia foi proposta, publicada pela fonte;
+  `dataCriacaoEstimada` fica por compatibilidade), `prazoApoios`, `dataMeta`, `meta`, `sugestao`,
+  `decisaoCdh`, `encerramento`, `oficina`, `proposicoes` (cada proposição em que a ideia virou, pela
+  CDH ou adotada por senador(a) ou deputado(a)), `linhaDoTempo` e `avisos`. O texto de cidadão
+  (`autorNome`, o `texto` de cada acontecimento e os avisos) é demarcado como os demais.
+- **Leitor da página de detalhe redesenhada das ideias** (`src/scraper/ideia-detalhe.ts`,
+  `lerIdeiaDetalhe`). Em 12/10/2026 a página `visualizacaoideia` trocou a seção "Situação da
+  Ideia" por uma "Linha do Tempo" de acontecimentos datados. O leitor novo classifica cada item
+  num vocabulário FECHADO de dez tipos, medido em 340 ideias de 2013 a 2026 (proposta, prazo,
+  oficina legislativa, meta de 20 mil, período encerrado, Sugestão, decisão da CDH com e sem
+  proposição, adoção por senador(a) ou deputado(a), transformação sem autor). Dele saem as etapas
+  datadas, as proposições (quem transformou, parlamentar e UF, sigla, nome, número, ano,
+  complemento, link), a oficina e o nome e a UF do autor como o portal publica. Um item fora do
+  vocabulário é copiado verbatim com aviso. Deriva parcial (item reconhecido sem os seus campos)
+  ou segunda Sugestão ou decisão da CDH lança `IdeiaDetalheForaDoMoldeError`, em vez de gravar um
+  campo adivinhado. Ligado nesta versão à tool, às transições e ao crawler de detalhe (A4, acima). Testes sobre 20 capturas reais, uma
+  por caminho, mais a página de ideia removida.
+- **`statusDaLinhaDoTempo`** (`src/scraper/ideia-detalhe.ts`): classificação da situação pela linha
+  do tempo, medida sobre 336 ideias com categoria conhecida; acerta 335. A divergência é
+  irredutível: 103929 e 136304 têm a mesma linha do tempo, e o portal as classificou de forma
+  diferente. Por isso a categoria da listagem sempre prevalece.
+
 ### Fixed
+
+- **UFs e datas das ideias apagadas desde 12/10 restauradas do histórico** (#134, script único
+  `restaurar-ideias-a3.ts`, aplicado em 18/10/2026 no D1 de produção): `autorUf` vazio de 24.242
+  para 2.977 e `dataPublicacao` vazia de 23.189 para 1.654; o que sobra vazio nunca teve valor no
+  histórico.
 
 - **Ingestão das ideias do e-Cidadania parada de 12 a 17/10/2026.** Em 12/10 o portal trocou a
   marcação da listagem `pesquisaideia` (`<article class="resumo-ideia">` → `<li>`, título em
@@ -37,24 +107,9 @@ All notable changes to this project are documented here. Format based on
   no detalhe, o cursor também não avança). O limiar vem da medição: retenção de 100% no regime são
   das ideias, de 1% a 2% na quebra de 12/10 e de 96% ou mais nos eventos ao longo de todo o
   histórico. Nas transições das ideias, a reprovação descarta só a fase, porque as fases 2 e 3
-  nunca bloqueiam o crawl vivo; até o leitor novo ser ligado, ela dispara ali todo dia, no log. O
+  nunca bloqueiam o crawl vivo; até o leitor novo ser ligado (nesta versão), ela disparava ali todo dia, no log. O
   vigia não cobre o splice de 2 h, que lê uns 5 itens e fica abaixo do mínimo de 50.
 
-### Added
-
-- **Leitor da página de detalhe redesenhada das ideias** (`src/scraper/ideia-detalhe.ts`,
-  `lerIdeiaDetalhe`). Em 12/10/2026 a página `visualizacaoideia` trocou a seção "Situação da
-  Ideia" por uma "Linha do Tempo" de acontecimentos datados. O leitor novo classifica cada item
-  num vocabulário FECHADO de dez tipos, medido em 340 ideias de 2013 a 2026 (proposta, prazo,
-  oficina legislativa, meta de 20 mil, período encerrado, Sugestão, decisão da CDH com e sem
-  proposição, adoção por senador(a) ou deputado(a), transformação sem autor). Dele saem as etapas
-  datadas, as proposições (quem transformou, parlamentar e UF, sigla, nome, número, ano,
-  complemento, link), a oficina e o nome e a UF do autor como o portal publica. Um item fora do
-  vocabulário é copiado verbatim com aviso. Deriva parcial (item reconhecido sem os seus campos)
-  ou segunda Sugestão ou decisão da CDH lança `IdeiaDetalheForaDoMoldeError`, em vez de gravar um
-  campo adivinhado. Ainda sem uso em produção: as tools, o crawler de detalhe (desligado desde
-  17/10) e as transições passam a usá-lo nas fases seguintes. Testes sobre 20 capturas reais, uma
-  por caminho, mais a página de ideia removida.
 
 ## [3.19.0] - 2026-10-15
 

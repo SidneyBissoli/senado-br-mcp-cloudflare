@@ -402,6 +402,9 @@ export const NOTA_DERIVACAO_RANKING_ECIDADANIA =
 /** Data de criação estimada das ideias legislativas. */
 export const NOTA_DERIVACAO_DATA_ESTIMADA =
   "A data de criação é estimada pelo servidor (fim do prazo de apoio menos 120 dias); a fonte não a publica.";
+/** Situação de uma ideia fora do corpus: classificada pelo servidor a partir da linha do tempo. */
+export const NOTA_DERIVACAO_STATUS_IDEIA =
+  "A situação da ideia foi classificada pelo servidor a partir da linha do tempo publicada, porque a ideia ainda não está no corpus; a categoria do portal, quando lida da listagem, prevalece.";
 /** Legislatura sem número na fonte: o próprio número é o padrão do servidor. */
 export const NOTA_DERIVACAO_LEGISLATURA_PADRAO =
   "A fonte não informou a legislatura: o servidor assume a 57ª (2023–2027) e calcula o período e as datas.";

@@ -27,6 +27,7 @@ import {
   NOTA_DERIVACAO_PERCENTUAIS,
   NOTA_DERIVACAO_RANKING_ECIDADANIA,
   NOTA_DERIVACAO_DATA_ESTIMADA,
+  NOTA_DERIVACAO_STATUS_IDEIA,
   NOTA_DERIVACAO_LEGISLATURA,
   NOTA_DERIVACAO_LEGISLATURA_PADRAO,
   NOTA_DERIVACAO_SUBORDINADAS,
@@ -52,6 +53,7 @@ import {
   provenanceDasConsultas,
   provenanceDaAnaliseDeConsultas,
   provenanceDasIdeias,
+  provenanceDaIdeia,
   provenanceDosVotosHistoricos,
   provenanceSugestaoEnquete,
 } from "../../src/tools/ecidadania.js";
@@ -95,6 +97,7 @@ describe("derivado / derivadoSe: the generic marker", () => {
       NOTA_DERIVACAO_SOMAS, NOTA_DERIVACAO_BRUTO, NOTA_DERIVACAO_PLACAR, NOTA_DERIVACAO_PLACAR_COMISSAO,
       NOTA_DERIVACAO_PERCENTUAIS, NOTA_DERIVACAO_RANKING_ECIDADANIA, NOTA_DERIVACAO_DATA_ESTIMADA,
       NOTA_DERIVACAO_LEGISLATURA, NOTA_DERIVACAO_LEGISLATURA_PADRAO, NOTA_DERIVACAO_SUBORDINADAS,
+      NOTA_DERIVACAO_STATUS_IDEIA,
     ];
     expect(new Set(notas).size).toBe(notas.length);
     for (const n of notas) expect(n).not.toMatch(/[a-z][A-Z]|`|_/);
@@ -227,6 +230,19 @@ describe("e-Cidadania", () => {
     marcado(provenanceDasIdeias(ec(), [{ dataCriacaoEstimada: "2026-01-01" }]), NOTA_DERIVACAO_DATA_ESTIMADA);
     limpo(provenanceDasIdeias(ec(), [{ dataCriacaoEstimada: null }]));
     limpo(provenanceDasIdeias(ec(), []));
+  });
+
+  it("obter_ideia (A4): status from the corpus is a sub-source; outside the corpus the status is derived", () => {
+    const leitura = { fetchedAt: "2026-10-18T12:00:00Z", fromCache: false };
+    const doCorpus = provenanceDaIdeia(ec(), { id: 1, status: "aberta", dataCriacaoEstimada: null }, { scrapedAt: "2026-10-18T11:00:00Z" }, leitura);
+    limpo(doCorpus);
+    expect(doCorpus.field_sources?.map((f) => f.fields)).toEqual([["id", "dataCriacaoEstimada"], ["status"]]);
+    marcado(provenanceDaIdeia(ec(), { id: 1, status: "aberta", dataCriacaoEstimada: null }, null, leitura), NOTA_DERIVACAO_STATUS_IDEIA);
+    marcado(
+      provenanceDaIdeia(ec(), { id: 1, status: "aberta", dataCriacaoEstimada: "2026-01-01" }, null, leitura),
+      `${NOTA_DERIVACAO_DATA_ESTIMADA} ${NOTA_DERIVACAO_STATUS_IDEIA}`,
+    );
+    marcado(provenanceDaIdeia(ec(), { id: 1, dataCriacaoEstimada: "2026-01-01" }, { scrapedAt: "2026-10-18T11:00:00Z" }, leitura), NOTA_DERIVACAO_DATA_ESTIMADA);
   });
 
   it("the historical archive: national totals are summed from the per-UF rows", () => {
