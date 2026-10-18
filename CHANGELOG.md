@@ -6,6 +6,22 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Changed
+
+- **Job das consultas grava o detalhe em lotes e diz onde está** (só o job; sem versão). Até aqui o job
+  acumulava as leituras de detalhe em memória e só gravava no fim: uma falha no meio (portal fora, teto
+  de tempo, erro inesperado) perdia tudo, e o run de 18/10/2026 (3.000 detalhes, 2 h 23) passou inteiro
+  sem uma linha de andamento. Agora, a cada 250 detalhes, o lote vai para o D1 pelo `apply-d1.sh`
+  (mesmas retentativas) e o log mostra uma linha `[consultas][andamento]` com quantas foram lidas e
+  gravadas, o ritmo medido e o término previsto em UTC e em Brasília (visível ao vivo na página do
+  job). O run seguinte relê o D1 e não busca de novo o que já gravou. Para nenhum lote gravar antes
+  das travas, o piso catastrófico passou para antes do detalhe (só depende do tamanho da listagem). Os
+  lotes e a gravação final montam o registro pela mesma função (`registroConsultaListada`), então o que
+  um lote gravou não vira segunda versão no histórico; a troca de situação das encerradas é decidida
+  antes, para sair no mesmo registro. O run row continua sendo só o da gravação final. Provado em
+  18/10/2026 com o job real em tamanho mínimo (6 detalhes, lotes de 3): 2 lotes aplicados, 6 autorias
+  no D1, gravação final sem repetir as 6.
+
 ### Fixed
 
 - **Consultas encerradas também recebem a autoria** (só o job diário; sem versão). A listagem do
