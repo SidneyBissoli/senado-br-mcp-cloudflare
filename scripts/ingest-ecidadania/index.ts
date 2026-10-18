@@ -27,77 +27,31 @@ import { sleep } from "./http.js";
 import { fetchParsedPage, firstContactOpts, logPageFailure } from "./page-retry.js";
 import { parseConsultaListingPage, findLastPage, type ListingItem } from "./listing.js";
 import { buildTramitandoSet, deriveStatus } from "./status.js";
-import { ECIDADANIA_BASE, buildConsultaResumo, type ConsultaResumo, type ConsultaDetalheCorpus } from "../../src/scraper/ecidadania.js";
-import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
+import { ECIDADANIA_BASE, type ConsultaDetalheCorpus } from "../../src/scraper/ecidadania.js";
+import { planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { classifyRun, parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
-import { readExistingMeta, readAllPayloads, readLastGoodRows } from "./d1.js";
+import { readExistingMeta, readAllPayloads, readLastGoodRows, applyD1File } from "./d1.js";
 import { selectRestatus, selectNaoListadasSemDetalhe, buildRestatusRecords } from "./restatus.js";
 import { generateLoadSql, generateRunOnlySql } from "./sql.js";
 import { fetchConsultaDetalheCorpus, consultaPrecisaDetalhe as needsEnrich } from "./detalhe.js";
 import { criarDisjuntor } from "./breaker.js";
-import { mesclarCampo, vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
+import { vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
+import { registroConsultaListada, syncRecordDeConsulta, loteParcial } from "./consultas-registro.js";
+import { descreverAndamento } from "./andamento.js";
 
 const SENADO_BASE_URL = process.env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
 const PAGE_DELAY_MS = Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
 const DETAIL_DELAY_MS = Number(process.env.INGEST_CONSULTAS_DETAIL_DELAY_MS) || 250;
 /** Máximo de consultas a enriquecer (fetch de detalhe) por execução; o resto fica p/ o próximo run. */
 const DETAIL_CHUNK = Number(process.env.INGEST_CONSULTAS_CHUNK) || 3000;
+/** Detalhes por lote gravado durante o run (~12 min no ritmo medido em 18/10/2026, 2,9 s/consulta). */
+const LOTE_DETALHE = Number(process.env.INGEST_CONSULTAS_LOTE) || 250;
 const MAX_PAGES = 1000; // safety cap against a runaway pagination value
 const OUT_PATH = join(dirname(fileURLToPath(import.meta.url)), "out.sql");
 
 // Um disjuntor por RUN: falha de transporte seguida, em qualquer dos dois laços
 // (páginas e detalhe), é o mesmo sintoma — o portal parou de responder.
 const disjuntor = criarDisjuntor();
-
-/**
- * Enrich crawled consultas with detail-only `autoria`/`relator` (agentes públicos — name kept).
- * These are IMMUTABLE, so a stored payload whose `autoria` already has a value is preserved; only
- * rows still WITHOUT one are fetched (`needsEnrich` = `consultaPrecisaDetalhe`), and only up to a
- * per-run cap (`doFetch`) so a backfill não estoure o orçamento do job — o resto fica para o próximo
- * run. Detail fetch failures fall back to null and are logged (never silenced), and stay pending.
- */
-async function enrichConsulta(
-  it: ListingItem,
-  status: string,
-  existing: Map<number, string>,
-  doFetch: boolean,
-): Promise<ConsultaResumo> {
-  const id = it.codigoMateria;
-  const prev = existing.get(id);
-  let autoria: string | null = null;
-  let relator: string | null = null;
-  const p = prev ? (JSON.parse(prev) as Partial<ConsultaResumo>) : undefined;
-  if (p) {
-    if ("autoria" in p) {
-      autoria = p.autoria ?? null;
-      relator = p.relator ?? null;
-    }
-  }
-  if (needsEnrich(prev) && doFetch) {
-    try {
-      const d = await fetchConsultaDetalheCorpus(id);
-      autoria = d.autoria;
-      relator = d.relator;
-      disjuntor.sucesso();
-    } catch (e) {
-      console.error(`[consultas][detalhe][gap] id=${id}: ${e instanceof Error ? e.message : String(e)}`);
-      disjuntor.falha(e, `id=${id}`);
-    }
-    await sleep(DETAIL_DELAY_MS);
-  }
-  // Campo a campo, vazio lido mantém o guardado (src/scraper/mesclar.ts). Placar ausente em consulta
-  // nova (nada guardado) segue 0, o padrão histórico do builder.
-  return buildConsultaResumo({
-    id,
-    materia: mesclarCampo(it.identificacao, p?.materia) ?? undefined,
-    ementa: mesclarCampo(it.ementa, p?.ementa) ?? undefined,
-    votosSim: mesclarCampo(it.votosSim, p?.votosSim) ?? 0,
-    votosNao: mesclarCampo(it.votosNao, p?.votosNao) ?? 0,
-    autoria: mesclarCampo(autoria, p?.autoria),
-    relator: mesclarCampo(relator, p?.relator),
-    status,
-  });
-}
 
 interface CrawlResult {
   items: ListingItem[];
@@ -199,78 +153,119 @@ async function main(): Promise<void> {
     writeFileSync(OUT_PATH, generateRunOnlySql(now, "anomalo", crawl.items.length, err));
     process.exit(1);
   }
-  const pendentes = crawl.items.filter((it) => needsEnrich(existingPayloads.get(it.codigoMateria))).length;
-  const records: SyncRecord[] = [];
-  let fetched = 0;
-  for (const it of crawl.items) {
-    const prev = existingPayloads.get(it.codigoMateria);
-    const doFetch = needsEnrich(prev) && fetched < DETAIL_CHUNK;
-    if (doFetch) fetched++;
-    const cr = await enrichConsulta(it, deriveStatus(tramitando, it.codigoMateria), existingPayloads, doFetch);
-    const payloadJson = JSON.stringify(cr);
-    records.push({
-      entityId: cr.id,
-      sourceUrl: cr.url,
-      payloadJson,
-      status: cr.status,
-      metrica: cr.totalVotos,
-      comissao: null,
-      contentHash: contentHash(payloadJson),
-    });
+  // 4. Catastrophic floor (after the completeness gate). force → only the rows>0 check applies. Antes
+  // do detalhe desde 18/10/2026: os lotes parciais gravam DURANTE a leitura, então toda trava tem de
+  // ter passado antes da primeira gravação. O piso só depende do tamanho da listagem.
+  const lastGoodRows = readLastGoodRows();
+  const verdict = classifyRun(
+    { rowsScraped: crawl.items.length, lastGoodRows: force ? null : lastGoodRows, error: undefined },
+    corpusMinPct,
+  );
+  if (verdict !== "ok") {
+    const err = `catastrophic floor: ${crawl.items.length} linhas vs último bom ${lastGoodRows} (< ${corpusMinPct}%); use --force se a redução for legítima`;
+    console.error(`[gate] verdict=${verdict} — ${err} — corpus NÃO será sobrescrito`);
+    writeFileSync(OUT_PATH, generateRunOnlySql(now, verdict, crawl.items.length, err));
+    process.exit(1);
   }
-  console.log(`[consultas][enrich] na listagem: detalhe buscado p/ ${fetched} consulta(s) neste run (pendentes na listagem: ${pendentes})`);
 
+  // 5. Detalhe (autoria/relator), gravado em LOTES durante o run: uma falha no meio não perde o que
+  // já foi lido, e o run seguinte, que relê o D1, não busca de novo. Fila = as da listagem sem autoria,
+  // depois as guardadas FORA da listagem sem autoria (encerradas: a listagem nunca mais as traz),
+  // dentro do teto do run.
+  const existingMeta = readExistingMeta();
+  const existingHashes = new Map(existingMeta.map((r) => [r.id, r.content_hash]));
+  const crawledIds = new Set(crawl.items.map((it) => it.codigoMateria));
+  const itemPorId = new Map(crawl.items.map((it) => [it.codigoMateria, it]));
+  const statusDe = (id: number) => deriveStatus(tramitando, id);
+  const listadasSemAutoria = crawl.items.filter((it) => needsEnrich(existingPayloads.get(it.codigoMateria))).map((it) => it.codigoMateria);
+  const naoListadas = selectNaoListadasSemDetalhe(existingPayloads, crawledIds);
+  const fila = [...listadasSemAutoria, ...naoListadas].slice(0, DETAIL_CHUNK);
+  console.log(
+    `[consultas][enrich] sem autoria: ${listadasSemAutoria.length} na listagem + ${naoListadas.length} fora dela; ` +
+      `${fila.length} neste run (teto ${DETAIL_CHUNK}), gravadas em lotes de ${LOTE_DETALHE}`,
+  );
+
+  // A troca de situação (§2, passo 7) é decidida ANTES: a encerrada que muda de situação e ganha autoria
+  // no mesmo run vira UM registro já no lote, e não duas versões no histórico com as datas invertidas.
+  const flips = selectRestatus(existingMeta, crawledIds, tramitando);
+  const flipDe = new Map(flips.map((f) => [f.id, f]));
+  const detalhes = new Map<number, ConsultaDetalheCorpus>();
+  const registroDe = (id: number): SyncRecord | undefined => {
+    const it = itemPorId.get(id);
+    if (it) return syncRecordDeConsulta(registroConsultaListada(it, statusDe(id), existingPayloads.get(id), detalhes.get(id)));
+    const d = detalhes.get(id);
+    const flip = flipDe.get(id);
+    return d ? buildRestatusRecords(flip ? [flip] : [], existingPayloads, new Map([[id, d]]))[0] : undefined;
+  };
+  const inicio = Date.now();
+  let lote: number[] = [];
+  let lotes = 0;
+  let gravadas = 0;
+  const gravarLote = () => {
+    const recs = lote.map(registroDe).filter((r): r is SyncRecord => r !== undefined);
+    lote = [];
+    if (recs.length === 0) return;
+    const { arquivos, alteradas } = loteParcial(recs, existingHashes, existingPayloads, new Date().toISOString());
+    for (const sql of arquivos) {
+      const path = join(dirname(OUT_PATH), `out-consultas-lote-${String(++lotes).padStart(3, "0")}.sql`);
+      writeFileSync(path, sql);
+      applyD1File(path);
+    }
+    gravadas += alteradas;
+  };
+  for (let i = 0; i < fila.length; i++) {
+    const id = fila[i];
+    try {
+      detalhes.set(id, await fetchConsultaDetalheCorpus(id));
+      disjuntor.sucesso();
+    } catch (e) {
+      console.error(`[consultas][detalhe][gap] id=${id}: ${e instanceof Error ? e.message : String(e)}`);
+      try {
+        disjuntor.falha(e, `id=${id}`);
+      } catch (parada) {
+        gravarLote(); // o portal parou: grava o que este lote já leu antes de desistir
+        throw parada;
+      }
+    }
+    lote.push(id);
+    await sleep(DETAIL_DELAY_MS);
+    if (lote.length >= LOTE_DETALHE || i === fila.length - 1) {
+      gravarLote();
+      console.log(
+        `[consultas][andamento] ${descreverAndamento({ rotulo: "detalhe lido", feitos: i + 1, total: fila.length, inicioMs: inicio, agoraMs: Date.now(), gravados: gravadas })}`,
+      );
+    }
+  }
+  const lidas = [...detalhes.values()].filter((d) => d.autoria).length;
+  console.log(`[consultas][enrich] detalhe lido p/ ${detalhes.size} de ${fila.length} (${lidas} com autoria); ${gravadas} gravadas nos lotes`);
+
+  // 6. Registros da listagem (a mesma montagem dos lotes: o que eles gravaram volta com o mesmo hash
+  // e não gera segunda versão no histórico).
+  const records = crawl.items.map((it) =>
+    syncRecordDeConsulta(registroConsultaListada(it, statusDe(it.codigoMateria), existingPayloads.get(it.codigoMateria), detalhes.get(it.codigoMateria))),
+  );
   const abertas = records.filter((r) => r.status === "aberta").length;
   const encerradas = records.length - abertas;
   const has164804 = records.some((r) => r.entityId === 164804);
   console.log(`[normalize] total=${records.length} abertas=${abertas} encerradas=${encerradas} tramitando=${tramitando.size} id164804=${has164804}`);
 
-  // 4. Catastrophic floor (after the completeness gate). force → only the rows>0 check applies.
-  const lastGoodRows = readLastGoodRows();
-  const verdict = classifyRun(
-    { rowsScraped: records.length, lastGoodRows: force ? null : lastGoodRows, error: undefined },
-    corpusMinPct,
-  );
-  if (verdict !== "ok") {
-    const err = `catastrophic floor: ${records.length} linhas vs último bom ${lastGoodRows} (< ${corpusMinPct}%); use --force se a redução for legítima`;
-    console.error(`[gate] verdict=${verdict} — ${err} — corpus NÃO será sobrescrito`);
-    writeFileSync(OUT_PATH, generateRunOnlySql(now, verdict, records.length, err));
-    process.exit(1);
-  }
-
-  // 5. Linger re-status (§2): for stored rows NOT in this crawl, flip status by /processo membership
+  // 7. Linger re-status (§2): for stored rows NOT in this crawl, flip status by /processo membership
   // (a matter that left tramitação → encerrada; never flip on mere listing-absence). The crawled rows
   // were already restated above (their status came from deriveStatus). Only runs on a complete crawl,
-  // which is guaranteed here (the completeness gate already passed).
-  const existingMeta = readExistingMeta();
-  const crawledIds = new Set(records.map((r) => r.entityId));
-  const flips = selectRestatus(existingMeta, crawledIds, tramitando);
-  // Detalhe também para as guardadas FORA da listagem (encerradas) ainda sem autoria, com a sobra do
-  // teto do run: a listagem nunca mais as traz (selectNaoListadasSemDetalhe).
-  const naoListadas = selectNaoListadasSemDetalhe(existingPayloads, crawledIds);
-  const detalhesNaoListadas = new Map<number, ConsultaDetalheCorpus>();
-  for (const id of naoListadas.slice(0, Math.max(0, DETAIL_CHUNK - fetched))) {
-    try {
-      detalhesNaoListadas.set(id, await fetchConsultaDetalheCorpus(id));
-      disjuntor.sucesso();
-    } catch (e) {
-      console.error(`[consultas][detalhe][gap] id=${id}: ${e instanceof Error ? e.message : String(e)}`);
-      disjuntor.falha(e, `id=${id}`);
-    }
-    await sleep(DETAIL_DELAY_MS);
-  }
-  console.log(`[consultas][enrich] fora da listagem: detalhe buscado p/ ${detalhesNaoListadas.size} de ${naoListadas.length} sem autoria`);
+  // which is guaranteed here (the completeness gate already passed). `existingPayloads` já traz o que
+  // os lotes gravaram (inclusive a troca de situação das que tiveram detalhe), então essas voltam com o
+  // mesmo hash e não geram versão nova.
+  const detalhesNaoListadas = new Map([...detalhes].filter(([id]) => !crawledIds.has(id)));
   const restatusRecords = buildRestatusRecords(flips, existingPayloads, detalhesNaoListadas);
   const flippedEncerrada = flips.filter((f) => f.newStatus === "encerrada").length;
   console.log(`[restatus] ${flips.length} linhas re-statusadas (${flippedEncerrada} → encerrada); ${restatusRecords.length} upserts fora da listagem`);
 
-  // 6. Diff history vs existing hashes (reuse planEntitySync) and emit the load SQL. The run row's
+  // 8. Diff history vs the CURRENT hashes (os lotes já atualizaram) and emit the load SQL. The run row's
   // rows_scraped stays the CRAWLED count (the floor baseline); re-statused rows are extra upserts.
-  const existingHashes = new Map(existingMeta.map((r) => [r.id, r.content_hash]));
   const allRecords = [...records, ...restatusRecords];
   const { annotated, rowsChanged } = planEntitySync(allRecords, existingHashes);
   writeFileSync(OUT_PATH, generateLoadSql(annotated, now, records.length, rowsChanged));
-  console.log(`[load] wrote ${OUT_PATH}: ${allRecords.length} upserts (${records.length} crawled + ${restatusRecords.length} re-status), ${rowsChanged} changed (history), 1 ok run row`);
+  console.log(`[load] wrote ${OUT_PATH}: ${allRecords.length} upserts (${records.length} crawled + ${restatusRecords.length} re-status), ${rowsChanged} changed (history) + ${gravadas} nos lotes, 1 ok run row`);
   process.exit(0);
 }
 

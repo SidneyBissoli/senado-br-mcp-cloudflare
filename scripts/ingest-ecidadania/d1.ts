@@ -10,7 +10,9 @@
  * HTTP API, to keep one tool and one credential across read and write.
  */
 
-import { execSync } from "node:child_process";
+import { execSync, execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 
 const DB_NAME = "senado-ecidadania";
 
@@ -35,6 +37,16 @@ export function queryD1<T = Record<string, unknown>>(sql: string, attempts = 2):
     }
   }
   throw lastErr;
+}
+
+/**
+ * Aplica um arquivo .sql no D1 DURANTE o run (lotes parciais do detalhe), pelo mesmo `apply-d1.sh` do
+ * workflow (retentativas contra o blip de storage do D1; `--file` é atômico, repetir é seguro). Falha
+ * esgotada lança: o run para, e o que os lotes anteriores gravaram fica.
+ */
+export function applyD1File(path: string): void {
+  const script = join(dirname(fileURLToPath(import.meta.url)), "..", "apply-d1.sh");
+  execFileSync("bash", [script, path], { stdio: "inherit", env: { ...process.env, D1_DATABASE: DB_NAME } });
 }
 
 export interface ExistingRow {
