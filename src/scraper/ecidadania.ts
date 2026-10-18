@@ -15,6 +15,7 @@ import { UPSTREAM_TIMEOUT_MS } from "../types.js";
 import { USER_AGENT } from "../version.js";
 import { CorpoForaDoPrazoError, PrazoDoCorpo, upstreamCall } from "../throttle/upstream.js";
 import type { ErrorClass } from "../call-shape.js";
+import { lerBrNum, mesclarCampo } from "./mesclar.js";
 
 export const ECIDADANIA_BASE = "https://www12.senado.leg.br/ecidadania";
 
@@ -147,7 +148,7 @@ async function idaEcidadania(path: string, headers: Record<string, string>, rotu
   }
 }
 
-/** Parse Brazilian number: 1.234.567 -> 1234567 */
+/** Parse Brazilian number: 1.234.567 -> 1234567. Ausente/lixo → 0: NÃO use em escritor do corpus (ver `lerBrNum`). */
 export function parseBrNum(s: string): number {
   return parseInt(s.replace(/\./g, ""), 10) || 0;
 }
@@ -260,23 +261,46 @@ export async function obterConsultaDetalheCorpus(id: number): Promise<ConsultaDe
   return parseConsultaDetalheCorpus(html);
 }
 
+/**
+ * Leitura crua de um destaque REST de consulta, para o splice de 2 h: contagem que não veio fica
+ * `null` (`lerBrNum`), nunca 0 — o splice mantém a guardada em vez de gravar o 0 inventado.
+ */
+export interface ConsultaDestaque {
+  id: number; materia: string; ementa: string;
+  votosSim: number | null; votosNao: number | null; totalVotos: number | null;
+}
+
+export async function lerDestaquesConsultas(): Promise<ConsultaDestaque[]> {
+  const data = await fetchEcidadaniaJson("/restcolecaomaismateria");
+  return data.map((item: any) => ({
+    id: item.id,
+    materia: item.identificacaoBasica || "",
+    ementa: item.ementa || "",
+    votosSim: lerBrNum(item.votosFavor),
+    votosNao: lerBrNum(item.votosContra),
+    totalVotos: lerBrNum(item.totalVotos),
+  }));
+}
+
 export async function listarConsultasInternal(params: { pagina?: number; limite?: number }): Promise<ConsultaResumo[]> {
   const { limite = 20 } = params;
-  const data = await fetchEcidadaniaJson("/restcolecaomaismateria");
+  const data = await lerDestaquesConsultas();
 
   // status is hardcoded "aberta" here because this path serves only the REST "highlight"
   // collection (/restcolecaomais*), which lists active consultations by construction. Real
   // per-item status for the full set is derived from /processo (tramitando) in the ingestion
   // job, which is the source of truth. Edge case: a just-closed highlight may briefly show
   // "aberta" until the next corpus run corrects it — acceptable on this cold-start/fallback path.
-  return data.slice(0, limite).map((item: any) =>
+  // Contagem ausente vira 0 só AQUI, na saída ao vivo (comportamento histórico da tool); o splice
+  // do corpus lê `lerDestaquesConsultas` e não grava esse 0.
+  return data.slice(0, limite).map((item) =>
     buildConsultaResumo({
       id: item.id,
-      materia: item.identificacaoBasica || "",
-      ementa: item.ementa || "",
-      votosSim: parseBrNum(String(item.votosFavor || "0")),
-      votosNao: parseBrNum(String(item.votosContra || "0")),
-      totalVotos: parseBrNum(String(item.totalVotos || "0")),
+      materia: item.materia,
+      ementa: item.ementa,
+      votosSim: item.votosSim ?? 0,
+      votosNao: item.votosNao ?? 0,
+      totalVotos: item.totalVotos ?? 0,
       status: "aberta",
     }),
   );
@@ -505,19 +529,26 @@ export async function obterIdeiaDetalheCorpus(id: number): Promise<IdeiaDetalheC
   return parseIdeiaDetalheCorpus(html);
 }
 
+/** Leitura crua de um destaque REST de ideia (ver `ConsultaDestaque`): apoios ausente = null. */
+export interface IdeiaDestaque {
+  id: number; titulo: string; apoios: number | null;
+}
+
+export async function lerDestaquesIdeias(): Promise<IdeiaDestaque[]> {
+  const data = await fetchEcidadaniaJson("/restcolecaomaisideia");
+  return data.map((item: any) => ({ id: item.id, titulo: item.titulo || "", apoios: lerBrNum(item.apoiamentos) }));
+}
+
 export async function listarIdeiasInternal(params: { status?: string; limite?: number; pagina?: number; ordenarPor?: string; ordem?: string }): Promise<IdeiaResumo[]> {
   const { limite = 20 } = params;
-  const data = await fetchEcidadaniaJson("/restcolecaomaisideia");
+  const data = await lerDestaquesIdeias();
 
   // status is hardcoded "aberta" (via the builder default) because this REST "highlight" collection
   // lists active ideas by construction; real per-idea status for the full set comes from the
   // per-situacao corpus crawl (the source of truth). See buildConsultaResumo for the same rationale.
-  let ideias: IdeiaResumo[] = data.map((item: any) =>
-    buildIdeiaResumo({
-      id: item.id,
-      titulo: item.titulo || "",
-      apoios: parseBrNum(String(item.apoiamentos || "0")),
-    }),
+  // apoios ausente vira 0 só na saída ao vivo (histórico da tool); o splice não grava esse 0.
+  let ideias: IdeiaResumo[] = data.map((item) =>
+    buildIdeiaResumo({ id: item.id, titulo: item.titulo, apoios: item.apoios ?? 0 }),
   );
 
   if (params.ordenarPor === "apoios") {
@@ -939,23 +970,31 @@ export function buildEventoResumoEnriquecido(fields: {
   horaListagem?: string | null;
   comentariosListagem?: number;
   detalhe?: EventoDetalhe | null;
-  /** Canonical AJAX comment count; when null, falls back to the listing count. */
+  /** Canonical AJAX comment count; when null, falls back to the stored count, then the listing's. */
   comentariosCanon?: number | null;
+  /**
+   * Payload already stored for this event. A detail field the fresh reading left empty (detail fetch
+   * failed, or the page no longer carries it) KEEPS the stored value — `mesclarCampo`, the class rule
+   * of the corpus writers. Until 17/10/2026 a failed detail fetch wiped the six v2 fields.
+   */
+  guardado?: Partial<EventoResumo>;
 }): EventoResumo {
   const d = fields.detalhe ?? null;
+  const g = fields.guardado;
   return buildEventoResumo({
     id: fields.id,
     titulo: d?.titulo || fields.titulo,
-    data: d?.data ?? fields.dataListagem ?? null,
-    hora: d?.hora ?? fields.horaListagem ?? null,
-    comissao: fields.comissao ?? d?.comissao ?? null,
-    comissaoNomeCompleto: d?.comissaoNomeCompleto ?? null,
-    local: d?.local ?? null,
-    descricao: d?.descricao ?? null,
-    pauta: d?.pauta ?? [],
-    convidados: d?.convidados ?? [],
-    videoUrl: d?.videoUrl ?? null,
-    comentarios: fields.comentariosCanon ?? fields.comentariosListagem ?? 0,
+    data: mesclarCampo(d?.data, g?.data) ?? fields.dataListagem ?? null,
+    hora: mesclarCampo(d?.hora, g?.hora) ?? fields.horaListagem ?? null,
+    comissao: fields.comissao ?? mesclarCampo(d?.comissao, g?.comissao),
+    comissaoNomeCompleto: mesclarCampo(d?.comissaoNomeCompleto, g?.comissaoNomeCompleto),
+    local: mesclarCampo(d?.local, g?.local),
+    descricao: mesclarCampo(d?.descricao, g?.descricao),
+    pauta: mesclarCampo(d?.pauta, g?.pauta) ?? [],
+    convidados: mesclarCampo(d?.convidados, g?.convidados) ?? [],
+    videoUrl: mesclarCampo(d?.videoUrl, g?.videoUrl),
+    // A contagem da listagem é a degradada (0 espúrio em 82% dos eventos, estudo A3): só por último.
+    comentarios: mesclarCampo(fields.comentariosCanon, g?.comentarios) ?? fields.comentariosListagem ?? 0,
     status: fields.status ?? d?.status,
   });
 }

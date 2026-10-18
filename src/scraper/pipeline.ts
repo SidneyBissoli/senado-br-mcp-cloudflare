@@ -17,13 +17,16 @@ import {
   buildConsultaResumo,
   buildEventoResumo,
   buildIdeiaResumo,
-  listarConsultasInternal,
-  listarIdeiasInternal,
+  lerDestaquesConsultas,
+  lerDestaquesIdeias,
   listarEventosInternal,
+  type ConsultaDestaque,
   type ConsultaResumo,
   type EventoResumo,
+  type IdeiaDestaque,
   type IdeiaResumo,
 } from "./ecidadania.js";
+import { mesclarCampo } from "./mesclar.js";
 
 export type Entidade = "consultas" | "ideias" | "eventos" | "consultas_votos";
 
@@ -141,24 +144,32 @@ export async function syncEntity(
  *     (history-on-change preserved; no source ping-pong between the two writers).
  *   - A brand-new highlight not yet in the corpus is inserted as-is; the next weekly corpus run
  *     reconciles its other fields.
+ *   - The fresh metric goes through `mesclarCampo` (src/scraper/mesclar.ts): a count the REST item
+ *     did not carry is `null`, never 0, and keeps the stored one. Until 17/10/2026 an absent
+ *     `apoiamentos` became 0 and overwrote the stored apoios (zero calado).
  */
-interface HighlightConfig<T extends { id: number; url: string; status: string }> {
+interface HighlightConfig<T extends { id: number; url: string; status: string }, D extends { id: number } = T> {
   entidade: Entidade;
-  scrape: () => Promise<T[]>;
+  /** Raw highlight readings (D), metric nullable where the source can omit it. */
+  scrape: () => Promise<D[]>;
   /** metrica_principal of the (final) item (votos | comentários | apoios). */
   metrica: (item: T) => number;
   /** comissao column of the (final) item, or null. */
   comissao: (item: T) => string | null;
-  /** rebuild via the canonical builder: corpus-authoritative fields + the fresh metric spliced in. */
-  splice: (corpus: T, fresh: T) => T;
+  /**
+   * The row to write: corpus-authoritative fields + the fresh metric spliced in (corpus present), or
+   * the fresh reading as a new row (corpus absent). `null` = nothing to write (a brand-new highlight
+   * whose metric was not read: inserting it would record an invented 0).
+   */
+  splice: (corpus: T | undefined, fresh: D) => T | null;
 }
 
-async function refreshHighlights<T extends { id: number; url: string; status: string }>(
+async function refreshHighlights<T extends { id: number; url: string; status: string }, D extends { id: number }>(
   db: D1Database,
   now: string,
-  cfg: HighlightConfig<T>,
+  cfg: HighlightConfig<T, D>,
 ): Promise<RunSummary> {
-  let highlights: T[];
+  let highlights: D[];
   try {
     highlights = await cfg.scrape();
   } catch (e) {
@@ -175,7 +186,8 @@ async function refreshHighlights<T extends { id: number; url: string; status: st
       .bind(cfg.entidade, hl.id)
       .first<{ content_hash: string; payload_json: string; status: string | null }>();
 
-    const item = existing ? cfg.splice(JSON.parse(existing.payload_json) as T, hl) : hl;
+    const item = cfg.splice(existing ? (JSON.parse(existing.payload_json) as T) : undefined, hl);
+    if (!item) continue;
     const payloadJson = JSON.stringify(item);
     const hash = contentHash(payloadJson);
     if (existing && existing.content_hash === hash) continue; // metric unchanged — skip
@@ -194,29 +206,45 @@ async function refreshHighlights<T extends { id: number; url: string; status: st
   return { entidade: cfg.entidade, status: "ok-metrica", rowsScraped: highlights.length, rowsChanged };
 }
 
-const consultasHighlightCfg: HighlightConfig<ConsultaResumo> = {
+export const consultasHighlightCfg: HighlightConfig<ConsultaResumo, ConsultaDestaque> = {
   entidade: "consultas",
-  scrape: () => listarConsultasInternal({ limite: 100 }),
+  scrape: () => lerDestaquesConsultas(),
   metrica: (c) => c.totalVotos,
   comissao: () => null,
   // Preserves the corpus-authoritative detail fields (autoria/relator, v2) so the 2h metric splice
-  // never wipes them; only the volatile vote counts come from the fresh REST highlight.
-  splice: (corpus, fresh) =>
-    buildConsultaResumo({
+  // never wipes them; only the volatile vote counts come from the fresh REST highlight — and only
+  // the ones it actually carried.
+  splice: (corpus, fresh) => {
+    if (!corpus) {
+      if (fresh.votosSim === null || fresh.votosNao === null) return null;
+      return buildConsultaResumo({
+        id: fresh.id, materia: fresh.materia, ementa: fresh.ementa,
+        votosSim: fresh.votosSim, votosNao: fresh.votosNao, totalVotos: fresh.totalVotos ?? undefined,
+        status: "aberta",
+      });
+    }
+    const votosSim = mesclarCampo(fresh.votosSim, corpus.votosSim) ?? 0;
+    const votosNao = mesclarCampo(fresh.votosNao, corpus.votosNao) ?? 0;
+    return buildConsultaResumo({
       id: fresh.id,
       materia: corpus.materia,
       ementa: corpus.ementa,
-      votosSim: fresh.votosSim,
-      votosNao: fresh.votosNao,
-      totalVotos: fresh.totalVotos,
+      votosSim,
+      votosNao,
+      // Total do REST quando veio; senão o guardado só se os votos também são os guardados (nada
+      // lido); com votos novos e total ausente, o builder deriva votosSim + votosNao.
+      totalVotos:
+        fresh.totalVotos ??
+        (fresh.votosSim === null && fresh.votosNao === null ? corpus.totalVotos : undefined),
       autoria: corpus.autoria,
       relator: corpus.relator,
       status: corpus.status,
       url: corpus.url,
-    }),
+    });
+  },
 };
 
-const eventosHighlightCfg: HighlightConfig<EventoResumo> = {
+export const eventosHighlightCfg: HighlightConfig<EventoResumo> = {
   entidade: "eventos",
   scrape: () => listarEventosInternal({ limite: 100 }),
   metrica: (e) => e.comentarios,
@@ -227,8 +255,8 @@ const eventosHighlightCfg: HighlightConfig<EventoResumo> = {
   // fresh REST count: it stays byte-stable (no ping-pong / history churn against the daily crawl) and
   // also carries all v2 detail fields through untouched. The eventos splice is thus effectively inert
   // between daily crawls — the daily crawl is the sole source of the canonical count.
-  splice: (corpus, _fresh) =>
-    buildEventoResumo({
+  splice: (corpus, fresh) =>
+    !corpus ? fresh : buildEventoResumo({
       id: corpus.id,
       titulo: corpus.titulo,
       data: corpus.data,
@@ -246,25 +274,29 @@ const eventosHighlightCfg: HighlightConfig<EventoResumo> = {
     }),
 };
 
-const ideiasHighlightCfg: HighlightConfig<IdeiaResumo> = {
+export const ideiasHighlightCfg: HighlightConfig<IdeiaResumo, IdeiaDestaque> = {
   entidade: "ideias",
-  scrape: () => listarIdeiasInternal({ limite: 100 }),
+  scrape: () => lerDestaquesIdeias(),
   metrica: (i) => i.apoios,
   comissao: () => null,
   // Preserves the corpus-authoritative detail fields (dataPublicacao/autorUf/descricao/plConvertido,
-  // v2) so the 2h apoios splice never wipes them.
-  splice: (corpus, fresh) =>
-    buildIdeiaResumo({
+  // v2) so the 2h apoios splice never wipes them; apoios only when the REST item carried it.
+  splice: (corpus, fresh) => {
+    if (!corpus) {
+      return fresh.apoios === null ? null : buildIdeiaResumo({ id: fresh.id, titulo: fresh.titulo, apoios: fresh.apoios });
+    }
+    return buildIdeiaResumo({
       id: fresh.id,
-      titulo: corpus.titulo,
-      apoios: fresh.apoios,
+      titulo: mesclarCampo(corpus.titulo, fresh.titulo) ?? undefined,
+      apoios: mesclarCampo(fresh.apoios, corpus.apoios) ?? undefined,
       dataPublicacao: corpus.dataPublicacao,
       autorUf: corpus.autorUf,
       descricao: corpus.descricao,
       plConvertido: corpus.plConvertido,
       status: corpus.status,
       url: corpus.url,
-    }),
+    });
+  },
 };
 
 /** Thin wrappers (kept by name for tests/back-compat). */

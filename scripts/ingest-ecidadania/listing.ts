@@ -28,8 +28,9 @@ import { parseBrNum, extractId } from "../../src/scraper/ecidadania.js";
 export interface ListingItem {
   /** e-Cidadania matter code (== codigoMateria), from visualizacaomateria?id=. */
   codigoMateria: number;
-  votosSim: number;
-  votosNao: number;
+  /** null quando o bloco não traz o placar — nunca 0 inventado (o escritor mantém o guardado). */
+  votosSim: number | null;
+  votosNao: number | null;
   /** Short identification (e.g. "PL 5064/2023"), when present on the listing. */
   identificacao: string | null;
   /** Ementa text, when present on the listing. */
@@ -70,8 +71,8 @@ export function parseConsultaListingPage(html: string): ListingItem[] {
 
     items.push({
       codigoMateria,
-      votosSim: votesMatch ? parseBrNum(votesMatch[1]) : 0,
-      votosNao: votesMatch ? parseBrNum(votesMatch[2]) : 0,
+      votosSim: votesMatch ? parseBrNum(votesMatch[1]) : null,
+      votosNao: votesMatch ? parseBrNum(votesMatch[2]) : null,
       identificacao: identMatch ? decodeEntities(identMatch[1]) : null,
       ementa: ementaMatch ? decodeEntities(ementaMatch[1]) : null,
     });

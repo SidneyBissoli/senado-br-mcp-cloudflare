@@ -35,8 +35,10 @@ import {
   inicioFatiaArquivo,
   avancarCursorArquivo,
 } from "./ideias-incremental.js";
-import { ECIDADANIA_BASE, STATUS_IDEIA_REMOVIDA, buildIdeiaResumo, type IdeiaResumo } from "../../src/scraper/ecidadania.js";
-import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
+import { ECIDADANIA_BASE, STATUS_IDEIA_REMOVIDA } from "../../src/scraper/ecidadania.js";
+import { planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
+import { vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
+import { registroIdeia, CAMPOS_LISTAGEM_IDEIA, CAMPOS_TRANSICAO_IDEIA, type DetalheIdeiaLido } from "./ideias-registro.js";
 import { parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
 import { readExistingMeta, readAllPayloads, readDetalheCursor } from "./d1.js";
 import { generateLoadSqlBatches, generateRunOnlySql, cursorUpsertStmt } from "./sql.js";
@@ -130,14 +132,20 @@ interface Transicao {
   apoios: number | null;
   status: string;
   /** Ausente quando a ideia foi removida (410): não há página para ler, o guardado é preservado. */
-  detalhe?: { dataPublicacao: string | null; autorUf: string | null; descricao: string | null; plConvertido: string | null };
+  detalhe?: DetalheIdeiaLido;
 }
 
 /**
  * Phase 2: read the detail page of each selected id. Stops at the time budget or a tripped breaker.
  * Appends to the caller's `lidas` as it goes, so readings made before a PortalForaError survive it.
  */
-async function lerTransicoes(ids: number[], deadline: number, lidas: Transicao[]): Promise<{ falhas: number; naoReconhecidas: number; removidas: number }> {
+async function lerTransicoes(
+  ids: number[],
+  deadline: number,
+  lidas: Transicao[],
+  /** TODA página lida (situação reconhecida ou não): é o que o vigia mede. 410 não entra — não há página. */
+  paginas: Array<{ id: number; lido: Record<string, unknown> }>,
+): Promise<{ falhas: number; naoReconhecidas: number; removidas: number }> {
   let falhas = 0;
   let naoReconhecidas = 0;
   let removidas = 0;
@@ -149,6 +157,7 @@ async function lerTransicoes(ids: number[], deadline: number, lidas: Transicao[]
     try {
       const d = await fetchIdeiaDetalheCorpus(id);
       disjuntor.sucesso();
+      paginas.push({ id, lido: { ...d } });
       if (d.status === null) {
         // Situação ausente ou texto novo: não adivinhar. A linha guardada fica como está.
         naoReconhecidas++;
@@ -256,38 +265,9 @@ function writeRunOnly(now: string, status: string, rows: number, error: string):
   writeFileSync(join(OUT_DIR, `${OUT_PREFIX}001.sql`), generateRunOnlySql(now, status, rows, error, ENTIDADE));
 }
 
-/**
- * Build the canonical record. The listing (or detail page, for transitions) owns titulo/apoios/status;
- * the four detail-only fields are IMMUTABLE and filled by the resumable detail backfill
- * (index-ideias-detalhe.ts) — PRESERVE them from the stored payload so this crawl never wipes them.
- */
-function toRecord(
-  id: number,
-  fresh: { titulo?: string; apoios: number; status: string },
-  prevJson: string | undefined,
-  detalhe?: Transicao["detalhe"],
-): SyncRecord {
-  const p = prevJson ? (JSON.parse(prevJson) as Partial<IdeiaResumo>) : undefined;
-  const ideia = buildIdeiaResumo({
-    id,
-    titulo: fresh.titulo ?? p?.titulo,
-    apoios: fresh.apoios,
-    status: fresh.status,
-    dataPublicacao: detalhe?.dataPublicacao ?? p?.dataPublicacao ?? null,
-    autorUf: detalhe?.autorUf ?? p?.autorUf ?? null,
-    descricao: detalhe?.descricao ?? p?.descricao ?? null,
-    plConvertido: detalhe?.plConvertido ?? p?.plConvertido ?? null,
-  });
-  const payloadJson = JSON.stringify(ideia);
-  return {
-    entityId: ideia.id,
-    sourceUrl: ideia.url,
-    payloadJson,
-    status: ideia.status,
-    metrica: ideia.apoios,
-    comissao: null,
-    contentHash: contentHash(payloadJson),
-  };
+/** Leitura crua × payload guardado do mesmo id — entrada do vigia. */
+function parLido(lido: Record<string, unknown>, prevJson: string | undefined) {
+  return { lido, guardado: prevJson ? (JSON.parse(prevJson) as Record<string, unknown>) : undefined };
 }
 
 async function main(): Promise<void> {
@@ -324,9 +304,10 @@ async function main(): Promise<void> {
   const vistos = new Set(crawl.items.map((it) => it.id));
   const ids = selecionarTransicoes(existentes, vistos, TRANSICOES_MAX);
   const transicoes: Transicao[] = [];
+  const paginasTransicao: Array<{ id: number; lido: Record<string, unknown> }> = [];
   let fatia: FatiaArquivo = { items: [], paginas: "-", cursor: null };
   try {
-    const t = await lerTransicoes(ids, deadline, transicoes);
+    const t = await lerTransicoes(ids, deadline, transicoes, paginasTransicao);
     console.log(`[ideias][transicoes] candidatas=${ids.length} lidas=${transicoes.length} (removidas=${t.removidas}) falhas=${t.falhas} naoReconhecidas=${t.naoReconhecidas}`);
     fatia = await lerFatiaArquivo(deadline);
     console.log(`[ideias][arquivo] ${fatia.paginas} items=${fatia.items.length} cursor=${fatia.cursor ? `${fatia.cursor.pagina}/voltas=${fatia.cursor.voltas}` : "inalterado"}`);
@@ -337,18 +318,47 @@ async function main(): Promise<void> {
     console.error(`[ideias][parcial] ${e.message} — gravando vivo + ${transicoes.length} transição(ões); o resto retoma amanhã`);
   }
 
-  // ── merge: vivo > transição > arquivo (o primeiro que leu o id ganha) ──
+  // ── vigia de taxa de leitura por campo (a mesclagem impede o apagão, mas esconderia a deriva) ──
   const existingPayloads = readAllPayloads(ENTIDADE);
+  // Listagem (vivo + arquivo): mesmo leitor; queda reprova o RUN, como os gates do vivo acima.
+  const vigiaListagem = vigiarCampos(
+    [...crawl.items, ...fatia.items].map((it) => parLido({ ...it }, existingPayloads.get(it.id))),
+    CAMPOS_LISTAGEM_IDEIA,
+  );
+  console.log(`[ideias][vigia][listagem] ${descreverVigia(vigiaListagem)}`);
+  if (!vigiaListagem.ok) {
+    const err = `taxa de leitura da listagem despencou: ${descreverVigia({ ...vigiaListagem, campos: vigiaListagem.quedas })}`;
+    console.error(`[ideias][gate] verdict=anomalo — ${err} — nada será gravado`);
+    writeRunOnly(now, "anomalo", crawl.items.length, err);
+    process.exit(1);
+  }
+  // Transições: queda descarta só a FASE — as fases 2 e 3 nunca bloqueiam o vivo (cabeçalho). O
+  // detalhe redesenhado de 12/10 cai aqui até a A4 ligar o leitor novo; reprovar o run inteiro
+  // pararia também a listagem, que está sã, e o cursor da s7.
+  const vigiaTransicoes = vigiarCampos(
+    paginasTransicao.map((p) => parLido(p.lido, existingPayloads.get(p.id))),
+    CAMPOS_TRANSICAO_IDEIA,
+  );
+  console.log(`[ideias][vigia][transicoes] ${descreverVigia(vigiaTransicoes)}`);
+  if (!vigiaTransicoes.ok) {
+    console.error(
+      `[ideias][transicoes][gate] verdict=anomalo — taxa de leitura do detalhe despencou: ` +
+        `${descreverVigia({ ...vigiaTransicoes, campos: vigiaTransicoes.quedas })} — leituras de página descartadas; removidas (410) mantidas`,
+    );
+    // A 410 não passa pelo leitor (não há página): segue valendo.
+    const removidasLidas = transicoes.filter((t) => !t.detalhe);
+    transicoes.splice(0, transicoes.length, ...removidasLidas);
+  }
+
+  // ── merge: vivo > transição > arquivo (o primeiro que leu o id ganha); campo a campo, vazio não apaga ──
   const records = new Map<number, SyncRecord>();
-  for (const it of crawl.items) records.set(it.id, toRecord(it.id, it, existingPayloads.get(it.id)));
+  for (const it of crawl.items) records.set(it.id, registroIdeia(it.id, it, existingPayloads.get(it.id)));
   for (const t of transicoes) {
     if (records.has(t.id)) continue;
-    const prev = existingPayloads.get(t.id);
-    const prevApoios = prev ? (JSON.parse(prev) as Partial<IdeiaResumo>).apoios ?? 0 : 0;
-    records.set(t.id, toRecord(t.id, { apoios: t.apoios ?? prevApoios, status: t.status }, prev, t.detalhe));
+    records.set(t.id, registroIdeia(t.id, { apoios: t.apoios, status: t.status }, existingPayloads.get(t.id), t.detalhe));
   }
   for (const it of fatia.items) {
-    if (!records.has(it.id)) records.set(it.id, toRecord(it.id, it, existingPayloads.get(it.id)));
+    if (!records.has(it.id)) records.set(it.id, registroIdeia(it.id, it, existingPayloads.get(it.id)));
   }
   const lista = [...records.values()];
 
