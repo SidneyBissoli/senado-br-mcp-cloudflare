@@ -13,9 +13,11 @@
  * handles the rows NOT seen in this crawl.
  */
 
-import { buildConsultaResumo, type ConsultaResumo } from "../../src/scraper/ecidadania.js";
+import { buildConsultaResumo, type ConsultaResumo, type ConsultaDetalheCorpus } from "../../src/scraper/ecidadania.js";
 import { contentHash, type SyncRecord } from "../../src/scraper/pipeline.js";
+import { mesclarCampo } from "../../src/scraper/mesclar.js";
 import { deriveStatus } from "./status.js";
+import { consultaPrecisaDetalhe } from "./detalhe.js";
 
 export interface ExistingMetaRow {
   id: number;
@@ -47,32 +49,56 @@ export function selectRestatus(
 }
 
 /**
- * Pure: build the flipped `SyncRecord`s from the chosen flips and their stored payloads. Only the
- * `status` changes; votes/ementa/materia/url are preserved from the existing payload, so the content
- * hash changes exactly because the status changed (history-on-change stays correct). Flips whose
- * payload is missing are skipped defensively.
+ * Pure: stored rows NOT in this crawl that still lack `autoria`. The listing is in-tramitação-only,
+ * so a consulta that closed before its detail was read (backlog above the per-run cap, failed reads,
+ * a future reader fix) is never crawled again: until 18/10/2026 the enrichment walked only the
+ * crawl, and 390 encerradas stayed without autoria for good. Ascending id = deterministic order.
  */
-export function buildRestatusRecords(flips: StatusFlip[], payloads: Map<number, string>): SyncRecord[] {
+export function selectNaoListadasSemDetalhe(payloads: Map<number, string>, crawledIds: Set<number>): number[] {
+  const ids: number[] = [];
+  for (const [id, prev] of payloads) {
+    if (!crawledIds.has(id) && consultaPrecisaDetalhe(prev)) ids.push(id);
+  }
+  return ids.sort((a, b) => a - b);
+}
+
+/**
+ * Pure: build the `SyncRecord`s of stored rows NOT in this crawl — the status flips and the rows whose
+ * detail was (re)read this run (`detalhes`); a row in both yields ONE record. Votes/ementa/materia/url
+ * are preserved from the existing payload; `status` comes from the flip (else the stored one); the
+ * detail fields merge field by field (`mesclarCampo`: an empty reading never wipes a stored value), so
+ * the content hash changes exactly when status or detail changed. Rows whose payload is missing are
+ * skipped defensively.
+ */
+export function buildRestatusRecords(
+  flips: StatusFlip[],
+  payloads: Map<number, string>,
+  detalhes: Map<number, ConsultaDetalheCorpus> = new Map(),
+): SyncRecord[] {
+  const novoStatus = new Map(flips.map((f) => [f.id, f.newStatus]));
+  const ids = [...new Set([...novoStatus.keys(), ...detalhes.keys()])];
   const records: SyncRecord[] = [];
-  for (const flip of flips) {
-    const payloadJson = payloads.get(flip.id);
+  for (const id of ids) {
+    const payloadJson = payloads.get(id);
     if (!payloadJson) continue;
     const old = JSON.parse(payloadJson) as ConsultaResumo;
+    const d = detalhes.get(id);
     const item = buildConsultaResumo({
-      id: flip.id,
+      id,
       materia: old.materia,
       ementa: old.ementa,
       votosSim: old.votosSim,
       votosNao: old.votosNao,
       totalVotos: old.totalVotos,
-      autoria: old.autoria ?? null, // v2: preserve detail fields on a status-only flip
-      relator: old.relator ?? null,
-      status: flip.newStatus,
+      autoria: mesclarCampo(d?.autoria ?? null, old.autoria ?? null),
+      relator: mesclarCampo(d?.relator ?? null, old.relator ?? null),
+      status: novoStatus.get(id) ?? old.status,
       url: old.url,
     });
     const json = JSON.stringify(item);
+    if (!novoStatus.has(id) && json === payloadJson) continue; // detail read, nothing new
     records.push({
-      entityId: flip.id,
+      entityId: id,
       sourceUrl: item.url,
       payloadJson: json,
       status: item.status,

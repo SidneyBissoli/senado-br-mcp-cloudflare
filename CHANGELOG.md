@@ -6,6 +6,18 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Fixed
+
+- **Consultas encerradas também recebem a autoria** (só o job diário; sem versão). A listagem do
+  portal só traz consultas em tramitação, e o detalhe era buscado só para as consultas da listagem:
+  uma consulta que encerrava antes de ser lida (fila acima do teto por execução, leitura que falhou,
+  um conserto futuro de leitor) nunca mais era lida. Medido em 18/10/2026 depois do primeiro run da
+  3.21.1: 390 das 455 encerradas sem autoria, e a página publica o autor (12 de 12 amostradas). As
+  guardadas fora da listagem sem autoria agora entram na mesma fila, depois das abertas e dentro do
+  teto, pela etapa que já tratava as encerradas (`selectNaoListadasSemDetalhe` + `buildRestatusRecords`
+  com os detalhes: um registro só quando a situação e a autoria mudam juntas; leitura vazia não apaga
+  nem gera versão).
+
 ## [3.21.1] - 2026-10-18
 
 Autoria das consultas presa e relator que a fonte não publica. Medido em 18/10/2026 no corpus das
