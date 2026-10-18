@@ -30,6 +30,8 @@ docs/estudo-a3-reconciliacao-eventos.html
 marketing/
 prompts/
 .api-spec/
+# Lotes .sql gerados por scripts/ingest-ecidadania/restaurar-ideias-a3.ts (dados do corpus).
+.a3/
 
 # Working image files — the served icon is base64-inlined in src/icon.ts
 imagem-senado.jpg
