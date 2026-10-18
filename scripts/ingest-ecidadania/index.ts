@@ -27,11 +27,11 @@ import { sleep } from "./http.js";
 import { fetchParsedPage, firstContactOpts, logPageFailure } from "./page-retry.js";
 import { parseConsultaListingPage, findLastPage, type ListingItem } from "./listing.js";
 import { buildTramitandoSet, deriveStatus } from "./status.js";
-import { ECIDADANIA_BASE, buildConsultaResumo, type ConsultaResumo } from "../../src/scraper/ecidadania.js";
+import { ECIDADANIA_BASE, buildConsultaResumo, type ConsultaResumo, type ConsultaDetalheCorpus } from "../../src/scraper/ecidadania.js";
 import { contentHash, planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
 import { classifyRun, parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
-import { readExistingMeta, readPayloads, readAllPayloads, readLastGoodRows } from "./d1.js";
-import { selectRestatus, buildRestatusRecords } from "./restatus.js";
+import { readExistingMeta, readAllPayloads, readLastGoodRows } from "./d1.js";
+import { selectRestatus, selectNaoListadasSemDetalhe, buildRestatusRecords } from "./restatus.js";
 import { generateLoadSql, generateRunOnlySql } from "./sql.js";
 import { fetchConsultaDetalheCorpus, consultaPrecisaDetalhe as needsEnrich } from "./detalhe.js";
 import { criarDisjuntor } from "./breaker.js";
@@ -218,7 +218,7 @@ async function main(): Promise<void> {
       contentHash: contentHash(payloadJson),
     });
   }
-  console.log(`[consultas][enrich] detalhe buscado p/ ${fetched} consulta(s) neste run (pendentes no total: ${pendentes})`);
+  console.log(`[consultas][enrich] na listagem: detalhe buscado p/ ${fetched} consulta(s) neste run (pendentes na listagem: ${pendentes})`);
 
   const abertas = records.filter((r) => r.status === "aberta").length;
   const encerradas = records.length - abertas;
@@ -245,9 +245,24 @@ async function main(): Promise<void> {
   const existingMeta = readExistingMeta();
   const crawledIds = new Set(records.map((r) => r.entityId));
   const flips = selectRestatus(existingMeta, crawledIds, tramitando);
-  const restatusRecords = buildRestatusRecords(flips, readPayloads(flips.map((f) => f.id)));
-  const flippedEncerrada = restatusRecords.filter((r) => r.status === "encerrada").length;
-  console.log(`[restatus] ${restatusRecords.length} linhas re-statusadas (${flippedEncerrada} → encerrada)`);
+  // Detalhe também para as guardadas FORA da listagem (encerradas) ainda sem autoria, com a sobra do
+  // teto do run: a listagem nunca mais as traz (selectNaoListadasSemDetalhe).
+  const naoListadas = selectNaoListadasSemDetalhe(existingPayloads, crawledIds);
+  const detalhesNaoListadas = new Map<number, ConsultaDetalheCorpus>();
+  for (const id of naoListadas.slice(0, Math.max(0, DETAIL_CHUNK - fetched))) {
+    try {
+      detalhesNaoListadas.set(id, await fetchConsultaDetalheCorpus(id));
+      disjuntor.sucesso();
+    } catch (e) {
+      console.error(`[consultas][detalhe][gap] id=${id}: ${e instanceof Error ? e.message : String(e)}`);
+      disjuntor.falha(e, `id=${id}`);
+    }
+    await sleep(DETAIL_DELAY_MS);
+  }
+  console.log(`[consultas][enrich] fora da listagem: detalhe buscado p/ ${detalhesNaoListadas.size} de ${naoListadas.length} sem autoria`);
+  const restatusRecords = buildRestatusRecords(flips, existingPayloads, detalhesNaoListadas);
+  const flippedEncerrada = flips.filter((f) => f.newStatus === "encerrada").length;
+  console.log(`[restatus] ${flips.length} linhas re-statusadas (${flippedEncerrada} → encerrada); ${restatusRecords.length} upserts fora da listagem`);
 
   // 6. Diff history vs existing hashes (reuse planEntitySync) and emit the load SQL. The run row's
   // rows_scraped stays the CRAWLED count (the floor baseline); re-statused rows are extra upserts.

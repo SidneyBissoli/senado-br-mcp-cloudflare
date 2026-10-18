@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { selectRestatus, buildRestatusRecords } from "../../scripts/ingest-ecidadania/restatus.js";
+import { selectRestatus, selectNaoListadasSemDetalhe, buildRestatusRecords } from "../../scripts/ingest-ecidadania/restatus.js";
 import { buildConsultaResumo } from "../../src/scraper/ecidadania.js";
 import { contentHash } from "../../src/scraper/pipeline.js";
 
@@ -58,5 +58,50 @@ describe("buildRestatusRecords", () => {
 
   it("skips flips whose payload is missing", () => {
     expect(buildRestatusRecords([{ id: 99, newStatus: "encerrada" }], payloads)).toEqual([]);
+  });
+});
+
+// Até 18/10/2026 o detalhe só era buscado para as consultas da listagem (só abertas): 390 encerradas
+// ficaram sem autoria para sempre. As fora da listagem agora entram pela mesma etapa.
+describe("consultas fora da listagem sem autoria", () => {
+  const guardada = (id: number, autoria: string | null, status = "encerrada") =>
+    JSON.stringify(buildConsultaResumo({ id, materia: `PL ${id}/2020`, votosSim: 5, votosNao: 1, autoria, status }));
+  const payloads = new Map<number, string>([
+    [40, guardada(40, null)], // encerrada sem autoria → entra
+    [41, guardada(41, "Senador A (PT/BA)")], // encerrada com autoria → não entra
+    [42, guardada(42, null, "aberta")], // na listagem deste run → o caminho normal cuida
+    [43, guardada(43, null)],
+  ]);
+
+  it("seleciona só as fora da listagem ainda sem autoria, em ordem de id", () => {
+    expect(selectNaoListadasSemDetalhe(payloads, new Set([42]))).toEqual([40, 43]);
+  });
+
+  it("detalhe lido grava a autoria e preserva status e votos", () => {
+    const [rec] = buildRestatusRecords([], payloads, new Map([[40, { autoria: "Senador B (PL/SP)", relator: null }]]));
+    const obj = JSON.parse(rec.payloadJson);
+    expect(rec.entityId).toBe(40);
+    expect(obj.autoria).toBe("Senador B (PL/SP)");
+    expect(obj.status).toBe("encerrada");
+    expect(obj.votosSim).toBe(5);
+    expect(rec.contentHash).toBe(contentHash(rec.payloadJson));
+  });
+
+  it("detalhe vazio não gera upsert (nada mudou) e nunca apaga autoria guardada", () => {
+    const vazio = { autoria: null, relator: null };
+    expect(buildRestatusRecords([], payloads, new Map([[43, vazio]]))).toEqual([]);
+    expect(buildRestatusRecords([], payloads, new Map([[41, vazio]]))).toEqual([]);
+  });
+
+  it("consulta que muda de situação E ganha autoria vira UM registro com as duas mudanças", () => {
+    const recs = buildRestatusRecords(
+      [{ id: 40, newStatus: "aberta" }],
+      payloads,
+      new Map([[40, { autoria: "Senador B (PL/SP)", relator: null }]]),
+    );
+    expect(recs).toHaveLength(1);
+    const obj = JSON.parse(recs[0].payloadJson);
+    expect(obj.status).toBe("aberta");
+    expect(obj.autoria).toBe("Senador B (PL/SP)");
   });
 });
