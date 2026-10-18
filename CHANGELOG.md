@@ -18,6 +18,22 @@ All notable changes to this project are documented here. Format based on
   falha de página → gate), em vez de gravar título vazio e 0 apoios. `src/dataset/schema.ts`
   e o dicionário do dataset descrevem a origem nova dos campos `titulo` e `apoios`.
 
+### Added
+
+- **Leitor da página de detalhe redesenhada das ideias** (`src/scraper/ideia-detalhe.ts`,
+  `lerIdeiaDetalhe`). Em 12/10/2026 a página `visualizacaoideia` trocou a seção "Situação da
+  Ideia" por uma "Linha do Tempo" de acontecimentos datados. O leitor novo classifica cada item
+  num vocabulário FECHADO de dez tipos, medido em 340 ideias de 2013 a 2026 (proposta, prazo,
+  oficina legislativa, meta de 20 mil, período encerrado, Sugestão, decisão da CDH com e sem
+  proposição, adoção por senador(a) ou deputado(a), transformação sem autor). Dele saem as etapas
+  datadas, as proposições (quem transformou, parlamentar e UF, sigla, nome, número, ano,
+  complemento, link), a oficina e o nome e a UF do autor como o portal publica. Um item fora do
+  vocabulário é copiado verbatim com aviso. Deriva parcial (item reconhecido sem os seus campos)
+  ou segunda Sugestão ou decisão da CDH lança `IdeiaDetalheForaDoMoldeError`, em vez de gravar um
+  campo adivinhado. Ainda sem uso em produção: as tools, o crawler de detalhe (desligado desde
+  17/10) e as transições passam a usá-lo nas fases seguintes. Testes sobre 20 capturas reais, uma
+  por caminho, mais a página de ideia removida.
+
 ## [3.19.0] - 2026-10-15
 
 A marca de cálculo do contrato 1.3 deixa de valer só para os modos `estatisticas` e passa a
