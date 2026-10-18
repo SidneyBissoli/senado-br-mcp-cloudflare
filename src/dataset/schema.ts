@@ -272,12 +272,12 @@ const ideiasSchema: EntitySchema = {
     {
       name: "autorUf",
       type: "string",
-      description: "UF do cidadão autor da ideia (SEM nome — conteúdo de cidadão).",
+      description: "Localidade do cidadão autor da ideia como o portal a publica: a sigla da UF ou \"Exterior\" (SEM nome — conteúdo de cidadão).",
       sourceEndpoint: EP_IDEIAS_DETALHE,
-      sourceField: "página de detalhe: \"Ideia proposta por … (UF)\" (na linha do tempo desde 12/10/2026) — apenas o \"(UF)\"",
+      sourceField: "página de detalhe: \"Ideia proposta por … (UF)\" (na linha do tempo desde 12/10/2026) — apenas o parêntese",
       operationalization:
-        "Extrai só a sigla de UF entre parênteses; o NOME do cidadão é descartado NA ORIGEM (nunca gravado no corpus). Postura de privacidade: conteúdo de cidadão → só UF.",
-      caveat: "Detail-only (v2): null nas ideias ainda não enriquecidas. Nome do autor deliberadamente não coletado.",
+        "Guarda o parêntese depois do nome tal como publicado: uma das 27 siglas de UF ou \"Exterior\" (os únicos valores medidos em 18/10/2026); parêntese vazio → null. O NOME do cidadão é descartado NA ORIGEM (nunca gravado no corpus).",
+      caveat: "Não é sempre uma UF: \"Exterior\" marca autor fora do país (antes de 18/10/2026 esse caso era gravado como null). null = ideia ainda não enriquecida pelo detalhe, ou portal sem localidade publicada. Nome do autor deliberadamente não coletado.",
     },
     {
       name: "descricao",

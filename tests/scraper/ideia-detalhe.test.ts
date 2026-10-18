@@ -33,6 +33,9 @@ import adotadaPrc from "../fixtures/ecidadania/ideias-detalhe-2026-10/adotada-pr
 import requerimento from "../fixtures/ecidadania/ideias-detalhe-2026-10/requerimento-19341.html?raw";
 import substitutivo from "../fixtures/ecidadania/ideias-detalhe-2026-10/substitutivo-65884.html?raw";
 import removida from "../fixtures/ecidadania/ideias-detalhe-2026-10/removida-220396.html?raw";
+// A8 (18/10/2026): os dois outros valores do parêntese do autor medidos nas 2.968 ideias sem UF.
+import autorExterior from "../fixtures/ecidadania/ideias-detalhe-2026-10/autor-exterior-62016.html?raw";
+import autorSemLocal from "../fixtures/ecidadania/ideias-detalhe-2026-10/autor-sem-local-1281.html?raw";
 
 const TODAS: Record<string, string> = {
   aberta, oficinaMedio, oficinaSuperior, oficinaOutros, oficinaEspecial, semApoio, aguardando, emAvaliacao,
@@ -88,6 +91,21 @@ describe("lerIdeiaDetalhe — um caminho por fixture", () => {
     });
     expect(d.titulo).toMatch(/^Equiparação dos soldos/);
     expect(d.descricao).toMatch(/^Tendo em vista a falta de reajustes/);
+  });
+
+  it("autor no exterior: o parêntese da fonte é guardado como publicado, e não vaza para o nome", () => {
+    const d = lerIdeiaDetalhe(autorExterior);
+    expect(d.autorUf).toBe("Exterior");
+    expect(d.autorNome).toBeTruthy();
+    expect(d.autorNome).not.toMatch(/Exterior|\(/);
+    expect(detalheParaCorpus(d).autorUf).toBe("Exterior");
+  });
+
+  it("autor sem localidade publicada (parêntese vazio): null, e o nome sai limpo", () => {
+    const d = lerIdeiaDetalhe(autorSemLocal);
+    expect(d.autorUf).toBeNull();
+    expect(d.autorNome).toBeTruthy();
+    expect(d.autorNome).not.toMatch(/\(|\s$/);
   });
 
   it("texto do item: sem tags, sem o link de declaração de autoria, palavras partidas em <span> reunidas", () => {
@@ -228,6 +246,11 @@ describe("lerIdeiaDetalhe — fora do molde", () => {
 
   it("adoção sem 'NOME (UF)' do parlamentar lança (deriva parcial)", () => {
     expect(() => lerIdeiaDetalhe(trocar(adotadaInc, "<span>Deputado Rodrigo Rollemberg (DF)</span>", "<span>Rodrigo Rollemberg</span>"))).toThrow(/transformada por Deputado/);
+  });
+
+  it("parêntese do autor fora dos valores medidos (27 UFs e Exterior) lança, em vez de gravar o desconhecido", () => {
+    expect(() => lerIdeiaDetalhe(trocar(autorExterior, "(Exterior)", "(Portugal)"))).toThrow(/parêntese do autor/);
+    expect(() => lerIdeiaDetalhe(trocar(aberta, "(RJ)", "(rj)"))).toThrow(/parêntese do autor/);
   });
 
   it("prazo sem a data em <strong> lança", () => {

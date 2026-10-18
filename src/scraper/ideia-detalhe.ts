@@ -218,16 +218,39 @@ function unico<K extends keyof IdeiaDetalhe>(c: Contexto, campo: K, valor: Ideia
   c.ideia[campo] = valor;
 }
 
+/**
+ * Valores do parêntese do autor medidos em 18/10/2026 nas 2.968 ideias gravadas sem UF: as 27 siglas
+ * e "Exterior". O valor é guardado COMO PUBLICADO (classificação da fonte), e o vazio é null. Qualquer
+ * outro texto é página fora do molde — o vigia o vê, em vez de um valor desconhecido entrar no corpus.
+ */
+const LOCALIDADES_DO_AUTOR = new Set([
+  "AC", "AL", "AM", "AP", "BA", "CE", "DF", "ES", "GO", "MA", "MG", "MS", "MT", "PA", "PB", "PE", "PI", "PR",
+  "RJ", "RN", "RO", "RR", "RS", "SC", "SE", "SP", "TO", "Exterior",
+]);
+
+function localidadeDoAutor(span: string | undefined, onde: string): string | null {
+  const s = decodificar(span ?? "").trim();
+  if (s === "") return null;
+  const p = /^\((.*)\)$/.exec(s)?.[1]?.trim();
+  if (p === undefined || !LOCALIDADES_DO_AUTOR.has(p)) {
+    throw new IdeiaDetalheForaDoMoldeError(`${onde}: parêntese do autor fora dos valores medidos: ${JSON.stringify(s.slice(0, 40))}`);
+  }
+  return p;
+}
+
 /** Tenta cada tipo em ordem; devolve o tipo reconhecido (e preenche a ideia) ou null. */
 function lerItem(c: Contexto): TipoAcontecimento | null {
   const { html, item, onde } = c;
   const t = item.texto;
 
   if (/^Ideia proposta por /.test(t)) {
-    const m = /Ideia proposta por\s*<strong>\s*<span>([\s\S]*?)<\/span>\s*(?:<span>\s*\(([A-Z]{2})\)\s*<\/span>)?\s*<\/strong>/.exec(html);
+    // O segundo <span> leva o parêntese da localidade SEM tags dentro: assim o nome (preguiçoso) para no
+    // primeiro </span> em todos os casos. Com o parêntese restrito a duas letras, "(Exterior)" caía fora
+    // do grupo opcional e o nome se esticava até engoli-lo — a UF saía null, calada (A8, 18/10/2026).
+    const m = /Ideia proposta por\s*<strong>\s*<span>([\s\S]*?)<\/span>\s*(?:<span>([^<]*)<\/span>)?\s*<\/strong>/.exec(html);
     if (!m) throw new IdeiaDetalheForaDoMoldeError(`${onde}: proposta sem "<strong><span>NOME</span><span> (UF)</span>"`);
     unico(c, "autorNome", textoDoHtml(m[1]) || null);
-    c.ideia.autorUf = m[2] ?? null;
+    c.ideia.autorUf = localidadeDoAutor(m[2], onde);
     unico(c, "dataProposta", item.data);
     return "proposta";
   }

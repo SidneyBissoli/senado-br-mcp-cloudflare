@@ -6,6 +6,26 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.20.1] - 2026-10-18
+
+O autor de ideia que mora fora do país deixa de sair sem localidade. A página da ideia escreve
+"Ideia proposta por NOME (Exterior)", mas o leitor só aceitava uma sigla de duas letras no
+parêntese: o "(Exterior)" ficava fora e o nome se esticava até engoli-lo. Na tool, o texto aparecia
+colado ao nome; no corpus, em que o nome é descartado, a localidade sumia e `autorUf` ficava `null`.
+O corpus nunca guardou "Exterior". Medido em 18/10/2026 nas 2.968 ideias gravadas sem UF: o
+parêntese só traz as 27 siglas ou "Exterior" (26 ideias); 176 páginas não publicam localidade
+nenhuma. PATCH: o campo mantém tipo e nulidade; só a descrição de
+`senado_ecidadania_listar_ideias` mudou (`surface.lock.json` regravado).
+
+### Fixed
+
+- **`autorUf` guarda a localidade como o portal a publica**: uma das 27 siglas ou "Exterior";
+  parêntese vazio continua `null`. Qualquer outro valor torna a página "fora do molde": nada é
+  gravado, e o vigia por campo a conta, em vez de um valor desconhecido entrar no corpus.
+- **O nome do autor em `senado_ecidadania_obter_ideia` sai limpo**, sem o "(Exterior)" colado.
+- Dicionário do dataset (`autorUf`) e descrição de `senado_ecidadania_listar_ideias` dizem que o
+  campo nem sempre é uma UF.
+
 ## [3.20.0] - 2026-10-18
 
 O detalhe das ideias legislativas volta a ser lido. Em 12/10/2026 o portal redesenhou a página da
