@@ -80,9 +80,13 @@ describe("detalheParaCorpus — UF-only, sem nome do autor cidadão (leitor novo
 
 describe("parseConsultaDetalheCorpus — autoria/relator (público, nome mantido)", () => {
   const d = parseConsultaDetalheCorpus(consultaDetalheHtml);
-  it("retorna autoria/relator como strings ou null (não lança)", () => {
-    expect(d).toHaveProperty("autoria");
-    expect(d).toHaveProperty("relator");
+  // Página REAL (capturada em 14/06/2026): o molde publica só Autoria e Ementa, o mesmo de 42 páginas
+  // amostradas em 18/10/2026. Conferir só que as chaves existem deixou o relator vazio em 100% passar.
+  it("lê a autoria publicada na página real", () => {
+    expect(d.autoria).toBe("Senador Rogério Carvalho (PT/SE)");
+  });
+  it("relator é null: a página da consulta não publica relatoria", () => {
+    expect(d.relator).toBeNull();
   });
 });
 

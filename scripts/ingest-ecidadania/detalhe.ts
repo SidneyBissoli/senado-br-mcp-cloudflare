@@ -60,6 +60,21 @@ export async function fetchIdeiaDetalhe(id: number): Promise<IdeiaDetalhe> {
   return lerIdeiaDetalhe(html);
 }
 
+/**
+ * A consulta precisa (de novo) do detalhe? Sim enquanto a `autoria` guardada não tiver VALOR.
+ *
+ * Até 18/10/2026 o sinal era a CHAVE `"autoria"` no payload, mas o `buildConsultaResumo` sempre a
+ * grava, mesmo `null`: as consultas que ficaram fora do teto do primeiro backfill (e as que nasceram
+ * pelo splice de 2 h) entraram com `"autoria":null` e nunca mais foram lidas: 4.780 de 8.145, com a
+ * autoria publicada na página (42 de 42 páginas amostradas). O `relator` não entra no critério: a
+ * página da consulta não publica relatoria (mesma amostra), então ele seria `null` para sempre.
+ */
+export function consultaPrecisaDetalhe(prev: string | undefined): boolean {
+  if (!prev) return true;
+  const autoria = (JSON.parse(prev) as { autoria?: unknown }).autoria;
+  return typeof autoria !== "string" || autoria.trim() === "";
+}
+
 /** Detalhe da consulta para o corpus (autoria/relator — agentes públicos, nome mantido). */
 export async function fetchConsultaDetalheCorpus(id: number): Promise<ConsultaDetalheCorpus> {
   const html = await getText(`${ECIDADANIA_BASE}/visualizacaomateria?id=${id}`, { accept: "text/html" });

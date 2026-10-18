@@ -177,17 +177,18 @@ const consultasSchema: EntitySchema = {
       sourceField: "página de detalhe: <b>Autoria:</b> <span>…</span>",
       operationalization:
         "Lido da página de detalhe (visualizacaomateria) no crawl enriquecido; null quando o detalhe não expõe. Nome MANTIDO (informação pública por função — ver postura de privacidade).",
-      caveat: "Detail-only (v2): populado pelo crawl de detalhe; null nas linhas ainda não enriquecidas.",
+      caveat:
+        "Detail-only (v2): populado pelo crawl de detalhe; null nas linhas ainda não enriquecidas. Até a 3.21.0 o crawl só preencheu as ~3,4 mil consultas do primeiro lote: as demais ficaram null com a autoria publicada na página e são relidas desde então, até o teto por execução.",
     },
     {
       name: "relator",
       type: "string",
-      description: "Relator(a) da matéria (agente público).",
+      description: "Relator(a) da matéria (agente público). Sempre null: a página da consulta não publica relatoria.",
       sourceEndpoint: EP_CONSULTAS_DETALHE,
-      sourceField: "página de detalhe: <b>Relator(a):</b> <span>…</span>",
+      sourceField: "página de detalhe: <b>Relator(a):</b> <span>…</span> (rótulo que a página não traz)",
       operationalization:
-        "Lido da página de detalhe (visualizacaomateria); null quando não há relatoria ou o detalhe não a expõe. Nome MANTIDO (público por função).",
-      caveat: "Detail-only (v2): populado pelo crawl de detalhe; null nas linhas ainda não enriquecidas.",
+        "O leitor procura o rótulo Relator(a) na página de detalhe (visualizacaomateria), mas a página publica só Autoria e Ementa: 0 de 8.145 consultas e 0 de 40.548 versões do histórico tiveram valor, e 42 páginas reais de anos e situações diferentes (medição de 18/10/2026) não traziam o rótulo. O relator da matéria está na API legislativa (/processo/relatoria), fora deste corpus.",
+      caveat: "Campo mantido por compatibilidade do formato; não use como dado. Vazio não significa matéria sem relator.",
     },
     {
       name: "status",

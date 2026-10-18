@@ -6,6 +6,36 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.21.1] - 2026-10-18
+
+Autoria das consultas presa e relator que a fonte não publica. Medido em 18/10/2026 no corpus das
+consultas: 4.780 das 8.145 consultas estavam sem `autoria`, embora a página de detalhe a publique
+(42 de 42 páginas reais amostradas, de anos e situações diferentes); e `relator` estava vazio em
+100%: 0 de 8.145 consultas e 0 de 40.548 versões do histórico. Na mesma amostra a página publica
+só "Autoria" e "Ementa"; o rótulo de relatoria não existe. PATCH: nenhum campo muda de tipo ou de
+nulidade.
+
+### Fixed
+
+- **Autoria das consultas volta a ser lida**: o job diário decidia que uma consulta "já foi
+  enriquecida" pela presença da CHAVE `autoria` no payload, mas o builder canônico sempre grava a
+  chave, mesmo `null`. As consultas que ficaram fora do teto do primeiro backfill (3.000 por
+  execução), e as que nasceram pelo splice de 2 h, entraram com `"autoria":null` e nunca mais foram
+  relidas (o log contava "pendentes no total: 9"). O critério agora é o VALOR (`consultaPrecisaDetalhe`):
+  sem autoria, a consulta volta à fila, respeitando o teto por execução; uma falha de leitura também
+  fica pendente para o dia seguinte. A autoria lida segue imutável.
+
+### Changed
+
+- `senado_ecidadania_obter_consulta`: a descrição diz que `relator` vem `null` porque a página da
+  consulta não publica relatoria, e aponta `senado_obter_materia` (mesmo número) para o relator da
+  matéria, que vem da API legislativa. O campo continua no formato.
+- Dicionário do dataset: `relator` documentado como sempre null pela fonte (não significa matéria
+  sem relator); `autoria` ganha a ressalva das linhas que ficaram vazias até a 3.21.0.
+- O teste do leitor da página de consulta passa a conferir os valores da página real (autoria lida,
+  relator null), e não só a existência das chaves; o HTML sintético com "Relatora:" fica marcado
+  como tal.
+
 ## [3.21.0] - 2026-10-18
 
 O corpus passa a guardar em que projetos a ideia foi transformada. Até aqui o projeto (PL, PEC,
