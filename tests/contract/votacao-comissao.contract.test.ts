@@ -70,11 +70,18 @@ describe("contract: /votacaoComissao (VotacoesComissao.Votacoes.Votacao)", () =>
     expect(v.reuniao).not.toBeNull();
     expect(typeof v.materia).toBe("string");
     expect(typeof v.descricao).toBe("string");
-    // Tally is computed in-Worker from the vote quality codes.
+    // Tally: copied from the source's TotalVotos* when published (never bounded by the vote list:
+    // the fixture truncates Votos.Voto to 3 and the source repeats the list in some votes).
     expect(typeof v.totalSim).toBe("number");
     expect(typeof v.totalNao).toBe("number");
     expect(typeof v.totalAbstencao).toBe("number");
-    expect(v.totalSim + v.totalNao + v.totalAbstencao).toBeLessThanOrEqual(v.votos.length);
+    const item = (digArrayRoot(raw, ROOT, "contract:votacao-comissao") as any[])[0];
+    if (item.TotalVotosSim != null || item.TotalVotosNao != null || item.TotalVotosAbstencao != null) {
+      expect(v.placarComputado).toBeUndefined();
+      expect(v.totalSim).toBe(Number(item.TotalVotosSim ?? 0));
+      expect(v.totalNao).toBe(Number(item.TotalVotosNao ?? 0));
+      expect(v.totalAbstencao).toBe(Number(item.TotalVotosAbstencao ?? 0));
+    }
     expect(Array.isArray(v.votos)).toBe(true);
     expect(v.votos.length).toBeGreaterThan(0);
     const vt = v.votos[0];
@@ -84,6 +91,16 @@ describe("contract: /votacaoComissao (VotacoesComissao.Votacoes.Votacao)", () =>
     expect(typeof vt.partido).toBe("string");
     expect(typeof vt.voto).toBe("string");
     expect(vt.voto!.length).toBeGreaterThan(0);
+  });
+
+  it("without published totals the tally is recounted from the votes and flagged placarComputado", () => {
+    const item = structuredClone((digArrayRoot(raw, ROOT, "contract:votacao-comissao") as any[])[0]);
+    delete item.TotalVotosSim;
+    delete item.TotalVotosNao;
+    delete item.TotalVotosAbstencao;
+    const v = parseVotacaoComissao(item);
+    expect(v.placarComputado).toBe(true);
+    expect(v.totalSim + v.totalNao + v.totalAbstencao).toBeLessThanOrEqual(v.votos.length);
   });
 
   it("filtrarPorData keeps everything on an all-inclusive window and drops everything outside", () => {
