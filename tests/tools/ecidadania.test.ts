@@ -335,6 +335,9 @@ describe("obterConsultaInternal", () => {
     vi.unstubAllGlobals();
   });
 
+  // HTML SINTÉTICO. A linha "Relatora:" não existe na página real (só Autoria e Ementa — medição de
+  // 18/10/2026; ver o teste da página real em tests/scraper/ecidadania-comentarios.test.ts): fica aqui
+  // só para o leitor seguir pegando o rótulo se o portal um dia passar a publicá-lo.
   it("parses consulta detail from HTML", async () => {
     const html = `
       <html>

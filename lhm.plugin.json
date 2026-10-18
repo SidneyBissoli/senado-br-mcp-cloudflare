@@ -2,7 +2,7 @@
   "identifier": "sidneybissoli-senado-br-mcp-cloudflare",
   "name": "Dados Abertos Senado BR - MCP",
   "icon": "🏛️",
-  "version": "3.21.0",
+  "version": "3.21.1",
   "description": "Independent MCP server for Brazilian Federal Senate open data — read-only tools, prompts and resources across the legislative process, Senate administration and the e-Cidadania portal. Cloudflare Workers, Streamable HTTP, no auth. Not affiliated with or endorsed by the Senate, OpenAI or ChatGPT. Responses in pt-BR. MIT licensed.",
   "author": "Sidney da Silva Pereira Bissoli",
   "authorUrl": "https://github.com/SidneyBissoli",
@@ -9022,7 +9022,7 @@
         "readOnlyHint": true,
         "title": "Detalhar consulta pública"
       },
-      "description": "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `url`. O portal não publica o período da consulta: `dataAbertura`/`dataEncerramento` (e `comissao`/`linkMateria`) vêm sempre `null` — a consulta abre quando a matéria entra em tramitação e encerra quando sai, refletido em `status`. O campo `comentarios` vem `null`: a página de consulta não possui recurso de comentários. Obtenha o `id` antes via `senado_ecidadania_listar_consultas` ou `senado_ecidadania_consultas_analise`.",
+      "description": "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `url`. O portal não publica o período da consulta: `dataAbertura`/`dataEncerramento` (e `comissao`/`linkMateria`) vêm sempre `null` — a consulta abre quando a matéria entra em tramitação e encerra quando sai, refletido em `status`. O campo `comentarios` vem `null`: a página de consulta não possui recurso de comentários. O campo `relator` vem `null`: a página da consulta publica só autoria e ementa, não a relatoria — o relator da matéria sai de `senado_obter_materia` com o mesmo número (`codigoMateria` = `id`). Obtenha o `id` antes via `senado_ecidadania_listar_consultas` ou `senado_ecidadania_consultas_analise`.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "additionalProperties": false,

@@ -33,7 +33,7 @@ import { classifyRun, parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
 import { readExistingMeta, readPayloads, readAllPayloads, readLastGoodRows } from "./d1.js";
 import { selectRestatus, buildRestatusRecords } from "./restatus.js";
 import { generateLoadSql, generateRunOnlySql } from "./sql.js";
-import { fetchConsultaDetalheCorpus } from "./detalhe.js";
+import { fetchConsultaDetalheCorpus, consultaPrecisaDetalhe as needsEnrich } from "./detalhe.js";
 import { criarDisjuntor } from "./breaker.js";
 import { mesclarCampo, vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
 
@@ -49,17 +49,12 @@ const OUT_PATH = join(dirname(fileURLToPath(import.meta.url)), "out.sql");
 // (páginas e detalhe), é o mesmo sintoma — o portal parou de responder.
 const disjuntor = criarDisjuntor();
 
-/** Uma consulta ainda NÃO enriquecida = seu payload não carrega a chave `autoria` (v1 ou nova). */
-function needsEnrich(prev: string | undefined): boolean {
-  return !prev || !prev.includes('"autoria"');
-}
-
 /**
  * Enrich crawled consultas with detail-only `autoria`/`relator` (agentes públicos — name kept).
- * These are IMMUTABLE, so a stored payload that already carries the `autoria` key is preserved; only
- * rows NOT yet enriched are fetched, and only up to a per-run cap (`doFetch`) so a first backfill of
- * ~7,8k não estoure o orçamento do job — o resto fica para o próximo run. Detail fetch failures fall
- * back to null and are logged (never silenced).
+ * These are IMMUTABLE, so a stored payload whose `autoria` already has a value is preserved; only
+ * rows still WITHOUT one are fetched (`needsEnrich` = `consultaPrecisaDetalhe`), and only up to a
+ * per-run cap (`doFetch`) so a backfill não estoure o orçamento do job — o resto fica para o próximo
+ * run. Detail fetch failures fall back to null and are logged (never silenced), and stay pending.
  */
 async function enrichConsulta(
   it: ListingItem,
@@ -182,7 +177,7 @@ async function main(): Promise<void> {
   }
 
   // 3. Normalize + hash (canonical ConsultaResumo via shared builder; metrica_principal = totalVotos).
-  //    v2: enrich with detail-only autoria/relator, preserving already-enriched rows (immutable).
+  //    v2: enrich with detail-only autoria/relator, preserving rows whose autoria has a value (immutable).
   const existingPayloads = readAllPayloads("consultas");
 
   // Vigia da listagem: dos campos que o corpus já tinha, quantos a leitura de hoje ainda trouxe.
