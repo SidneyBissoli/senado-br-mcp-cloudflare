@@ -160,6 +160,9 @@ describe("a classe dos escritores — leitura vazia não apaga nenhum campo guar
   it("listagem de consultas — bloco sem placar dá null, não 0", () => {
     const html = `<div class="resumo-materia"><header><a href="visualizacaomateria?id=5">PL 5/2024</a></header><section><a href="x">Ementa</a></section></div>`;
     expect(parseConsultaListingPage(html)[0]).toMatchObject({ codigoMateria: 5, votosSim: null, votosNao: null });
+    // O link vazio só vale como 0 × 0 se apontar para a PRÓPRIA consulta.
+    const outro = `<div class="resumo-materia"><header><a href="visualizacaomateria?id=5">PL 5/2024</a></header><a href="visualizacaomateria?id=6"> </a></div>`;
+    expect(parseConsultaListingPage(outro)[0]).toMatchObject({ votosSim: null, votosNao: null });
   });
 });
 
