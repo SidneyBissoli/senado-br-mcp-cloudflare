@@ -53,6 +53,31 @@ capturas.
 3. `npm run test:contract` de novo — **falha aqui significa drift real**: o
    upstream mudou a forma de um campo que algum parser lê.
 
+### Fonte fora do ar não é deriva
+
+Desde a 3.21.2 o passo 2 é relatado pelo repórter do portfólio,
+`@sbissoli/mcp-fonte-viva`: cada captura que falha recebe um **veredito** pelo
+`kind` do erro da origem (o `UpstreamError` local carrega o erro do pacote em
+`cause`), nunca pela frase. A política, decidida em 22/10/2026:
+
+| O que aconteceu | Código | Anotação no job |
+|---|---|---|
+| Tudo capturado | 0 | — |
+| Só fonte fora (5xx, timeout, rede, 429) ou dependência de uma delas, com ≥ 1 captura | **0** (verde) | `::warning title=Fonte indisponível::spec1, spec2` |
+| Nada respondeu (disjuntor: 5 indisponíveis seguidas sem captura) | **3** | `::error title=Fonte inalcançável::…` |
+| A origem recusou o pedido (404/4xx) | 1 | `::error title=Deriva de formato::…` |
+| Corpo que não é o esperado, persistiu nas 3 tentativas | 1 | `::error title=Ambíguo (deriva ou página de erro)::…` |
+| Defeito nosso (código, guarda de tamanho) | 1 | `::error title=Falha alheia à origem::…` |
+
+Na noite verde-com-aviso, as specs não medidas ficam com a fixture commitada e o
+passo 3 roda sobre ela; o resumo do job diz "deriva NÃO medida em N endpoints".
+Verde, e não vermelho rotulado, porque o vermelho dispara o retry automático
+(três tentativas num 502 que persiste) e o painel do portfólio lia a conclusão do
+job como "a fonte mudou". O painel passa a contar noites por endpoint a partir
+da anotação (três noites seguidas abrem um item). Antes da 3.21.2, um 502 isolado
+zerava o disjuntor local e saía como falha genérica (`exit 1`) — foi o alarme
+falso de 22/10/2026.
+
 ## O que fazer quando falhar
 
 1. Identifique o teste/fixture que falhou e compare a fixture recapturada com

@@ -6,6 +6,41 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.21.2] - 2026-10-22
+
+### Fixed
+
+- **Fonte fora do ar não é deriva (contrato noturno).** Em 22/10/2026 o job `contract-tests` ficou
+  vermelho três vezes porque UM endpoint (vídeos da taquigrafia) respondeu 502 nas três tentativas,
+  com os outros 63 capturados; o painel do portfólio abriu "a fonte mudou". A causa: o classificador
+  local lia o erro TRADUZIDO, cujo `transport` é falso num 5xx, então o 502 contava como "chegou
+  resposta" (falha genérica, `exit 1`) e ainda ZERAVA o disjuntor — uma noite de 502 em tudo
+  caminhava o manifesto inteiro até o teto de 30 min. Agora o `UpstreamError` local carrega o erro do
+  pacote em `cause` (corpo vazio e JSON inválido ganham uma causa `malformed_body` sintética), e o
+  script relata pelo repórter do portfólio, `@sbissoli/mcp-fonte-viva` 0.1.0 (extraído deste
+  `outage.ts`, que sai): veredito pelo `kind` da origem, disjuntor em que 5xx/429 contam,
+  retentativa que não repete dependência nem 404, e a política decidida pelo dono — só fonte fora
+  (com ≥ 1 captura) = **verde** com `::warning title=Fonte indisponível::<specs>` e resumo
+  "deriva NÃO medida em N"; nada respondeu = `exit 3`; 404/4xx, corpo inesperado persistente ou
+  defeito nosso = `exit 1` rotulado. O YAML deixa de escrever o resumo (o script escreve, pelo
+  `$GITHUB_STEP_SUMMARY`); o retry automático segue só em `failure`. `mcp-upstream` ^0.5.1
+  (`entregaDaOrigem` segue `cause`). Teste `tests/scripts/contract-refresh.test.ts` reescrito sobre
+  a costura que este repositório possui (todo `kind` traduzido lê o veredito certo; o caso de 22/10
+  sai 0 com o aviso nomeando a spec; nada respondeu sai 3 na 5ª). Provado em rodada local
+  (`tsx` com o build do pacote): 1 de 3 capturadas, duas em timeout, saída 0, aviso e resumo
+  escritos. Superfície intacta (`surface.lock.json` não muda). Política documentada em
+  `docs/contract-tests.pt-BR.md`.
+
+- **Consultas encerradas também recebem a autoria** (só o job diário; sem versão). A listagem do
+  portal só traz consultas em tramitação, e o detalhe era buscado só para as consultas da listagem:
+  uma consulta que encerrava antes de ser lida (fila acima do teto por execução, leitura que falhou,
+  um conserto futuro de leitor) nunca mais era lida. Medido em 18/10/2026 depois do primeiro run da
+  3.21.1: 390 das 455 encerradas sem autoria, e a página publica o autor (12 de 12 amostradas). As
+  guardadas fora da listagem sem autoria agora entram na mesma fila, depois das abertas e dentro do
+  teto, pela etapa que já tratava as encerradas (`selectNaoListadasSemDetalhe` + `buildRestatusRecords`
+  com os detalhes: um registro só quando a situação e a autoria mudam juntas; leitura vazia não apaga
+  nem gera versão).
+
 ### Changed
 
 - **Job das consultas grava o detalhe em lotes e diz onde está** (só o job; sem versão). Até aqui o job
@@ -21,18 +56,6 @@ All notable changes to this project are documented here. Format based on
   antes, para sair no mesmo registro. O run row continua sendo só o da gravação final. Provado em
   18/10/2026 com o job real em tamanho mínimo (6 detalhes, lotes de 3): 2 lotes aplicados, 6 autorias
   no D1, gravação final sem repetir as 6.
-
-### Fixed
-
-- **Consultas encerradas também recebem a autoria** (só o job diário; sem versão). A listagem do
-  portal só traz consultas em tramitação, e o detalhe era buscado só para as consultas da listagem:
-  uma consulta que encerrava antes de ser lida (fila acima do teto por execução, leitura que falhou,
-  um conserto futuro de leitor) nunca mais era lida. Medido em 18/10/2026 depois do primeiro run da
-  3.21.1: 390 das 455 encerradas sem autoria, e a página publica o autor (12 de 12 amostradas). As
-  guardadas fora da listagem sem autoria agora entram na mesma fila, depois das abertas e dentro do
-  teto, pela etapa que já tratava as encerradas (`selectNaoListadasSemDetalhe` + `buildRestatusRecords`
-  com os detalhes: um registro só quando a situação e a autoria mudam juntas; leitura vazia não apaga
-  nem gera versão).
 
 ## [3.21.1] - 2026-10-18
 
