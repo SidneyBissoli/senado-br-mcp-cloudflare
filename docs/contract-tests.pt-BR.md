@@ -56,7 +56,7 @@ capturas.
 ### Fonte fora do ar não é deriva
 
 Desde a 3.21.2 o passo 2 é relatado pelo repórter do portfólio,
-`@sbissoli/mcp-fonte-viva`: cada captura que falha recebe um **veredito** pelo
+`@sbissoli/mcp-live-source`: cada captura que falha recebe um **veredito** pelo
 `kind` do erro da origem (o `UpstreamError` local carrega o erro do pacote em
 `cause`), nunca pela frase. A política, decidida em 22/10/2026:
 

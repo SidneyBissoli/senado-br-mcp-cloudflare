@@ -2,7 +2,7 @@
  * Unit tests for the nightly fixture refresher's outage handling. No network.
  *
  * Since 3.21.2 the verdict, the breaker, the retry and the exit policy live in
- * the portfolio's `@sbissoli/mcp-fonte-viva`; what is pinned HERE is the seam
+ * the portfolio's `@sbissoli/mcp-live-source`; what is pinned HERE is the seam
  * this repo owns: the local `UpstreamError` that `traduzirErro` builds must
  * carry the package error in `cause`, because that is the only way the
  * reporter can read the origin's `kind`. Without it every failure is "alheio"
@@ -23,7 +23,7 @@ import {
   SAIDA_FONTE_INALCANCAVEL,
   SAIDA_OK,
   classificarFalha,
-} from "@sbissoli/mcp-fonte-viva";
+} from "@sbissoli/mcp-live-source";
 import { UpstreamError, traduzirErro } from "../../src/throttle/upstream.js";
 import { MissingDependencyError } from "../../scripts/contract/manifest.js";
 

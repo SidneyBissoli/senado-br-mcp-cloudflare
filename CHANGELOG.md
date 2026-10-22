@@ -17,7 +17,7 @@ All notable changes to this project are documented here. Format based on
   resposta" (falha genérica, `exit 1`) e ainda ZERAVA o disjuntor — uma noite de 502 em tudo
   caminhava o manifesto inteiro até o teto de 30 min. Agora o `UpstreamError` local carrega o erro do
   pacote em `cause` (corpo vazio e JSON inválido ganham uma causa `malformed_body` sintética), e o
-  script relata pelo repórter do portfólio, `@sbissoli/mcp-fonte-viva` 0.1.0 (extraído deste
+  script relata pelo repórter do portfólio, `@sbissoli/mcp-live-source` 0.1.0 (extraído deste
   `outage.ts`, que sai): veredito pelo `kind` da origem, disjuntor em que 5xx/429 contam,
   retentativa que não repete dependência nem 404, e a política decidida pelo dono — só fonte fora
   (com ≥ 1 captura) = **verde** com `::warning title=Fonte indisponível::<specs>` e resumo

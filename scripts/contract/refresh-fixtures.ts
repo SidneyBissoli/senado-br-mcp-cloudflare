@@ -21,7 +21,7 @@
  * OUTAGE IS NOT DRIFT. Telling the two apart — the verdict per failed capture,
  * the circuit breaker, the retry, the exit code, the job summary and the
  * `::warning`/`::error` annotations the portfolio panel reads — is the
- * portfolio's live-source reporter, `@sbissoli/mcp-fonte-viva` (since 3.21.2;
+ * portfolio's live-source reporter, `@sbissoli/mcp-live-source` (since 3.21.2;
  * it was extracted from this script's former `outage.ts`). The policy, decided
  * on 22/10/2026: a night where the ONLY failures are the source being down
  * (5xx, timeout, network, 429) and at least one capture answered exits 0 with
@@ -43,7 +43,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { Relatorio, capturarComRetentativa, linhaDeResultado } from "@sbissoli/mcp-fonte-viva";
+import { Relatorio, capturarComRetentativa, linhaDeResultado } from "@sbissoli/mcp-live-source";
 import { upstreamFetch } from "../../src/throttle/upstream.js";
 import { admFetch } from "../../src/throttle/adm.js";
 import { MAX_RESPONSE_SIZE_LARGE } from "../../src/types.js";

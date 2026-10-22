@@ -56,7 +56,7 @@ jobs:
       # nothing is committed), then re-run the same assertions.
       #
       # OUTAGE IS NOT DRIFT, and the script says which is which: the reporter
-      # (`@sbissoli/mcp-fonte-viva`, since 3.21.2) writes the step summary and
+      # (`@sbissoli/mcp-live-source`, since 3.21.2) writes the step summary and
       # the annotations the portfolio panel reads. Exit codes:
       #   0 — everything captured, OR the only failures are the source being
       #       down (5xx/timeout/network/429) with at least one capture answered:

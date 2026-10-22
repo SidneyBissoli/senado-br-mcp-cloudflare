@@ -16,7 +16,7 @@
  * semântica deste servidor, medida contra a fonte). O pacote CLASSIFICA; este
  * módulo DECIDE. A classe `UpstreamError` local, as mensagens e o `transport`
  * continuam os mesmos: `errorFrom`, `ehReuniaoInexistente`, `classifyError` e o
- * repórter do contrato noturno (`@sbissoli/mcp-fonte-viva`, pelo `cause`) leem todos eles.
+ * repórter do contrato noturno (`@sbissoli/mcp-live-source`, pelo `cause`) leem todos eles.
  *
  * POLÍTICA (`UPSTREAM_POLICY`) — medida em 27/09/2026 com `curl` e o User-Agent
  * do portfólio: a API legislativa responde em 0,3–1 s (`/senador/lista/atual`
@@ -108,7 +108,7 @@ export class UpstreamError extends Error {
     /**
      * `cause`: o erro do PACOTE (`@sbissoli/mcp-upstream`) que este erro local
      * traduz. É por ele que o repórter do contrato noturno
-     * (`@sbissoli/mcp-fonte-viva`, via `entregaDaOrigem`) decide se a origem
+     * (`@sbissoli/mcp-live-source`, via `entregaDaOrigem`) decide se a origem
      * entregou algo medível — pelo `kind`, nunca pela frase. Sem `cause`, toda
      * falha traduzida seria "alheia à origem" (medido em 22/10/2026: um 502 nas
      * três tentativas caía em "other" e zerava o disjuntor).
