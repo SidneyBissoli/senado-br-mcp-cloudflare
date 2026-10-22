@@ -118,12 +118,18 @@ async function main(): Promise<void> {
     const target = join(FIXTURES_DIR, spec.family, `${spec.name}.json`);
     process.stdout.write(`capturing ${spec.family}/${spec.name} ... `);
     const startedAt = Date.now();
+    // Trips the SCRIPT made for this spec — the origin's `motivo` counts the attempts
+    // of ONE trip (a timeout is "1 tentativa"), so the log line carries both.
+    let idas: number | undefined;
     try {
       const raw = await capturarComRetentativa(() => spec.capture(helpers), {
         tentativas: CAPTURE_RETRIES,
         dependencia: ehDependencia,
         aoRepetir: (tentativa, falha) =>
           console.warn(`  retry ${tentativa}/${CAPTURE_RETRIES} for '${spec.name}' [${falha.veredito}]: ${falha.motivo}`),
+        aoDesistir: (n) => {
+          idas = n;
+        },
       });
       helpers.ctx.set(spec.name, raw);
       const normalized = normalizeFixture(raw, spec.keepItems ?? DEFAULT_KEEP_ITEMS);
@@ -131,7 +137,7 @@ async function main(): Promise<void> {
       writeFileSync(target, JSON.stringify(normalized, null, 2) + "\n", "utf8");
       console.log(linhaDeResultado(relatorio.registrarCaptura(spec.name, Date.now() - startedAt)));
     } catch (err) {
-      console.log(linhaDeResultado(relatorio.registrarFalha(spec.name, err, Date.now() - startedAt)));
+      console.log(linhaDeResultado(relatorio.registrarFalha(spec.name, err, Date.now() - startedAt, { idas })));
     }
     if (relatorio.deveParar) break;
     await sleep(PAUSE_MS);

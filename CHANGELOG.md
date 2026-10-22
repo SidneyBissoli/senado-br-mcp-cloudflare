@@ -6,6 +6,21 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Fixed
+
+- **Contrato de `/legislacao/{codigo}` aceita norma sem indexação e fixa a amostra** (só o tier de
+  contrato e o manifesto; sem versão). A primeira rodada do `contract-tests` depois da 3.21.2 (dispatch
+  de 22/10/2026, 18:38 UTC) reprovou no tier "live": a lista `/legislacao/lista?tipo=LEI&ano=2024`
+  veio em OUTRA ordem para o runner (primeiro item Lei 15.080, a LDO; de um laptop minutos depois,
+  Lei 15.081), e o detalhe da 15.080 chegou naquele instante SEM o bloco `indexacao` — minutos depois,
+  de outro endereço, veio com ele. O parser já tolera a ausência (`indexacao: null`, como a descrição
+  da tool promete); o teste é que exigia a frase. Agora o teste trata `indexacao` como opcional (se
+  presente, lista ou texto; o parser devolve texto ou `null`) e o manifesto fixa a amostra pela Lei
+  15.081/2024 (a da fixture commitada) em vez de `docs[0]`, com recuo para o primeiro item só se a lei
+  sumir da lista. Provado: recaptura ao vivo resolve o id 40035193 (15.081) e o tier passa. Junto,
+  `@sbissoli/mcp-live-source` ^0.1.1: a linha do log do refresh passa a dizer quantas idas o script
+  fez (`(36008ms, 3 idas)`), porque o motivo da origem conta as tentativas de UMA ida.
+
 ## [3.21.2] - 2026-10-22
 
 ### Fixed

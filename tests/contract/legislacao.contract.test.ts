@@ -83,10 +83,13 @@ describe("contract: /legislacao/{codigo} detail (legacy wrapper, nested identifi
       expect(doc.identificacao, `key "${k}" missing from identificacao`).toHaveProperty(k);
     }
     expect(doc.identificacao.dataassinatura).toMatch(BR_DATE);
-    // indexacao.frase carries the thematic terms (array or single string)
-    expect(doc).toHaveProperty("indexacao");
+    // indexacao.frase carries the thematic terms (array or single string) — WHEN the
+    // norma has an indexação. Measured 22/10/2026 (nightly run, egress 68.154.116.68):
+    // Lei 15.080/2024 arrived without the block at 18:38 UTC and with it minutes later
+    // from another address. Absence is a state of the source, not a shape change; the
+    // parser already answers `indexacao: null` and the tool description promises it.
     const frase = doc.indexacao?.frase;
-    expect(Array.isArray(frase) || typeof frase === "string").toBe(true);
+    if (frase != null) expect(Array.isArray(frase) || typeof frase === "string").toBe(true);
     // optional: descricao/normaNome/apelido inside identificacao — if present, strings
     if (doc.identificacao.descricao != null) expect(typeof doc.identificacao.descricao).toBe("string");
     if (doc.identificacao.normaNome != null) expect(typeof doc.identificacao.normaNome).toBe("string");
@@ -103,10 +106,13 @@ describe("contract: /legislacao/{codigo} detail (legacy wrapper, nested identifi
     expect(parsed.data).toMatch(ISO_DATE);
     expect(typeof parsed.ementa).toBe("string");
     expect((parsed.ementa as string).length).toBeGreaterThan(0);
-    // indexacao.frase[] must join into a non-empty whitespace-normalized string
-    expect(typeof parsed.indexacao).toBe("string");
-    expect((parsed.indexacao as string).length).toBeGreaterThan(0);
-    expect(parsed.indexacao).not.toMatch(/\s{2,}/);
+    // indexacao.frase[] joins into a non-empty whitespace-normalized string, or null
+    // when the norma carries no indexação (see the raw-fixture test above)
+    expect(parsed.indexacao === null || typeof parsed.indexacao === "string").toBe(true);
+    if (parsed.indexacao !== null) {
+      expect((parsed.indexacao as string).length).toBeGreaterThan(0);
+      expect(parsed.indexacao).not.toMatch(/\s{2,}/);
+    }
     expect(typeof parsed.url).toBe("string");
     expect((parsed.url as string).length).toBeGreaterThan(0);
     // optional: norma/apelido — string or null

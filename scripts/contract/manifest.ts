@@ -339,9 +339,15 @@ export const FIXTURES: FixtureSpec[] = [
     family: "legado",
     name: "legislacao-detalhe",
     capture: async (h) => {
-      const docs = asArray(dig(fromCtx(h, "legislacao-lista"), "ListaDocumento", "documentos", "documento"));
-      const d0 = docs[0] as Record<string, unknown> | undefined;
-      const cod = d0?.id ?? d0?.Codigo ?? d0?.codigo;
+      const docs = asArray(dig(fromCtx(h, "legislacao-lista"), "ListaDocumento", "documentos", "documento")) as Array<
+        Record<string, unknown>
+      >;
+      // The list comes back in a different order per call (measured 22/10/2026: the
+      // runner got Lei 15.080 first, a laptop minutes later got 15.081), so `docs[0]`
+      // changed the sample every night. Pin the sample by law number — the fixture is
+      // Lei 15.081/2024 — and fall back to the first entry only if that law is gone.
+      const alvo = docs.find((d) => String(d.numero ?? d.Numero ?? "") === "15081") ?? docs[0];
+      const cod = alvo?.id ?? alvo?.Codigo ?? alvo?.codigo;
       if (!cod) throw new Error("could not resolve a norma code from legislacao-lista");
       return h.legis(`/legislacao/${cod}`);
     },
