@@ -55,28 +55,23 @@ jobs:
       # Refresh every fixture from the live upstream (working tree only,
       # nothing is committed), then re-run the same assertions.
       #
-      # Exit 3 is the refresher's circuit breaker: the upstream never
-      # answered, so drift was NOT measured tonight. That is a different fact
-      # from drift and it is labelled as such here, because the portfolio
-      # panel reads this job's conclusion and used to report an outage as
-      # "a fonte mudou".
+      # OUTAGE IS NOT DRIFT, and the script says which is which: the reporter
+      # (`@sbissoli/mcp-live-source`, since 3.21.2) writes the step summary and
+      # the annotations the portfolio panel reads. Exit codes:
+      #   0 — everything captured, OR the only failures are the source being
+      #       down (5xx/timeout/network/429) with at least one capture answered:
+      #       `::warning title=Fonte indisponível::<specs>`; those specs keep
+      #       the committed fixture and the summary says drift was NOT measured
+      #       there. Green on purpose — red would fire the auto-retry on a 502
+      #       that persists (22/10/2026: three red runs for one endpoint).
+      #   3 — nothing answered at all (breaker): `::error title=Fonte
+      #       inalcançável::…`. Re-running draws another egress address.
+      #   1 — a refused request (404/4xx), a body that is not the expected one
+      #       after the retries, or a defect of ours: `::error` labelled
+      #       `Deriva de formato` / `Ambíguo (deriva ou página de erro)` /
+      #       `Falha alheia à origem`.
       - name: Refresh fixtures from live upstream
-        run: |
-          set +e
-          npm run contract:refresh
-          code=$?
-          set -e
-          if [ "$code" -eq 3 ]; then
-            {
-              echo "### Upstream do Senado inalcançável"
-              echo
-              echo "Nenhuma captura respondeu; o disjuntor parou a rodada."
-              echo "**A deriva de formato NÃO foi medida nesta noite** — isto não"
-              echo "é deriva. Re-rodar o job cai em outro IP de saída."
-            } >> "$GITHUB_STEP_SUMMARY"
-            echo "::error title=Upstream inalcançável::deriva não medida; não é deriva de formato"
-          fi
-          exit $code
+        run: npm run contract:refresh
 
       - name: Contract tests (live-refreshed fixtures)
         run: npm run test:contract

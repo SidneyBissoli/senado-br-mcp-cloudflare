@@ -16,7 +16,7 @@
  * semântica deste servidor, medida contra a fonte). O pacote CLASSIFICA; este
  * módulo DECIDE. A classe `UpstreamError` local, as mensagens e o `transport`
  * continuam os mesmos: `errorFrom`, `ehReuniaoInexistente`, `classifyError` e o
- * disjuntor do contrato noturno (`scripts/contract/outage.ts`) leem todos eles.
+ * repórter do contrato noturno (`@sbissoli/mcp-live-source`, pelo `cause`) leem todos eles.
  *
  * POLÍTICA (`UPSTREAM_POLICY`) — medida em 27/09/2026 com `curl` e o User-Agent
  * do portfólio: a API legislativa responde em 0,3–1 s (`/senador/lista/atual`
@@ -105,8 +105,17 @@ export class UpstreamError extends Error {
      * é `nao_encontrado`).
      */
     classe?: ErrorClass,
+    /**
+     * `cause`: o erro do PACOTE (`@sbissoli/mcp-upstream`) que este erro local
+     * traduz. É por ele que o repórter do contrato noturno
+     * (`@sbissoli/mcp-live-source`, via `entregaDaOrigem`) decide se a origem
+     * entregou algo medível — pelo `kind`, nunca pela frase. Sem `cause`, toda
+     * falha traduzida seria "alheia à origem" (medido em 22/10/2026: um 502 nas
+     * três tentativas caía em "other" e zerava o disjuntor).
+     */
+    opcoes: { cause?: unknown } = {},
   ) {
-    super(message);
+    super(message, opcoes.cause === undefined ? undefined : { cause: opcoes.cause });
     this.name = "UpstreamError";
     this.classe = classe ?? (status === 404 ? "nao_encontrado" : "fonte");
   }
@@ -485,6 +494,7 @@ export async function upstreamFetch(
       true,
       false,
       "nao_encontrado",
+      { cause: corpoInesperado(url.toString(), response.status, text) },
     );
   }
 
@@ -497,6 +507,9 @@ export async function upstreamFetch(
       `[${path}] Resposta upstream não é JSON válido`,
       502,
       false,
+      false,
+      undefined,
+      { cause: corpoInesperado(url.toString(), response.status, text.slice(0, 2048)) },
     );
   }
 }
@@ -508,6 +521,9 @@ export async function upstreamFetch(
  * `transport` alimenta o disjuntor do contrato noturno.
  */
 export function traduzirErro(err: PkgUpstreamError, path: string): UpstreamError {
+  // O erro do pacote vai em `cause`: é por ele (pelo `kind`) que o repórter do
+  // contrato noturno sabe se a origem entregou algo medível (3.21.2).
+  const cause = { cause: err };
   switch (err.kind) {
     case "timeout":
     case "aborted":
@@ -516,25 +532,44 @@ export function traduzirErro(err: PkgUpstreamError, path: string): UpstreamError
         504,
         true,
         true,
+        undefined,
+        cause,
       );
     case "network": {
-      const cause = err.cause;
-      const detalhe = cause instanceof Error ? cause.message : typeof cause === "string" ? cause : "";
-      return new UpstreamError(`[${path}] Erro de rede: ${detalhe || "desconhecido"}`, 502, true, true);
+      const raiz = err.cause;
+      const detalhe = raiz instanceof Error ? raiz.message : typeof raiz === "string" ? raiz : "";
+      return new UpstreamError(`[${path}] Erro de rede: ${detalhe || "desconhecido"}`, 502, true, true, undefined, cause);
     }
     case "rate_limited":
-      return new UpstreamError(`[${path}] Upstream retornou 429`, 429, true);
+      return new UpstreamError(`[${path}] Upstream retornou 429`, 429, true, false, undefined, cause);
     case "http_5xx": {
       const status = err.status ?? 502;
       return status === 503
-        ? new UpstreamError(`[${path}] Upstream retornou 503`, 503, true)
-        : new UpstreamError(`[${path}] Upstream retornou HTTP ${status}`, status, true);
+        ? new UpstreamError(`[${path}] Upstream retornou 503`, 503, true, false, undefined, cause)
+        : new UpstreamError(`[${path}] Upstream retornou HTTP ${status}`, status, true, false, undefined, cause);
     }
     case "http_4xx":
     case "not_found":
-      return new UpstreamError(`[${path}] Upstream retornou HTTP ${err.status ?? 404}`, err.status ?? 404, false);
+      return new UpstreamError(
+        `[${path}] Upstream retornou HTTP ${err.status ?? 404}`,
+        err.status ?? 404,
+        false,
+        false,
+        undefined,
+        cause,
+      );
     case "malformed_body":
       // Não acontece no modo `response` (o corpo é lido por `upstreamFetch`).
-      return new UpstreamError(`[${path}] Resposta upstream não é JSON válido`, 502, false);
+      return new UpstreamError(`[${path}] Resposta upstream não é JSON válido`, 502, false, false, undefined, cause);
   }
+}
+
+/**
+ * O corpo chegou, mas não é o esperado (vazio, ou não é JSON). Para o repórter do
+ * contrato noturno isso é `malformed_body` da origem — veredito "ambíguo": ou o
+ * formato mudou, ou a origem serviu a página de erro num pedido bom; repetir decide.
+ * Lido AQUI, depois da ida, porque o modo `response` do pacote não lê o corpo.
+ */
+function corpoInesperado(url: string, status: number, body: string): PkgUpstreamError {
+  return new PkgUpstreamError({ url, kind: "malformed_body", status, retryable: false, transport: false, attempts: 1, body });
 }

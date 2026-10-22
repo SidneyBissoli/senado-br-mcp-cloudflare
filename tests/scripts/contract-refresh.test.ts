@@ -1,100 +1,150 @@
 /**
- * Unit tests for the nightly fixture refresher's outage handling
- * (`scripts/contract/refresh-fixtures.ts`). No network: the classifier and
- * the breaker are pure functions, exported precisely so they can be tested
- * directly (repo convention).
+ * Unit tests for the nightly fixture refresher's outage handling. No network.
  *
- * What is pinned here is the distinction the nightly tier lives or dies by.
- * On 02, 04, 08 and 11/09/2026 every one of the 66 specs timed out, the job
- * walked the manifest until the 30 min ceiling cut it, and the portfolio
- * panel reported "a fonte mudou" — a false alarm on the detector whose only
- * purpose is to catch real upstream drift.
+ * Since 3.21.2 the verdict, the breaker, the retry and the exit policy live in
+ * the portfolio's `@sbissoli/mcp-live-source`; what is pinned HERE is the seam
+ * this repo owns: the local `UpstreamError` that `traduzirErro` builds must
+ * carry the package error in `cause`, because that is the only way the
+ * reporter can read the origin's `kind`. Without it every failure is "alheio"
+ * (ours), which is exactly the false alarm of 22/10/2026 — one endpoint in 502
+ * for three attempts, three red runs, "a fonte mudou" on the panel.
+ *
+ * `refresh-fixtures.ts` itself reads `process.argv` and writes files, so it
+ * only type-checks under `scripts/tsconfig.json`; importing it here would drag
+ * it into the root (Workers-typed) program. The seam is tested through the
+ * pieces it is made of.
  */
 
 import { describe, it, expect } from "vitest";
-import { UpstreamError } from "../../src/throttle/upstream.js";
-import { MissingDependencyError } from "../../scripts/contract/manifest.js";
+import { UpstreamError as PkgUpstreamError } from "@sbissoli/mcp-upstream";
 import {
-  classifyFailure,
-  breakerTripped,
-  DEFAULT_TRANSPORT_STREAK_LIMIT,
-  EXIT_UPSTREAM_UNREACHABLE,
-} from "../../scripts/contract/outage.js";
+  Relatorio,
+  SAIDA_FALHA,
+  SAIDA_FONTE_INALCANCAVEL,
+  SAIDA_OK,
+  classificarFalha,
+} from "@sbissoli/mcp-live-source";
+import { UpstreamError, traduzirErro } from "../../src/throttle/upstream.js";
+import { MissingDependencyError } from "../../scripts/contract/manifest.js";
 
-describe("classifyFailure", () => {
-  it("reads an aborted request as transport", () => {
-    const err = new UpstreamError("[/x] Timeout na requisição upstream (10s)", 504, true, true);
-    expect(classifyFailure(err)).toBe("transport");
+const ehDependencia = (err: unknown) => err instanceof MissingDependencyError;
+
+function doPacote(kind: PkgUpstreamError["kind"], status?: number, attempts = 3): PkgUpstreamError {
+  return new PkgUpstreamError({
+    url: "https://legis.senado.leg.br/dadosabertos/x.json",
+    kind,
+    status,
+    retryable: false,
+    transport: kind === "timeout" || kind === "network",
+    attempts,
+  });
+}
+
+describe("traduzirErro carries the package error in `cause`", () => {
+  it("every kind: the local error keeps its message AND the origin's verdict is readable", () => {
+    const casos: Array<[PkgUpstreamError["kind"], number | undefined, string]> = [
+      ["timeout", undefined, "indisponivel"],
+      ["network", undefined, "indisponivel"],
+      ["rate_limited", 429, "indisponivel"],
+      ["http_5xx", 502, "indisponivel"],
+      ["http_5xx", 503, "indisponivel"],
+      ["http_4xx", 406, "respondeu"],
+      ["not_found", 404, "respondeu"],
+      ["malformed_body", 200, "ambiguo"],
+      ["aborted", undefined, "alheio"],
+    ];
+    for (const [kind, status, veredito] of casos) {
+      const pacote = doPacote(kind, status);
+      const local = traduzirErro(pacote, "/x");
+      expect(local, kind).toBeInstanceOf(UpstreamError);
+      expect(local.cause, kind).toBe(pacote);
+      expect(classificarFalha(local).veredito, kind).toBe(veredito);
+    }
   });
 
-  it("reads a network error as transport", () => {
-    const err = new UpstreamError("[/x] Erro de rede: ECONNREFUSED", 502, true, true);
-    expect(classifyFailure(err)).toBe("transport");
+  it("the 22/10/2026 case: HTTP 502 after three attempts is 'indisponivel', not ours — message unchanged", () => {
+    const local = traduzirErro(doPacote("http_5xx", 502, 3), "/taquigrafia/videos");
+    expect(local.message).toBe("[/taquigrafia/videos] Upstream retornou HTTP 502");
+    expect(local.transport).toBe(false); // unchanged: the flag still means "nothing arrived"
+    const falha = classificarFalha(local);
+    expect(falha.veredito).toBe("indisponivel");
+    expect(falha.status).toBe(502);
+    expect(falha.motivo).toContain("3 tentativas");
   });
 
-  it("does NOT read an HTTP status as transport", () => {
-    const err = new UpstreamError("[/x] Upstream retornou HTTP 404", 404, false);
-    expect(classifyFailure(err)).toBe("other");
+  it("a local error built without `cause` (our own guards) is 'alheio'", () => {
+    const err = new UpstreamError("[/x] Resposta upstream excede o limite de 5 MB", 413, false);
+    expect(err.cause).toBeUndefined();
+    expect(classificarFalha(err).veredito).toBe("alheio");
   });
 
-  it("does NOT read a non-JSON body as transport, even though its status is 502", () => {
-    // This is the case status alone cannot separate: a body arrived and
-    // failed to parse, which is shape-shaped and belongs to the contract
-    // tier, yet it carries the same 502 as a real network failure.
-    const err = new UpstreamError("[/x] Resposta upstream não é JSON válido", 502, false);
-    expect(classifyFailure(err)).toBe("other");
-  });
-
-  it("does NOT read an empty body as transport", () => {
-    const err = new UpstreamError("[/x] Resposta upstream vazia", 502, true);
-    expect(classifyFailure(err)).toBe("other");
-  });
-
-  it("reads a missing dependency as its own kind", () => {
-    expect(classifyFailure(new MissingDependencyError("senador-lista-atual"))).toBe("dependency");
-  });
-
-  it("reads an unknown error as other", () => {
-    expect(classifyFailure(new Error("boom"))).toBe("other");
-    expect(classifyFailure("boom")).toBe("other");
-  });
-});
-
-describe("breakerTripped", () => {
-  it("stays open until the streak reaches the limit", () => {
-    expect(breakerTripped(0, 4, 5)).toBe(false);
-    expect(breakerTripped(0, 5, 5)).toBe(true);
-    expect(breakerTripped(0, 66, 5)).toBe(true);
-  });
-
-  it("never trips once something has been captured", () => {
-    // The whole point of the `captured === 0` condition: if the Senado
-    // answered even once, it is reachable, and a later run of failures is
-    // about those endpoints, not about the connection.
-    expect(breakerTripped(1, 100, 5)).toBe(false);
-  });
-
-  it("defaults to the documented streak limit", () => {
-    expect(DEFAULT_TRANSPORT_STREAK_LIMIT).toBe(5);
-    expect(breakerTripped(0, DEFAULT_TRANSPORT_STREAK_LIMIT)).toBe(true);
-    expect(breakerTripped(0, DEFAULT_TRANSPORT_STREAK_LIMIT - 1)).toBe(false);
-  });
-});
-
-describe("MissingDependencyError", () => {
-  it("names the capture it was waiting on", () => {
+  it("a missing dependency is its own verdict, through the predicate this repo passes", () => {
     const err = new MissingDependencyError("senador-lista-atual");
     expect(err.dependsOn).toBe("senador-lista-atual");
-    expect(err.name).toBe("MissingDependencyError");
-    expect(err).toBeInstanceOf(Error);
+    expect(classificarFalha(err).veredito).toBe("alheio");
+    expect(classificarFalha(err, { dependencia: ehDependencia }).veredito).toBe("dependencia");
   });
 });
 
-describe("exit code", () => {
-  it("keeps the unreachable code distinct from the generic failure", () => {
-    // The workflow branches on this: 3 means "drift was not measured",
-    // 1 means "captures failed for reasons that are not the connection".
-    expect(EXIT_UPSTREAM_UNREACHABLE).toBe(3);
-    expect(EXIT_UPSTREAM_UNREACHABLE).not.toBe(1);
+describe("the nightly policy, driven by this repo's errors", () => {
+  function noite(falhas: Array<[string, unknown | null]>, limite?: number) {
+    const r = new Relatorio({ dependencia: ehDependencia, limiteDoDisjuntor: limite });
+    for (const [nome, err] of falhas) {
+      if (err === null) r.registrarCaptura(nome, 1);
+      else r.registrarFalha(nome, err, 1);
+      if (r.deveParar) break;
+    }
+    return r;
+  }
+
+  it("one endpoint in 502, the rest ok → exit 0 with the 'Fonte indisponível' warning naming it", () => {
+    const r = noite([
+      ["senador-lista-atual", null],
+      ["taquigrafia-videos", traduzirErro(doPacote("http_5xx", 502), "/taquigrafia/videos")],
+      ["ceaps", null],
+    ]);
+    expect(r.codigoDeSaida()).toBe(SAIDA_OK);
+    expect(r.anotacoes()).toEqual(["::warning title=Fonte indisponível::taquigrafia-videos"]);
+  });
+
+  it("nothing answers → the breaker trips on the 5th and exits 3 (5xx now COUNTS; it used to clear the streak)", () => {
+    const r = noite(
+      Array.from({ length: 20 }, (_, i) => [`spec-${i}`, traduzirErro(doPacote("http_5xx", 502), "/x")]),
+    );
+    expect(r.resultados).toHaveLength(5);
+    expect(r.codigoDeSaida()).toBe(SAIDA_FONTE_INALCANCAVEL);
+    expect(r.anotacoes()[0]).toContain("::error title=Fonte inalcançável::");
+  });
+
+  it("the env override of the streak limit is honoured", () => {
+    const r = noite(
+      Array.from({ length: 20 }, (_, i) => [`spec-${i}`, traduzirErro(doPacote("timeout"), "/x")]),
+      2,
+    );
+    expect(r.resultados).toHaveLength(2);
+    expect(r.codigoDeSaida()).toBe(SAIDA_FONTE_INALCANCAVEL);
+  });
+
+  it("a refused request (404) or a non-JSON body that persisted is red and labelled", () => {
+    const r = noite([
+      ["a", null],
+      ["rota-velha", traduzirErro(doPacote("not_found", 404), "/rota")],
+      ["html", traduzirErro(doPacote("malformed_body", 200), "/html")],
+    ]);
+    expect(r.codigoDeSaida()).toBe(SAIDA_FALHA);
+    expect(r.anotacoes()).toEqual([
+      "::error title=Deriva de formato::rota-velha",
+      "::error title=Ambíguo (deriva ou página de erro)::html",
+    ]);
+  });
+
+  it("a spec that depends on an unavailable capture is 'not measured', not red", () => {
+    const r = noite([
+      ["lista", null],
+      ["processo-lista", traduzirErro(doPacote("timeout"), "/processo")],
+      ["processo-detalhe", new MissingDependencyError("processo-lista")],
+    ]);
+    expect(r.codigoDeSaida()).toBe(SAIDA_OK);
+    expect(r.anotacoes()).toEqual(["::warning title=Fonte indisponível::processo-lista, processo-detalhe"]);
   });
 });
