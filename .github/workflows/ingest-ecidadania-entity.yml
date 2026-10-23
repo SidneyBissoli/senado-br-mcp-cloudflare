@@ -84,6 +84,8 @@ jobs:
         run: bash scripts/apply-d1.sh scripts/ingest-ecidadania/out.sql
 
       # ── eventos (listing principalaudiencia?p=N + detalhe/AJAX de uma fatia rotativa por cursor) ──
+      # Desde 23/10/2026 a fatia é gravada em lotes (out-eventos-lote-NNN.sql: comentários + eventos +
+      # cursor) DURANTE o run, pelo apply-d1.sh; aqui só o corpus da listagem + run row (out-eventos.sql).
       - name: Generate eventos corpus load SQL
         if: inputs.entity == 'eventos'
         env:
@@ -97,8 +99,9 @@ jobs:
         if: ${{ always() && inputs.entity == 'eventos' }}
         run: bash scripts/apply-d1.sh scripts/ingest-ecidadania/out-eventos.sql
 
-      # Nível-comentário (fragmento AJAX; tabela ecidadania_comentarios). Emitido junto com o corpus de
-      # eventos (out-eventos-comentarios-NNN.sql); pode não existir quando nada mudou — tolerar ausência.
+      # Nível-comentário (fragmento AJAX; tabela ecidadania_comentarios). Desde 23/10/2026 vai nos lotes
+      # do run; este passo fica para um out-eventos-comentarios-NNN.sql avulso (hoje nunca emitido) —
+      # tolerar ausência.
       - name: Apply eventos comentários to D1 (batched files, in order)
         if: ${{ always() && inputs.entity == 'eventos' }}
         run: |
@@ -117,7 +120,9 @@ jobs:
           if [ -n "$files" ]; then bash scripts/apply-d1.sh $files; else echo "nenhum lote a aplicar"; fi
 
       # ── ideias-detalhe (backfill resumível por cursor de ~113,7k; reabre dataPublicacao/autorUf/…) ──
-      # Tem cron próprio e roda VÁRIAS vezes/dia (ver stub) para queimar o backfill mais rápido.
+      # Tem cron próprio (ver stub). Desde 23/10/2026 o job grava os lotes (out-ideias-detalhe-lote-NNN.sql,
+      # cursor na cauda de cada um) DURANTE o run, pelo apply-d1.sh; o passo abaixo só aplica a linha de
+      # run de falha (out-ideias-detalhe-NNN.sql, numérico) — o glob [0-9]* deixa os lotes de fora.
       - name: Generate ideias detail backfill SQL
         if: inputs.entity == 'ideias-detalhe'
         env:
@@ -125,8 +130,8 @@ jobs:
           INGEST_IDEIAS_DETAIL_DELAY_MS: "150"
         run: npm run ingest:ecidadania:ideias-detalhe
 
-      - name: Apply ideias detail backfill to D1 (batched files, in order)
+      - name: Apply ideias detail run row to D1 (the batches were applied during the run)
         if: ${{ always() && inputs.entity == 'ideias-detalhe' }}
         run: |
-          files=$(ls scripts/ingest-ecidadania/out-ideias-detalhe-*.sql 2>/dev/null | sort || true)
-          if [ -n "$files" ]; then bash scripts/apply-d1.sh $files; else echo "nenhum lote a aplicar"; fi
+          files=$(ls scripts/ingest-ecidadania/out-ideias-detalhe-[0-9]*.sql 2>/dev/null | sort || true)
+          if [ -n "$files" ]; then bash scripts/apply-d1.sh $files; else echo "nenhum arquivo a aplicar (lotes já aplicados durante o run)"; fi

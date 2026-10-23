@@ -12,31 +12,42 @@
  *   3. Para cada ideia do chunk: fetch do detalhe (UF-only, SEM nome do autor), reconstrói o
  *      IdeiaResumo PRESERVANDO os campos de listagem (titulo/apoios/status) do payload atual +
  *      detalhe fresco. Diffa vs. o content_hash → upsert + history-on-change só p/ quem mudou.
- *   4. Emite lotes SQL (out-ideias-detalhe-NNN.sql) e, no fim, o upsert do cursor.
+ *   4. Grava em LOTES de `LOTE` ideias DURANTE o run (desde 23/10/2026, extensão do PR #143 das
+ *      consultas): cada lote sai em `out-ideias-detalhe-lote-NNN.sql`, aplicado na hora pelo
+ *      `apply-d1.sh`, com o upsert do cursor na cauda — uma falha no meio não perde o que já foi lido,
+ *      e o run seguinte retoma do último lote gravado. O vigia mede CADA lote antes de gravá-lo
+ *      (ver lotes.ts). Uma linha `[ideias-detalhe][andamento]` por lote, visível ao vivo na página do job.
  *
  * Falha de fetch de detalhe → preserva o detalhe atual (não zera), loga a lacuna, e o cursor AVANÇA
  * mesmo assim (não trava a varredura). Sem run row 'ok' (não é crawl de corpus; não mexe no baseline).
+ * O passo final do workflow só aplica `out-ideias-detalhe-[0-9]*.sql` — a linha de run de falha.
  */
 
 import { writeFileSync, readdirSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { sleep } from "./http.js";
-import { planEntitySync, type SyncRecord } from "../../src/scraper/pipeline.js";
-import { vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
+import type { SyncRecord } from "../../src/scraper/pipeline.js";
+import { descreverVigia } from "../../src/scraper/mesclar.js";
 import { registroDetalheIdeia, CAMPOS_DETALHE_IDEIA, type DetalheIdeiaLido } from "./ideias-registro.js";
 import { criarDisjuntor } from "./breaker.js";
-import { readCurrentRange, readDetalheCursor, type CurrentPayloadRow } from "./d1.js";
-import { generateDetalheLoadSqlBatches, cursorUpsertStmt, generateRunOnlySql } from "./sql.js";
+import { readCurrentRange, readDetalheCursor, gravarEAplicarLote, type CurrentPayloadRow } from "./d1.js";
+import { cursorUpsertStmt, generateRunOnlySql } from "./sql.js";
 import { fetchIdeiaDetalhe, ehRecursoRemovido } from "./detalhe.js";
 import { detalheParaCorpus, IdeiaDetalheForaDoMoldeError } from "../../src/scraper/ideia-detalhe.js";
+import { fecharLote, LoteReprovadoError, LOTE_PADRAO, type Leitura } from "./lotes.js";
+import { descreverAndamento } from "./andamento.js";
 
 const ENTIDADE = "ideias";
 const CHUNK = Number(process.env.INGEST_IDEIAS_DETALHE_CHUNK) || 8000;
 const DETAIL_DELAY_MS = Number(process.env.INGEST_IDEIAS_DETAIL_DELAY_MS) || 250;
 const BATCH_SIZE = Number(process.env.INGEST_IDEIAS_BATCH_SIZE) || 10000;
+/** Ideias por lote gravado durante o run. */
+const LOTE = Number(process.env.INGEST_IDEIAS_DETALHE_LOTE) || LOTE_PADRAO;
 const OUT_DIR = dirname(fileURLToPath(import.meta.url));
 const OUT_PREFIX = "out-ideias-detalhe-";
+/** Lotes aplicados durante o run; o prefixo começa por OUT_PREFIX, então a limpeza cobre os dois. */
+const LOTE_PREFIX = `${OUT_PREFIX}lote-`;
 
 function cleanOldOutputs(): void {
   for (const f of readdirSync(OUT_DIR)) {
@@ -76,6 +87,18 @@ function rebuild(row: CurrentPayloadRow, detail: DetalheIdeiaLido | null, removi
   return registroDetalheIdeia(row.payload_json, row.id, detail, removida);
 }
 
+/** Um lote em formação: linhas reconstruídas, leituras cruas (vigia), hashes correntes e o último id. */
+interface LoteEmFormacao {
+  records: SyncRecord[];
+  leituras: Leitura[];
+  hashes: Map<number, string>;
+  ultimoId: number;
+}
+
+function novoLote(): LoteEmFormacao {
+  return { records: [], leituras: [], hashes: new Map(), ultimoId: 0 };
+}
+
 async function main(): Promise<void> {
   const now = new Date().toISOString();
   cleanOldOutputs();
@@ -92,74 +115,100 @@ async function main(): Promise<void> {
     fullPasses += 1;
     rows = readCurrentRange(ENTIDADE, 0, CHUNK);
   }
-  console.log(`[ideias-detalhe] cursor=${cursor.lastEntityId} fullPasses=${fullPasses} chunk=${rows.length}`);
+  console.log(`[ideias-detalhe] cursor=${cursor.lastEntityId} fullPasses=${fullPasses} chunk=${rows.length}, gravado em lotes de ${LOTE}`);
 
   const disjuntor = criarDisjuntor();
-  const records: SyncRecord[] = [];
-  // Leitura crua × guardado, por id lido com sucesso — a entrada do vigia (o mesclado nunca cai).
-  const leituras: Array<{ lido: Record<string, unknown>; guardado: Record<string, unknown> }> = [];
   let fetched = 0;
   let gaps = 0;
   let removidas = 0;
   let naoReconhecidas = 0;
-  let lastId = afterId;
-  for (const row of rows) {
-    let detail: DetalheIdeiaLido | null = null;
-    let removida = false;
-    try {
-      detail = detalheParaCorpus(await fetchIdeiaDetalhe(row.id));
-      fetched++;
-      leituras.push({ lido: { ...detail }, guardado: JSON.parse(row.payload_json) as Record<string, unknown> });
-      disjuntor.sucesso();
-    } catch (e) {
-      if (e instanceof IdeiaDetalheForaDoMoldeError) {
-        // Página que o leitor não reconhece: nada desta leitura é gravado (o guardado fica), e ela entra
-        // no vigia como leitura vazia — muitas assim reprovam o run.
-        naoReconhecidas++;
-        leituras.push({ lido: Object.fromEntries(CAMPOS_DETALHE_IDEIA.map((c) => [c, null])), guardado: JSON.parse(row.payload_json) as Record<string, unknown> });
-        console.warn(`[ideias-detalhe][fora-do-molde] id=${row.id}: ${e.message}`);
-        disjuntor.sucesso();
-      } else if (ehRecursoRemovido(e)) {
-        // Resposta do portal (410), não falha de transporte: grava `removida`, preserva o resto.
-        removida = true;
-        removidas++;
-        disjuntor.sucesso();
-      } else {
-        gaps++;
-        console.error(`[ideias-detalhe][gap] id=${row.id}: ${e instanceof Error ? e.message : String(e)}`);
-        disjuntor.falha(e, `id=${row.id}`);
-      }
-    }
-    await sleep(DETAIL_DELAY_MS);
-    records.push(rebuild(row, detail, removida));
-    lastId = row.id;
-  }
+  let processadas = 0;
+  let gravadas = 0;
+  // Cursor já gravado no D1 (cauda do último lote aplicado); fica em `afterId` até o 1º lote.
+  let cursorGravado = afterId;
+  const seq = { n: 0 };
+  const inicio = Date.now();
+  let lote = novoLote();
 
-  // Vigia: a mesclagem impede que a leitura vazia apague, mas também a esconderia. Queda brusca da
-  // taxa de leitura de um campo = o leitor deixou de reconhecer a página → nada gravado, cursor parado
-  // (o mesmo chunk volta no próximo run, depois do conserto).
-  const vigia = vigiarCampos(leituras, CAMPOS_DETALHE_IDEIA);
-  console.log(`[ideias-detalhe][vigia] ${descreverVigia(vigia)}`);
-  if (!vigia.ok) {
-    const err = `taxa de leitura despencou: ${descreverVigia({ ...vigia, campos: vigia.quedas })}`;
-    console.error(`[ideias-detalhe][gate] verdict=anomalo — ${err} — nada será gravado, cursor parado`);
-    cleanOldOutputs();
-    writeRunOnly(now, "anomalo", rows.length, err);
+  // Gravação em LOTES durante o run (23/10/2026, extensão do PR #143 das consultas): o vigia mede as
+  // leituras do PRÓPRIO lote antes de gravá-lo — a mesclagem impede que a leitura vazia apague, mas
+  // também a esconderia; queda brusca = o leitor deixou de reconhecer a página → este lote não é
+  // gravado, os anteriores ficam e o cursor para no fim do último gravado (o resto volta no próximo
+  // run, depois do conserto). Cada lote leva o cursor na cauda do seu último arquivo.
+  const gravarLote = (): void => {
+    if (lote.records.length === 0) return;
+    const fechado = fecharLote({
+      leituras: lote.leituras,
+      campos: CAMPOS_DETALHE_IDEIA,
+      records: lote.records,
+      hashes: lote.hashes,
+      now: new Date().toISOString(),
+      entidade: ENTIDADE,
+      tailStmt: cursorUpsertStmt(ENTIDADE, lote.ultimoId, fullPasses, now),
+      maxStmtsPerFile: BATCH_SIZE,
+    });
+    console.log(`[ideias-detalhe][vigia] lote ${seq.n + 1}: ${descreverVigia(fechado.vigia)}`);
+    if (!fechado.vigia.ok) throw new LoteReprovadoError(fechado.vigia, seq.n + 1, cursorGravado);
+    gravarEAplicarLote(OUT_DIR, LOTE_PREFIX, fechado.arquivos, seq);
+    gravadas += fechado.alteradas;
+    cursorGravado = lote.ultimoId;
+    lote = novoLote();
+    console.log(
+      `[ideias-detalhe][andamento] ${descreverAndamento({ rotulo: "detalhe lido", feitos: processadas, total: rows.length, inicioMs: inicio, agoraMs: Date.now(), gravados: gravadas })} · cursor ${cursorGravado}`,
+    );
+  };
+
+  try {
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      let detail: DetalheIdeiaLido | null = null;
+      let removida = false;
+      try {
+        detail = detalheParaCorpus(await fetchIdeiaDetalhe(row.id));
+        fetched++;
+        lote.leituras.push({ lido: { ...detail }, guardado: JSON.parse(row.payload_json) as Record<string, unknown> });
+        disjuntor.sucesso();
+      } catch (e) {
+        if (e instanceof IdeiaDetalheForaDoMoldeError) {
+          // Página que o leitor não reconhece: nada desta leitura é gravado (o guardado fica), e ela entra
+          // no vigia como leitura vazia — muitas assim reprovam o lote.
+          naoReconhecidas++;
+          lote.leituras.push({ lido: Object.fromEntries(CAMPOS_DETALHE_IDEIA.map((c) => [c, null])), guardado: JSON.parse(row.payload_json) as Record<string, unknown> });
+          console.warn(`[ideias-detalhe][fora-do-molde] id=${row.id}: ${e.message}`);
+          disjuntor.sucesso();
+        } else if (ehRecursoRemovido(e)) {
+          // Resposta do portal (410), não falha de transporte: grava `removida`, preserva o resto.
+          removida = true;
+          removidas++;
+          disjuntor.sucesso();
+        } else {
+          gaps++;
+          console.error(`[ideias-detalhe][gap] id=${row.id}: ${e instanceof Error ? e.message : String(e)}`);
+          try {
+            disjuntor.falha(e, `id=${row.id}`);
+          } catch (parada) {
+            gravarLote(); // o portal parou: grava o que este lote já leu antes de desistir
+            throw parada;
+          }
+        }
+      }
+      await sleep(DETAIL_DELAY_MS);
+      lote.records.push(rebuild(row, detail, removida));
+      lote.hashes.set(row.id, row.content_hash);
+      lote.ultimoId = row.id;
+      processadas = i + 1;
+      if (lote.records.length >= LOTE || i === rows.length - 1) gravarLote();
+    }
+  } catch (e) {
+    if (!(e instanceof LoteReprovadoError)) throw e;
+    console.error(`[ideias-detalhe][gate] verdict=anomalo — ${e.message}`);
+    writeRunOnly(now, "anomalo", rows.length, e.message);
     process.exit(1);
   }
 
-  // Cursor avança para o último id processado (ou fica em `afterId` se o chunk veio vazio).
-  const nextCursor = lastId;
-  const existingHashes = new Map(rows.map((r) => [r.id, r.content_hash]));
-  const { annotated, rowsChanged } = planEntitySync(records, existingHashes);
-  const tail = cursorUpsertStmt(ENTIDADE, nextCursor, fullPasses, now);
-  const files = generateDetalheLoadSqlBatches(annotated, now, ENTIDADE, tail, BATCH_SIZE);
-  files.forEach((content, i) => {
-    writeFileSync(join(OUT_DIR, `${OUT_PREFIX}${String(i + 1).padStart(3, "0")}.sql`), content);
-  });
   console.log(
-    `[ideias-detalhe] processadas ${rows.length} (detalhe ok=${fetched} removidas=${removidas} foraDoMolde=${naoReconhecidas} gaps=${gaps}), ${rowsChanged} alteradas; ` +
-      `cursor→${nextCursor}; ${files.length} arquivo(s)`,
+    `[ideias-detalhe] processadas ${rows.length} (detalhe ok=${fetched} removidas=${removidas} foraDoMolde=${naoReconhecidas} gaps=${gaps}), ` +
+      `${gravadas} alteradas em ${seq.n} lote(s) já aplicado(s); cursor→${cursorGravado}`,
   );
   process.exit(0);
 }
@@ -168,9 +217,8 @@ main().catch((e) => {
   const err = e instanceof Error ? e.message : String(e);
   console.error(`[ideias-detalhe][fatal] ${err}`);
   try {
-    // Limpa ANTES de escrever: os lotes parciais do chunk interrompido levam o
-    // upsert do cursor na cauda, e aplicá-los faria o cursor avançar sobre itens
-    // que nunca foram buscados.
+    // Os lotes já aplicados ficam no D1 (cursor na cauda de cada um); aqui só a linha de erro, que o
+    // passo final do workflow aplica. Limpa antes para o nome 001 não colidir com nada.
     cleanOldOutputs();
     writeRunOnly(new Date().toISOString(), "erro", 0, `fatal: ${err}`);
   } catch {
