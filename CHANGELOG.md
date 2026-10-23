@@ -6,6 +6,27 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Changed
+
+- **Os jobs de eventos e de detalhe das ideias gravam em lotes e dizem onde estão** (só os jobs
+  off-Worker e o workflow reutilizável; nada em `src/`, sem versão). É a extensão, decidida pelo dono em
+  18/10/2026 e liberada pela prova de 20/10 (PR #143, consultas), aos dois laços que ainda acumulavam o
+  chunk inteiro em memória e só gravavam no fim: uma falha no meio (portal fora, teto de tempo) jogava
+  fora ~90 min de ideias ou ~1 h de eventos. Agora cada lote de 250 itens (`INGEST_IDEIAS_DETALHE_LOTE`,
+  `INGEST_EVENTOS_LOTE`) sai em `out-<job>-lote-NNN.sql` e é aplicado na hora pelo `apply-d1.sh`, com o
+  upsert do cursor na cauda do seu último arquivo — o run seguinte retoma do último lote gravado. A
+  fatia dos eventos passa a ser lida em ordem de id (o cursor de cada lote é o maior id lido até ali,
+  então um run interrompido não pula ninguém), e os comentários do lote vão no mesmo lote, antes dos
+  eventos. **O vigia muda de lógica:** em vez de uma medição sobre o chunk inteiro no fim, mede as
+  leituras de CADA lote antes de gravá-lo (mínimo de 50 guardados por campo, o `N_MINIMO` de
+  `vigiarCampos`); lote reprovado não é gravado, o run para com `anomalo` e os anteriores ficam, com o
+  cursor no fim do último gravado. Uma linha `[<job>][andamento]` por lote (lidos, gravados, ritmo,
+  término previsto em UTC e Brasília, cursor), visível ao vivo na página do job. O passo final do
+  workflow não reaplica os lotes: para o detalhe das ideias passa a aplicar só a linha de run de falha
+  (`out-ideias-detalhe-[0-9]*.sql`); para eventos continua aplicando só `out-eventos.sql` (corpus da
+  listagem + run row + cursor). Módulo puro `scripts/ingest-ecidadania/lotes.ts` (`fecharLote`,
+  `LoteReprovadoError`) com teste `tests/scraper/ingest-lotes-eventos-ideias.test.ts`.
+
 ### Fixed
 
 - **Contrato de `/legislacao/{codigo}` aceita norma sem indexação e fixa a amostra** (só o tier de

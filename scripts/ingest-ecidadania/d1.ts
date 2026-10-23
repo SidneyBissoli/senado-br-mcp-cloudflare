@@ -11,6 +11,7 @@
  */
 
 import { execSync, execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -47,6 +48,23 @@ export function queryD1<T = Record<string, unknown>>(sql: string, attempts = 2):
 export function applyD1File(path: string): void {
   const script = join(dirname(fileURLToPath(import.meta.url)), "..", "apply-d1.sh");
   execFileSync("bash", [script, path], { stdio: "inherit", env: { ...process.env, D1_DATABASE: DB_NAME } });
+}
+
+/**
+ * Grava os arquivos de um lote em `dir` (nome `<prefixo>NNN.sql`, sequência em `seq.n`, contínua entre
+ * lotes) e aplica cada um no D1, na ordem — o último leva a cauda (cursor), então o cursor só avança
+ * depois que os anteriores aplicaram. Os arquivos ficam no disco para inspeção; o passo final do
+ * workflow não os reaplica (os globs dele não casam com o prefixo de lote).
+ */
+export function gravarEAplicarLote(dir: string, prefixo: string, arquivos: string[], seq: { n: number }): string[] {
+  const paths: string[] = [];
+  for (const sql of arquivos) {
+    const path = join(dir, `${prefixo}${String(++seq.n).padStart(3, "0")}.sql`);
+    writeFileSync(path, sql);
+    applyD1File(path);
+    paths.push(path);
+  }
+  return paths;
 }
 
 export interface ExistingRow {
