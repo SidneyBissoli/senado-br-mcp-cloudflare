@@ -207,19 +207,22 @@ async function enrichSlice(
   // depois os eventos com o cursor na cauda — o cursor só avança quando tudo do lote aplicou.
   const gravarLote = (): void => {
     if (lote.records.length === 0) return;
+    // UMA hora por lote, no histórico, nos comentários E no cursor (prova de 24/10/2026: o cursor
+    // saía com a hora do início do run, `cursor.now`, e não com a do lote que o gravou).
+    const horaDoLote = new Date().toISOString();
     const fechado = fecharLote({
       leituras: lote.leituras,
       campos: CAMPOS_DETALHE_EVENTO,
       records: lote.records,
       hashes: existingHashes,
-      now: new Date().toISOString(),
+      now: horaDoLote,
       entidade: ENTIDADE,
-      tailStmt: cursorUpsertStmt(ENTIDADE, lote.ultimoId, cursor.fullPasses, cursor.now),
+      tailStmt: cursorUpsertStmt(ENTIDADE, lote.ultimoId, cursor.fullPasses, horaDoLote),
     });
     console.log(`[eventos][vigia] lote ${seq.n + 1}: ${descreverVigia(fechado.vigia)}`);
     if (!fechado.vigia.ok) throw new LoteReprovadoError(fechado.vigia, seq.n + 1, cursorGravado);
     const { annotated, rowsChanged } = planComentariosSync(lote.comentarios, existingComentHashes);
-    const comentFiles = generateComentariosSqlBatches(annotated, new Date().toISOString());
+    const comentFiles = generateComentariosSqlBatches(annotated, horaDoLote);
     for (const c of lote.comentarios) existingComentHashes.set(`${c.eventoId}:${c.comentarioId}`, c.contentHash);
     gravarEAplicarLote(OUT_DIR, LOTE_PREFIX, [...comentFiles, ...fechado.arquivos], seq);
     gravadas += fechado.alteradas;

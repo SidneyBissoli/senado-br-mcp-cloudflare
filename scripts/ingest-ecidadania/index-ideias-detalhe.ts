@@ -137,14 +137,18 @@ async function main(): Promise<void> {
   // run, depois do conserto). Cada lote leva o cursor na cauda do seu último arquivo.
   const gravarLote = (): void => {
     if (lote.records.length === 0) return;
+    // UMA hora por lote, no histórico E no cursor: a primeira prova em produção (24/10/2026, run
+    // 40070838444) gravou as 8 versões com a hora de cada lote mas o cursor com a hora do INÍCIO do
+    // run (`now`), e a hora do cursor é o que diz quando ele andou pela última vez.
+    const horaDoLote = new Date().toISOString();
     const fechado = fecharLote({
       leituras: lote.leituras,
       campos: CAMPOS_DETALHE_IDEIA,
       records: lote.records,
       hashes: lote.hashes,
-      now: new Date().toISOString(),
+      now: horaDoLote,
       entidade: ENTIDADE,
-      tailStmt: cursorUpsertStmt(ENTIDADE, lote.ultimoId, fullPasses, now),
+      tailStmt: cursorUpsertStmt(ENTIDADE, lote.ultimoId, fullPasses, horaDoLote),
       maxStmtsPerFile: BATCH_SIZE,
     });
     console.log(`[ideias-detalhe][vigia] lote ${seq.n + 1}: ${descreverVigia(fechado.vigia)}`);
