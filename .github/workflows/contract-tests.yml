@@ -1,6 +1,6 @@
 name: Contract tests (upstream shape drift)
 
-# Nightly detection of upstream shape drift: refreshes the contract fixtures
+# Weekly detection of upstream shape drift: refreshes the contract fixtures
 # from the LIVE Senado APIs and runs the contract tier against them. A failure
 # in the "live" step means the upstream changed the shape of a field some
 # parser depends on — the worst silent-failure mode for a data tool.
@@ -10,8 +10,10 @@ name: Contract tests (upstream shape drift)
 
 on:
   schedule:
-    # 03:20 America/Sao_Paulo (06:20 UTC) every night
-    - cron: "20 6 * * *"
+    # Monday 03:20 America/Sao_Paulo (06:20 UTC). Nightly until 2026-10-27;
+    # weekly since then (owner's decision), when the job moved to the
+    # owner's desktop runner (see runs-on) with the other five servers.
+    - cron: "20 6 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -19,17 +21,18 @@ permissions:
 
 jobs:
   contract:
-    # Roda no DESKTOP (executor próprio, rótulo desktop-br), não nos runners do
-    # GitHub: medido em 27/10/2026, o IBGE recusa conexões vindas de fora do
-    # Brasil (saída BR responde; EUA e Alemanha falham a conexão; a mesma saída
-    # EUA alcança o BCB), e os runners do GitHub ficam nos EUA. Decisão do dono:
-    # o GitHub agenda, repete e anota; só a execução vem para uma máquina no
-    # Brasil, e vale para os seis servidores com contrato ao vivo, não só o ibge.
-    # Instalação: portfolio-monitor/scripts/registrar-runners-desktop.ps1.
-    # Desktop desligado: o job espera na fila até 24 h e, se ninguém o pegar,
-    # termina sem sucesso — o painel acusa, como acusaria uma falha.
+    # Runs on the owner's DESKTOP (self-hosted runner, label desktop-br), not
+    # on GitHub-hosted runners: measured on 2026-10-27, the IBGE refuses
+    # connections from outside Brazil (a Brazilian exit answers; US and German
+    # exits fail to connect; the same US exit reaches the BCB), and GitHub's
+    # runners sit in the US. Owner's decision: GitHub keeps scheduling,
+    # retrying and annotating; only the execution moves to a machine in Brazil,
+    # for all six servers with a live contract, not only the ibge.
+    # Installed by portfolio-monitor/scripts/registrar-runners-desktop.ps1.
+    # Desktop off: the job waits in the queue for up to 24 h and, if no runner
+    # picks it up, ends without success — the panel flags it like a failure.
     runs-on: [self-hosted, desktop-br]
-    # O executor é Windows; bash (do Git) mantém a semântica dos passos `run:`.
+    # The runner is Windows; bash (from Git) keeps the `run:` steps' semantics.
     defaults:
       run:
         shell: bash
