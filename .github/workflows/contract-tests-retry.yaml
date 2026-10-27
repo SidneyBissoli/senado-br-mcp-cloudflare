@@ -45,10 +45,18 @@ jobs:
     # reports `cancelled`, and restarting it would override that person's
     # decision. Until now an outage showed up as `cancelled` too, because the
     # job ran into its own 30 min ceiling; with the refresher's breaker it
-    # exits 3 and lands here as `failure`. `timed_out` stays as a backstop.
+    # exits 3 and lands here as `failure`. `timed_out` was meant as a
+    # backstop, and it never was one: GitHub does NOT report a job that hits
+    # `timeout-minutes` as `timed_out` — measured on bcb-br-mcp, 26/10/2026,
+    # the job annotation reads "The job has exceeded the maximum execution
+    # time of 15m0s" and both the check run and the workflow run conclude
+    # `cancelled`. So `cancelled` enters the `if`, and the step below decides
+    # by that annotation whether it was the ceiling (re-run) or a person
+    # (leave it alone).
     if: >-
       (github.event.workflow_run.conclusion == 'failure' ||
-       github.event.workflow_run.conclusion == 'timed_out') &&
+       github.event.workflow_run.conclusion == 'timed_out' ||
+       github.event.workflow_run.conclusion == 'cancelled') &&
       github.event.workflow_run.run_attempt < 3
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -58,6 +66,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ github.event.workflow_run.id }}
           ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
         run: |
           set -euo pipefail
           echo "run $RUN_ID did not succeed on attempt $ATTEMPT; waiting 60s"
@@ -80,5 +89,26 @@ jobs:
             echo "run $RUN_ID is already on attempt $live; giving up"
             exit 0
           fi
-          gh run rerun "$RUN_ID" --failed -R "${{ github.repository }}"
+          # `cancelled` = by hand OR the job ceiling; the annotation GitHub
+          # puts on the job that hit the ceiling tells them apart, read on the
+          # jobs of THIS attempt. By hand: respect it and stop. Ceiling: re-run
+          # the whole run (not `--failed`, which is not guaranteed to include a
+          # cancelled job).
+          mode="--failed"
+          if [ "$CONCLUSION" = "cancelled" ]; then
+            ceilings=0
+            for u in $(gh api "repos/${{ github.repository }}/actions/runs/$RUN_ID/attempts/$ATTEMPT/jobs" \
+                --jq '.jobs[].check_run_url'); do
+              n=$(gh api "${u#https://api.github.com/}/annotations" \
+                --jq '[.[] | select(.message | contains("exceeded the maximum execution time"))] | length')
+              ceilings=$((ceilings + n))
+            done
+            if [ "$ceilings" -eq 0 ]; then
+              echo "run $RUN_ID was cancelled without hitting the job ceiling (by hand); not re-running"
+              exit 0
+            fi
+            echo "run $RUN_ID hit the job ceiling in $ceilings job(s); re-running the run"
+            mode=""
+          fi
+          gh run rerun "$RUN_ID" $mode -R "${{ github.repository }}"
           echo "re-run requested for the failed jobs of $RUN_ID"
