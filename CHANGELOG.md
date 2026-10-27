@@ -41,6 +41,26 @@ All notable changes to this project are documented here. Format based on
   sumir da lista. Provado: recaptura ao vivo resolve o id 40035193 (15.081) e o tier passa. Junto,
   `@sbissoli/mcp-live-source` ^0.1.1: a linha do log do refresh passa a dizer quantas idas o script
   fez (`(36008ms, 3 idas)`), porque o motivo da origem conta as tentativas de UMA ida.
+- **Contrato da CEAPS aceita valor negativo** (só o tier de contrato e a fixture; sem versão; PR #152).
+  Mesma classe do item acima: a origem reordena a lista e a fixture guarda as 3 primeiras linhas. Em
+  27/10/2026 elas vieram −2.991,74, −2.991,74 e 1.449,26, e as asserções `total > 0` (da amostra e de
+  cada grupo) reprovaram sem deriva nenhuma. Valor negativo é dado real: em 2025, 90 de 23.826 linhas
+  (74 de passagens aéreas, 16 de consultoria), −R$ 126.588,32 no total, nenhum senador com total ≤ 0
+  no ano; em 2024, 58; em 2023, 69. As asserções passam a ser sem sinal (número finito), com os totais
+  por grupo conciliados com as linhas (soma e contagem); a fixture com as duas negativas fica como
+  regressão — o teste antigo reprova nela, o novo passa.
+
+## [3.21.3] - 2026-10-27
+
+### Changed
+
+- **`senado_ceaps` avisa que a fonte publica valores negativos.** A descrição não dizia, e a
+  estatística sem agrupamento devolvia −2.991,74 como mínimo e no `bottom`, que um assistente leria
+  como erro ou como "a menor despesa". Agora a descrição diz que existem lançamentos negativos sem
+  rótulo próprio na fonte (a maioria em passagens aéreas, com jeito de crédito ou estorno — a fonte
+  não os nomeia), que eles entram nas somas e totais como desconto e onde aparecem nas estatísticas.
+  Medido no ano de 2025: 90 de 23.826 linhas. Só texto: nenhum cálculo mudou. Superfície: muda a
+  descrição de uma tool; `surface.lock.json` e `server.json` regravados.
 
 ## [3.21.2] - 2026-10-22
 
