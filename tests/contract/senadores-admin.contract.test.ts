@@ -65,11 +65,19 @@ describe("contract: CEAPS dataset", () => {
     expect(typeof row.nomeSenador).toBe("string");
   });
 
-  it("valorCeaps reads a positive monetary total from the fixture rows", () => {
+  // Sign-agnostic on purpose. A CEAPS row can be NEGATIVE: the 2025 dataset read on
+  // 2026-10-27 has 90 of 23,826 rows below zero (74 air tickets, 16 consultancy), summing
+  // R$ -126,588.32, while every senator's total stays positive. The fixture keeps only the
+  // FIRST rows of the live array, and the upstream reorders it: that day the first three
+  // were -2991.74, -2991.74 and 1449.26, and the old `total > 0` assertions failed every
+  // night with no drift at all. The contract is the type and finiteness of the value.
+  it("valorCeaps reads a finite monetary value from every fixture row", () => {
+    for (const r of ceaps) {
+      expect(typeof valorCeaps(r)).toBe("number");
+      expect(Number.isFinite(valorCeaps(r))).toBe(true);
+    }
     const total = ceaps.reduce((s: number, r: any) => s + valorCeaps(r), 0);
     expect(Number.isFinite(total)).toBe(true);
-    expect(total).toBeGreaterThan(0);
-    for (const r of ceaps) expect(typeof valorCeaps(r)).toBe("number");
   });
 
   it("parseCeapsItem yields a well-typed detail row", () => {
@@ -105,9 +113,15 @@ describe("contract: CEAPS dataset", () => {
     for (const g of agregado) {
       expect(g.chave).toBeDefined();
       expect(typeof g.total).toBe("number");
-      expect(g.total).toBeGreaterThan(0);
+      // Not `> 0`: a group can net negative on a truncated sample (see valorCeaps above).
+      expect(Number.isFinite(g.total)).toBe(true);
       expect(g.despesas).toBeGreaterThanOrEqual(1);
     }
+    // The totals reconcile with the rows (2-decimal rounding per group).
+    const somaGrupos = agregado.reduce((s: number, g: any) => s + g.total, 0);
+    const somaLinhas = ceaps.reduce((s: number, r: any) => s + valorCeaps(r), 0);
+    expect(somaGrupos).toBeCloseTo(somaLinhas, 1);
+    expect(agregado.reduce((s: number, g: any) => s + g.despesas, 0)).toBe(ceaps.length);
     // Sorted by total desc
     for (let i = 1; i < agregado.length; i++) {
       expect(agregado[i - 1].total).toBeGreaterThanOrEqual(agregado[i].total);
