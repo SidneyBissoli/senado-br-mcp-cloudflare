@@ -50,7 +50,12 @@ All notable changes to this project are documented here. Format based on
   por grupo conciliados com as linhas (soma e contagem); a fixture com as duas negativas fica como
   regressão — o teste antigo reprova nela, o novo passa.
 
-## [3.21.3] - 2026-10-27
+## [3.22.0] - 2026-10-27
+
+Primeira publicação desde a 3.21.1: leva também a 3.21.2 (abaixo), numerada e nunca publicada.
+Esta mudança saiu numerada como 3.21.3 no PR #153 e foi para o ar no Worker com esse número, mas a
+regra deste arquivo é MINOR quando a superfície publicada muda, e uma descrição de tool é superfície;
+a 3.21.3 nunca foi publicada no npm nem no registro, e o número certo é este.
 
 ### Changed
 
