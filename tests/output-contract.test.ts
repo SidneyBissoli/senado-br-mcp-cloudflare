@@ -167,7 +167,16 @@ describe("outputSchema anunciado", () => {
     // (decisão de manter o passthrough). Fechar aqui reprovaria toda tool.
     expect(schema.additionalProperties, "o envelope fechou o objeto").not.toBe(false);
     expect(Object.keys(schema.properties ?? {}).sort()).toEqual(["attribution", "provenance"]);
-    expect(schema.properties?.attribution).toEqual({ type: "array", items: { type: "string" } });
+    expect(schema.properties?.attribution).toEqual({
+      type: "array",
+      items: { type: "string" },
+      description: expect.stringMatching(/\S/),
+    });
+    // mcpscore 1.29 (tools_output_properties_documented): toda propriedade de topo
+    // do outputSchema precisa de `description` não vazia.
+    for (const [nome, prop] of Object.entries(schema.properties ?? {})) {
+      expect((prop as { description?: string }).description, `${nome} sem description`).toMatch(/\S/);
+    }
   });
 
   it("o bloco de provenance é o do PACOTE (objeto ou lista não vazia), não uma transcrição", () => {
