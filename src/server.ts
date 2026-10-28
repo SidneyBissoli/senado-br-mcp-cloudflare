@@ -114,8 +114,23 @@ export function createServer(env: Env, ctx?: ExecutionContext, options: CreateSe
   // `retrieval`. `provenance` é objeto com uma fonte e LISTA quando a chamada passa
   // várias (o índice do Deep Research), então os dois.
   const outputSchema = z.looseObject({
-    provenance: z.union([ConciseBlockSchema, z.array(ConciseBlockSchema).min(1)]),
-    attribution: z.array(z.string()),
+    provenance: z
+      .union([ConciseBlockSchema, z.array(ConciseBlockSchema).min(1)])
+      .describe(
+        "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, " +
+          "retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources " +
+          "só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. " +
+          "retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com " +
+          "retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, " +
+          "malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não " +
+          "foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search).",
+      ),
+    attribution: z
+      .array(z.string())
+      .describe(
+        "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de " +
+          "field_sources), para linkar a citação",
+      ),
   });
   const registerTool = server.registerTool.bind(server);
   const analytics = env.SENADO_ANALYTICS;

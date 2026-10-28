@@ -50,6 +50,25 @@ All notable changes to this project are documented here. Format based on
   por grupo conciliados com as linhas (soma e contagem); a fixture com as duas negativas fica como
   regressão — o teste antigo reprova nela, o novo passa.
 
+## [3.23.0] - 2026-10-27
+
+MINOR porque a superfície publicada muda: o `outputSchema` comum das 69 tools ganha duas descrições
+(`surface.lock.json`, `server.json` e `lhm.plugin.json` regravados). Nenhum campo, tipo ou valor muda.
+
+### Fixed
+
+- **As duas propriedades de topo do envelope de saída passam a ter `description`.** O mcpscore 1.29
+  acrescentou a regra `tools_output_properties_documented` (LOW, 1 ponto): toda propriedade de topo do
+  `outputSchema` precisa de descrição não vazia. O envelope comum não descrevia `provenance` nem
+  `attribution`, e como as 69 tools anunciam o mesmo schema a regra contou 138 propriedades sem
+  descrição; produção caiu para 206/207. Agora `provenance` descreve o bloco concise do contrato
+  (chaves, `retrieval` como diagnóstico da ida à origem ou `null`, lista de blocos no `search`) e
+  `attribution` diz o que ela é: a lista das `source_url` distintas dos blocos, para linkar a citação
+  — não um texto de crédito. Descritas uma vez só, no envelope de `src/server.ts`; o bloco continua o
+  schema importado do `@sbissoli/mcp-provenance`, sem transcrição. `tests/output-contract.test.ts`
+  passa a exigir descrição em toda propriedade de topo. Medido no stdio: a regra passa e nenhuma outra
+  reprova.
+
 ## [3.22.0] - 2026-10-27
 
 Primeira publicação desde a 3.21.1: leva também a 3.21.2 (abaixo), numerada e nunca publicada.

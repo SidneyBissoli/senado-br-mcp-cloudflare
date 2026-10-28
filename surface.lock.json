@@ -1,8 +1,8 @@
 {
   "$comentario": "Impressão digital da superfície (@sbissoli/mcp-surface). Não editar à mão: `npm run surface:lock` regrava, e só aceita superfície nova sob versão nova.",
   "declarada": {
-    "versao": "3.21.3",
-    "sha256": "c4754660abf7af4e5dfd80dd65334849f20a839746c48a38af40863734f1b690",
+    "versao": "3.22.1",
+    "sha256": "d9e203cf214729003ff07ddc049f2e7705d26c88b25f7028e27d85fc207bed7b",
     "conteudo": {
       "full": {
         "initialize": {
@@ -165,6 +165,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -552,7 +553,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -592,6 +594,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -979,7 +982,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -1022,6 +1026,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -1409,7 +1414,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -1462,6 +1468,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -1849,7 +1856,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -1898,6 +1906,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -2285,7 +2294,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -2339,6 +2349,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -2726,7 +2737,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -2822,6 +2834,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -3209,7 +3222,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -3316,6 +3330,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -3703,7 +3718,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -3774,6 +3790,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -4161,7 +4178,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -4233,6 +4251,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -4620,7 +4639,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -4686,6 +4706,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -5073,7 +5094,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -5115,6 +5137,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -5502,7 +5525,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -5549,6 +5573,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -5936,7 +5961,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -6001,6 +6027,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -6388,7 +6415,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -6444,6 +6472,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -6831,7 +6860,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -6911,6 +6941,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -7298,7 +7329,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -7367,6 +7399,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -7754,7 +7787,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -7811,6 +7845,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -8198,7 +8233,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -8268,6 +8304,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -8655,7 +8692,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -8730,6 +8768,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -9117,7 +9156,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -9159,6 +9199,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -9546,7 +9587,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -9588,6 +9630,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -9975,7 +10018,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -10017,6 +10061,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -10404,7 +10449,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -10465,6 +10511,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -10852,7 +10899,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -10901,6 +10949,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -11288,7 +11337,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -11341,6 +11391,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -11728,7 +11779,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -11775,6 +11827,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -12162,7 +12215,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -12272,6 +12326,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -12659,7 +12714,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -12739,6 +12795,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -13126,7 +13183,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -13174,6 +13232,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -13561,7 +13620,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -13612,6 +13672,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -13999,7 +14060,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -14031,6 +14093,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -14418,7 +14481,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -14465,6 +14529,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -14852,7 +14917,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -14909,6 +14975,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -15296,7 +15363,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -15338,6 +15406,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -15725,7 +15794,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -15808,6 +15878,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -16195,7 +16266,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -16237,6 +16309,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -16624,7 +16697,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -16674,6 +16748,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -17061,7 +17136,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -17103,6 +17179,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -17490,7 +17567,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -17548,6 +17626,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -17935,7 +18014,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -17977,6 +18057,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -18364,7 +18445,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -18406,6 +18488,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -18793,7 +18876,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -18841,6 +18925,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -19228,7 +19313,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -19295,6 +19381,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -19682,7 +19769,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -19730,6 +19818,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -20117,7 +20206,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -20178,6 +20268,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -20565,7 +20656,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -20659,6 +20751,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -21046,7 +21139,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -21159,6 +21253,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -21546,7 +21641,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -21594,6 +21690,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -21981,7 +22078,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -22032,6 +22130,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -22419,7 +22518,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -22471,6 +22571,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -22858,7 +22959,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -22907,6 +23009,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -23294,7 +23397,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -23345,6 +23449,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -23732,7 +23837,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -23814,6 +23920,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -24201,7 +24308,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -24288,6 +24396,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -24675,7 +24784,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -24730,6 +24840,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -25117,7 +25228,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -25171,6 +25283,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -25558,7 +25671,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -25590,6 +25704,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -25977,7 +26092,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -26044,6 +26160,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -26431,7 +26548,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -26536,6 +26654,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -26923,7 +27042,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -26979,6 +27099,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -27366,7 +27487,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -27431,6 +27553,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -27818,7 +27941,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -27866,6 +27990,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -28253,7 +28378,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -28305,6 +28431,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -28692,7 +28819,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -28747,6 +28875,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -29134,7 +29263,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -29196,6 +29326,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -29583,7 +29714,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -29668,6 +29800,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -30055,7 +30188,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -30113,6 +30247,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -30500,7 +30635,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -30547,6 +30683,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -30934,7 +31071,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -31136,6 +31274,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -31523,7 +31662,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -31627,6 +31767,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -32014,7 +32155,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -32129,6 +32271,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -32516,7 +32659,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -32595,6 +32739,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -32982,7 +33127,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -33056,6 +33202,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -33443,7 +33590,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -33531,6 +33679,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -33918,7 +34067,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -33983,6 +34133,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -34370,7 +34521,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -34453,6 +34605,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -34840,7 +34993,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -34890,6 +35044,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -35277,7 +35432,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -35327,6 +35483,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -35714,7 +35871,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -35775,6 +35933,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -36162,7 +36321,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -36217,6 +36377,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -36604,7 +36765,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -36659,6 +36821,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -37046,7 +37209,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -37111,6 +37275,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -37498,7 +37663,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -37589,6 +37755,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -37976,7 +38143,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -38034,6 +38202,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -38421,7 +38590,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -38487,6 +38657,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -38874,7 +39045,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -38924,6 +39096,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -39311,7 +39484,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -39367,6 +39541,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -39754,7 +39929,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -39813,6 +39989,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -40200,7 +40377,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -40257,6 +40435,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -40644,7 +40823,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -40703,6 +40883,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -41090,7 +41271,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -41185,6 +41367,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -41572,7 +41755,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -41647,6 +41831,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -42034,7 +42219,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -42104,6 +42290,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -42491,7 +42678,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -42557,6 +42745,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -42944,7 +43133,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
@@ -42999,6 +43189,7 @@
               "additionalProperties": {},
               "properties": {
                 "attribution": {
+                  "description": "URLs de origem dos dados (as source_url distintas dos blocos de proveniência, incluindo as de field_sources), para linkar a citação",
                   "items": {
                     "type": "string"
                   },
@@ -43386,7 +43577,8 @@
                       "minItems": 1,
                       "type": "array"
                     }
-                  ]
+                  ],
+                  "description": "Bloco de proveniência do portfólio (projeção concise): source, source_url, data_vintage, retrieved_at (horário de Brasília), citation, license, revision e retrieval; field_sources só quando a resposta funde recortes, derived e derivation_note só nos modos de estatísticas. retrieval é o diagnóstico da ida à origem nesta chamada — requisições, tentativas com retentativas, anomalias superadas (timeout, network, rate_limited, http_5xx, http_4xx, malformed_body) e unstable (true quando algo precisou ser repetido) —, ou null quando não foi medido. Lista de blocos quando a chamada consulta várias fontes (índice do search)."
                 }
               },
               "required": [
