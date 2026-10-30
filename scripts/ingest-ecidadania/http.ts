@@ -94,6 +94,27 @@ async function curlOnce(url: string, opts: GetOpts): Promise<{ code: number; bod
   }
 }
 
+/**
+ * Observer of every FINAL portal response (fase B, raw-page archive): called with the status and the
+ * raw bytes BEFORE the caller sees the body. Responses about to be retried (429/5xx with attempts
+ * left) are not final and are skipped. If the observer throws, the error propagates as-is (no new
+ * portal request): the page is not read without being archived first.
+ */
+export type ObservadorDeResposta = (url: string, status: number, body: Uint8Array) => Promise<void>;
+let observador: ObservadorDeResposta | null = null;
+
+/** Register (or clear, with null) the response observer. One per process: each ingest job is its own process. */
+export function observarRespostas(fn: ObservadorDeResposta | null): void {
+  observador = fn;
+}
+
+/** Marks an observer failure so the retry loop below does not refetch the portal because of it. */
+class FalhaDoObservador extends Error {
+  constructor(readonly causa: unknown) {
+    super(causa instanceof Error ? causa.message : String(causa));
+  }
+}
+
 /** curl with retry/backoff. Returns the body bytes on the final successful attempt. */
 async function fetchWithRetry(url: string, opts: GetOpts): Promise<Uint8Array> {
   const retries = opts.retries ?? DEFAULT_RETRIES;
@@ -102,6 +123,14 @@ async function fetchWithRetry(url: string, opts: GetOpts): Promise<Uint8Array> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const { code, body } = await curlOnce(url, opts);
+      const vaiRepetir = (code === 429 || code >= 500) && attempt < retries;
+      if (observador && code > 0 && !vaiRepetir) {
+        try {
+          await observador(url, code, body);
+        } catch (e) {
+          throw new FalhaDoObservador(e);
+        }
+      }
       // 429 / 5xx are transient — retry; other non-2xx/3xx are fatal.
       if (code === 429 || code >= 500) {
         throw new HttpError(`HTTP ${code} for ${url}`, code, true);
@@ -111,6 +140,7 @@ async function fetchWithRetry(url: string, opts: GetOpts): Promise<Uint8Array> {
       }
       return body;
     } catch (e) {
+      if (e instanceof FalhaDoObservador) throw e.causa;
       lastErr = e;
       const retryable = e instanceof HttpError ? e.retryable : true; // unknown errors are retryable
       if (!retryable || attempt === retries) break;

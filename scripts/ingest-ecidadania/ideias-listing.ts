@@ -33,6 +33,9 @@ export const SITUACAO_STATUS: Record<number, string> = {
   7: "encerrada", // Ideias encerradas sem apoios suficientes
   9: "encerrada", // Ideias debatidas pela CDH
   10: "convertida", // Ideias transformadas em proposição
+  // Ideias arquivadas ao final da legislatura (30 ideias, 1 página; medido 30/10/2026). Nunca percorrida
+  // até a fase B2; as 30 já estavam no D1 pela s7. O nome da categoria se guarda pela página arquivada.
+  99: "encerrada",
 };
 
 export interface IdeiaListingItem {

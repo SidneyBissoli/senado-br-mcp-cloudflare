@@ -37,6 +37,7 @@ import { fetchIdeiaDetalhe, ehRecursoRemovido } from "./detalhe.js";
 import { detalheParaCorpus, IdeiaDetalheForaDoMoldeError } from "../../src/scraper/ideia-detalhe.js";
 import { fecharLote, LoteReprovadoError, LOTE_PADRAO, type Leitura } from "./lotes.js";
 import { descreverAndamento } from "./andamento.js";
+import { ligarArquivo, type ArquivoLigado } from "./arquivo-run.js";
 
 const ENTIDADE = "ideias";
 const CHUNK = Number(process.env.INGEST_IDEIAS_DETALHE_CHUNK) || 8000;
@@ -48,6 +49,9 @@ const OUT_DIR = dirname(fileURLToPath(import.meta.url));
 const OUT_PREFIX = "out-ideias-detalhe-";
 /** Lotes aplicados durante o run; o prefixo começa por OUT_PREFIX, então a limpeza cobre os dois. */
 const LOTE_PREFIX = `${OUT_PREFIX}lote-`;
+
+/** Arquivo bruto (fase B): ligado no início do run; todo caminho de saída o fecha antes de sair. */
+let arquivo: ArquivoLigado = { fechar: async () => {} };
 
 function cleanOldOutputs(): void {
   for (const f of readdirSync(OUT_DIR)) {
@@ -102,6 +106,7 @@ function novoLote(): LoteEmFormacao {
 async function main(): Promise<void> {
   const now = new Date().toISOString();
   cleanOldOutputs();
+  arquivo = ligarArquivo({ job: "ideias-detalhe", entidade: ENTIDADE, outDir: OUT_DIR });
 
   const cursor = readDetalheCursor(ENTIDADE);
   let afterId = cursor.lastEntityId;
@@ -207,6 +212,7 @@ async function main(): Promise<void> {
     if (!(e instanceof LoteReprovadoError)) throw e;
     console.error(`[ideias-detalhe][gate] verdict=anomalo — ${e.message}`);
     writeRunOnly(now, "anomalo", rows.length, e.message);
+    await arquivo.fechar();
     process.exit(1);
   }
 
@@ -214,10 +220,12 @@ async function main(): Promise<void> {
     `[ideias-detalhe] processadas ${rows.length} (detalhe ok=${fetched} removidas=${removidas} foraDoMolde=${naoReconhecidas} gaps=${gaps}), ` +
       `${gravadas} alteradas em ${seq.n} lote(s) já aplicado(s); cursor→${cursorGravado}`,
   );
+  await arquivo.fechar();
   process.exit(0);
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
+  await arquivo.fechar();
   const err = e instanceof Error ? e.message : String(e);
   console.error(`[ideias-detalhe][fatal] ${err}`);
   try {

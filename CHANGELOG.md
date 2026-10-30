@@ -6,6 +6,28 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Added
+
+- **Arquivo bruto de páginas do e-Cidadania — fases B1 e B2 das ideias** (só os jobs off-Worker, o
+  workflow reutilizável e uma migração; nada em `src/`, sem versão). Desenho aprovado pelo dono em
+  30/10/2026, uma decisão por vez. Os três coletores de ideias (listagem viva, transições e fatia da s7
+  em `index-ideias.ts`; detalhe em `index-ideias-detalhe.ts`) guardam cada resposta final do portal —
+  200, 404, 410 — ANTES de lê-la, pelo observador de respostas de `http.ts`: a página inteira, em gzip,
+  no balde R2 privado `ecidadania-arquivos` (Europa Ocidental, sem URL pública, trava permanente contra
+  apagar/sobrescrever), endereçada pelo sha256 dos bytes originais — página idêntica é guardada uma vez
+  só. Cada leitura vira uma linha da tabela nova `ecidadania_arquivo_indice` (migração 0004: url × id ×
+  instante × status HTTP × sha256 × bytes × leitor × rodada × nova), aplicada em lotes de 250 durante
+  o run, e cada rodada deixa as mesmas linhas como manifesto no balde. Balde fora (depois de 4
+  tentativas) = a página não é lida e conta como falha de transporte no disjuntor. O cliente R2 é próprio
+  (`scripts/ingest-ecidadania/r2.ts`, assinatura V4 sobre `node:crypto`, testada contra o exemplo
+  oficial da AWS) — sem dependência nova. Obrigatório nos jobs `ideias` e `ideias-detalhe`
+  (`ECIDADANIA_ARQUIVO=obrigatorio`: sem os secrets `ECIDADANIA_R2_ACCESS_KEY_ID`/
+  `ECIDADANIA_R2_SECRET_ACCESS_KEY` o job falha no início); consultas e eventos entram na B4. A
+  releitura completa (B3) vem de carona no cursor do detalhe, que já relê todas as ideias (~1 volta/mês).
+- **A listagem da situação 99 ("Ideias arquivadas ao final da legislatura") entra no crawl vivo** —
+  1 página, 30 ideias (medido 30/10/2026), nunca percorrida; as 30 já estavam no D1 pela s7, como
+  `encerrada`. Entra para que a página dessa categoria, que só o portal publica, fique no arquivo todo dia.
+
 ### Fixed
 
 - **O `release.json` do dataset nasce com os DOIs, não com `PENDENTE`** (só o pipeline de release do

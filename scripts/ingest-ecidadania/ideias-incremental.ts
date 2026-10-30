@@ -17,8 +17,12 @@
  *      fonte primária: pega o que as transições não veem (ideia que nunca esteve no D1 como aberta).
  */
 
-/** Situações relidas inteiras todo dia: as que ainda mudam de apoios ou de situação. */
-export const SITUACOES_VIVAS = [5, 6, 8, 9, 10] as const;
+/**
+ * Situações relidas inteiras todo dia: as que ainda mudam de apoios ou de situação, mais a 99
+ * ("arquivadas ao final da legislatura", 1 página): entra pela fase B2 (30/10/2026) para que a página
+ * dessa categoria fique no arquivo bruto todo dia — é a única fonte que a publica.
+ */
+export const SITUACOES_VIVAS = [5, 6, 8, 9, 10, 99] as const;
 
 /** A situação de arquivo (encerradas sem apoio suficiente), varrida por cursor. */
 export const SITUACAO_ARQUIVO = 7;
