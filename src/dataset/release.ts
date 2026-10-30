@@ -172,6 +172,64 @@ export function formatSha256Sums(files: ReleaseFile[]): string {
   );
 }
 
+// ── DOIs reservados ANTES do freeze ─────────────────────────────────────────────────────────────
+/** Os dois DOIs de um corte: o concept (estável entre versões) e o desta versão. */
+export interface DoisDoRelease {
+  conceptDoi: string;
+  versionDoi: string;
+}
+
+/** Forma mínima da deposição Zenodo de que os DOIs se derivam. */
+export interface DeposicaoComDois {
+  conceptdoi?: string;
+  conceptrecid?: string;
+  metadata?: { prereserve_doi?: { doi?: string } };
+}
+
+const DOI_RE = /^10\.\d{4,}\/\S+$/;
+/** DOI com forma válida e que não é o placeholder (que tem forma de DOI). */
+const doiReal = (doi: string): boolean => DOI_RE.test(doi) && doi !== DOI_PLACEHOLDER;
+
+/**
+ * Deriva os DOIs de um rascunho Zenodo ainda não publicado. O version-DOI é o reservado
+ * (`prereserve_doi`); o concept-DOI vem da deposição ou, no 1º release (concept ainda sem DOI
+ * cunhado), de `conceptrecid` sob o mesmo prefixo do version-DOI. Lança se faltar algum: o freeze
+ * NÃO pode seguir com placeholder quando o Zenodo está ligado — o `release.json` de um release
+ * publicado é imutável (dataset-v1.0.0 saiu com "PENDENTE" porque os DOIs vinham depois).
+ */
+export function doisDaDeposicao(dep: DeposicaoComDois): DoisDoRelease {
+  const versionDoi = dep.metadata?.prereserve_doi?.doi ?? "";
+  if (!doiReal(versionDoi)) {
+    throw new Error(`deposição sem version-DOI reservado válido (prereserve_doi="${versionDoi}").`);
+  }
+  let conceptDoi = dep.conceptdoi ?? "";
+  if (!conceptDoi && dep.conceptrecid) {
+    conceptDoi = `${versionDoi.slice(0, versionDoi.lastIndexOf("."))}.${dep.conceptrecid}`;
+  }
+  if (!doiReal(conceptDoi)) {
+    throw new Error(`deposição sem concept-DOI derivável (conceptdoi="${dep.conceptdoi ?? ""}", conceptrecid="${dep.conceptrecid ?? ""}").`);
+  }
+  return { conceptDoi, versionDoi };
+}
+
+/**
+ * Confere que um `release.json` leva exatamente os DOIs reservados da deposição para onde vai.
+ * Devolve a lista de problemas (vazia = confere). Trava do envio: um manifesto congelado antes da
+ * reserva, ou de outra deposição, não sobe.
+ */
+export function conferirDoisDoManifesto(
+  manifest: { conceptDoi?: unknown; versionDoi?: unknown },
+  dois: DoisDoRelease,
+): string[] {
+  const problemas: string[] = [];
+  for (const campo of ["conceptDoi", "versionDoi"] as const) {
+    if (manifest[campo] !== dois[campo]) {
+      problemas.push(`${campo} do release.json = "${String(manifest[campo])}", reservado = "${dois[campo]}"`);
+    }
+  }
+  return problemas;
+}
+
 // ── Metadados Zenodo (a partir do `.zenodo.json` + o release corrente) ──────────────────────────
 /** Forma mínima do `.zenodo.json` que consumimos (o arquivo pode ter mais campos). */
 export interface ZenodoJson {

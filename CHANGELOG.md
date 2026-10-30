@@ -6,6 +6,21 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Fixed
+
+- **O `release.json` do dataset nasce com os DOIs, não com `PENDENTE`** (só o pipeline de release do
+  dataset, off-Worker; nada em `src/` publicado, sem versão). O `release.json` publicado do
+  `dataset-v1.0.0` diz `conceptDoi`/`versionDoi` = `10.5281/zenodo.PENDENTE`: o freeze gravava o
+  manifesto (avulso e dentro do tarball) ANTES do passo do Zenodo, que só conhecia os DOIs depois do
+  envio — e um release publicado não aceita troca de arquivo. Agora `release:zenodo` tem duas etapas:
+  `--reserve` (antes do freeze) cria o rascunho, apaga os arquivos herdados da versão anterior (o
+  `newversion` os copia; os nomes colidiriam no envio, defeito latente que nunca rodou) e devolve o
+  concept-DOI e o version-DOI reservado; `--draft <id>` (depois) recusa enviar um `release.json` cujos
+  DOIs não sejam os reservados daquele rascunho. `release-dataset.yml` reordenado (reserva → freeze
+  com os DOIs → tarball → GitHub Release → envio). Lógica pura e testada em `src/dataset/release.ts`
+  (`doisDaDeposicao`, `conferirDoisDoManifesto`; o placeholder, que tem forma de DOI, é recusado).
+  O v1.0.0 fica como está (imutável); nota na entrada dele no `CHANGELOG-dataset.md`.
+
 ### Changed
 
 - **Os jobs de eventos e de detalhe das ideias gravam em lotes e dizem onde estão** (só os jobs
