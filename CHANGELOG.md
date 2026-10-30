@@ -30,6 +30,18 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- **Página da s7 que falha sempre não prende mais a varredura das encerradas** (só o job off-Worker
+  `index-ideias.ts`; nada em `src/`, sem versão). Desde 30/10/2026 a página 951 da listagem das ideias
+  encerradas sem apoio suficiente (s7) responde HTTP 500: medido, a causa é UMA ideia dela, a 133378, que
+  o portal não consegue mais renderizar (o detalhe dela dá o mesmo 500, `AttributeError`; a vizinha
+  133379 abre). Como a fatia da s7 só anda em sequência a partir do cursor, a página prendia o cursor
+  `ideias-s7` em 950 todo dia, e as 184 páginas seguintes (~18 mil ideias) nunca eram percorridas.
+  Decisão do dono (30/10): a página que falha em 3 dias distintos seguidos é pulada, o pulo é registrado
+  e a fatia segue; a próxima volta tenta de novo, porque recomeça da página 1. A contagem fica em
+  `ecidadania_detalhe_cursor` (`ideias-s7-falha`: página × dias × instante da última falha; zera quando a
+  página volta a responder) e cada pulo vira uma linha `ideias-s7-pulo-p<N>` (com a volta em que pulou),
+  sem migração. Dias, não runs: um dispatch manual no mesmo dia não acelera o pulo. Regra pura em
+  `contarFalhaArquivo` (`ideias-incremental.ts`), com testes.
 - **O `release.json` do dataset nasce com os DOIs, não com `PENDENTE`** (só o pipeline de release do
   dataset, off-Worker; nada em `src/` publicado, sem versão). O `release.json` publicado do
   `dataset-v1.0.0` diz `conceptDoi`/`versionDoi` = `10.5281/zenodo.PENDENTE`: o freeze gravava o
