@@ -122,6 +122,8 @@ interface EnrichResult {
   /** Lotes aplicados e o cursor na cauda do último. */
   lotes: number;
   cursorGravado: number;
+  /** Hora do último lote aplicado (a do cursor no banco); null quando nenhum lote foi gravado. */
+  horaDoCursor: string | null;
   /** Detalhe lido × payload guardado, por evento da fatia já enriquecido antes — acumulado do run. */
   leituras: Leitura[];
 }
@@ -198,6 +200,7 @@ async function enrichSlice(
   let gravadas = 0;
   let comentariosGravados = 0;
   let cursorGravado = cursor.afterId;
+  let horaDoCursor: string | null = null;
   const seq = { n: 0 };
   const inicio = Date.now();
   const leituras: Leitura[] = [];
@@ -228,6 +231,7 @@ async function enrichSlice(
     gravadas += fechado.alteradas;
     comentariosGravados += rowsChanged;
     cursorGravado = lote.ultimoId;
+    horaDoCursor = horaDoLote;
     lote = novoLote();
     console.log(
       `[eventos][andamento] ${descreverAndamento({ rotulo: "detalhe lido", feitos: enrichedCount, total: slice.length, inicioMs: inicio, agoraMs: Date.now(), gravados: gravadas })} · ${comentariosGravados} comentários gravados · cursor ${cursorGravado}`,
@@ -301,7 +305,7 @@ async function enrichSlice(
     if (!sliceIds.has(it.id)) eventoRecords.push(toSyncRecord(preserveEvento(it, existingPayloads.get(it.id))));
   }
 
-  return { eventoRecords, detailFails, commentFails, enrichedCount, comentariosColetados, gravadas, comentariosGravados, lotes: seq.n, cursorGravado, leituras };
+  return { eventoRecords, detailFails, commentFails, enrichedCount, comentariosColetados, gravadas, comentariosGravados, lotes: seq.n, cursorGravado, horaDoCursor, leituras };
 }
 
 async function main(): Promise<void> {
@@ -369,7 +373,7 @@ async function main(): Promise<void> {
     writeFileSync(OUT_PATH, generateRunOnlySql(now, "anomalo", crawl.items.length, e.message, ENTIDADE));
     process.exit(1);
   }
-  const { eventoRecords, detailFails, commentFails, enrichedCount, comentariosColetados, gravadas, comentariosGravados, lotes, cursorGravado, leituras } = enriched;
+  const { eventoRecords, detailFails, commentFails, enrichedCount, comentariosColetados, gravadas, comentariosGravados, lotes, cursorGravado, horaDoCursor, leituras } = enriched;
   console.log(
     `[eventos][enrich] ${enrichedCount} enriquecidos, ${comentariosColetados} comentários coletados; gaps: detalhe=${detailFails} comentarios=${commentFails}; ` +
       `${gravadas} alteradas + ${comentariosGravados} comentários gravados em ${lotes} lote(s); cursor gravado ${cursorGravado}`,
@@ -379,10 +383,12 @@ async function main(): Promise<void> {
   console.log(`[eventos][vigia] acumulado do run: ${descreverVigia(vigiarCampos(leituras, CAMPOS_DETALHE_EVENTO))}`);
 
   // Corpus load (rows_scraped = crawled listing count, the floor baseline) + cursor no fim. Os eventos
-  // da fatia voltam com o hash que os lotes já gravaram (sem segunda versão no histórico).
+  // da fatia voltam com o hash que os lotes já gravaram (sem segunda versão no histórico). O cursor
+  // leva a hora do último lote: com `now` esta regravação devolvia ao banco a hora do INÍCIO do run
+  // (prova de 29/10/2026: cursor 10460 com 15:02:58, run de 15:02 a 15:59).
   const { annotated, rowsChanged } = planEntitySync(eventoRecords, existingHashes);
   const loadSql = generateLoadSql(annotated, now, crawl.items.length, rowsChanged, ENTIDADE);
-  writeFileSync(OUT_PATH, loadSql + cursorUpsertStmt(ENTIDADE, nextCursor, fullPasses, now) + "\n");
+  writeFileSync(OUT_PATH, loadSql + cursorUpsertStmt(ENTIDADE, nextCursor, fullPasses, horaDoCursor ?? now) + "\n");
   console.log(`[eventos][load] wrote ${OUT_PATH}: ${eventoRecords.length} upserts, ${rowsChanged} changed (+ ${gravadas} nos lotes), cursor→${nextCursor}, 1 ok run row`);
   process.exit(0);
 }
