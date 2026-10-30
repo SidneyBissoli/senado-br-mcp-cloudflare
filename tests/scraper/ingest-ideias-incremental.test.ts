@@ -6,6 +6,11 @@ import {
   selecionarTransicoes,
   inicioFatiaArquivo,
   avancarCursorArquivo,
+  CURSOR_ARQUIVO,
+  CURSOR_ARQUIVO_FALHA,
+  DIAS_FALHA_PARA_PULAR,
+  chavePuloArquivo,
+  contarFalhaArquivo,
 } from "../../scripts/ingest-ecidadania/ideias-incremental.js";
 import { SITUACAO_STATUS } from "../../scripts/ingest-ecidadania/ideias-listing.js";
 import { leituraDoDetalhe, statusDaTransicao } from "../../scripts/ingest-ecidadania/ideias-registro.js";
@@ -101,6 +106,41 @@ describe("cursor do arquivo (s7)", () => {
 
   it("ao alcançar a última página fecha a passada e volta à página 1", () => {
     expect(avancarCursorArquivo({ pagina: 1100, voltas: 2 }, 1126, 1126)).toEqual({ pagina: 0, voltas: 3 });
+  });
+});
+
+describe("página da s7 que falha sempre (p951, 30/10/2026)", () => {
+  it("primeira falha da página conta 1 dia e não pula", () => {
+    expect(contarFalhaArquivo(null, 951, "2026-10-31")).toEqual({ falha: { pagina: 951, dias: 1, dia: "2026-10-31" }, pular: false });
+  });
+
+  it("conta dias distintos: run repetido no mesmo dia não acelera o pulo", () => {
+    const d1 = contarFalhaArquivo(null, 951, "2026-10-31").falha;
+    const mesmoDia = contarFalhaArquivo(d1, 951, "2026-10-31");
+    expect(mesmoDia.falha.dias).toBe(1);
+    expect(mesmoDia.pular).toBe(false);
+  });
+
+  it(`pula no ${DIAS_FALHA_PARA_PULAR}º dia de falha da mesma página`, () => {
+    const d1 = contarFalhaArquivo(null, 951, "2026-10-31").falha;
+    const d2 = contarFalhaArquivo(d1, 951, "2026-11-01");
+    expect(d2.pular).toBe(false);
+    const d3 = contarFalhaArquivo(d2.falha, 951, "2026-11-02");
+    expect(d3).toEqual({ falha: { pagina: 951, dias: 3, dia: "2026-11-02" }, pular: true });
+  });
+
+  it("falha em OUTRA página recomeça a contagem", () => {
+    const anterior = { pagina: 951, dias: 2, dia: "2026-11-01" };
+    expect(contarFalhaArquivo(anterior, 960, "2026-11-02")).toEqual({ falha: { pagina: 960, dias: 1, dia: "2026-11-02" }, pular: false });
+  });
+
+  it("o pulo conta como página lida: o cursor passa dela", () => {
+    expect(avancarCursorArquivo({ pagina: 950, voltas: 0 }, 951, 1135)).toEqual({ pagina: 951, voltas: 0 });
+  });
+
+  it("cada pulo tem a sua chave, separada do cursor e da página em falha", () => {
+    expect(chavePuloArquivo(951)).toBe("ideias-s7-pulo-p951");
+    expect(new Set([chavePuloArquivo(951), CURSOR_ARQUIVO, CURSOR_ARQUIVO_FALHA]).size).toBe(3);
   });
 });
 

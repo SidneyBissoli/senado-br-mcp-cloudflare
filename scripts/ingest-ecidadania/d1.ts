@@ -143,14 +143,14 @@ export function readAllPayloads(entidade: string, pageSize = 5000): Map<number, 
   return map;
 }
 
-/** Estado do cursor de backfill de detalhe de uma entidade (0/0 quando ainda não existe). */
-export function readDetalheCursor(entidade: string): { lastEntityId: number; fullPasses: number } {
-  const rows = queryD1<{ last_entity_id: number; full_passes: number }>(
-    `SELECT last_entity_id, full_passes FROM ecidadania_detalhe_cursor WHERE entidade='${entidade}'`,
+/** Estado do cursor de backfill de detalhe de uma entidade (0/0/"" quando ainda não existe). */
+export function readDetalheCursor(entidade: string): { lastEntityId: number; fullPasses: number; updatedAt: string } {
+  const rows = queryD1<{ last_entity_id: number; full_passes: number; updated_at: string }>(
+    `SELECT last_entity_id, full_passes, updated_at FROM ecidadania_detalhe_cursor WHERE entidade='${entidade}'`,
   );
   return rows.length
-    ? { lastEntityId: Number(rows[0].last_entity_id), fullPasses: Number(rows[0].full_passes) }
-    : { lastEntityId: 0, fullPasses: 0 };
+    ? { lastEntityId: Number(rows[0].last_entity_id), fullPasses: Number(rows[0].full_passes), updatedAt: String(rows[0].updated_at) }
+    : { lastEntityId: 0, fullPasses: 0, updatedAt: "" };
 }
 
 /** content_hash de TODOS os comentários já gravados, chaveado por `${eventoId}:${comentarioId}`. Paginado. */

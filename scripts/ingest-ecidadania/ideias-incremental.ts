@@ -77,3 +77,42 @@ export function avancarCursorArquivo(
   if (ultimaPagina > 0 && ultimaLida >= ultimaPagina) return { pagina: 0, voltas: cursor.voltas + 1 };
   return { pagina: ultimaLida, voltas: cursor.voltas };
 }
+
+/**
+ * Página da s7 que falha sempre (30/10/2026: a p951 dá HTTP 500 porque UMA ideia dela, a 133378, derruba
+ * a renderização do portal — o detalhe dela dá o mesmo 500). A fatia anda só em sequência, então essa
+ * página prendia o cursor para sempre. Decisão do dono (30/10): falhou em 3 DIAS distintos seguidos (sem
+ * leitura boa no meio) → pula, registra o pulo e segue; a próxima volta tenta de novo, porque recomeça
+ * da página 1. Dias, não runs: um dispatch manual no mesmo dia não acelera o pulo.
+ */
+export const DIAS_FALHA_PARA_PULAR = 3;
+
+/** Chave, em `ecidadania_detalhe_cursor`, da página que vem falhando (`last_entity_id` = página,
+ *  `full_passes` = dias de falha, `updated_at` = instante da última falha). Página 0 = nenhuma. */
+export const CURSOR_ARQUIVO_FALHA = "ideias-s7-falha";
+
+/** Chave do registro de um pulo (uma linha por página pulada; `full_passes` = volta em que pulou). */
+export function chavePuloArquivo(pagina: number): string {
+  return `ideias-s7-pulo-p${pagina}`;
+}
+
+export interface FalhaArquivo {
+  pagina: number;
+  dias: number;
+  /** Dia (AAAA-MM-DD, UTC) da última falha contada. */
+  dia: string;
+}
+
+/**
+ * Conta mais uma falha da `pagina` no dia `hoje`. Mesma página: soma 1 se o dia é outro, nada se é o
+ * mesmo. Outra página (ou nenhuma antes): recomeça em 1. `pular` = chegou a DIAS_FALHA_PARA_PULAR.
+ */
+export function contarFalhaArquivo(
+  anterior: FalhaArquivo | null,
+  pagina: number,
+  hoje: string,
+): { falha: FalhaArquivo; pular: boolean } {
+  let dias = 1;
+  if (anterior && anterior.pagina === pagina) dias = anterior.dia === hoje ? anterior.dias : anterior.dias + 1;
+  return { falha: { pagina, dias, dia: hoje }, pular: dias >= DIAS_FALHA_PARA_PULAR };
+}

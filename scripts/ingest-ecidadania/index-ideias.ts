@@ -30,6 +30,11 @@ import {
   SITUACOES_VIVAS,
   SITUACAO_ARQUIVO,
   CURSOR_ARQUIVO,
+  CURSOR_ARQUIVO_FALHA,
+  DIAS_FALHA_PARA_PULAR,
+  chavePuloArquivo,
+  contarFalhaArquivo,
+  type FalhaArquivo,
   pisoVivoOk,
   selecionarTransicoes,
   inicioFatiaArquivo,
@@ -198,28 +203,38 @@ async function lerTransicoes(
   return { falhas, naoReconhecidas, removidas };
 }
 
-/** Phase 3 result: items read from the archive slice + the cursor to persist (null = unchanged). */
+/** Phase 3 result: items read from the archive slice + the cursor to persist (null = unchanged), plus
+ *  the SQL that records the failing page / the skips (empty = nothing to record). */
 interface FatiaArquivo {
   items: IdeiaCrawlItem[];
   paginas: string;
   cursor: { pagina: number; voltas: number } | null;
+  registros: string[];
 }
 
 /**
  * Phase 3: up to ARQUIVO_PAGINAS pages of situacao 7 from the persisted cursor, in sequence, stopping
- * at the first failure (the cursor only covers pages actually read) or at the time budget.
+ * at the first failure (the cursor only covers pages actually read) or at the time budget. A page that
+ * failed on DIAS_FALHA_PARA_PULAR distinct days in a row is skipped instead (recorded) and the slice goes
+ * on — see `contarFalhaArquivo`.
  */
-async function lerFatiaArquivo(deadline: number): Promise<FatiaArquivo> {
-  const vazio: FatiaArquivo = { items: [], paginas: "-", cursor: null };
+async function lerFatiaArquivo(deadline: number, now: string): Promise<FatiaArquivo> {
+  const vazio: FatiaArquivo = { items: [], paginas: "-", cursor: null, registros: [] };
   if (ARQUIVO_PAGINAS <= 0) return vazio;
 
   const salvo = readDetalheCursor(CURSOR_ARQUIVO);
   const cursor = { pagina: salvo.lastEntityId, voltas: salvo.fullPasses };
+  const falhaSalva = readDetalheCursor(CURSOR_ARQUIVO_FALHA);
+  const falhaAnterior: FalhaArquivo | null =
+    falhaSalva.lastEntityId > 0 ? { pagina: falhaSalva.lastEntityId, dias: falhaSalva.fullPasses, dia: falhaSalva.updatedAt.slice(0, 10) } : null;
+  const hoje = now.slice(0, 10);
+  const registros: string[] = [];
   const base = `${ECIDADANIA_BASE}/pesquisaideia?situacao=${SITUACAO_ARQUIVO}`;
   const status = SITUACAO_STATUS[SITUACAO_ARQUIVO];
   const inicio = inicioFatiaArquivo(cursor.pagina);
 
   const items: IdeiaCrawlItem[] = [];
+  const pulos: number[] = [];
   let ultimaPagina = 0;
   let ultimaLida = 0;
   for (let p = inicio; p < inicio + ARQUIVO_PAGINAS; p++) {
@@ -231,14 +246,19 @@ async function lerFatiaArquivo(deadline: number): Promise<FatiaArquivo> {
     try {
       const page = await fetchParsedPage(`${base}&p=${p}`, parseIdeiaListingPage, { allowEmpty: p === inicio });
       disjuntor.sucesso();
+      if (falhaAnterior && falhaAnterior.pagina === p) {
+        // A página que vinha falhando voltou: a contagem zera.
+        console.log(`[ideias][arquivo] s${SITUACAO_ARQUIVO}:p${p} voltou a responder após ${falhaAnterior.dias} dia(s) de falha`);
+        registros.push(cursorUpsertStmt(CURSOR_ARQUIVO_FALHA, 0, 0, now));
+      }
+      if (ultimaPagina === 0) ultimaPagina = findLastPageIdeias(page.html);
       if (p === inicio) {
-        ultimaPagina = findLastPageIdeias(page.html);
         if (page.items.length === 0) {
           // Cursor além do fim (a s7 encolheu): fecha a passada e recomeça amanhã da página 1.
           // Página vazia DENTRO do intervalo é falha, não fim — o cursor não anda.
-          if (p > ultimaPagina) return { items: [], paginas: `p${p} (além do fim p${ultimaPagina})`, cursor: { pagina: 0, voltas: cursor.voltas + 1 } };
+          if (p > ultimaPagina) return { items: [], paginas: `p${p} (além do fim p${ultimaPagina})`, cursor: { pagina: 0, voltas: cursor.voltas + 1 }, registros };
           console.warn(`[ideias][arquivo] s${SITUACAO_ARQUIVO}:p${p} veio vazia dentro do intervalo (fim p${ultimaPagina}); cursor parado`);
-          return vazio;
+          return { ...vazio, registros };
         }
       }
       for (const it of page.items) items.push({ ...it, status });
@@ -247,14 +267,26 @@ async function lerFatiaArquivo(deadline: number): Promise<FatiaArquivo> {
       if (e instanceof PortalForaError) throw e;
       logPageFailure(ENTIDADE, `s${SITUACAO_ARQUIVO}:p${p}`, e);
       disjuntor.falha(e, `s${SITUACAO_ARQUIVO}:p${p}`);
-      break;
+      const { falha, pular } = contarFalhaArquivo(falhaAnterior, p, hoje);
+      if (!pular) {
+        console.warn(`[ideias][arquivo] s${SITUACAO_ARQUIVO}:p${p} falhou no dia ${falha.dias} de ${DIAS_FALHA_PARA_PULAR}; cursor parado nela`);
+        registros.push(cursorUpsertStmt(CURSOR_ARQUIVO_FALHA, falha.pagina, falha.dias, now));
+        break;
+      }
+      // 3º dia: pula a página, registra o pulo e segue a fatia; a próxima volta tenta de novo.
+      console.warn(`[ideias][arquivo][pulo] s${SITUACAO_ARQUIVO}:p${p} pulada após ${falha.dias} dias de falha (volta ${cursor.voltas})`);
+      pulos.push(p);
+      registros.push(cursorUpsertStmt(chavePuloArquivo(p), p, cursor.voltas, now));
+      registros.push(cursorUpsertStmt(CURSOR_ARQUIVO_FALHA, 0, 0, now));
+      ultimaLida = p;
     }
     await sleep(PAGE_DELAY_MS);
   }
 
   const novo = avancarCursorArquivo(cursor, ultimaLida, ultimaPagina);
-  const paginas = ultimaLida > 0 ? `p${inicio}..p${ultimaLida} de ${ultimaPagina}` : `nenhuma (parou em p${inicio})`;
-  return { items, paginas, cursor: novo === cursor ? null : novo };
+  const comPulos = pulos.length ? ` (puladas: ${pulos.map((p) => `p${p}`).join(",")})` : "";
+  const paginas = ultimaLida > 0 ? `p${inicio}..p${ultimaLida} de ${ultimaPagina}${comPulos}` : `nenhuma (parou em p${inicio})`;
+  return { items, paginas, cursor: novo === cursor ? null : novo, registros };
 }
 
 /** Remove any out-ideias-*.sql from a prior run so a smaller run never re-applies stale files. */
@@ -318,11 +350,11 @@ async function main(): Promise<void> {
   const ids = selecionarTransicoes(existentes, vistos, TRANSICOES_MAX);
   const transicoes: Transicao[] = [];
   const paginasTransicao: Array<{ id: number; lido: Record<string, unknown> }> = [];
-  let fatia: FatiaArquivo = { items: [], paginas: "-", cursor: null };
+  let fatia: FatiaArquivo = { items: [], paginas: "-", cursor: null, registros: [] };
   try {
     const t = await lerTransicoes(ids, deadline, transicoes, paginasTransicao);
     console.log(`[ideias][transicoes] candidatas=${ids.length} lidas=${transicoes.length} (removidas=${t.removidas}) falhas=${t.falhas} naoReconhecidas=${t.naoReconhecidas}`);
-    fatia = await lerFatiaArquivo(deadline);
+    fatia = await lerFatiaArquivo(deadline, now);
     console.log(`[ideias][arquivo] ${fatia.paginas} items=${fatia.items.length} cursor=${fatia.cursor ? `${fatia.cursor.pagina}/voltas=${fatia.cursor.voltas}` : "inalterado"}`);
   } catch (e) {
     if (!(e instanceof PortalForaError)) throw e;
@@ -392,7 +424,10 @@ async function main(): Promise<void> {
 
   const existingHashes = new Map(existentes.map((r) => [r.id, r.content_hash]));
   const { annotated, rowsChanged } = planEntitySync(lista, existingHashes);
-  const tail = fatia.cursor ? [cursorUpsertStmt(CURSOR_ARQUIVO, fatia.cursor.pagina, fatia.cursor.voltas, now)] : [];
+  const tail = [
+    ...fatia.registros,
+    ...(fatia.cursor ? [cursorUpsertStmt(CURSOR_ARQUIVO, fatia.cursor.pagina, fatia.cursor.voltas, now)] : []),
+  ];
   // rows_scraped = ideias LIDAS neste run (vivo + transições + arquivo), não o tamanho do acervo:
   // o piso deste job não lê mais esse número (deriva do D1), e o acervo inteiro segue em current.
   const files = generateLoadSqlBatches(annotated, now, lista.length, rowsChanged, ENTIDADE, BATCH_SIZE, tail);
