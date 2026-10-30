@@ -5,6 +5,8 @@ name: Release dataset (freeze + DOI)
 # workflow_dispatch. Fluxo: build do dataset (consome o pipeline da Fase 1.2, lê o D1) → freeze
 # (SHA256SUMS + release.json + arquivos de citação) → verificação de integridade → tarball →
 # GitHub Release com assets → (opcional, gated por ZENODO_TOKEN) depósito no Zenodo com version-DOI.
+# Com o Zenodo ligado, o rascunho e os DOIs são reservados ANTES do freeze, para o release.json
+# já nascer com eles.
 #
 # O passo Zenodo é OPT-IN: sem o segredo ZENODO_TOKEN ele é no-op e o release do GitHub sai igual.
 # Por segurança, NÃO publica no Zenodo automaticamente — deixa em rascunho, a menos que o dispatch
@@ -81,11 +83,27 @@ jobs:
           echo "Diretório de build: $DIR"
           echo "dir=$DIR" >> "$GITHUB_OUTPUT"
 
+      # Os DOIs vão DENTRO do release.json (e do tarball), e um release publicado no Zenodo não aceita
+      # troca de arquivo: por isso o rascunho é reservado ANTES do freeze (o v1.0.0 saiu com PENDENTE).
+      - name: Zenodo — reserva o rascunho e os DOIs (opt-in, gated por ZENODO_TOKEN)
+        id: zen
+        if: ${{ env.ZENODO_TOKEN != '' }}
+        env:
+          # recid da deposição-pai para continuidade de concept-DOI (vazio no 1º release)
+          ZENODO_DEPOSITION: ${{ vars.ZENODO_DEPOSITION }}
+        run: |
+          ARGS=(--version "${{ steps.ver.outputs.version }}" --reserve)
+          [ -n "$ZENODO_DEPOSITION" ] && ARGS+=(--deposition "$ZENODO_DEPOSITION")
+          npm run release:zenodo -- "${ARGS[@]}"
+
       - name: Freeze (SHA256SUMS + release.json + arquivos de citação)
         run: |
-          npm run release:dataset -- \
-            --version "${{ steps.ver.outputs.version }}" \
-            --in "${{ steps.dir.outputs.dir }}"
+          ARGS=(--version "${{ steps.ver.outputs.version }}" --in "${{ steps.dir.outputs.dir }}")
+          if [ -n "${{ steps.zen.outputs.version_doi }}" ]; then
+            ARGS+=(--concept-doi "${{ steps.zen.outputs.concept_doi }}" \
+                   --version-doi "${{ steps.zen.outputs.version_doi }}")
+          fi
+          npm run release:dataset -- "${ARGS[@]}"
 
       - name: Verifica integridade (sha256sum -c)
         working-directory: ${{ steps.dir.outputs.dir }}
@@ -114,17 +132,14 @@ jobs:
             ${{ steps.dir.outputs.dir }}/SHA256SUMS
             ${{ steps.dir.outputs.dir }}/release.json
 
-      - name: Zenodo (opt-in — gated por ZENODO_TOKEN; concept-DOI + version-DOI)
+      - name: Zenodo — envia ao rascunho reservado (confere os DOIs do release.json antes)
         if: ${{ env.ZENODO_TOKEN != '' }}
-        env:
-          # recid da deposição-pai para continuidade de concept-DOI (vazio no 1º release)
-          ZENODO_DEPOSITION: ${{ vars.ZENODO_DEPOSITION }}
         run: |
           ARGS=(--version "${{ steps.ver.outputs.version }}" \
+                --draft "${{ steps.zen.outputs.deposition_id }}" \
                 --file "${{ steps.pack.outputs.tar }}" \
                 --file "${{ steps.dir.outputs.dir }}/SHA256SUMS" \
                 --file "${{ steps.dir.outputs.dir }}/release.json")
-          [ -n "$ZENODO_DEPOSITION" ] && ARGS+=(--deposition "$ZENODO_DEPOSITION")
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.zenodo_publish }}" = "true" ]; then
             ARGS+=(--publish)
           fi

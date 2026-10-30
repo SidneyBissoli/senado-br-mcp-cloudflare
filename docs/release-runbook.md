@@ -58,15 +58,21 @@ O primeiro corte **cunha o concept-DOI** (estável para sempre) e o primeiro ver
    npm run release:zenodo -- --version 1.0.0 --dry-run   # confira a metadata
    ```
 2. **Publique no Zenodo** (recomendado: sandbox primeiro). Duas opções:
-   - **Automática (helper):** empacote e rode o helper contra o sandbox:
+   - **Automática (helper), em duas etapas — reservar ANTES de congelar:**
      ```bash
+     export ZENODO_URL=https://sandbox.zenodo.org ZENODO_TOKEN=<seu-token-sandbox>
+     npm run release:zenodo -- --version 1.0.0 --reserve        # imprime deposition_id, concept_doi, version_doi
+     npm run release:dataset -- --version 1.0.0 --concept-doi <concept_doi> --version-doi <version_doi>
      tar --sort=name --mtime='@0' --owner=0 --group=0 -czf ecidadania-participacao-1.0.0.tar.gz -C dataset 1.0.0
-     ZENODO_URL=https://sandbox.zenodo.org ZENODO_TOKEN=<seu-token-sandbox> \
-       npm run release:zenodo -- --version 1.0.0 \
-         --file ecidadania-participacao-1.0.0.tar.gz \
-         --file dataset/1.0.0/SHA256SUMS --file dataset/1.0.0/release.json --publish
+     npm run release:zenodo -- --version 1.0.0 --draft <deposition_id> \
+       --file ecidadania-participacao-1.0.0.tar.gz \
+       --file dataset/1.0.0/SHA256SUMS --file dataset/1.0.0/release.json --publish
      ```
-     O helper imprime o **version-DOI** e o **concept-DOI**. Anote os dois.
+     O envio confere que o `release.json` leva os DOIs reservados daquele rascunho e recusa senão.
+     > **Por que duas etapas (30/10/2026):** o `release.json` (avulso e dentro do tarball) leva os DOIs,
+     > e um release publicado no Zenodo não aceita troca de arquivo. O `dataset-v1.0.0` foi publicado
+     > com o helper antigo, que só conhecia os DOIs depois do envio — o `release.json` dele diz
+     > `PENDENTE`, e assim fica (os DOIs válidos estão no `CHANGELOG-dataset.md`).
    - **Manual (UI):** *New upload* no Zenodo, arraste o tarball + `SHA256SUMS` + `release.json`, cole os
      metadados de `.zenodo.json`, escolha a licença (CC-BY-4.0 como equivalente — ver `LICENSE-DATA.md`),
      e publique. Anote os DOIs.
@@ -95,18 +101,22 @@ O primeiro corte **cunha o concept-DOI** (estável para sempre) e o primeiro ver
 2. **Adicione a entrada no `CHANGELOG-dataset.md`** descrevendo o **delta** desde o release anterior
    (o dado é append-only: descreva o que entrou/mudou, não reescreva histórico). Amarre o `schemaVersion`.
 3. Confirme que `vars.ZENODO_DEPOSITION` aponta para a deposição-pai (continuidade do concept-DOI).
-4. Empurre a tag `dataset-v<X.Y.Z>` — o workflow builda, congela, verifica, cria o GitHub Release e
-   (com `ZENODO_TOKEN`) deposita uma **nova versão** no Zenodo. Para publicar automaticamente em vez de
-   deixar rascunho, use *Run workflow* (dispatch) com `zenodo_publish=true`.
-5. Grave o novo version-DOI na entrada do changelog.
+4. Empurre a tag `dataset-v<X.Y.Z>` — o workflow builda, (com `ZENODO_TOKEN`) reserva o rascunho da
+   **nova versão** e os DOIs no Zenodo, congela com eles no `release.json`, verifica, cria o GitHub
+   Release e envia ao rascunho. Para publicar automaticamente em vez de deixar rascunho, use *Run
+   workflow* (dispatch) com `zenodo_publish=true`. Rascunho que ficou de um run que falhou no meio é
+   reaproveitado pelo `newversion` seguinte (os arquivos herdados são apagados na reserva).
+5. Grave o novo version-DOI na entrada do changelog (o `release.json` já o leva).
 
 ---
 
 ## Fallback manual (sem automação Zenodo)
 
-Se preferir não configurar o token: rode `npm run build:dataset && npm run release:dataset -- --version <v>`,
-empurre a tag (o GitHub Release sai com os assets), baixe o tarball do release e suba-o à mão no Zenodo
-pela UI, usando `.zenodo.json` como roteiro dos metadados. Grave os DOIs de volta como acima.
+Se preferir não configurar o token: crie o rascunho da nova versão na UI do Zenodo e use **Reserve
+DOI** ANTES de congelar; rode `npm run build:dataset && npm run release:dataset -- --version <v>
+--concept-doi <concept> --version-doi <reservado>`, empacote, suba o tarball + `SHA256SUMS` +
+`release.json` ao rascunho pela UI (`.zenodo.json` como roteiro dos metadados) e publique. Sem a
+reserva prévia, o `release.json` sai com `PENDENTE` e não há como trocá-lo depois de publicado.
 
 ---
 

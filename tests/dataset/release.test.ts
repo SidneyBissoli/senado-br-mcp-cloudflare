@@ -4,6 +4,8 @@ import {
   DOI_PLACEHOLDER,
   buildReleaseManifest,
   buildZenodoMetadata,
+  conferirDoisDoManifesto,
+  doisDaDeposicao,
   formatSha256Sums,
   nextVersion,
   validateReleaseVersion,
@@ -121,6 +123,49 @@ describe("formatSha256Sums", () => {
       { file: "a.ndjson", sha256: "11", bytes: 1 },
     ]);
     expect(out).toBe("11  a.ndjson\n22  b.ndjson\n");
+  });
+});
+
+describe("doisDaDeposicao", () => {
+  it("nova versão: concept da deposição + version-DOI reservado", () => {
+    const dois = doisDaDeposicao({
+      conceptdoi: "10.5281/zenodo.21183940",
+      conceptrecid: "21183940",
+      metadata: { prereserve_doi: { doi: "10.5281/zenodo.31000001" } },
+    });
+    expect(dois).toEqual({ conceptDoi: "10.5281/zenodo.21183940", versionDoi: "10.5281/zenodo.31000001" });
+  });
+
+  it("1º release: concept derivado de conceptrecid, sob o prefixo do version-DOI (sandbox incluso)", () => {
+    const dois = doisDaDeposicao({
+      conceptrecid: "777",
+      metadata: { prereserve_doi: { doi: "10.5072/zenodo.778" } },
+    });
+    expect(dois.conceptDoi).toBe("10.5072/zenodo.777");
+  });
+
+  it("recusa rascunho sem DOI reservado ou sem concept derivável — nunca segue com placeholder", () => {
+    expect(() => doisDaDeposicao({ conceptdoi: "10.5281/zenodo.1" })).toThrow(/version-DOI/);
+    expect(() => doisDaDeposicao({ metadata: { prereserve_doi: { doi: DOI_PLACEHOLDER } } })).toThrow(/version-DOI/);
+    expect(() => doisDaDeposicao({ metadata: { prereserve_doi: { doi: "10.5281/zenodo.9" } } })).toThrow(/concept-DOI/);
+  });
+});
+
+describe("conferirDoisDoManifesto", () => {
+  const dois = { conceptDoi: "10.5281/zenodo.21183940", versionDoi: "10.5281/zenodo.31000001" };
+
+  it("confere quando o release.json leva os DOIs reservados", () => {
+    expect(conferirDoisDoManifesto({ ...dois }, dois)).toEqual([]);
+  });
+
+  it("acusa o release.json congelado com placeholder (o caso do dataset-v1.0.0)", () => {
+    const p = conferirDoisDoManifesto({ conceptDoi: DOI_PLACEHOLDER, versionDoi: DOI_PLACEHOLDER }, dois);
+    expect(p).toHaveLength(2);
+    expect(p[1]).toContain("PENDENTE");
+  });
+
+  it("acusa DOI de outra deposição", () => {
+    expect(conferirDoisDoManifesto({ ...dois, versionDoi: "10.5281/zenodo.30999999" }, dois)).toHaveLength(1);
   });
 });
 

@@ -24,6 +24,12 @@ release tem também seu **version-DOI**. Enquanto o Zenodo não cunha, os campos
 - **schemaVersion:** `1.0.0`
 - **concept-DOI:** `10.5281/zenodo.21183940` · **version-DOI:** `10.5281/zenodo.21183941`
 - **Registro:** <https://zenodo.org/records/21183941> · licença **CC-BY-4.0** (equivalente SPDX de "Dados Abertos do Senado Federal — uso livre com atribuição").
+- **Conhecido:** o `release.json` desta versão (avulso e dentro do tarball) traz `conceptDoi` e
+  `versionDoi` como `10.5281/zenodo.PENDENTE` — o pipeline congelava o manifesto antes de o Zenodo
+  cunhar os DOIs, e um release publicado não aceita troca de arquivo. Os DOIs válidos são os desta
+  entrada. Consertado no pipeline em 30/10/2026: os próximos cortes reservam os DOIs antes do freeze.
+  A pré-visualização do Zenodo mostra os acentos do `release.json` como `ç` etc.: é o
+  visualizador que reescreve o JSON; o arquivo é UTF-8 íntegro.
 - **Licença do dado:** Dados Abertos do Senado Federal — uso livre com atribuição da fonte
   (ver [`LICENSE-DATA.md`](LICENSE-DATA.md); separada da licença de código, MIT).
 
