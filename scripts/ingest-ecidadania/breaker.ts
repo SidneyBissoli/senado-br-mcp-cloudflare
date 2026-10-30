@@ -28,6 +28,7 @@
  * mudo. Quem publica isso no painel é o monitor de fontes, pelo item de CI.
  */
 
+import { ArquivoIndisponivelError } from "./arquivo.js";
 import { HttpError } from "./http.js";
 
 const LIMITE_PADRAO = Number(process.env.INGEST_BREAKER_SEGUIDAS) || 10;
@@ -57,6 +58,8 @@ export class PortalForaError extends Error {
  */
 export function ehFalhaDeTransporte(e: unknown): boolean {
   if (e instanceof HttpError) return e.retryable;
+  // Arquivo bruto (fase B) fora: a página não foi lida. Seguidas assim param o run como portal fora.
+  if (e instanceof ArquivoIndisponivelError) return true;
   const m = e instanceof Error ? e.message : String(e);
   return /curl failed|curl: \(\d+\)|timed out|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|socket hang up|fetch failed|network/i.test(
     m,

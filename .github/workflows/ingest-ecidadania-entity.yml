@@ -51,6 +51,13 @@ jobs:
       # needs the account id explicitly (otherwise: "request to /memberships failed", code 9106).
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       INGEST_FORCE: ${{ inputs.force && '1' || '0' }}
+      # Arquivo bruto de páginas (fase B, 30/10/2026): balde R2 privado `ecidadania-arquivos`. Token R2
+      # com "Object Read & Write" SÓ nesse balde; a trava do balde barra apagar/sobrescrever. Obrigatório
+      # nos coletores de ideias (sem credencial o job falha no início, não coleta sem arquivar);
+      # consultas/eventos entram na B4.
+      ECIDADANIA_R2_ACCESS_KEY_ID: ${{ secrets.ECIDADANIA_R2_ACCESS_KEY_ID }}
+      ECIDADANIA_R2_SECRET_ACCESS_KEY: ${{ secrets.ECIDADANIA_R2_SECRET_ACCESS_KEY }}
+      ECIDADANIA_ARQUIVO: ${{ (inputs.entity == 'ideias' || inputs.entity == 'ideias-detalhe') && 'obrigatorio' || 'desligado' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v7

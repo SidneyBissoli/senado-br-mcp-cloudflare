@@ -46,6 +46,7 @@ import { parseAnomalyMinPct } from "../../src/scraper/anomaly.js";
 import { readExistingMeta, readAllPayloads, readDetalheCursor } from "./d1.js";
 import { generateLoadSqlBatches, generateRunOnlySql, cursorUpsertStmt } from "./sql.js";
 import { fetchIdeiaDetalhe, ehRecursoRemovido } from "./detalhe.js";
+import { ligarArquivo, type ArquivoLigado } from "./arquivo-run.js";
 
 const ENTIDADE = "ideias";
 const PAGE_DELAY_MS = Number(process.env.INGEST_IDEIAS_PAGE_DELAY_MS) || Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
@@ -70,6 +71,9 @@ const OUT_PREFIX = "out-ideias-";
 // Um disjuntor por RUN: falha de transporte seguida, em qualquer dos laços, é o
 // mesmo sintoma — o portal parou de responder. Ver breaker.ts.
 const disjuntor = criarDisjuntor();
+
+/** Arquivo bruto (fase B): ligado no início do run; todo caminho de saída o fecha antes de sair. */
+let arquivo: ArquivoLigado = { fechar: async () => {} };
 
 type IdeiaCrawlItem = IdeiaListingItem & { status: string };
 
@@ -284,6 +288,7 @@ async function main(): Promise<void> {
   const corpusMinPct = parseAnomalyMinPct(process.env.ECIDADANIA_CORPUS_MIN_PCT, 80);
 
   cleanOldOutputs();
+  arquivo = ligarArquivo({ job: "ideias", entidade: ENTIDADE, outDir: OUT_DIR });
 
   // ── 1. vivo ──
   const crawl = await crawlVivo();
@@ -293,6 +298,7 @@ async function main(): Promise<void> {
     const err = `crawl vivo incompleto: ${crawl.failedPages.length} pagina(s): ${crawl.failedPages.slice(0, 20).join(",")}`;
     console.error(`[ideias][gate] ${err} — nada será gravado`);
     writeRunOnly(now, "erro", crawl.items.length, err);
+    await arquivo.fechar();
     process.exit(1);
   }
 
@@ -303,6 +309,7 @@ async function main(): Promise<void> {
     const err = `catastrophic floor: ${abertasLidas} abertas lidas (< ${corpusMinPct}% das ${abertasNoD1} abertas no D1); use --force se legítimo`;
     console.error(`[ideias][gate] verdict=anomalo — ${err}`);
     writeRunOnly(now, "anomalo", crawl.items.length, err);
+    await arquivo.fechar();
     process.exit(1);
   }
 
@@ -336,6 +343,7 @@ async function main(): Promise<void> {
     const err = `taxa de leitura da listagem despencou: ${descreverVigia({ ...vigiaListagem, campos: vigiaListagem.quedas })}`;
     console.error(`[ideias][gate] verdict=anomalo — ${err} — nada será gravado`);
     writeRunOnly(now, "anomalo", crawl.items.length, err);
+    await arquivo.fechar();
     process.exit(1);
   }
   // Transições: queda descarta só a FASE — as fases 2 e 3 nunca bloqueiam o vivo (cabeçalho);
@@ -390,10 +398,12 @@ async function main(): Promise<void> {
   const files = generateLoadSqlBatches(annotated, now, lista.length, rowsChanged, ENTIDADE, BATCH_SIZE, tail);
   writeBatches(files);
   console.log(`[ideias][load] wrote ${files.length} file(s): ${lista.length} upserts, ${rowsChanged} changed, 1 ok run row`);
+  await arquivo.fechar();
   process.exit(0);
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
+  await arquivo.fechar();
   const err = e instanceof Error ? e.message : String(e);
   console.error(`[ideias][fatal] ${err}`);
   try {
