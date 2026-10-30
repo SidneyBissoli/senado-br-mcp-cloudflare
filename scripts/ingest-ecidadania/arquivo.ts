@@ -165,7 +165,7 @@ export class Arquivo {
       });
     } catch (e) {
       // O índice já está no D1; a parte do manifesto é a cópia de segurança. Avisa, não para o run.
-      console.warn(`[arquivo][manifesto] parte ${parte} não gravada: ${e instanceof Error ? e.message : String(e)}`);
+      console.warn(`[arquivo-bruto][manifesto] parte ${parte} não gravada: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 

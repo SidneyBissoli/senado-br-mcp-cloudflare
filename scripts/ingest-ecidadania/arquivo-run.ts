@@ -19,7 +19,7 @@ export interface ArquivoLigado {
 export function ligarArquivo(o: { job: string; entidade: string; outDir: string }): ArquivoLigado {
   const cfg = configDoAmbiente(process.env);
   if (!cfg) {
-    console.log(`[${o.job}][arquivo] desligado (sem credenciais do R2 ou ECIDADANIA_ARQUIVO=desligado)`);
+    console.log(`[${o.job}][arquivo-bruto] desligado (sem credenciais do R2 ou ECIDADANIA_ARQUIVO=desligado)`);
     return { fechar: async () => {} };
   }
   const rodada = process.env.GITHUB_RUN_ID
@@ -43,7 +43,7 @@ export function ligarArquivo(o: { job: string; entidade: string; outDir: string 
     },
   });
   observarRespostas((url, status, body) => arquivo.guardar(url, status, body));
-  console.log(`[${o.job}][arquivo] ligado: balde ${cfg.bucket}, rodada ${rodada}, leitor ${leitor}`);
+  console.log(`[${o.job}][arquivo-bruto] ligado: balde ${cfg.bucket}, rodada ${rodada}, leitor ${leitor}`);
 
   let fechado = false;
   return {
@@ -54,11 +54,11 @@ export function ligarArquivo(o: { job: string; entidade: string; outDir: string 
       try {
         await arquivo.descarregar();
       } catch (e) {
-        console.error(`[${o.job}][arquivo] índice final não descarregado: ${e instanceof Error ? e.message : String(e)}`);
+        console.error(`[${o.job}][arquivo-bruto] índice final não descarregado: ${e instanceof Error ? e.message : String(e)}`);
       }
       const r = arquivo.resumo();
       console.log(
-        `[${o.job}][arquivo] ${r.leituras} leituras guardadas (${r.novas} páginas novas, ${r.repetidas} repetidas); ` +
+        `[${o.job}][arquivo-bruto] ${r.leituras} leituras guardadas (${r.novas} páginas novas, ${r.repetidas} repetidas); ` +
           `${(r.bytesOriginais / 1048576).toFixed(1)} MB originais, ${(r.bytesGravados / 1048576).toFixed(1)} MB gravados em gzip`,
       );
     },
