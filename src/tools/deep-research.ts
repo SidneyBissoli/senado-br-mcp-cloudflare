@@ -152,7 +152,7 @@ async function construirIndice(baseUrl: string): Promise<IndiceCarregado> {
       upstreamFetch(PATH_COLEGIADOS, {}, baseUrl),
     ),
   ]);
-  const senadores = extractParlamentares(sen.value).map(parseSenadorResumo);
+  const senadores = extractParlamentares(sen.value).map((p) => parseSenadorResumo(p, true));
   const comissoes = ensureArray((com.value as any)?.ListaColegiados?.Colegiados?.Colegiado).map(parseComissaoItem);
   return {
     index: createIndex([...entradasSenadores(senadores), ...entradasComissoes(comissoes)]),

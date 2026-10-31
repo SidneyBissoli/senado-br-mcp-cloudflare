@@ -1,8 +1,8 @@
 {
   "$comentario": "Impressão digital da superfície (@sbissoli/mcp-surface). Não editar à mão: `npm run surface:lock` regrava, e só aceita superfície nova sob versão nova.",
   "declarada": {
-    "versao": "3.22.1",
-    "sha256": "d9e203cf214729003ff07ddc049f2e7705d26c88b25f7028e27d85fc207bed7b",
+    "versao": "3.24.0",
+    "sha256": "ecf80ba49024e35f1fcdb2ea69dced68245356ac32cb24304fb11bc8f82e1156",
     "conteudo": {
       "full": {
         "initialize": {
@@ -14937,14 +14937,13 @@
               "readOnlyHint": true,
               "title": "Listar senadores"
             },
-            "description": "Use para pedidos como 'liste os senadores em exercício', 'senadores atuais', 'lista atual de senadores' ou filtros por UF/partido. Lista senadores em exercício ou de uma legislatura específica, com filtros opcionais por `nome`, `uf` e `partido`. Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`, mais proveniência oficial do endpoint `/senador/lista/atual`. Use `emExercicio` (padrão `true`) ou `legislatura` para escolher o conjunto; `nome` faz correspondência parcial ignorando acentos/maiúsculas (use quando você só tem o nome e precisa do `codigo`); `uf`/`partido` filtram localmente. Use o `codigo` em `senado_obter_senador` ou `senado_votacoes_senador`. Para senadores fora de exercício veja `senado_senadores_afastados`.",
+            "description": "Use para pedidos como 'liste os senadores em exercício', 'senadores atuais', 'lista atual de senadores' ou filtros por UF/partido. Lista senadores em exercício, fora de exercício ou de uma legislatura específica, com filtros opcionais por `nome`, `uf` e `partido`. Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`, mais proveniência oficial da lista lida. `emExercicio` é a situação de HOJE: sem `legislatura`, `true` (padrão) lista os em exercício (titulares e suplentes que assumiram a vaga) e `false` lista os fora de exercício (titulares licenciados e suplentes fora da vaga — a mesma lista de `senado_senadores_afastados`); com `legislatura`, omitido traz a legislatura inteira e `true`/`false` filtra pela situação de hoje. `nome` faz correspondência parcial ignorando acentos/maiúsculas (use quando você só tem o nome e precisa do `codigo`); `uf`/`partido` filtram localmente. Use o `codigo` em `senado_obter_senador` ou `senado_votacoes_senador`.",
             "inputSchema": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
                 "emExercicio": {
-                  "default": true,
-                  "description": "Filtrar apenas senadores em exercício",
+                  "description": "Situação de hoje: true = em exercício (padrão sem `legislatura`), false = fora de exercício. Com `legislatura`, omitido = todos",
                   "type": "boolean"
                 },
                 "legislatura": {
@@ -37237,14 +37236,13 @@
               "readOnlyHint": true,
               "title": "Listar senadores"
             },
-            "description": "Use para pedidos como 'liste os senadores em exercício', 'senadores atuais', 'lista atual de senadores' ou filtros por UF/partido. Lista senadores em exercício ou de uma legislatura específica, com filtros opcionais por `nome`, `uf` e `partido`. Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`, mais proveniência oficial do endpoint `/senador/lista/atual`. Use `emExercicio` (padrão `true`) ou `legislatura` para escolher o conjunto; `nome` faz correspondência parcial ignorando acentos/maiúsculas (use quando você só tem o nome e precisa do `codigo`); `uf`/`partido` filtram localmente. Use o `codigo` em `senado_obter_senador` ou `senado_votacoes_senador`. Para senadores fora de exercício veja `senado_senadores_afastados`.",
+            "description": "Use para pedidos como 'liste os senadores em exercício', 'senadores atuais', 'lista atual de senadores' ou filtros por UF/partido. Lista senadores em exercício, fora de exercício ou de uma legislatura específica, com filtros opcionais por `nome`, `uf` e `partido`. Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`, mais proveniência oficial da lista lida. `emExercicio` é a situação de HOJE: sem `legislatura`, `true` (padrão) lista os em exercício (titulares e suplentes que assumiram a vaga) e `false` lista os fora de exercício (titulares licenciados e suplentes fora da vaga — a mesma lista de `senado_senadores_afastados`); com `legislatura`, omitido traz a legislatura inteira e `true`/`false` filtra pela situação de hoje. `nome` faz correspondência parcial ignorando acentos/maiúsculas (use quando você só tem o nome e precisa do `codigo`); `uf`/`partido` filtram localmente. Use o `codigo` em `senado_obter_senador` ou `senado_votacoes_senador`.",
             "inputSchema": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
                 "emExercicio": {
-                  "default": true,
-                  "description": "Filtrar apenas senadores em exercício",
+                  "description": "Situação de hoje: true = em exercício (padrão sem `legislatura`), false = fora de exercício. Com `legislatura`, omitido = todos",
                   "type": "boolean"
                 },
                 "legislatura": {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { digObjectRoot } from "../../src/utils/upstream-parse.js";
 import { classifyError } from "../../src/call-shape.js";
-import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador, parseLicenca, parseMandato, parseComissaoMembro, parseCargoSenador, matchesPartido, derivarEmExercicio } from "../../src/tools/senadores.js";
+import { parseSenadorResumo, parseSenadorDetalhe, extractParlamentares, parseVotoSenador, parseLicenca, parseMandato, parseComissaoMembro, parseCargoSenador, matchesPartido, derivarEmExercicio, fonteDaListagem, resumosDaListagem, provenanceDaListagem, NOTA_DERIVACAO_EM_EXERCICIO } from "../../src/tools/senadores.js";
 
 describe("matchesPartido (OBS-6)", () => {
   it("matches exact and common short forms", () => {
@@ -42,33 +42,19 @@ describe("parseSenadorResumo", () => {
     expect(result.partido).toBe("PSB");
     expect(result.uf).toBe("PR");
     expect(result.foto).toBe("https://example.com/foto.jpg");
-    expect(result.emExercicio).toBe(true);
+    expect(result.emExercicio).toBeNull();
   });
 
-  it("handles suplente (not in exercise)", () => {
-    const parlamentar = {
-      IdentificacaoParlamentar: {
-        CodigoParlamentar: "1000",
-        NomeParlamentar: "Suplente",
-      },
-      DescricaoParticipacao: "Suplente",
-      Mandato: {},
+  it("states emExercicio from the caller, never from the record", () => {
+    // A suplente in /senador/lista/atual IS seated: the participation says nothing
+    // about the exercise (11 of 81 on 30/10/2026).
+    const suplenteEmExercicio = {
+      IdentificacaoParlamentar: { CodigoParlamentar: "1000", NomeParlamentar: "Suplente" },
+      Mandato: { DescricaoParticipacao: "1º Suplente" },
     };
-    const result = parseSenadorResumo(parlamentar);
-    expect(result.emExercicio).toBe(false);
-  });
-
-  it("handles entry with DataFim (no longer serving)", () => {
-    const parlamentar = {
-      IdentificacaoParlamentar: {
-        CodigoParlamentar: "2000",
-        NomeParlamentar: "Ex-Senador",
-      },
-      DataFim: "2023-06-01",
-      Mandato: {},
-    };
-    const result = parseSenadorResumo(parlamentar);
-    expect(result.emExercicio).toBe(false);
+    expect(parseSenadorResumo(suplenteEmExercicio, true).emExercicio).toBe(true);
+    expect(parseSenadorResumo(suplenteEmExercicio, false).emExercicio).toBe(false);
+    expect(parseSenadorResumo(suplenteEmExercicio).emExercicio).toBeNull();
   });
 
   it("falls back to IdentificacaoParlamentar fields when Mandato is empty", () => {
@@ -89,6 +75,49 @@ describe("parseSenadorResumo", () => {
   it("defaults codigo to 0 when missing", () => {
     const result = parseSenadorResumo({});
     expect(result.codigo).toBe(0);
+  });
+});
+
+describe("senado_listar_senadores: emExercicio filters (was inert until 3.x)", () => {
+  const p = (codigo: string) => ({ IdentificacaoParlamentar: { CodigoParlamentar: codigo, NomeParlamentar: `S${codigo}` } });
+
+  it("picks the official list: atual by default, afastados on false, legislature crossed with atual", () => {
+    expect(fonteDaListagem({})).toEqual({ path: "/senador/lista/atual", dataset_id: "lista/atual", cruzaComAtual: false });
+    expect(fonteDaListagem({ emExercicio: true }).path).toBe("/senador/lista/atual");
+    expect(fonteDaListagem({ emExercicio: false })).toEqual({ path: "/senador/afastados", dataset_id: "afastados", cruzaComAtual: false });
+    for (const emExercicio of [undefined, true, false]) {
+      expect(fonteDaListagem({ legislatura: 57, emExercicio })).toEqual({
+        path: "/senador/lista/legislatura/57", dataset_id: "legislatura=57", cruzaComAtual: true,
+      });
+    }
+  });
+
+  it("states the field from the list read, without filtering, when there is no legislature", () => {
+    expect(resumosDaListagem([p("1"), p("2")], {}, null).map((s) => s.emExercicio)).toEqual([true, true]);
+    expect(resumosDaListagem([p("1"), p("2")], { emExercicio: false }, null).map((s) => s.emExercicio)).toEqual([false, false]);
+  });
+
+  it("crosses a legislature with the current list and filters only when asked", () => {
+    const leg = [p("1"), p("2"), p("3")];
+    const atuais = new Set([2]);
+    const todos = resumosDaListagem(leg, { legislatura: 57 }, atuais);
+    expect(todos.map((s) => [s.codigo, s.emExercicio])).toEqual([[1, false], [2, true], [3, false]]);
+    expect(resumosDaListagem(leg, { legislatura: 57, emExercicio: true }, atuais).map((s) => s.codigo)).toEqual([2]);
+    expect(resumosDaListagem(leg, { legislatura: 57, emExercicio: false }, atuais).map((s) => s.codigo)).toEqual([1, 3]);
+  });
+
+  it("marks the legislature cross as derived, with the current list as the field source", () => {
+    const base = "https://legis.senado.leg.br/dadosabertos";
+    const leitura = { fetchedAt: "2026-10-30T10:00:00-03:00", fromCache: false };
+    const simples = provenanceDaListagem(base, { emExercicio: false }, leitura, null);
+    expect(simples.source_url).toBe(`${base}/senador/afastados`);
+    expect(simples.derived).not.toBe(true);
+
+    const cruzada = provenanceDaListagem(base, { legislatura: 57 }, leitura, leitura);
+    expect(cruzada.source_url).toBe(`${base}/senador/lista/legislatura/57`);
+    expect(cruzada.derived).toBe(true);
+    expect(cruzada.derivation_note).toBe(NOTA_DERIVACAO_EM_EXERCICIO);
+    expect(JSON.stringify(cruzada.field_sources)).toContain("/senador/lista/atual");
   });
 });
 

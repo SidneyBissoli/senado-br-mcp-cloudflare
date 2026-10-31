@@ -99,6 +99,30 @@ All notable changes to this project are documented here. Format based on
   por grupo conciliados com as linhas (soma e contagem); a fixture com as duas negativas fica como
   regressão — o teste antigo reprova nela, o novo passa.
 
+## [3.24.0] - 2026-10-30
+
+### Fixed
+
+- **`senado_listar_senadores`: o filtro `emExercicio` passa a filtrar.** Ele era declarado (padrão
+  `true`), mas não mudava a lista lida: `emExercicio: false` devolvia os mesmos 81 senadores em
+  exercício. Decisão do dono (30/10/2026): fazê-lo funcionar, em vez de tirá-lo (os esquemas são
+  estritos, e tirar faria falhar toda chamada que ainda o manda). "Em exercício" é a situação de HOJE.
+  Sem `legislatura`, `true` (padrão) lê `/senador/lista/atual` e `false` lê `/senador/afastados`, a
+  mesma lista e a mesma entrada de cache de `senado_senadores_afastados` (medido 30/10: 81 e 44
+  pessoas, sem ninguém nas duas; os 44 são 11 titulares licenciados e 33 suplentes fora da vaga). Com
+  `legislatura`, omitido continua trazendo a legislatura inteira, e `true`/`false` filtra cruzando-a
+  com a lista atual. **Mudança de superfície:** o parâmetro perde o `default: true` do esquema (o
+  padrão sem `legislatura` continua `true`, agora dito na descrição), e a descrição da ferramenta e a
+  do parâmetro mudam. É a única diferença no dump `--stdio` contra a 3.23.0.
+- **O campo `emExercicio` de cada senador da lista deixa de sair `true` para todos.** O leitor buscava
+  `DescricaoParticipacao`/`DataFim` no topo do registro, onde a fonte nunca os põe (a participação
+  fica dentro de `Mandato` e só diz titular/suplente). Na lista atual o erro acertava por acaso; com
+  `legislatura: 57`, os 163 suplentes saíam como em exercício. O campo agora vem da lista oficial lida
+  (atual → `true`, afastados → `false`) ou, com `legislatura`, do cruzamento com a lista atual. Nesse
+  caso a proveniência registra `/senador/lista/atual` como sub-fonte do campo e marca o bloco como
+  derivado (nota `NOTA_DERIVACAO_EM_EXERCICIO`). O teste de contrato passa a reprovar a fixture que
+  trouxer a participação no topo.
+
 ## [3.23.0] - 2026-10-27
 
 MINOR porque a superfície publicada muda: o `outputSchema` comum das 69 tools ganha duas descrições
