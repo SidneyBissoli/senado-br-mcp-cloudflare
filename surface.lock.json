@@ -1,8 +1,8 @@
 {
   "$comentario": "Impressão digital da superfície (@sbissoli/mcp-surface). Não editar à mão: `npm run surface:lock` regrava, e só aceita superfície nova sob versão nova.",
   "declarada": {
-    "versao": "3.24.0",
-    "sha256": "ecf80ba49024e35f1fcdb2ea69dced68245356ac32cb24304fb11bc8f82e1156",
+    "versao": "3.25.0",
+    "sha256": "1554c0cfcc9290cb19e821aa54bd8571d5ba11681d5babdd8f5558c244562fe2",
     "conteudo": {
       "full": {
         "initialize": {
@@ -5981,7 +5981,7 @@
               "readOnlyHint": true,
               "title": "Discursos de um senador"
             },
-            "description": "Lista pronunciamentos de um senador, filtráveis por período e casa. `tipo` (padrão `discursos`) alterna entre `discursos` (falas próprias) e `apartes` (intervenções em falas de outros) — muda a fonte upstream e o conteúdo, mantendo a mesma estrutura. Retorna `{ codigoSenador, tipo, count, discursos }` sem paginação (`count` 0 e lista vazia quando não há pronunciamentos no período), cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `indexacao`, `url` e `nomeParlamentar` — sem o texto integral. ATENÇÃO: para `tipo=discursos`, omitir `dataInicio`/`dataFim` faz a fonte retornar SOMENTE os últimos 30 dias (frequentemente vazio) — para o histórico, informe o período explícito (ex.: desde o início do mandato); apenas `apartes` traz o histórico completo sem período. Obtenha o `codigoSenador` via `senado_listar_senadores` e o texto completo em `senado_discurso_texto` (campo `codigo`). Para discursos de todos os senadores num período use `senado_discursos_plenario`, não esta.",
+            "description": "Lista pronunciamentos de um senador, filtráveis por período e casa. `tipo` (padrão `discursos`) alterna entre `discursos` (falas próprias) e `apartes` (intervenções em falas de outros) — muda a fonte upstream e o conteúdo, mantendo a mesma estrutura. Retorna `{ codigoSenador, tipo, count, discursos, periodosNaoLidos?, aviso? }` sem paginação (`count` 0 e lista vazia quando não há pronunciamentos no período), cada item com `codigo`, `data`, `casa`, `tipoUsoPalavra`, `resumo`, `indexacao`, `url` e `nomeParlamentar` — sem o texto integral. ATENÇÃO: para `tipo=discursos`, omitir `dataInicio`/`dataFim` faz a fonte retornar SOMENTE os últimos 30 dias (frequentemente vazio) — para o histórico, informe o período explícito (ex.: desde o início do mandato; períodos de mais de 1 ano são lidos ano a ano por dentro, e um ano que a fonte não entregar aparece em `periodosNaoLidos`); `apartes` traz o histórico completo sem período e, com período, só os apartes dentro dele. Obtenha o `codigoSenador` via `senado_listar_senadores` e o texto completo em `senado_discurso_texto` (campo `codigo`). Para discursos de todos os senadores num período use `senado_discursos_plenario`, não esta.",
             "inputSchema": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
@@ -23416,13 +23416,13 @@
               "readOnlyHint": true,
               "title": "Reuniões de comissão"
             },
-            "description": "Lista reuniões de uma comissão (pela `sigla`) num intervalo `dataInicio`/`dataFim` (YYYYMMDD); sem datas, usa os últimos 14 dias. Atenção: o upstream devolve a agenda de TODAS as comissões do período (o filtro por sigla é local), então janelas amplas (mensais/anuais) podem estourar o limite de tamanho da resposta (erro de payload): prefira janelas de até 2 semanas e divida períodos maiores em chamadas sucessivas. Retorna `{ sigla, periodo, count, reunioes }`, cada reunião com `codigo`, `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. Intervalos entre anos são divididos por ano internamente. Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` retornado em `senado_reuniao_comissao` para os detalhes da pauta.",
+            "description": "Lista reuniões de uma comissão (pela `sigla`) num intervalo `dataInicio`/`dataFim` (YYYYMMDD) de até 30 dias; sem datas, usa os últimos 14 dias. A fonte só entrega 30 dias por pedido (e cortava o resto calada), então janelas maiores são recusadas: divida períodos longos em chamadas de até 30 dias. A agenda é lida um dia por vez; um dia que a fonte não entregar aparece em `diasNaoLidos`, com `aviso`. Retorna `{ sigla, periodo, count, reunioes, agendaPrevista?, diasNaoLidos?, aviso? }`, cada reunião com `codigo`, `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. `reunioes` traz só as de até hoje; quando o período chega ao futuro, as marcadas para depois de hoje vêm à parte em `agendaPrevista` (`count`, `reunioes`, `aviso`) — são previsão e podem mudar. Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` retornado em `senado_reuniao_comissao` para os detalhes da pauta.",
             "inputSchema": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
                 "dataFim": {
-                  "description": "Data fim (YYYYMMDD)",
+                  "description": "Data fim (YYYYMMDD); no máximo 30 dias depois do início",
                   "pattern": "^\\d{8}$",
                   "type": "string"
                 },
@@ -40849,13 +40849,13 @@
               "readOnlyHint": true,
               "title": "Reuniões de comissão"
             },
-            "description": "Lista reuniões de uma comissão (pela `sigla`) num intervalo `dataInicio`/`dataFim` (YYYYMMDD); sem datas, usa os últimos 14 dias. Atenção: o upstream devolve a agenda de TODAS as comissões do período (o filtro por sigla é local), então janelas amplas (mensais/anuais) podem estourar o limite de tamanho da resposta (erro de payload): prefira janelas de até 2 semanas e divida períodos maiores em chamadas sucessivas. Retorna `{ sigla, periodo, count, reunioes }`, cada reunião com `codigo`, `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. Intervalos entre anos são divididos por ano internamente. Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` retornado em `senado_reuniao_comissao` para os detalhes da pauta.",
+            "description": "Lista reuniões de uma comissão (pela `sigla`) num intervalo `dataInicio`/`dataFim` (YYYYMMDD) de até 30 dias; sem datas, usa os últimos 14 dias. A fonte só entrega 30 dias por pedido (e cortava o resto calada), então janelas maiores são recusadas: divida períodos longos em chamadas de até 30 dias. A agenda é lida um dia por vez; um dia que a fonte não entregar aparece em `diasNaoLidos`, com `aviso`. Retorna `{ sigla, periodo, count, reunioes, agendaPrevista?, diasNaoLidos?, aviso? }`, cada reunião com `codigo`, `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. `reunioes` traz só as de até hoje; quando o período chega ao futuro, as marcadas para depois de hoje vêm à parte em `agendaPrevista` (`count`, `reunioes`, `aviso`) — são previsão e podem mudar. Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` retornado em `senado_reuniao_comissao` para os detalhes da pauta.",
             "inputSchema": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
               "additionalProperties": false,
               "properties": {
                 "dataFim": {
-                  "description": "Data fim (YYYYMMDD)",
+                  "description": "Data fim (YYYYMMDD); no máximo 30 dias depois do início",
                   "pattern": "^\\d{8}$",
                   "type": "string"
                 },

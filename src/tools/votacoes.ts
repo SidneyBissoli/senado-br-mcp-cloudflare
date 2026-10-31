@@ -15,6 +15,9 @@ import { toolError, errorFrom, buildParams, ensureArray } from "../utils/validat
 import { computarPlacar } from "../utils/placar.js";
 import { NOTA_DERIVACAO_PLACAR, derivadoSe, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND } from "../types.js";
+import {
+  camposDePeriodosNaoLidos, carimboDaJanela, lerPorAno, maisAntigo, recusarJanelaInvertida, relogioJanela,
+} from "../utils/janela.js";
 
 /** Convert YYYYMMDD → YYYY-MM-DD (required by /votacao endpoint). */
 export function toISODate(yyyymmdd: string): string {
@@ -265,40 +268,43 @@ export function registerVotacoesTools(server: SenadoToolHost, baseUrl: string) {
     },
     async (params) => {
       try {
+        const invertida = recusarJanelaInvertida(params.dataInicio, params.dataFim);
+        if (invertida) return invertida;
         let di = params.dataInicio ? toISODate(params.dataInicio) : undefined;
         let df = params.dataFim ? toISODate(params.dataFim) : undefined;
         if (params.dias && !di && !df) {
-          const hoje = new Date();
+          const hoje = relogioJanela.agora();
           const inicio = new Date(hoje);
           inicio.setDate(inicio.getDate() - params.dias);
           di = formatISO(inicio);
           df = formatISO(hoje);
         }
-        const qp = buildParams({
-          dataInicio: di,
-          dataFim: df,
-          idProcesso: params.idProcesso,
-          codigoMateria: params.codigoMateria,
-          sigla: params.sigla,
-          numero: params.numero,
-          ano: params.ano,
-          codigoParlamentar: params.codigoParlamentar,
-          siglaVotoParlamentar: params.siglaVotoParlamentar,
-        });
-        const { value: response, fetchedAt } = await cachedFetchWithMeta(
-          "senado_search_votacoes",
-          qp,
-          CACHE_ON_DEMAND,
-          () => upstreamFetch("/votacao", qp, baseUrl),
-        );
-        const votacoes = ensureArray(response)
+        const ler = (janela: { dataInicio?: string; dataFim?: string }) => {
+          const qp = buildParams({
+            ...janela,
+            idProcesso: params.idProcesso,
+            codigoMateria: params.codigoMateria,
+            sigla: params.sigla,
+            numero: params.numero,
+            ano: params.ano,
+            codigoParlamentar: params.codigoParlamentar,
+            siglaVotoParlamentar: params.siglaVotoParlamentar,
+          });
+          return cachedFetchWithMeta("senado_search_votacoes", qp, CACHE_ON_DEMAND, () => upstreamFetch("/votacao", qp, baseUrl));
+        };
+        const { leituras, falhas } = await lerPorAno(di, df, ler);
+        const votacoes = leituras
+          .flatMap((l) => ensureArray(l.value))
           .map((v: any) => parseVotacaoItem(v))
           .sort((a, b) => (b.data || "").localeCompare(a.data || ""));
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
-          reference_period: di && df ? `${di}/${df}` : di || df || undefined,
-          retrieved_at: fetchedAt,
+          reference_period: di && df ? carimboDaJanela(di, df) : di || df || undefined,
+          retrieved_at: maisAntigo(leituras.map((l) => l.fetchedAt)),
         });
-        return resultWithProvenance({ count: votacoes.length, votacoes }, provenanceDaVotacao(prov, votacoes));
+        return resultWithProvenance(
+          { count: votacoes.length, votacoes, ...camposDePeriodosNaoLidos(falhas) },
+          provenanceDaVotacao(prov, votacoes),
+        );
       } catch (e) {
         return errorFrom(e, "Erro na busca de votações");
       }
