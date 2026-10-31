@@ -124,6 +124,21 @@ export class UpstreamError extends Error {
 }
 
 /**
+ * A ida foi recusada pelo NOSSO limitador (balde global ou teto de concorrência), sem chegar
+ * à fonte. Mesma mensagem, status e classe de antes — quem lê `UpstreamError` não muda —, mas
+ * o tipo deixa quem faz várias idas numa chamada (a leitura em fatias de `src/utils/janela.ts`)
+ * esperar a vez em vez de dar a fatia por perdida. Medido em 30/10/2026: a agenda lida dia a
+ * dia com 4 idas em paralelo esvaziava a rajada de 12 em < 1 s, e 12 de 30 dias voltavam
+ * "Taxa de requisições excedida" — nenhum deles era falha da fonte.
+ */
+export class LimiteLocalError extends UpstreamError {
+  constructor(message: string, status: number) {
+    super(message, status, true);
+    this.name = "LimiteLocalError";
+  }
+}
+
+/**
  * Frase-chave da mensagem de rota inexistente. Vive numa constante porque
  * `classifyError` casa contra ela para devolver `defeito`: se o texto mudar
  * num lugar só, a telemetria volta a mentir em silêncio.
@@ -377,10 +392,9 @@ export async function upstreamFetch(
   if (!globalBucket.tryConsume()) {
     incr("upstreamErrors");
     logger.warn("upstream_rate_limited", { path });
-    throw new UpstreamError(
+    throw new LimiteLocalError(
       `[${path}] Taxa de requisições excedida. Tente novamente em alguns segundos.`,
       429,
-      true,
     );
   }
 
@@ -388,10 +402,9 @@ export async function upstreamFetch(
   if (inFlight >= MAX_CONCURRENT) {
     incr("upstreamErrors");
     logger.warn("upstream_concurrency_limited", { path });
-    throw new UpstreamError(
+    throw new LimiteLocalError(
       `[${path}] Muitas requisições simultâneas ao upstream. Tente novamente em breve.`,
       503,
-      true,
     );
   }
 
