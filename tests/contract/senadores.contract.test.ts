@@ -65,13 +65,19 @@ describe("contract: /senador/lista/atual", () => {
     expect(items[0]).toHaveProperty("IdentificacaoParlamentar.SiglaPartidoParlamentar");
     expect(items[0]).toHaveProperty("IdentificacaoParlamentar.UfParlamentar");
     expect(items[0]).toHaveProperty("Mandato.UfParlamentar");
+    // The participation lives inside Mandato, never at the top: a top-level read
+    // made `emExercicio` true for everyone until 3.x (see parseSenadorResumo).
+    for (const item of items) {
+      expect(item).not.toHaveProperty("DescricaoParticipacao");
+      expect(item).toHaveProperty("Mandato.DescricaoParticipacao");
+    }
   });
 
   it("extractParlamentares + parseSenadorResumo yield well-typed senators", () => {
     const parlamentares = extractParlamentares(listaAtual);
     expect(parlamentares.length).toBeGreaterThan(0);
     for (const p of parlamentares) {
-      const s = parseSenadorResumo(p);
+      const s = parseSenadorResumo(p, true);
       expect(typeof s.codigo).toBe("number");
       expect(s.codigo).toBeGreaterThan(0);
       expect(typeof s.nome).toBe("string");

@@ -13,10 +13,19 @@ import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
 import { errorFrom, ensureArray, normalizeText, safeInt } from "../utils/validation.js";
 import { digArrayRoot, digObjectRoot } from "../utils/upstream-parse.js";
-import { leituraDoCache, provenanceFor, resultWithProvenance, toBrasiliaIso } from "../utils/provenance.js";
+import { derivado, leituraDoCache, provenanceFor, resultWithProvenance, toBrasiliaIso, withFieldSources, type Provenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
 
-export function parseSenadorResumo(parlamentar: any) {
+/**
+ * `emExercicio` is NOT read from the record: none of the three list endpoints carries
+ * a usable flag. The participation lives inside `Mandato` and only says titular/suplente
+ * — and a suplente in `/senador/lista/atual` IS seated (11 of 81 on 30/10/2026). Until
+ * 3.x the field read a top-level `DescricaoParticipacao`/`DataFim` that never exists, so
+ * it came out `true` for everyone, including the 163 suplentes of legislature 57.
+ * The caller states it from WHICH official list the record came (see
+ * `resumosDaListagem`); `null` when it is not known.
+ */
+export function parseSenadorResumo(parlamentar: any, emExercicio: boolean | null = null) {
   const id = parlamentar.IdentificacaoParlamentar || parlamentar;
   const m = parlamentar.Mandato || {};
   return {
@@ -26,8 +35,88 @@ export function parseSenadorResumo(parlamentar: any) {
     partido: m.Partido?.SiglaPartido || id.SiglaPartidoParlamentar || null,
     uf: m.UfParlamentar || id.UfParlamentar || "",
     foto: id.UrlFotoParlamentar || null,
-    emExercicio: parlamentar.DescricaoParticipacao !== "Suplente" && !parlamentar.DataFim,
+    emExercicio,
   };
+}
+
+export const PATH_SENADORES_ATUAIS = "/senador/lista/atual";
+export const PATH_SENADORES_AFASTADOS = "/senador/afastados";
+
+/**
+ * The official list `senado_listar_senadores` reads. "Em exercício" is a state of TODAY:
+ * without `legislatura`, `true` (default) is `/senador/lista/atual` and `false` is
+ * `/senador/afastados` (licensed titulars + suplentes out of the seat — measured 30/10/2026:
+ * 81 and 44, disjoint). With `legislatura`, the legislature list is crossed with
+ * `/senador/lista/atual` (`cruzaComAtual`).
+ */
+export function fonteDaListagem(params: { legislatura?: number; emExercicio?: boolean }): {
+  path: string;
+  dataset_id: string;
+  cruzaComAtual: boolean;
+} {
+  if (params.legislatura) {
+    return { path: `/senador/lista/legislatura/${params.legislatura}`, dataset_id: `legislatura=${params.legislatura}`, cruzaComAtual: true };
+  }
+  return params.emExercicio === false
+    ? { path: PATH_SENADORES_AFASTADOS, dataset_id: "afastados", cruzaComAtual: false }
+    : { path: PATH_SENADORES_ATUAIS, dataset_id: "lista/atual", cruzaComAtual: false };
+}
+
+/**
+ * Summaries with `emExercicio` stated from the list they came from. With `legislatura`,
+ * it is membership in `/senador/lista/atual` (`codigosEmExercicio`), and an explicit
+ * `emExercicio` filters on it; omitted, the whole legislature comes back.
+ */
+export function resumosDaListagem(
+  parlamentares: any[],
+  params: { legislatura?: number; emExercicio?: boolean },
+  codigosEmExercicio: ReadonlySet<number> | null,
+) {
+  if (!params.legislatura || !codigosEmExercicio) {
+    const emExercicio = params.legislatura ? null : params.emExercicio !== false;
+    return parlamentares.map((p) => parseSenadorResumo(p, emExercicio));
+  }
+  const resumos = parlamentares.map((p) => {
+    const r = parseSenadorResumo(p);
+    return { ...r, emExercicio: codigosEmExercicio.has(r.codigo) };
+  });
+  return params.emExercicio === undefined
+    ? resumos
+    : resumos.filter((s) => s.emExercicio === params.emExercicio);
+}
+
+/** Server-side cross of a legislature list with the current one (contract v1.3 `derived`). */
+export const NOTA_DERIVACAO_EM_EXERCICIO =
+  "Situação de exercício de cada senador da legislatura determinada pelo servidor, cruzando a lista da legislatura com a lista oficial dos senadores em exercício hoje.";
+
+/**
+ * Provenance of `senado_listar_senadores`. A plain list (atual/afastados) restates the
+ * source. With `legislatura`, `emExercicio` comes from a second reading (`atual`), which
+ * becomes a field source, and the block is marked derived.
+ */
+export function provenanceDaListagem(
+  baseUrl: string,
+  params: { legislatura?: number; emExercicio?: boolean },
+  principal: { fetchedAt: string },
+  atual: { fetchedAt: string; fromCache: boolean } | null,
+): Provenance {
+  const fonte = fonteDaListagem(params);
+  const prov = provenanceFor("SENADO_LEGIS", baseUrl, fonte.path, {
+    dataset_id: fonte.dataset_id,
+    retrieved_at: principal.fetchedAt,
+  });
+  if (!atual) return prov;
+  return derivado(
+    withFieldSources(prov, [
+      {
+        fields: ["emExercicio"],
+        source_url: `${baseUrl.replace(/\/$/, "")}${PATH_SENADORES_ATUAIS}`,
+        dataset_id: "lista/atual",
+        ...leituraDoCache(atual),
+      },
+    ]),
+    NOTA_DERIVACAO_EM_EXERCICIO,
+  );
 }
 
 /**
@@ -336,12 +425,19 @@ export function provenanceSenadorDetalhe(
 }
 
 export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) {
+  // One cache entry per official list: `emExercicio: false` shares the afastados
+  // entry with `senado_senadores_afastados`.
+  const lerListaOficial = (path: string) =>
+    path === PATH_SENADORES_AFASTADOS
+      ? cachedFetchWithMeta("senado_senadores_afastados", {}, CACHE_SEMI_STATIC, () => upstreamFetch(path, {}, baseUrl))
+      : cachedFetchWithMeta("senado_listar_senadores", { path }, CACHE_SEMI_STATIC, () => upstreamFetch(path, {}, baseUrl));
+
   // A1. senado_listar_senadores (filtro `nome` substitui a antiga busca por nome)
   server.tool(
     "senado_listar_senadores",
-    "Use para pedidos como 'liste os senadores em exercício', 'senadores atuais', 'lista atual de senadores' ou filtros por UF/partido. Lista senadores em exercício ou de uma legislatura específica, com filtros opcionais por `nome`, `uf` e `partido`. Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`, mais proveniência oficial do endpoint `/senador/lista/atual`. Use `emExercicio` (padrão `true`) ou `legislatura` para escolher o conjunto; `nome` faz correspondência parcial ignorando acentos/maiúsculas (use quando você só tem o nome e precisa do `codigo`); `uf`/`partido` filtram localmente. Use o `codigo` em `senado_obter_senador` ou `senado_votacoes_senador`. Para senadores fora de exercício veja `senado_senadores_afastados`.",
+    "Use para pedidos como 'liste os senadores em exercício', 'senadores atuais', 'lista atual de senadores' ou filtros por UF/partido. Lista senadores em exercício, fora de exercício ou de uma legislatura específica, com filtros opcionais por `nome`, `uf` e `partido`. Retorna `{ count, senadores }`, cada item com `codigo`, `nome`, `nomeCompleto`, `partido`, `uf`, `foto` e `emExercicio`, mais proveniência oficial da lista lida. `emExercicio` é a situação de HOJE: sem `legislatura`, `true` (padrão) lista os em exercício (titulares e suplentes que assumiram a vaga) e `false` lista os fora de exercício (titulares licenciados e suplentes fora da vaga — a mesma lista de `senado_senadores_afastados`); com `legislatura`, omitido traz a legislatura inteira e `true`/`false` filtra pela situação de hoje. `nome` faz correspondência parcial ignorando acentos/maiúsculas (use quando você só tem o nome e precisa do `codigo`); `uf`/`partido` filtram localmente. Use o `codigo` em `senado_obter_senador` ou `senado_votacoes_senador`.",
     {
-      emExercicio: z.boolean().optional().default(true).describe("Filtrar apenas senadores em exercício"),
+      emExercicio: z.boolean().optional().describe("Situação de hoje: true = em exercício (padrão sem `legislatura`), false = fora de exercício. Com `legislatura`, omitido = todos"),
       legislatura: z.number().int().min(1).optional().describe("Número da legislatura (ex: 57 para 2023-2027)"),
       nome: z.string().optional().describe("Nome ou parte do nome (busca parcial, sem acento)"),
       uf: z.string().max(2).optional().describe("Sigla do estado (ex: SP, RJ, MG)"),
@@ -349,16 +445,13 @@ export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) 
     },
     async (params) => {
       try {
-        const path = params.legislatura
-          ? `/senador/lista/legislatura/${params.legislatura}`
-          : "/senador/lista/atual";
-        const { value: response, fetchedAt } = await cachedFetchWithMeta(
-          "senado_listar_senadores",
-          { path },
-          CACHE_SEMI_STATIC,
-          () => upstreamFetch(path, {}, baseUrl),
-        );
-        let senadores = extractParlamentares(response).map(parseSenadorResumo);
+        const fonte = fonteDaListagem(params);
+        const principal = await lerListaOficial(fonte.path);
+        const atual = fonte.cruzaComAtual ? await lerListaOficial(PATH_SENADORES_ATUAIS) : null;
+        const codigosEmExercicio = atual
+          ? new Set(extractParlamentares(atual.value).map((p) => parseSenadorResumo(p).codigo))
+          : null;
+        let senadores = resumosDaListagem(extractParlamentares(principal.value), params, codigosEmExercicio);
         if (params.nome) {
           senadores = senadores.filter((s) => matchesNome(s, params.nome!));
         }
@@ -369,10 +462,7 @@ export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) 
         if (params.partido) {
           senadores = senadores.filter((s) => matchesPartido(s.partido, params.partido!));
         }
-        const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
-          dataset_id: params.legislatura ? `legislatura=${params.legislatura}` : "lista/atual",
-          retrieved_at: fetchedAt,
-        });
+        const prov = provenanceDaListagem(baseUrl, params, principal, atual);
         return resultWithProvenance({ count: senadores.length, senadores }, prov);
       } catch (e) {
         return errorFrom(e, "Erro ao listar senadores");
@@ -533,15 +623,9 @@ export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) 
     {},
     async () => {
       try {
-        const { value: response, fetchedAt } = await cachedFetchWithMeta(
-          "senado_senadores_afastados",
-          {},
-          CACHE_SEMI_STATIC,
-          () => upstreamFetch("/senador/afastados", {}, baseUrl),
-        );
-        const senadores = extractParlamentares(response).map(parseSenadorResumo)
-          .map((s) => ({ ...s, emExercicio: false }));
-        const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/senador/afastados", {
+        const { value: response, fetchedAt } = await lerListaOficial(PATH_SENADORES_AFASTADOS);
+        const senadores = extractParlamentares(response).map((p) => parseSenadorResumo(p, false));
+        const prov = provenanceFor("SENADO_LEGIS", baseUrl, PATH_SENADORES_AFASTADOS, {
           retrieved_at: fetchedAt,
         });
         return resultWithProvenance({ count: senadores.length, senadores }, prov);
