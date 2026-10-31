@@ -99,6 +99,18 @@ All notable changes to this project are documented here. Format based on
   por grupo conciliados com as linhas (soma e contagem); a fixture com as duas negativas fica como
   regressão — o teste antigo reprova nela, o novo passa.
 
+## [3.25.2] - 2026-10-30
+
+### Fixed
+
+- **`senado_reunioes_comissao`: dia cheio da agenda estourava o guarda de 5 MB.** Provado no ar
+  após a 3.25.1: CCJ em 02/02–03/03/2026 voltou com 0 reuniões e 2 dias em `diasNaoLidos`
+  (05/02 e 26/02), ambos "Resposta upstream excede o limite de 5 MB" — 7,7 MB e 6,8 MB. A entrada
+  da 3.25.0 dizia "0,2–1,2 MB por dia": era uma amostra de 8 dias, e não vale para o dia cheio. A
+  leitura de UM dia da agenda (`/comissao/agenda/{data}`, também em `senado_agenda_comissoes`) passa
+  a usar o teto dos datasets grandes (20 MB): um dia é a menor unidade que a fonte serve e não se
+  divide mais. Sem mudança de superfície.
+
 ## [3.25.1] - 2026-10-30
 
 ### Fixed

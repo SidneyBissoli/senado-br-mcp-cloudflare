@@ -158,6 +158,15 @@ describe("decisões 1 e 4 — senado_reunioes_comissao lê dia a dia, até 30 di
     expect(r.structuredContent.count).toBe(1);
   });
 
+  it("a full day over 5 MB is read, not lost (measured live: 05/02/2026 = 7.7 MB)", async () => {
+    const pauta = "x".repeat(6 * 1024 * 1024);
+    fonte(() => agenda(reuniao(11, "CCJ", "2026-02-05T10:00:00", { partes: { pauta } })));
+    const r = await chamar("senado_reunioes_comissao", { sigla: "CCJ", dataInicio: "20260205", dataFim: "20260205" });
+    expect(r.isError).toBeFalsy();
+    expect(r.structuredContent).not.toHaveProperty("diasNaoLidos");
+    expect(r.structuredContent.reunioes.map((x: any) => x.codigo)).toEqual([11]);
+  });
+
   it("every day failing is an error, not an empty list", async () => {
     fonte(() => erro500());
     const r = await chamar("senado_reunioes_comissao", { sigla: "CCJ", dataInicio: "20260811", dataFim: "20260812" });
