@@ -16,6 +16,7 @@ import { toolError, errorFrom, buildParams, ensureArray, safeInt, normalizeText 
 import { digArrayRoot } from "../utils/upstream-parse.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND, CACHE_STATIC, CACHE_SEMI_STATIC } from "../types.js";
+import { avisoDeCorte, carimboDaJanela, dataBR, excedeUmAno, recusarJanelaInvertida } from "../utils/janela.js";
 
 /** Convert YYYYMMDD → YYYY-MM-DD when needed (v3 endpoints require ISO dates). */
 export function ensureISODate(d: string | undefined): string | undefined {
@@ -100,6 +101,16 @@ export function parseEmendaProcesso(e: any) {
 }
 
 /** Parse a /processo/relatoria item. */
+/**
+ * A data que ordena cada seção de `senado_processo_detalhe`, para o aviso de corte. Os prazos vêm
+ * brutos da API (sem campo de data fixo): sem data, o aviso não afirma período entregue.
+ */
+export function dataDoDetalhe(secao: string): (item: any) => string | null | undefined {
+  if (secao === "emendas") return (e) => e?.data;
+  if (secao === "relatorias") return (r) => r?.dataDesignacao;
+  return () => undefined;
+}
+
 export function parseRelatoriaProcesso(r: any) {
   return {
     idProcesso: r.idProcesso ?? null,
@@ -214,6 +225,8 @@ export function registerProcessosTools(server: SenadoToolHost, baseUrl: string) 
     },
     async (params) => {
       try {
+        const invertida = recusarJanelaInvertida(params.dataInicioApresentacao, params.dataFimApresentacao);
+        if (invertida) return invertida;
         const qp = buildParams({
           sigla: params.sigla,
           numero: params.numero,
@@ -239,13 +252,14 @@ export function registerProcessosTools(server: SenadoToolHost, baseUrl: string) 
         const di = ensureISODate(params.dataInicioApresentacao);
         const df = ensureISODate(params.dataFimApresentacao);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/processo", {
-          reference_period: di && df ? `${di}/${df}` : params.ano ? String(params.ano) : di || df || undefined,
+          reference_period: di && df ? carimboDaJanela(di, df) : params.ano ? String(params.ano) : di || df || undefined,
           retrieved_at: fetchedAt,
         });
+        const aviso = avisoDeCorte(todos, limite, (p) => p.dataApresentacao, "processos");
         return resultWithProvenance({
           count: processos.length,
           total: todos.length,
-          ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} processos.` } : {}),
+          ...(aviso ? { aviso } : {}),
           processos,
         }, prov);
       } catch (e) {
@@ -307,9 +321,19 @@ export function registerProcessosTools(server: SenadoToolHost, baseUrl: string) 
     },
     async (params) => {
       try {
+        const invertida = recusarJanelaInvertida(params.dataInicio, params.dataFim);
+        if (invertida) return invertida;
         const di = ensureISODate(params.dataInicio);
         const df = ensureISODate(params.dataFim);
         const dref = ensureISODate(params.dataReferencia);
+        if (params.secao === "emendas" && di && df && excedeUmAno(di, df)) {
+          // `/processo/emenda` refuses (HTTP 400, generic) a window over 1 year, and a year already
+          // weighs ~5 MB (measured 30/10/2026) — split by hand rather than read many MB to list 500.
+          return toolError(
+            `Emendas aceitam até 1 ano por consulta (limite da fonte), e o período pedido vai de ${dataBR(di)} a ${dataBR(df)}. Divida em consultas de até 1 ano.`,
+            "contrato",
+          );
+        }
         const limite = params.limite ?? 100;
 
         let path: string;
@@ -367,14 +391,15 @@ export function registerProcessosTools(server: SenadoToolHost, baseUrl: string) 
             : params.codigoMateria
               ? `codigoMateria=${params.codigoMateria}`
               : undefined,
-          reference_period: di && df ? `${di}/${df}` : dref || di || df || undefined,
+          reference_period: di && df ? carimboDaJanela(di, df) : dref || di || df || undefined,
           retrieved_at: fetchedAt,
         });
+        const aviso = avisoDeCorte(todos, limite, dataDoDetalhe(params.secao), "registros");
         return resultWithProvenance({
           secao: params.secao,
           count: itens.length,
           total: todos.length,
-          ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} registros.` } : {}),
+          ...(aviso ? { aviso } : {}),
           itens,
         }, prov);
       } catch (e) {

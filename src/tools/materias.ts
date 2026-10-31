@@ -16,6 +16,7 @@ import { upstreamFetch } from "../throttle/upstream.js";
 import { toolError, errorFrom, buildParams, ensureArray, safeInt } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance, type FieldSource } from "../utils/provenance.js";
 import { CACHE_ON_DEMAND, CACHE_DYNAMIC } from "../types.js";
+import { avisoDeCorte, carimboDaJanela, recusarJanelaInvertida } from "../utils/janela.js";
 
 /** Convert YYYYMMDD → YYYY-MM-DD when needed (v3 endpoints require ISO dates). */
 export function ensureISODate(d: string | undefined): string | undefined {
@@ -250,6 +251,8 @@ export function registerMateriasTools(server: SenadoToolHost, baseUrl: string) {
     },
     async (params) => {
       try {
+        const invertida = recusarJanelaInvertida(params.dataInicioApresentacao, params.dataFimApresentacao);
+        if (invertida) return invertida;
         const di = ensureISODate(params.dataInicioApresentacao);
         const df = ensureISODate(params.dataFimApresentacao);
         const qp = buildParams({
@@ -286,13 +289,14 @@ export function registerMateriasTools(server: SenadoToolHost, baseUrl: string) {
         const limite = params.limite ?? 100;
         const materias = todos.slice(0, limite);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/processo", {
-          reference_period: di && df ? `${di}/${df}` : params.ano ? String(params.ano) : di || df || undefined,
+          reference_period: di && df ? carimboDaJanela(di, df) : params.ano ? String(params.ano) : di || df || undefined,
           retrieved_at: fetchedAt,
         });
+        const aviso = avisoDeCorte(todos, limite, (m) => m.dataApresentacao, "resultados");
         return resultWithProvenance({
           count: materias.length,
           total: todos.length,
-          ...(todos.length > limite ? { aviso: `Exibindo ${limite} de ${todos.length} resultados. Refine a busca ou aumente o limite.` } : {}),
+          ...(aviso ? { aviso } : {}),
           // Zero calado é beco sem saída (ver dicaBuscaVazia).
           ...(todos.length === 0 && params.palavraChave ? { dica: dicaBuscaVazia(params.palavraChave) } : {}),
           materias,

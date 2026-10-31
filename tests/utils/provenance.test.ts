@@ -494,26 +494,15 @@ describe("tools que fundem uma 2ª leitura declaram as duas e o topo é a mais a
     });
   });
 
-  describe("senado_reunioes_comissao — janela que cruza o ano", () => {
-    it("two partitions: each is a sub-source with its own window; top = the older one (the 2nd)", () => {
-      const p = provenanceReunioesComissao("https://legis/dadosabertos", "CAE", "20251220", "20260110", [
-        { dataInicio: "20251220", dataFim: "20251231", ...novo },
-        { dataInicio: "20260101", dataFim: "20260110", ...velhoDoCache },
-      ]);
+  describe("senado_reunioes_comissao — agenda lida dia a dia", () => {
+    it("top = the OLDEST day read; the stamp is ISO and cut at today; the dataset says it was day by day", () => {
+      const p = provenanceReunioesComissao("https://legis/dadosabertos", "CAE", "20261028", "20261031", [
+        { data: "2026-10-28", ...novo },
+        { data: "2026-10-30", ...velhoDoCache },
+      ], "2026-10-30");
       expect(ms(p.retrieved_at)).toBe(ms(T1));
-      expect(p.data_vintage).toBe("20251220/20260110");
-      expect(p.field_sources!.map((f) => f.source_url)).toEqual([
-        "https://legis/dadosabertos/comissao/agenda/20251220/20251231",
-        "https://legis/dadosabertos/comissao/agenda/20260101/20260110",
-      ]);
-      expect(p.field_sources!.map((f) => f.data_vintage)).toEqual(["20251220/20251231", "20260101/20260110"]);
-      expect(p.field_sources!.map((f) => f.served_from_cache)).toEqual([false, true]);
-    });
-
-    it("one partition: plain block, no sub-sources", () => {
-      const p = provenanceReunioesComissao("https://legis/dadosabertos", "CAE", "20260101", "20260110", [
-        { dataInicio: "20260101", dataFim: "20260110", ...novo },
-      ]);
+      expect(p.data_vintage).toBe("2026-10-28/2026-10-30 (pedido até 2026-10-31)");
+      expect(p.source_url).toBe("https://legis/dadosabertos/comissao/agenda/20261028");
       expect(p.field_sources).toBeNull();
     });
   });

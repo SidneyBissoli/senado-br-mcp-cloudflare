@@ -99,6 +99,66 @@ All notable changes to this project are documented here. Format based on
   por grupo conciliados com as linhas (soma e contagem); a fixture com as duas negativas fica como
   regressão — o teste antigo reprova nela, o novo passa.
 
+## [3.25.0] - 2026-10-30
+
+Janelas de período: o que o selo diz e o que a fonte entrega. Medido no ar em 30/10/2026, nas dez
+tools que montam o `data_vintage` a partir de `dataInicio`/`dataFim`; sete decisões do dono, uma
+por vez. Utilitário comum novo: `src/utils/janela.ts`.
+
+### Fixed
+
+- **`senado_reunioes_comissao` subcontava em silêncio.** A fonte documenta "Máximo de 30 dias" para
+  `/comissao/agenda/{di}/{df}` e, acima disso, entrega só ~30 dias A PARTIR DO INÍCIO, com HTTP 200 e
+  metadados sem aviso (01/08→até 01/09; 02/08→até 02/09; início em 01/01 = vazio até abril, porque
+  janeiro é recesso). A CCJ saía com 0 reuniões em jan–jun e só a de 01/07 em jul–out. Agora a janela
+  vai até 30 dias (acima disso, erro de contrato que diz o limite e manda dividir) e a agenda é lida
+  UM DIA POR VEZ, em `/comissao/agenda/{data}` (0,2–1,2 MB por dia, sob o guarda de 5 MB; a mesma
+  entrada de cache de `senado_agenda_comissoes`). Um dia que a fonte não entregar sai em
+  `diasNaoLidos`, com `aviso`. Reuniões depois de hoje saem à parte, em `agendaPrevista` (`count`,
+  `reunioes`, `aviso`): são previsão — em set/2026, 9 de 37 reuniões marcadas não ocorreram como
+  previsto. A mesma reunião listada em dois dias conta uma vez. O filtro pela comissão criadora
+  (`colegiadoCriador.sigla`) não mudou: estava certo.
+- **`senado_discursos_senador` perdia discursos em silêncio acima de 1 ano.** A fonte guarda só os
+  últimos 12 meses, contados do fim (2024–2026 voltava a partir de 11/11/2025; o senador 5672 tem 19
+  discursos em 2024). Agora o período é lido um ano do calendário por vez e juntado; um ano que falhar
+  sai em `periodosNaoLidos`, com `aviso`. O conselho da descrição ("desde o início do mandato") passa
+  a valer.
+- **`senado_discursos_senador` com `tipo=apartes` ignorava o período.** A fonte devolve o histórico
+  inteiro qualquer que seja a janela (um aparte de 2021 numa consulta de 2024–2026, com o selo dizendo
+  2024–2026). Com período, a tool agora mantém só os apartes dentro dele; sem período, segue trazendo
+  o histórico inteiro.
+- **Janela invertida (fim antes do início) passava calada.** Em 9 das 10 tools voltava lista vazia,
+  com o selo repetindo a janela invertida; em `senado_discursos_plenario`, um 400 genérico da fonte.
+  Agora é recusada antes de ir à fonte, com erro de contrato que mostra as duas datas, em
+  `senado_reunioes_comissao`, `senado_discursos_senador`, `senado_discursos_plenario`,
+  `senado_buscar_materias`, `senado_search_processos`, `senado_processo_detalhe`,
+  `senado_votacoes_senador`, `senado_votacao_comissao`, `senado_search_votacoes`,
+  `senado_orientacao_bancada` e na agenda do Congresso (`senado_agenda_plenario`, `escopo=cn`).
+- **Limites da fonte que viravam erro genérico.** `senado_discursos_plenario` (a fonte recusa mais de
+  1 mês: fim ≤ início + 1 mês) passa a ler um mês do calendário por vez; `senado_search_votacoes` e
+  `senado_votacoes_senador` (`/votacao` recusa mais de 1 ano), um ano por vez — fatia que falhar sai em
+  `periodosNaoLidos`. Emendas (`senado_processo_detalhe`, `secao=emendas`) acima de 1 ano são
+  recusadas antes da fonte, com o limite e como dividir: um ano de emendas já pesa ~5 MB.
+- **`senado_resultado_plenario` e `senado_agenda_plenario` com `escopo=mes` carimbavam um dia** para
+  uma leitura do mês inteiro; agora o selo é o mês (`AAAA-MM`).
+
+### Changed
+
+- **Selo de período (`data_vintage`) em ISO e cortado em hoje.** Formato único `AAAA-MM-DD/AAAA-MM-DD`
+  (reuniões de comissão, discursos e orientação de bancada saíam `AAAAMMDD/AAAAMMDD`; datas únicas
+  também em ISO). Nas tools de coisas já acontecidas, um fim no futuro não entra mais no selo: ele
+  para em hoje e diz o pedido — `2026-09-01/2026-10-30 (pedido até 2027-12-31)`; a consulta à fonte
+  não muda. A agenda do plenário, que é por natureza futura, não é cortada.
+- **Aviso de lista cortada pelo `limite` diz o que foi entregue** (`senado_buscar_materias`,
+  `senado_search_processos`, `senado_processo_detalhe`). O selo continua a janela consultada (é dela
+  o `total`); o aviso diz o período entregue — "os mais recentes, de 23/04/2026 a 29/10/2026" —
+  SÓ quando a lista inteira está em ordem de data (medido na lista, não presumido da fonte), e marca o
+  dia de fronteira cortado no meio. Fora de ordem, diz que as entregues não cobrem um trecho contínuo.
+- **Superfície:** descrições de `senado_reunioes_comissao` (limite de 30 dias, leitura dia a dia,
+  `agendaPrevista`, `diasNaoLidos`) e `senado_discursos_senador` (`periodosNaoLidos`, apartes com
+  período), e a descrição do parâmetro `dataFim` de `senado_reunioes_comissao`; é toda a diferença do
+  dump stdio contra a 3.24.0.
+
 ## [3.24.0] - 2026-10-30
 
 ### Fixed

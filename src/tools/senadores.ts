@@ -15,6 +15,9 @@ import { errorFrom, ensureArray, normalizeText, safeInt } from "../utils/validat
 import { digArrayRoot, digObjectRoot } from "../utils/upstream-parse.js";
 import { derivado, leituraDoCache, provenanceFor, resultWithProvenance, toBrasiliaIso, withFieldSources, type Provenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
+import {
+  camposDePeriodosNaoLidos, carimboDaJanela, hojeEmBrasilia, lerPorAno, maisAntigo, paraISO, recusarJanelaInvertida,
+} from "../utils/janela.js";
 
 /**
  * `emExercicio` is NOT read from the record: none of the three list endpoints carries
@@ -500,37 +503,34 @@ export function registerSenadoresTools(server: SenadoToolHost, baseUrl: string) 
     },
     async (params) => {
       try {
+        const invertida = recusarJanelaInvertida(params.dataInicio, params.dataFim);
+        if (invertida) return invertida;
         let di: string;
         let df: string;
         if (params.dataInicio && params.dataFim) {
-          di = `${params.dataInicio.slice(0, 4)}-${params.dataInicio.slice(4, 6)}-${params.dataInicio.slice(6, 8)}`;
-          df = `${params.dataFim.slice(0, 4)}-${params.dataFim.slice(4, 6)}-${params.dataFim.slice(6, 8)}`;
+          di = paraISO(params.dataInicio);
+          df = paraISO(params.dataFim);
         } else {
-          const ano = params.ano ?? new Date().getFullYear();
+          const ano = params.ano ?? Number(hojeEmBrasilia().slice(0, 4));
           di = `${ano}-01-01`;
           df = `${ano}-12-31`;
         }
-        const qp = {
-          codigoParlamentar: String(params.codigoSenador),
-          dataInicio: di,
-          dataFim: df,
-        };
-        const { value: response, fetchedAt } = await cachedFetchWithMeta(
-          "senado_votacoes_senador",
-          qp,
-          CACHE_DYNAMIC,
-          () => upstreamFetch("/votacao", qp, baseUrl),
-        );
-        const votos = ensureArray(response)
+        // `/votacao` refuses (HTTP 400) a window over 1 year: read one calendar year per call.
+        const { leituras, falhas } = await lerPorAno(di, df, (janela) => {
+          const qp = { codigoParlamentar: String(params.codigoSenador), dataInicio: janela.dataInicio!, dataFim: janela.dataFim! };
+          return cachedFetchWithMeta("senado_votacoes_senador", qp, CACHE_DYNAMIC, () => upstreamFetch("/votacao", qp, baseUrl));
+        });
+        const votos = leituras
+          .flatMap((l) => ensureArray(l.value))
           .map((v: any) => parseVotoSenador(v, params.codigoSenador))
           .sort((a, b) => b.data.localeCompare(a.data));
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/votacao", {
           dataset_id: `codigoParlamentar=${params.codigoSenador}`,
-          reference_period: `${di}/${df}`,
-          retrieved_at: fetchedAt,
+          reference_period: carimboDaJanela(di, df),
+          retrieved_at: maisAntigo(leituras.map((l) => l.fetchedAt)),
         });
         return resultWithProvenance(
-          { periodo: { dataInicio: di, dataFim: df }, count: votos.length, votos },
+          { periodo: { dataInicio: di, dataFim: df }, count: votos.length, votos, ...camposDePeriodosNaoLidos(falhas) },
           prov,
         );
       } catch (e) {

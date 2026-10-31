@@ -15,6 +15,7 @@ import { upstreamFetch } from "../throttle/upstream.js";
 import { toolError, errorFrom, ensureArray, safeInt } from "../utils/validation.js";
 import { provenanceFor, resultWithProvenance } from "../utils/provenance.js";
 import { CACHE_DYNAMIC, CACHE_ON_DEMAND, CACHE_STATIC } from "../types.js";
+import { carimboDaJanela, carimboDoDia, carimboDoMes, paraISO, recusarJanelaInvertida } from "../utils/janela.js";
 
 function formatDateYMD(d: Date): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
@@ -179,6 +180,8 @@ export function registerPlenarioTools(server: SenadoToolHost, baseUrl: string) {
       try {
         const data = params.data || formatDateYMD(new Date());
         const escopo = params.escopo ?? "dia";
+        const invertida = escopo === "cn" ? recusarJanelaInvertida(data, params.dataFim) : null;
+        if (invertida) return invertida;
         let path: string;
         if (escopo === "mes") {
           path = `/plenario/agenda/mes/${data}`;
@@ -200,8 +203,13 @@ export function registerPlenarioTools(server: SenadoToolHost, baseUrl: string) {
           r?.Sessoes?.Sessao ??
           firstArrayDeep(stripWrapper(r)),
         ).map(parseSessaoAgenda);
+        // The agenda is forward-looking (sessions scheduled ahead are its point), so the stamp is
+        // not cut at today; `mes` covers the whole month the given day falls in.
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
-          reference_period: data, retrieved_at: fetchedAt,
+          reference_period: escopo === "mes"
+            ? carimboDoMes(data)
+            : escopo === "cn" && params.dataFim ? `${paraISO(data)}/${paraISO(params.dataFim)}` : carimboDoDia(data),
+          retrieved_at: fetchedAt,
         });
         return resultWithProvenance({ data, escopo, count: sessoes.length, sessoes }, prov);
       } catch (e) {
@@ -232,7 +240,8 @@ export function registerPlenarioTools(server: SenadoToolHost, baseUrl: string) {
         );
         const sessoes = extractSessoesResultado(response).map(parseSessaoResultado);
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
-          reference_period: params.data, retrieved_at: fetchedAt,
+          reference_period: escopo === "mes" ? carimboDoMes(params.data) : carimboDoDia(params.data),
+          retrieved_at: fetchedAt,
         });
         return resultWithProvenance({ data: params.data, escopo, count: sessoes.length, sessoes }, prov);
       } catch (e) {
@@ -252,6 +261,8 @@ export function registerPlenarioTools(server: SenadoToolHost, baseUrl: string) {
     },
     async (params) => {
       try {
+        const invertida = recusarJanelaInvertida(params.dataInicio, params.dataFim);
+        if (invertida) return invertida;
         let path: string;
         if (params.dataInicio && params.dataFim) {
           path = `/plenario/votacao/orientacaoBancada/${params.dataInicio}/${params.dataFim}`;
@@ -271,7 +282,10 @@ export function registerPlenarioTools(server: SenadoToolHost, baseUrl: string) {
           : params.data;
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `orientacaoBancada; ${periodo}`,
-          reference_period: periodo, retrieved_at: fetchedAt,
+          reference_period: params.dataInicio && params.dataFim
+            ? carimboDaJanela(params.dataInicio, params.dataFim)
+            : carimboDoDia(params.data!),
+          retrieved_at: fetchedAt,
         });
         return resultWithProvenance({ count: votacoes.length, votacoes }, prov);
       } catch (e) {

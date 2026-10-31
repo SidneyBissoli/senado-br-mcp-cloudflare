@@ -11,6 +11,7 @@ import { toolError, errorFrom, buildParams, ensureArray, normalizeText } from ".
 import { digArrayRoot } from "../utils/upstream-parse.js";
 import { NOTA_DERIVACAO_PLACAR_COMISSAO, derivadoSe, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
 import { CACHE_DYNAMIC } from "../types.js";
+import { carimboDaJanela, recusarJanelaInvertida } from "../utils/janela.js";
 
 const VOTACAO_COMISSAO_ROOT = [["VotacoesComissao", "Votacoes", "Votacao"]];
 
@@ -115,6 +116,8 @@ export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: st
     },
     async (params) => {
       try {
+        const invertida = recusarJanelaInvertida(params.dataInicio, params.dataFim);
+        if (invertida) return invertida;
         const por = params.por ?? "comissao";
 
         if (por === "senador") {
@@ -139,7 +142,7 @@ export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: st
           const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
             dataset_id: `codigoParlamentar=${params.codigoSenador}`,
             reference_period: params.dataInicio && params.dataFim
-              ? `${params.dataInicio}/${params.dataFim}` : undefined,
+              ? carimboDaJanela(params.dataInicio, params.dataFim) : undefined,
             retrieved_at: fetchedAt,
           });
           return resultWithProvenance(
@@ -203,7 +206,7 @@ export function registerVotacaoComissaoTools(server: SenadoToolHost, baseUrl: st
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, path, {
           dataset_id: `comissao=${sigla}`,
           reference_period: params.dataInicio && params.dataFim
-            ? `${params.dataInicio}/${params.dataFim}` : undefined,
+            ? carimboDaJanela(params.dataInicio, params.dataFim) : undefined,
           retrieved_at: fetchedAt,
         });
         return resultWithProvenance({ por, siglaComissao: sigla, count: votacoes.length, votacoes }, provenanceDaVotacaoComissao(prov, votacoes));

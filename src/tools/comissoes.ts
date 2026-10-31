@@ -19,8 +19,12 @@ import { upstreamFetch, UpstreamError } from "../throttle/upstream.js";
 import { toolError, errorFrom, ensureArray, safeInt, toBool, normalizeText } from "../utils/validation.js";
 import { digArrayRoot } from "../utils/upstream-parse.js";
 import { escolherReuniao, ehReuniaoInexistente, mensagemCodigoInexistente } from "./resolver-reuniao.js";
-import { NOTA_DERIVACAO_SOMAS, derivadoSe, leituraDoCache, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
+import { NOTA_DERIVACAO_SOMAS, derivadoSe, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
 import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
+import {
+  avisoDeFatiasNaoLidas, carimboDaJanela, carimboDoDia, dataBR, diasEntre, fatiar, hojeEmBrasilia, lerFatias,
+  paraCompacta, paraISO, recusarJanelaInvertida, relogioJanela, type Fatia,
+} from "../utils/janela.js";
 
 export function formatDateYMD(d: Date): string {
   return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
@@ -141,47 +145,100 @@ export async function fetchComissaoColegiado(codigo: number, baseUrl: string) {
   return { path, fetchedAt, colegiado };
 }
 
-/** Um recorte de `/comissao/agenda/{di}/{df}` lido por `senado_reunioes_comissao`. */
+/** Um dia de `/comissao/agenda/{data}` lido por `senado_reunioes_comissao`. */
 export interface ParteAgenda {
-  dataInicio: string;
-  dataFim: string;
+  /** `AAAA-MM-DD`. */
+  data: string;
   fetchedAt: string;
   fromCache: boolean;
 }
 
 /**
- * Proveniência de `senado_reunioes_comissao`. A fonte não aceita janela que cruza o ano, então
- * a tool lê um recorte por ano, cada um numa entrada de cache própria, e junta as reuniões.
- * Com um recorte só, o bloco é o desse recorte. Com dois, cada um vira sub-fonte das MESMAS
- * linhas (`reunioes`, `count`) com a sua janela e o seu instante, e o topo é o mais antigo
- * (adaptador, contrato §3) — até a 3.18.1 o topo era sempre o do 1º recorte e o instante do
- * 2º era descartado, mesmo quando ele estava em cache havia mais tempo.
+ * Janela máxima de `senado_reunioes_comissao`, em dias corridos (fim − início). A fonte documenta
+ * "Máximo de 30 dias" para `/comissao/agenda/{di}/{df}` e, acima disso, CORTA CALADA: entrega só
+ * ~30 dias a partir do início, com HTTP 200 (medido em 30/10/2026: 01/08→até 01/09, 02/08→até
+ * 02/09; início em 01/01 = vazio até abril, porque janeiro é recesso). A tool lê dia a dia.
+ */
+export const REUNIOES_JANELA_MAX_DIAS = 30;
+
+export const AVISO_AGENDA_PREVISTA =
+  "Reuniões marcadas para depois de hoje: são previsão e podem mudar (ser canceladas, suspensas ou " +
+  "remarcadas — em set/2026, 9 de 37 reuniões marcadas não ocorreram como previsto). A fonte só traz o " +
+  "que já foi agendado; ausência aqui não quer dizer que não haverá reunião.";
+
+/** Reunião de `/comissao/agenda/{data}` no formato da tool. */
+export function parseReuniaoDaAgenda(re: any) {
+  return {
+    codigo: parseInt(re.codigo || "0"),
+    descricao: re.descricao || re.titulo || "",
+    data: re.dataInicio ? String(re.dataInicio).split("T")[0] : "",
+    hora: re.dataInicio ? String(re.dataInicio).split("T")[1]?.slice(0, 5) || null : null,
+    local: re.local || null,
+    tipo: re.tipo?.descricao || null,
+    situacao: re.situacao || null,
+  };
+}
+
+/**
+ * Payload de `senado_reunioes_comissao` a partir das agendas diárias já lidas. Filtra pela
+ * comissão CRIADORA (uma reunião de outra comissão pode citar esta no conteúdo — medido em
+ * 30/10/2026: a 14880 é da CAS e cita a CCJ), separa o que é depois de hoje em `agendaPrevista`
+ * (previsão, não fato) e diz os dias que a fonte não entregou.
+ */
+export function montarReunioesComissao(
+  sigla: string,
+  periodo: { dataInicio: string; dataFim: string },
+  agendas: ReadonlyArray<{ data: string; reunioes: any[] }>,
+  falhas: ReadonlyArray<{ fatia: Fatia }>,
+  hoje: string,
+) {
+  const vistas = new Set<number>();
+  const todas = agendas
+    .flatMap((a) => a.reunioes)
+    .filter((re: any) => (re.colegiadoCriador?.sigla || "").toUpperCase() === sigla)
+    .map(parseReuniaoDaAgenda)
+    // A mesma reunião pode aparecer na agenda de dois dias (continuação); conta uma vez.
+    .filter((r) => (vistas.has(r.codigo) ? false : (vistas.add(r.codigo), true)))
+    .sort((a, b) => `${a.data} ${a.hora ?? ""}`.localeCompare(`${b.data} ${b.hora ?? ""}`));
+  const reunioes = todas.filter((r) => !r.data || r.data <= hoje);
+  const previstas = todas.filter((r) => r.data && r.data > hoje);
+  const temFuturo = paraISO(periodo.dataFim) > hoje;
+  return {
+    sigla,
+    periodo,
+    count: reunioes.length,
+    reunioes,
+    ...(temFuturo
+      ? { agendaPrevista: { count: previstas.length, reunioes: previstas, aviso: AVISO_AGENDA_PREVISTA } }
+      : {}),
+    ...(falhas.length ? { diasNaoLidos: falhas.map((f) => f.fatia.inicio), aviso: avisoDeFatiasNaoLidas(falhas, "dias") } : {}),
+  };
+}
+
+/**
+ * Proveniência de `senado_reunioes_comissao`. A agenda é lida um dia por vez, cada dia numa
+ * entrada de cache própria (a mesma de `senado_agenda_comissoes`); o topo leva o instante da
+ * leitura MAIS ANTIGA (adaptador, contrato §3) e o `dataset_id` diz que a leitura foi dia a dia.
+ * Até a 3.24.0 a janela inteira ia num pedido só e a fonte cortava calada em ~30 dias.
  */
 export function provenanceReunioesComissao(
   baseUrl: string,
   sigla: string,
   di: string,
   df: string,
-  partes: ParteAgenda[],
+  dias: ParteAgenda[],
+  hoje: string,
 ) {
-  const dataset_id = `comissao=${sigla}`;
-  const [primeira] = partes;
-  const base = baseUrl.replace(/\/$/, "");
-  return provenanceFor("SENADO_LEGIS", baseUrl, `/comissao/agenda/${di}/${df}`, {
-    dataset_id,
-    reference_period: `${di}/${df}`,
-    retrieved_at: primeira.fetchedAt,
-    ...(partes.length > 1
-      ? {
-          field_sources: partes.map((p) => ({
-            fields: ["reunioes", "count"],
-            source_url: `${base}/comissao/agenda/${p.dataInicio}/${p.dataFim}`,
-            dataset_id,
-            reference_period: `${p.dataInicio}/${p.dataFim}`,
-            ...leituraDoCache(p),
-          })),
-        }
-      : {}),
+  const inicio = paraISO(di);
+  const fim = paraISO(df);
+  const maisAntiga = dias.reduce<ParteAgenda | undefined>(
+    (velha, d) => (!velha || Date.parse(d.fetchedAt) < Date.parse(velha.fetchedAt) ? d : velha),
+    undefined,
+  );
+  return provenanceFor("SENADO_LEGIS", baseUrl, `/comissao/agenda/${paraCompacta(inicio)}`, {
+    dataset_id: `comissao=${sigla}; agenda lida dia a dia (${dias.length} ${dias.length === 1 ? "dia" : "dias"}, ${inicio} a ${fim})`,
+    reference_period: carimboDaJanela(inicio, fim, hoje),
+    retrieved_at: maisAntiga?.fetchedAt,
   });
 }
 
@@ -301,78 +358,57 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
   // E3. senado_reunioes_comissao
   server.tool(
     "senado_reunioes_comissao",
-    "Lista reuniões de uma comissão (pela `sigla`) num intervalo `dataInicio`/`dataFim` (YYYYMMDD); sem datas, usa os últimos 14 dias. Atenção: o upstream devolve a agenda de TODAS as comissões do período (o filtro por sigla é local), então janelas amplas (mensais/anuais) podem estourar o limite de tamanho da resposta (erro de payload): prefira janelas de até 2 semanas e divida períodos maiores em chamadas sucessivas. Retorna `{ sigla, periodo, count, reunioes }`, cada reunião com `codigo`, `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. Intervalos entre anos são divididos por ano internamente. Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` retornado em `senado_reuniao_comissao` para os detalhes da pauta.",
+    "Lista reuniões de uma comissão (pela `sigla`) num intervalo `dataInicio`/`dataFim` (YYYYMMDD) de até 30 dias; sem datas, usa os últimos 14 dias. A fonte só entrega 30 dias por pedido (e cortava o resto calada), então janelas maiores são recusadas: divida períodos longos em chamadas de até 30 dias. A agenda é lida um dia por vez; um dia que a fonte não entregar aparece em `diasNaoLidos`, com `aviso`. Retorna `{ sigla, periodo, count, reunioes, agendaPrevista?, diasNaoLidos?, aviso? }`, cada reunião com `codigo`, `descricao`, `data`, `hora`, `local`, `tipo` e `situacao`. `reunioes` traz só as de até hoje; quando o período chega ao futuro, as marcadas para depois de hoje vêm à parte em `agendaPrevista` (`count`, `reunioes`, `aviso`) — são previsão e podem mudar. Descubra a `sigla` via `senado_listar_comissoes`; use o `codigo` retornado em `senado_reuniao_comissao` para os detalhes da pauta.",
     {
       sigla: z.string().min(2).describe("Sigla da comissão"),
       dataInicio: z.string().regex(/^\d{8}$/).optional().describe("Data início (YYYYMMDD)"),
-      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD)"),
+      dataFim: z.string().regex(/^\d{8}$/).optional().describe("Data fim (YYYYMMDD); no máximo 30 dias depois do início"),
     },
     async (params) => {
       try {
         const sigla = params.sigla.toUpperCase();
-        // Default to last 14 days if no dates provided — the upstream returns ALL
-        // committees for the range and wider windows can blow the 5 MB response guard.
-        const hoje = new Date();
-        const inicio14 = new Date(hoje);
+        const invertida = recusarJanelaInvertida(params.dataInicio, params.dataFim);
+        if (invertida) return invertida;
+        // Default to the last 14 days when no dates are given.
+        const agora = relogioJanela.agora();
+        const inicio14 = new Date(agora);
         inicio14.setDate(inicio14.getDate() - 14);
-        const di = params.dataInicio || formatDateYMD(inicio14);
-        const df = params.dataFim || formatDateYMD(hoje);
-
-        // The /comissao/agenda endpoint doesn't support cross-year ranges.
-        // Split into per-year requests if needed.
-        const yearDi = parseInt(di.slice(0, 4));
-        const yearDf = parseInt(df.slice(0, 4));
-        let todas: any[] = [];
-        let partes: ParteAgenda[];
-        if (yearDi === yearDf) {
-          const res = await cachedFetchWithMeta(
-            "senado_reunioes_comissao",
-            { sigla, dataInicio: di, dataFim: df },
-            CACHE_DYNAMIC,
-            () => upstreamFetch(`/comissao/agenda/${di}/${df}`, {}, baseUrl),
+        const di = paraISO(params.dataInicio || formatDateYMD(inicio14));
+        const df = paraISO(params.dataFim || formatDateYMD(agora));
+        if (diasEntre(di, df) > REUNIOES_JANELA_MAX_DIAS) {
+          return toolError(
+            `A agenda de comissões aceita até ${REUNIOES_JANELA_MAX_DIAS} dias por consulta (limite da fonte), e o período pedido vai de ${dataBR(di)} a ${dataBR(df)} (${diasEntre(di, df)} dias). Divida em consultas de até ${REUNIOES_JANELA_MAX_DIAS} dias.`,
+            "contrato",
           );
-          partes = [{ dataInicio: di, dataFim: df, ...res }];
-          todas = ensureArray((res.value as any)?.AgendaReuniao?.reunioes?.reuniao);
-        } else {
-          // Split: [di..yearDi-12-31] + [yearDf-01-01..df]
-          const r1 = await cachedFetchWithMeta(
-            "senado_reunioes_comissao_p1",
-            { sigla, dataInicio: di, dataFim: `${yearDi}1231` },
-            CACHE_DYNAMIC,
-            () => upstreamFetch(`/comissao/agenda/${di}/${yearDi}1231`, {}, baseUrl),
-          );
-          const r2 = await cachedFetchWithMeta(
-            "senado_reunioes_comissao_p2",
-            { sigla, dataInicio: `${yearDf}0101`, dataFim: df },
-            CACHE_DYNAMIC,
-            () => upstreamFetch(`/comissao/agenda/${yearDf}0101/${df}`, {}, baseUrl),
-          );
-          partes = [
-            { dataInicio: di, dataFim: `${yearDi}1231`, ...r1 },
-            { dataInicio: `${yearDf}0101`, dataFim: df, ...r2 },
-          ];
-          todas = [
-            ...ensureArray((r1.value as any)?.AgendaReuniao?.reunioes?.reuniao),
-            ...ensureArray((r2.value as any)?.AgendaReuniao?.reunioes?.reuniao),
-          ];
         }
-        const reunioes = todas
-          .filter((re: any) => {
-            const s = re.colegiadoCriador?.sigla || "";
-            return s.toUpperCase() === sigla;
-          })
-          .map((re: any) => ({
-            codigo: parseInt(re.codigo || "0"),
-            descricao: re.descricao || re.titulo || "",
-            data: re.dataInicio ? re.dataInicio.split("T")[0] : "",
-            hora: re.dataInicio ? re.dataInicio.split("T")[1]?.slice(0, 5) || null : null,
-            local: re.local || null,
-            tipo: re.tipo?.descricao || null,
-            situacao: re.situacao || null,
-          }));
-        const prov = provenanceReunioesComissao(baseUrl, sigla, di, df, partes);
+        const hoje = hojeEmBrasilia();
+
+        // One day per read: a day of the agenda for ALL committees weighs 0.2–1.2 MB (measured
+        // 30/10/2026), under the 5 MB guard, while a 2-week window can exceed it. The cache entry is
+        // the one `senado_agenda_comissoes` uses for that day.
+        const { lidas, falhas } = await lerFatias(fatiar(di, df, "dia"), async (f) => {
+          const data = paraCompacta(f.inicio);
+          const res = await cachedFetchWithMeta(
+            "senado_agenda_comissoes",
+            { data },
+            CACHE_DYNAMIC,
+            () => upstreamFetch(`/comissao/agenda/${data}`, {}, baseUrl),
+          );
+          return { ...res, data: f.inicio };
+        });
+        if (lidas.length === 0 && falhas.length > 0) throw falhas[0].erro;
+        const agendas = lidas.map(({ valor }) => ({
+          data: valor.data,
+          reunioes: ensureArray((valor.value as any)?.AgendaReuniao?.reunioes?.reuniao),
+        }));
+        const dias: ParteAgenda[] = lidas.map(({ valor }) => ({
+          data: valor.data,
+          fetchedAt: valor.fetchedAt,
+          fromCache: valor.fromCache,
+        }));
+        const prov = provenanceReunioesComissao(baseUrl, sigla, di, df, dias, hoje);
         return resultWithProvenance(
-          { sigla, periodo: { dataInicio: di, dataFim: df }, count: reunioes.length, reunioes },
+          montarReunioesComissao(sigla, { dataInicio: paraCompacta(di), dataFim: paraCompacta(df) }, agendas, falhas, hoje),
           prov,
         );
       } catch (e) {
@@ -415,7 +451,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
           reunioes = reunioes.filter((r: any) => r.comissao.sigla.toUpperCase() === s);
         }
         const prov = provenanceFor("SENADO_LEGIS", baseUrl, `/comissao/agenda/${data}`, {
-          reference_period: data, retrieved_at: fetchedAt,
+          reference_period: carimboDoDia(data), retrieved_at: fetchedAt,
         });
         return resultWithProvenance(
           { data, siglaComissao: params.siglaComissao || null, count: reunioes.length, reunioes },
