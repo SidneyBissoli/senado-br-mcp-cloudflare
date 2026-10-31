@@ -20,7 +20,7 @@ import { toolError, errorFrom, ensureArray, safeInt, toBool, normalizeText } fro
 import { digArrayRoot } from "../utils/upstream-parse.js";
 import { escolherReuniao, ehReuniaoInexistente, mensagemCodigoInexistente } from "./resolver-reuniao.js";
 import { NOTA_DERIVACAO_SOMAS, derivadoSe, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
-import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND } from "../types.js";
+import { CACHE_SEMI_STATIC, CACHE_DYNAMIC, CACHE_ON_DEMAND, MAX_RESPONSE_SIZE_LARGE } from "../types.js";
 import {
   avisoDeFatiasNaoLidas, carimboDaJanela, carimboDoDia, dataBR, diasEntre, fatiar, hojeEmBrasilia, lerFatias,
   paraCompacta, paraISO, recusarJanelaInvertida, relogioJanela, type Fatia,
@@ -160,6 +160,14 @@ export interface ParteAgenda {
  * 02/09; início em 01/01 = vazio até abril, porque janeiro é recesso). A tool lê dia a dia.
  */
 export const REUNIOES_JANELA_MAX_DIAS = 30;
+
+/**
+ * Teto de tamanho da leitura de UM dia da agenda (`/comissao/agenda/{data}`). A agenda traz
+ * todas as comissões com a pauta inteira embutida: a maioria dos dias pesa 0,1–1,4 MB, mas dia
+ * cheio passa de 5 MB (medido em 30/10/2026: 05/02/2026 = 7,7 MB, 26/02/2026 = 6,8 MB) e, com o
+ * teto padrão, saía em `diasNaoLidos`. Um dia não se divide mais; usa o teto dos datasets grandes.
+ */
+export const AGENDA_DIA_MAX_BYTES = MAX_RESPONSE_SIZE_LARGE;
 
 export const AVISO_AGENDA_PREVISTA =
   "Reuniões marcadas para depois de hoje: são previsão e podem mudar (ser canceladas, suspensas ou " +
@@ -383,16 +391,16 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
         }
         const hoje = hojeEmBrasilia();
 
-        // One day per read: a day of the agenda for ALL committees weighs 0.2–1.2 MB (measured
-        // 30/10/2026), under the 5 MB guard, while a 2-week window can exceed it. The cache entry is
-        // the one `senado_agenda_comissoes` uses for that day.
+        // One day per read: a day of the agenda for ALL committees is the smallest unit the source
+        // serves (most days 0.1–1.4 MB, a full day up to ~8 MB — see AGENDA_DIA_MAX_BYTES). The
+        // cache entry is the one `senado_agenda_comissoes` uses for that day.
         const { lidas, falhas } = await lerFatias(fatiar(di, df, "dia"), async (f) => {
           const data = paraCompacta(f.inicio);
           const res = await cachedFetchWithMeta(
             "senado_agenda_comissoes",
             { data },
             CACHE_DYNAMIC,
-            () => upstreamFetch(`/comissao/agenda/${data}`, {}, baseUrl),
+            () => upstreamFetch(`/comissao/agenda/${data}`, {}, baseUrl, { maxSize: AGENDA_DIA_MAX_BYTES }),
           );
           return { ...res, data: f.inicio };
         });
@@ -430,7 +438,7 @@ export function registerComissoesTools(server: SenadoToolHost, baseUrl: string) 
         const data = params.data || formatDateYMD(new Date());
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_agenda_comissoes", { data }, CACHE_DYNAMIC,
-          () => upstreamFetch(`/comissao/agenda/${data}`, {}, baseUrl),
+          () => upstreamFetch(`/comissao/agenda/${data}`, {}, baseUrl, { maxSize: AGENDA_DIA_MAX_BYTES }),
         );
         const r = response as any;
         let reunioes = ensureArray(r?.AgendaReuniao?.reunioes?.reuniao).map((re: any) => {
