@@ -1,5 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+import { LimiteLocalError, UpstreamError, upstreamIo } from "../../src/throttle/upstream.js";
 import {
+  TENTATIVAS_LIMITE_LOCAL,
   avisoDeCorte,
   camposDePeriodosNaoLidos,
   carimboDaJanela,
@@ -125,6 +127,35 @@ describe("lerFatias / lerPorAno", () => {
       emVoo--;
     }, 2);
     expect(pico).toBe(2);
+  });
+
+  it("a refusal by OUR limiter waits its turn and retries; a source failure does not", async () => {
+    const espera = vi.spyOn(upstreamIo, "sleep").mockResolvedValue(undefined);
+    const tentativas: Record<string, number> = {};
+    const r = await lerFatias(fatias, async (f) => {
+      tentativas[f.inicio] = (tentativas[f.inicio] ?? 0) + 1;
+      if (f.inicio === "2026-01-02" && tentativas[f.inicio] < 3) throw new LimiteLocalError("[x] Taxa de requisições excedida.", 429);
+      if (f.inicio === "2026-01-04") throw new UpstreamError("HTTP 500", 500, true);
+      return f.inicio;
+    });
+    expect(r.lidas.map((l) => l.valor)).toEqual(["2026-01-01", "2026-01-02", "2026-01-03", "2026-01-05"]);
+    expect(tentativas["2026-01-02"]).toBe(3);
+    expect(tentativas["2026-01-04"]).toBe(1);
+    expect(r.falhas.map((f) => f.fatia.inicio)).toEqual(["2026-01-04"]);
+    expect(espera).toHaveBeenCalledTimes(2);
+    espera.mockRestore();
+  });
+
+  it("gives up after the limiter refuses every attempt (the slice is then named as not read)", async () => {
+    const espera = vi.spyOn(upstreamIo, "sleep").mockResolvedValue(undefined);
+    let n = 0;
+    const r = await lerFatias([fatias[0]], async () => {
+      n++;
+      throw new LimiteLocalError("[x] Taxa de requisições excedida.", 429);
+    });
+    expect(n).toBe(TENTATIVAS_LIMITE_LOCAL);
+    expect(r.falhas).toHaveLength(1);
+    espera.mockRestore();
   });
 
   it("lerPorAno: one call per calendar year with both ends, a single call otherwise", async () => {

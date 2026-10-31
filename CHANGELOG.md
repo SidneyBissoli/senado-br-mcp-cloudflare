@@ -99,6 +99,20 @@ All notable changes to this project are documented here. Format based on
   por grupo conciliados com as linhas (soma e contagem); a fixture com as duas negativas fica como
   regressão — o teste antigo reprova nela, o novo passa.
 
+## [3.25.1] - 2026-10-30
+
+### Fixed
+
+- **`senado_reunioes_comissao` perdia dias no ar para o NOSSO limitador.** Provado no ar logo
+  após o deploy da 3.25.0: numa janela fria de 30 dias, 14 a 16 dias voltavam em `diasNaoLidos`. A
+  causa, reproduzida localmente pelo mesmo caminho: as 4 leituras em paralelo esvaziam a rajada de 12
+  do balde global em menos de 1 s, e o balde recusa na hora ("Taxa de requisições excedida") — 12 de
+  30 dias, nenhum deles falha da fonte. A recusa do limitador do próprio servidor passa a ter tipo
+  (`LimiteLocalError`, subclasse de `UpstreamError` com a mesma mensagem, status e classe), e a
+  leitura em fatias (`lerFatias`, usada também por discursos, plenário e votações) espera a vez e
+  tenta de novo (250 ms × tentativa, até 8) só nesse caso; falha da fonte continua saindo nomeada.
+  Reproduzido de novo: 30 de 30 dias lidos, em ~3 s. Sem mudança de superfície.
+
 ## [3.25.0] - 2026-10-30
 
 Janelas de período: o que o selo diz e o que a fonte entrega. Medido no ar em 30/10/2026, nas dez

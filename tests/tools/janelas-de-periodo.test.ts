@@ -140,6 +140,24 @@ describe("decisões 1 e 4 — senado_reunioes_comissao lê dia a dia, até 30 di
     expect(vintage(r)).toBe("2026-08-11/2026-08-12");
   });
 
+  it("our own rate limiter refusing a burst does NOT lose days (measured live: 12 of 30 lost)", async () => {
+    // The bucket's burst (12) passes, then it is empty until the waits let it refill: every
+    // refused day waits its turn and is read.
+    let n = 0;
+    const recusadas = new Set<number>();
+    vi.spyOn(tokenBucket.globalBucket, "tryConsume").mockImplementation(() => {
+      n++;
+      if (n > 12 && n <= 24) return (recusadas.add(n), false);
+      return true;
+    });
+    fonte(() => agenda(reuniao(9, "CCJ", "2026-08-12T09:00:00")));
+    const r = await chamar("senado_reunioes_comissao", { sigla: "CCJ", dataInicio: "20260801", dataFim: "20260830" });
+    expect(recusadas.size).toBe(12);
+    expect(r.structuredContent).not.toHaveProperty("diasNaoLidos");
+    expect(new Set(pedidas).size).toBe(30);
+    expect(r.structuredContent.count).toBe(1);
+  });
+
   it("every day failing is an error, not an empty list", async () => {
     fonte(() => erro500());
     const r = await chamar("senado_reunioes_comissao", { sigla: "CCJ", dataInicio: "20260811", dataFim: "20260812" });

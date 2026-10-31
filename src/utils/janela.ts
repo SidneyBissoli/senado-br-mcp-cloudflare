@@ -16,6 +16,7 @@
  */
 
 import { toolError } from "./validation.js";
+import { LimiteLocalError, upstreamIo } from "../throttle/upstream.js";
 
 /** Relógio injetável (os testes fixam "hoje"). */
 export const relogioJanela = { agora: (): Date => new Date() };
@@ -130,9 +131,16 @@ export function excedeUmAno(inicio: string, fim: string): boolean {
   return paraISO(fim) > umAnoDepois;
 }
 
+/** Espera entre tentativas quando o NOSSO limitador recusa a ida (o balde repõe 8 vagas/s). */
+export const ESPERA_LIMITE_LOCAL_MS = 250;
+export const TENTATIVAS_LIMITE_LOCAL = 8;
+
 /**
  * Lê as fatias com no máximo `concorrencia` idas simultâneas. A falha de uma fatia não derruba
- * as outras: volta em `falhas`, para a resposta dizer o que ficou de fora.
+ * as outras: volta em `falhas`, para a resposta dizer o que ficou de fora. Recusa do nosso
+ * próprio limitador (`LimiteLocalError`) não é falha da fonte: a fatia espera a vez e tenta de
+ * novo — medido em 30/10/2026, sem isso 12 de 30 dias da agenda voltavam "Taxa de requisições
+ * excedida" e saíam como não lidos.
  */
 export async function lerFatias<T>(
   fatias: Fatia[],
@@ -141,11 +149,21 @@ export async function lerFatias<T>(
 ): Promise<{ lidas: Array<{ fatia: Fatia; valor: T }>; falhas: Array<{ fatia: Fatia; erro: unknown }> }> {
   const resultados: Array<{ fatia: Fatia; valor?: T; erro?: unknown; ok: boolean }> = new Array(fatias.length);
   let proxima = 0;
+  async function lerComVez(f: Fatia): Promise<T> {
+    for (let tentativa = 1; ; tentativa++) {
+      try {
+        return await ler(f);
+      } catch (erro) {
+        if (!(erro instanceof LimiteLocalError) || tentativa >= TENTATIVAS_LIMITE_LOCAL) throw erro;
+        await upstreamIo.sleep(ESPERA_LIMITE_LOCAL_MS * tentativa);
+      }
+    }
+  }
   async function trabalhador() {
     while (proxima < fatias.length) {
       const i = proxima++;
       try {
-        resultados[i] = { fatia: fatias[i], valor: await ler(fatias[i]), ok: true };
+        resultados[i] = { fatia: fatias[i], valor: await lerComVez(fatias[i]), ok: true };
       } catch (erro) {
         resultados[i] = { fatia: fatias[i], erro, ok: false };
       }
