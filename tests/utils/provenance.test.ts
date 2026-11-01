@@ -414,17 +414,19 @@ describe("contract v1.2 on: merged responses never throw and the top is the olde
 
   describe("senado_servidores com subordinadasA (provenanceServidoresSubordinadas)", () => {
     it("the org-chart snapshot is older than the payroll: top = snapshot extraction, payroll kept as a sub-source", () => {
+      // Derived from the snapshot, never a fixed date: the monthly ingest refreshes the snapshot
+      // before running the tests, so any fixed instant eventually becomes older than it.
+      const folhaEm = new Date(Date.parse(ESTRUTURA_VINTAGE) + 86_400_000).toISOString();
       const folha = provenanceFor("SENADO_ADM", "https://adm", "/api/v1/servidores/servidores/ativos", {
         dataset_id: "servidores; situacao=ativos",
-        retrieved_at: T3,
+        retrieved_at: folhaEm,
       });
-      expect(ms(ESTRUTURA_VINTAGE)).toBeLessThan(ms(T3));
       const p = provenanceServidoresSubordinadas(folha, "ativos");
       expect(ms(p.retrieved_at)).toBe(ms(ESTRUTURA_VINTAGE));
       expect(p.source_url).toBe(folha.source_url);
       const [daFolha, doOrganograma] = p.field_sources!;
       expect(daFolha.source_url).toBe(folha.source_url);
-      expect(ms(daFolha.retrieved_at!)).toBe(ms(T3));
+      expect(ms(daFolha.retrieved_at!)).toBe(ms(folhaEm));
       expect(doOrganograma.source_url).toBe(provenanceEstrutura().source_url);
       // Instante REAL da extração no portal (o crawler o grava), nunca apagado nem trocado.
       expect(ms(doOrganograma.retrieved_at!)).toBe(ms(ESTRUTURA_VINTAGE));
