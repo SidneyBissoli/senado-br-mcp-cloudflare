@@ -1,12 +1,12 @@
 // GERADO por scripts/ingest-estrutura/index.ts — NÃO edite à mão.
 // Snapshot da árvore organizacional do Senado (portal institucional), até o nível de serviço.
-// Extraído em 2026-10-01T12:13:07.708Z. Rode `npm run ingest:estrutura` para atualizar.
+// Extraído em 2026-11-01T17:20:35.706Z. Rode `npm run ingest:estrutura` para atualizar.
 import type { EstruturaSnapshot } from "../estrutura/tipos.js";
 
 export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
-  "extraidoEm": "2026-10-01T12:13:07.708Z",
+  "extraidoEm": "2026-11-01T17:20:35.706Z",
   "fonteUrl": "https://www12.senado.leg.br/institucional/estrutura/orgaosenado",
-  "total": 821,
+  "total": 820,
   "orgaos": [
     {
       "cod": -2072346465,
@@ -3009,12 +3009,6 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "codSuperior": 108
     },
     {
-      "cod": 10082,
-      "sigla": "GSRPACHE",
-      "nome": "Gabinete do Senador Rodrigo Pacheco",
-      "codSuperior": 108
-    },
-    {
       "cod": 10083,
       "sigla": "GSRSANT",
       "nome": "Gabinete do Senador Rogério Carvalho",
@@ -3235,12 +3229,6 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "sigla": null,
       "nome": "Escritório de Apoio Nº 01 do Senador Izalci Lucas",
       "codSuperior": 10066
-    },
-    {
-      "cod": 10203,
-      "sigla": null,
-      "nome": "Escritório de Apoio Nº 01 do Senador Rodrigo Pacheco",
-      "codSuperior": 10082
     },
     {
       "cod": 10205,
@@ -4932,6 +4920,12 @@ export const ESTRUTURA_ORGANIZACIONAL: EstruturaSnapshot = {
       "cod": 10866,
       "sigla": "GSRBRAZ",
       "nome": "Gabinete do Senador Renzo Braz",
+      "codSuperior": 108
+    },
+    {
+      "cod": 10867,
+      "sigla": "GSLLEMOS",
+      "nome": "Gabinete da Senadora Leany Lemos",
       "codSuperior": 108
     }
   ]
