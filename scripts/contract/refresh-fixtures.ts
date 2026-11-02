@@ -40,7 +40,7 @@
  * times and opened "a fonte mudou" on the panel.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Relatorio, capturarComRetentativa, linhaDeResultado } from "@sbissoli/mcp-live-source";
@@ -48,6 +48,7 @@ import { upstreamFetch } from "../../src/throttle/upstream.js";
 import { admFetch } from "../../src/throttle/adm.js";
 import { MAX_RESPONSE_SIZE_LARGE } from "../../src/types.js";
 import { FIXTURES, MissingDependencyError, type Helpers } from "./manifest.js";
+import { ehDeriva, reclassificarRotaSumida } from "./rota-sumida.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURES_DIR = join(ROOT, "tests", "contract", "fixtures");
@@ -67,6 +68,9 @@ const TRANSPORT_STREAK_LIMIT =
 
 /** The package does not know this repo's error classes; this is how it learns `dependencia`. */
 export const ehDependencia = (err: unknown): boolean => err instanceof MissingDependencyError;
+
+// A route that already answered and now 404s "No static resource" is drift, not ours:
+// see `rota-sumida.ts` (the 2026-11-02 case).
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -112,25 +116,36 @@ async function main(): Promise<void> {
   // Dependency captures (h.ctx) require the full manifest order; when running
   // a subset, dependencies may be missing — specs throw a clear error then,
   // and the reporter files them as `dependencia` (not measured, not drift).
-  const relatorio = new Relatorio({ dependencia: ehDependencia, limiteDoDisjuntor: TRANSPORT_STREAK_LIMIT });
+  const relatorio = new Relatorio({
+    dependencia: ehDependencia,
+    deriva: ehDeriva,
+    limiteDoDisjuntor: TRANSPORT_STREAK_LIMIT,
+  });
 
   for (const spec of specs) {
     const target = join(FIXTURES_DIR, spec.family, `${spec.name}.json`);
+    // Read BEFORE the capture: a success overwrites the file, a failure leaves it.
+    const fixtureExiste = existsSync(target);
     process.stdout.write(`capturing ${spec.family}/${spec.name} ... `);
     const startedAt = Date.now();
     // Trips the SCRIPT made for this spec — the origin's `motivo` counts the attempts
     // of ONE trip (a timeout is "1 tentativa"), so the log line carries both.
     let idas: number | undefined;
     try {
-      const raw = await capturarComRetentativa(() => spec.capture(helpers), {
+      const raw = await capturarComRetentativa(
+        () => spec.capture(helpers).catch(reclassificarRotaSumida(spec.name, fixtureExiste)),
+        {
         tentativas: CAPTURE_RETRIES,
         dependencia: ehDependencia,
+        // `respondeu` is not repeated: the same request gets the same 404.
+        deriva: ehDeriva,
         aoRepetir: (tentativa, falha) =>
           console.warn(`  retry ${tentativa}/${CAPTURE_RETRIES} for '${spec.name}' [${falha.veredito}]: ${falha.motivo}`),
         aoDesistir: (n) => {
           idas = n;
         },
-      });
+        },
+      );
       helpers.ctx.set(spec.name, raw);
       const normalized = normalizeFixture(raw, spec.keepItems ?? DEFAULT_KEEP_ITEMS);
       mkdirSync(dirname(target), { recursive: true });

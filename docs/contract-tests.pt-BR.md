@@ -66,8 +66,18 @@ Desde a 3.21.2 o passo 2 é relatado pelo repórter do portfólio,
 | Só fonte fora (5xx, timeout, rede, 429) ou dependência de uma delas, com ≥ 1 captura | **0** (verde) | `::warning title=Fonte indisponível::spec1, spec2` |
 | Nada respondeu (disjuntor: 5 indisponíveis seguidas sem captura) | **3** | `::error title=Fonte inalcançável::…` |
 | A origem recusou o pedido (404/4xx) | 1 | `::error title=Deriva de formato::…` |
+| Rota que JÁ RESPONDEU (fixture commitada) agora dá 404 `No static resource` — a fonte renomeou ou removeu | 1 (sem repetir) | `::error title=Deriva de formato::…` |
 | Corpo que não é o esperado, persistiu nas 3 tentativas | 1 | `::error title=Ambíguo (deriva ou página de erro)::…` |
-| Defeito nosso (código, guarda de tamanho) | 1 | `::error title=Falha alheia à origem::…` |
+| Defeito nosso (código, guarda de tamanho; rota inexistente de spec SEM fixture) | 1 | `::error title=Falha alheia à origem::…` |
+
+A linha da rota que já respondeu existe desde 02/11/2026: o Senado renomeou três rotas
+da API administrativa, e o `upstreamFetch` levanta o 404 `No static resource` como erro
+local sem `cause` (no Worker, caminho que não existe é defeito nosso, classe `defeito`),
+então o repórter o arquivava como `alheio`. `scripts/contract/rota-sumida.ts` o
+reclassifica como deriva quando a fixture do spec está commitada — ela só existe porque
+uma captura daquela rota deu certo. Limite aceito: um refactor que quebre o caminho de um
+spec existente também sai como deriva; o job fica vermelho do mesmo jeito, e a mensagem
+manda conferir o `/v3/api-docs`, que separa os dois casos.
 
 Na noite verde-com-aviso, as specs não medidas ficam com a fixture commitada e o
 passo 3 roda sobre ela; o resumo do job diz "deriva NÃO medida em N endpoints".
