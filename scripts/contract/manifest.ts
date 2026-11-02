@@ -479,12 +479,12 @@ export const FIXTURES: FixtureSpec[] = [
   {
     family: "adm",
     name: "auxilio-moradia",
-    capture: (h) => h.adm("/senadores/auxilio-moradia"),
+    capture: (h) => h.adm("/senadores/auxilio-moradia-imoveis-funcionais"),
   },
   {
     family: "adm",
     name: "escritorios",
-    capture: (h) => h.adm("/senadores/escritorios"),
+    capture: (h) => h.adm("/senadores/escritorios-apoio"),
   },
   {
     family: "adm",
@@ -512,7 +512,7 @@ export const FIXTURES: FixtureSpec[] = [
     family: "adm",
     name: "pessoal-estagiarios",
     // enveloped ({statusCode, msg, data}) — exercises unwrapAdmEnvelope
-    capture: (h) => h.adm("/servidores/estagiarios"),
+    capture: (h) => h.adm("/colaboradores/estagiarios"),
   },
 
   // ── adm: contratações ──────────────────────────────────────────────────

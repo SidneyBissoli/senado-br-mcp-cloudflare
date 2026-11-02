@@ -685,8 +685,15 @@ export function registerServidoresTools(server: SenadoToolHost, admBaseUrl: stri
           "previsao-aposentadoria": "/servidores/previsao-aposentadoria",
           "senadores": "/senadores/quantitativos/senadores",
         };
+        // Nominal lists that do not live under /servidores/. The Senate moved estagiarios
+        // to /colaboradores/ between 2026-10-27 and 2026-11-02 (the old path is now 404).
+        const LISTAS_FORA_DE_SERVIDORES: Record<string, string> = {
+          "estagiarios": "/colaboradores/estagiarios",
+        };
         const isQuantitativo = params.tabela in QUANTITATIVOS;
-        const path = isQuantitativo ? QUANTITATIVOS[params.tabela] : `/servidores/${params.tabela}`;
+        const path = isQuantitativo
+          ? QUANTITATIVOS[params.tabela]
+          : (LISTAS_FORA_DE_SERVIDORES[params.tabela] ?? `/servidores/${params.tabela}`);
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_pessoal_tabelas",
           { tabela: params.tabela },

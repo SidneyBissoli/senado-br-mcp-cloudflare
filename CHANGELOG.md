@@ -30,6 +30,19 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- **Três rotas da API administrativa renomeadas pelo Senado** (entre 27/10 e 02/11/2026; as antigas
+  passaram a dar 404 "rota inexistente" e as consultas quebraram no ar). `senado_senadores_admin`:
+  `tipo: 'auxilio-moradia'` lê `/senadores/auxilio-moradia-imoveis-funcionais` (era
+  `/senadores/auxilio-moradia`) e `tipo: 'escritorios-apoio'` lê `/senadores/escritorios-apoio` (era
+  `/senadores/escritorios`); `senado_pessoal_tabelas`: `tabela: 'estagiarios'` lê
+  `/colaboradores/estagiarios` (era `/servidores/estagiarios`; as outras listas nominais seguem em
+  `/servidores/`). Achado pelo contrato noturno de 02/11 (run 41478280273, rotulado "Falha alheia à
+  origem" porque o 404 de rota inexistente é lido como caminho mal montado). Medido antes de trocar: a
+  documentação da API (`/v3/api-docs`, 103 rotas) lista os nomes novos; as respostas novas têm a MESMA
+  forma das fixtures de 27/10 (comparação recursiva das chaves), com 85, 81 e 486 registros; varredura de
+  todas as rotas da API administrativa usadas em `src/` contra a documentação: só estas três faltavam.
+  Manifesto do contrato, as três fixtures, a proveniência e o mapeamento de rotas do README/LEIA-ME
+  atualizados. Superfície inalterada (nomes, descrições e enums iguais).
 - **Página da s7 que falha sempre não prende mais a varredura das encerradas** (só o job off-Worker
   `index-ideias.ts`; nada em `src/`, sem versão). Desde 30/10/2026 a página 951 da listagem das ideias
   encerradas sem apoio suficiente (s7) responde HTTP 500: medido, a causa é UMA ideia dela, a 133378, que

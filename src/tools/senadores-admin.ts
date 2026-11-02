@@ -250,7 +250,8 @@ export function registerSenadoresAdminTools(server: SenadoToolHost, admBaseUrl: 
         if (params.tipo === "escritorios-apoio") {
           const { value: response, fetchedAt } = await cachedFetchWithMeta(
             "senado_escritorios_apoio", {}, CACHE_SEMI_STATIC,
-            () => admFetch("/senadores/escritorios", {}, admBaseUrl),
+            // Renamed by the Senate between 2026-10-27 and 2026-11-02 (was /senadores/escritorios, now 404).
+            () => admFetch("/senadores/escritorios-apoio", {}, admBaseUrl),
           );
           // Enveloped ({statusCode,msg,data}); each record nests parlamentar/setor.
           let escritorios = ensureArray(unwrapAdmEnvelope(response)).map((e: any) => ({
@@ -266,7 +267,7 @@ export function registerSenadoresAdminTools(server: SenadoToolHost, admBaseUrl: 
             escritorios = escritorios.filter((e) => e.uf?.toUpperCase() === uf);
           }
           if (params.nome) escritorios = escritorios.filter((e) => norm(e.senador).includes(norm(params.nome!)));
-          const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/senadores/escritorios", {
+          const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/senadores/escritorios-apoio", {
             dataset_id: "tipo=escritorios-apoio", retrieved_at: fetchedAt,
           });
           return resultWithProvenance({ tipo: params.tipo, count: escritorios.length, escritorios }, prov);
@@ -293,7 +294,8 @@ export function registerSenadoresAdminTools(server: SenadoToolHost, admBaseUrl: 
         // tipo === "auxilio-moradia"
         const { value: response, fetchedAt } = await cachedFetchWithMeta(
           "senado_auxilio_moradia", {}, CACHE_SEMI_STATIC,
-          () => admFetch("/senadores/auxilio-moradia", {}, admBaseUrl),
+          // Renamed by the Senate between 2026-10-27 and 2026-11-02 (was /senadores/auxilio-moradia, now 404).
+          () => admFetch("/senadores/auxilio-moradia-imoveis-funcionais", {}, admBaseUrl),
         );
         let senadores = ensureArray(unwrapAdmEnvelope(response)).map((s: any) => ({
           nome: s.nomeParlamentar || "",
@@ -307,7 +309,7 @@ export function registerSenadoresAdminTools(server: SenadoToolHost, admBaseUrl: 
           senadores = senadores.filter((s) => s.uf?.toUpperCase() === uf);
         }
         if (params.nome) senadores = senadores.filter((s) => norm(s.nome).includes(norm(params.nome!)));
-        const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/senadores/auxilio-moradia", {
+        const prov = provenanceFor("SENADO_ADM", admBaseUrl, "/api/v1/senadores/auxilio-moradia-imoveis-funcionais", {
           dataset_id: "tipo=auxilio-moradia", retrieved_at: fetchedAt,
         });
         return resultWithProvenance({ tipo: params.tipo, count: senadores.length, senadores }, prov);
