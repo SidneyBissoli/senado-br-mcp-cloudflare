@@ -453,12 +453,12 @@ Used by Groups O, P, Q, R via `admFetch` (no `.json` suffix; HTTP 404 treated as
 | Upstream path | Used by |
 |---------------|---------|
 | `/api/v1/senadores/despesas_ceaps/{ano}` | `senado_ceaps` (~10 MB/year, cached + aggregated in-Worker) |
-| `/api/v1/senadores/{auxilio-moradia,escritorios,aposentados}` | `senado_senadores_admin` (`tipo` enum) |
+| `/api/v1/senadores/{auxilio-moradia-imoveis-funcionais,escritorios-apoio,aposentados}` | `senado_senadores_admin` (`tipo` enum) |
 | `/api/v1/servidores/servidores/{ativos,efetivos,comissionados,inativos}` | `senado_servidores` |
 | `/api/v1/servidores/remuneracoes/{ano}/{mes}` | `senado_remuneracoes_servidores` (~5.5 MB/month) |
 | `/api/v1/servidores/horas-extras/{ano}/{mes}` | `senado_horas_extras` |
 | `/api/v1/servidores/quantitativos/*`, `/previsao-aposentadoria`, `/api/v1/senadores/quantitativos/senadores` | `senado_pessoal_tabelas` (quantitativos) |
-| `/api/v1/servidores/{estagiarios,pensionistas,lotacoes,cargos}` | `senado_pessoal_tabelas` (listas nominais) |
+| `/api/v1/servidores/{pensionistas,lotacoes,cargos}`, `/api/v1/colaboradores/estagiarios` | `senado_pessoal_tabelas` (listas nominais) |
 | `/api/v1/contratacoes/contratos` (+ `/{id}/aditivos`) | `senado_contratos`, `senado_contratacao_detalhe` |
 | `/api/v1/contratacoes/{tipo}/{id}/{itens,pagamentos,garantias}` | `senado_contratacao_detalhe` |
 | `/api/v1/contratacoes/licitacoes` | `senado_licitacoes` |
