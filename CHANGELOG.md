@@ -30,19 +30,6 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
-- **Três rotas da API administrativa renomeadas pelo Senado** (entre 27/10 e 02/11/2026; as antigas
-  passaram a dar 404 "rota inexistente" e as consultas quebraram no ar). `senado_senadores_admin`:
-  `tipo: 'auxilio-moradia'` lê `/senadores/auxilio-moradia-imoveis-funcionais` (era
-  `/senadores/auxilio-moradia`) e `tipo: 'escritorios-apoio'` lê `/senadores/escritorios-apoio` (era
-  `/senadores/escritorios`); `senado_pessoal_tabelas`: `tabela: 'estagiarios'` lê
-  `/colaboradores/estagiarios` (era `/servidores/estagiarios`; as outras listas nominais seguem em
-  `/servidores/`). Achado pelo contrato noturno de 02/11 (run 41478280273, rotulado "Falha alheia à
-  origem" porque o 404 de rota inexistente é lido como caminho mal montado). Medido antes de trocar: a
-  documentação da API (`/v3/api-docs`, 103 rotas) lista os nomes novos; as respostas novas têm a MESMA
-  forma das fixtures de 27/10 (comparação recursiva das chaves), com 85, 81 e 486 registros; varredura de
-  todas as rotas da API administrativa usadas em `src/` contra a documentação: só estas três faltavam.
-  Manifesto do contrato, as três fixtures, a proveniência e o mapeamento de rotas do README/LEIA-ME
-  atualizados. Superfície inalterada (nomes, descrições e enums iguais).
 - **Página da s7 que falha sempre não prende mais a varredura das encerradas** (só o job off-Worker
   `index-ideias.ts`; nada em `src/`, sem versão). Desde 30/10/2026 a página 951 da listagem das ideias
   encerradas sem apoio suficiente (s7) responde HTTP 500: medido, a causa é UMA ideia dela, a 133378, que
@@ -111,6 +98,44 @@ All notable changes to this project are documented here. Format based on
   no ano; em 2024, 58; em 2023, 69. As asserções passam a ser sem sinal (número finito), com os totais
   por grupo conciliados com as linhas (soma e contagem); a fixture com as duas negativas fica como
   regressão — o teste antigo reprova nela, o novo passa.
+
+## [3.25.3] - 2026-11-02
+
+Tudo o que mudou no pacote publicado desde a 3.25.2. Os itens "sem versão" do [Unreleased] acima
+(jobs off-Worker, tier de contrato) não entram no pacote e seguem lá. Superfície inalterada (nomes,
+descrições, enums e esquemas iguais; `surface.lock.json` não mudou).
+
+### Fixed
+
+- **Três rotas da API administrativa renomeadas pelo Senado** (entre 27/10 e 02/11/2026; as antigas
+  passaram a dar 404 "rota inexistente" e as consultas quebraram no ar; PR #168). `senado_senadores_admin`:
+  `tipo: 'auxilio-moradia'` lê `/senadores/auxilio-moradia-imoveis-funcionais` (era
+  `/senadores/auxilio-moradia`) e `tipo: 'escritorios-apoio'` lê `/senadores/escritorios-apoio` (era
+  `/senadores/escritorios`); `senado_pessoal_tabelas`: `tabela: 'estagiarios'` lê
+  `/colaboradores/estagiarios` (era `/servidores/estagiarios`; as outras listas nominais seguem em
+  `/servidores/`). Achado pelo contrato noturno de 02/11 (run 41478280273, rotulado "Falha alheia à
+  origem" porque o 404 de rota inexistente é lido como caminho mal montado). Medido antes de trocar: a
+  documentação da API (`/v3/api-docs`, 103 rotas) lista os nomes novos; as respostas novas têm a MESMA
+  forma das fixtures de 27/10 (comparação recursiva das chaves), com 85, 81 e 486 registros; varredura de
+  todas as rotas da API administrativa usadas em `src/` contra a documentação: só estas três faltavam.
+  Manifesto do contrato, as três fixtures, a proveniência e o mapeamento de rotas do README/LEIA-ME
+  atualizados. No ar desde o deploy de 02/11 (provado pela rota de uso próprio; contrato
+  41480386000 verde); esta versão leva o conserto ao canal npm/stdio.
+
+### Changed
+
+- **Snapshot da árvore organizacional de 01/11/2026** (`src/data/estrutura-organizacional.ts`, gerado
+  por `ingest:estrutura`; lido por `senado_estrutura_organizacional` e pelo filtro `subordinadasA` de
+  `senado_servidores`): 821 → 820 unidades. Saem o Gabinete do Senador Rodrigo Pacheco (GSRPACHE) e o
+  Escritório de Apoio Nº 01 dele; entra o Gabinete da Senadora Leany Lemos (GSLLEMOS).
+- **Dependências** (PR #166): `@modelcontextprotocol/server` 2.3.1 → 2.4.0 no lock (a única de execução
+  do pacote; a faixa `^2.0.0` não mudou); no Worker e no desenvolvimento, `agents` 0.30 → 0.32,
+  `@modelcontextprotocol/client` 2.4.0, `@sbissoli/mcp-live-source` 0.5.0, `wrangler` 4.156.0 e
+  `@cloudflare/workers-types`. Override `minimatch` ^11.0.1 sob `exceljs` (PR #164; só o pipeline do
+  dataset, GHSA-g3hv-75wg-m249).
+- **Deploy do Worker serializado** (PR #167): grupo de concorrência fixo `deploy-production`, depois
+  que dois merges seguidos num servidor irmão deixaram código velho no ar (o deploy mais antigo
+  terminou por último).
 
 ## [3.25.2] - 2026-10-30
 
