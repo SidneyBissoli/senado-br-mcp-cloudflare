@@ -22,10 +22,17 @@ import {
   SAIDA_FALHA,
   SAIDA_FONTE_INALCANCAVEL,
   SAIDA_OK,
+  capturarComRetentativa,
   classificarFalha,
 } from "@sbissoli/mcp-live-source";
-import { UpstreamError, traduzirErro } from "../../src/throttle/upstream.js";
+import {
+  MSG_ROTA_INEXISTENTE,
+  RecursoAusenteError,
+  UpstreamError,
+  traduzirErro,
+} from "../../src/throttle/upstream.js";
 import { MissingDependencyError } from "../../scripts/contract/manifest.js";
+import { RotaSumiuNaFonteError, ehDeriva, reclassificarRotaSumida } from "../../scripts/contract/rota-sumida.js";
 
 const ehDependencia = (err: unknown) => err instanceof MissingDependencyError;
 
@@ -146,5 +153,77 @@ describe("the nightly policy, driven by this repo's errors", () => {
     ]);
     expect(r.codigoDeSaida()).toBe(SAIDA_OK);
     expect(r.anotacoes()).toEqual(["::warning title=Fonte indisponível::processo-lista, processo-detalhe"]);
+  });
+});
+
+describe("a route that already answered and now 404s 'No static resource' is drift (2026-11-02)", () => {
+  // The exact error `upstreamFetch` raises for the route-not-found 404 (no package `cause`).
+  const rotaInexistente = (path: string) =>
+    new UpstreamError(
+      `[${path}] ${MSG_ROTA_INEXISTENTE} — o caminho montado não existe na API do Senado.`,
+      404,
+      false,
+      false,
+      "defeito",
+    );
+
+  /** Runs one capture through the same wiring as `refresh-fixtures.ts`. */
+  async function capturar(spec: string, fixtureExiste: boolean, err: unknown): Promise<unknown> {
+    try {
+      await Promise.reject(err).catch(reclassificarRotaSumida(spec, fixtureExiste));
+    } catch (e) {
+      return e;
+    }
+    throw new Error("unreachable");
+  }
+
+  it("without the fix this is exactly the false label of run 41478280273: 'alheio'", () => {
+    expect(classificarFalha(rotaInexistente("/api/v1/senadores/escritorios")).veredito).toBe("alheio");
+  });
+
+  it("fixture committed → RotaSumiuNaFonteError → 'respondeu', with the check named in the message", async () => {
+    const e = await capturar("escritorios", true, rotaInexistente("/api/v1/senadores/escritorios"));
+    expect(e).toBeInstanceOf(RotaSumiuNaFonteError);
+    expect((e as Error).message).toContain("/v3/api-docs");
+    expect((e as Error).cause).toBeInstanceOf(UpstreamError);
+    expect(classificarFalha(e, { deriva: ehDeriva }).veredito).toBe("respondeu");
+  });
+
+  it("no fixture (a NEW spec with a wrong path) → stays ours: 'alheio'", async () => {
+    const e = await capturar("nova", false, rotaInexistente("/api/v1/x"));
+    expect(e).not.toBeInstanceOf(RotaSumiuNaFonteError);
+    expect(classificarFalha(e, { deriva: ehDeriva }).veredito).toBe("alheio");
+  });
+
+  it("other errors pass through untouched, even with a fixture (absent key, 5xx, our own guards)", async () => {
+    const ausente = new RecursoAusenteError("/supridos/2005");
+    const fora = traduzirErro(doPacote("http_5xx", 502), "/x");
+    const guarda = new UpstreamError("Resposta upstream excede o limite de 5 MB", 200, false);
+    for (const err of [ausente, fora, guarda]) {
+      expect(await capturar("spec", true, err)).toBe(err);
+    }
+  });
+
+  it("the night of 02/11 replayed: three renamed routes → red 'Deriva de formato', no retry", async () => {
+    const r = new Relatorio({ dependencia: ehDependencia, deriva: ehDeriva });
+    r.registrarCaptura("senador-lista-atual", 1);
+    for (const [spec, path] of [
+      ["auxilio-moradia", "/api/v1/senadores/auxilio-moradia"],
+      ["escritorios", "/api/v1/senadores/escritorios"],
+      ["pessoal-estagiarios", "/api/v1/servidores/estagiarios"],
+    ] as const) {
+      let tentativas = 0;
+      const err = await capturarComRetentativa(
+        () => {
+          tentativas++;
+          return Promise.reject(rotaInexistente(path)).catch(reclassificarRotaSumida(spec, true));
+        },
+        { tentativas: 3, dependencia: ehDependencia, deriva: ehDeriva, dormir: async () => {} },
+      ).catch((e: unknown) => e);
+      expect(tentativas).toBe(1);
+      r.registrarFalha(spec, err, 1);
+    }
+    expect(r.codigoDeSaida()).toBe(SAIDA_FALHA);
+    expect(r.anotacoes()).toEqual(["::error title=Deriva de formato::auxilio-moradia, escritorios, pessoal-estagiarios"]);
   });
 });

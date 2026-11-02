@@ -30,6 +30,18 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- **Rota que já respondeu e passa a dar 404 "No static resource" sai como deriva, não como defeito
+  nosso** (só o refresh do tier de contrato; nada em `src/`, sem versão). Na noite de 02/11/2026 (run
+  41478280273) as três rotas da API administrativa renomeadas pelo Senado saíram como "Falha alheia à
+  origem (defeito nosso)", com três idas inúteis cada: o `upstreamFetch` levanta o 404 de rota
+  inexistente como `UpstreamError` local sem `cause`, e o `@sbissoli/mcp-live-source` arquiva erro sem
+  origem como `alheio`. `scripts/contract/rota-sumida.ts` reclassifica esse 404 como
+  `RotaSumiuNaFonteError` quando a fixture do spec está commitada (ela só existe porque a rota já
+  respondeu), e o refresh passa `deriva` à retentativa e ao `Relatorio`: sai `::error title=Deriva de
+  formato::`, em UMA ida, com a mensagem mandando conferir o `/v3/api-docs`. Spec novo sem fixture
+  segue `alheio`. Provado ponta a ponta contra a fonte viva (spec `escritorios` apontado de propósito
+  para a rota antiga: `FALHOU [respondeu] (838ms, 1 ida)`, `Deriva de formato`, fixture intacta) e em
+  `tests/scripts/contract-refresh.test.ts` (5 casos, inclusive a noite de 02/11 reencenada).
 - **Página da s7 que falha sempre não prende mais a varredura das encerradas** (só o job off-Worker
   `index-ideias.ts`; nada em `src/`, sem versão). Desde 30/10/2026 a página 951 da listagem das ideias
   encerradas sem apoio suficiente (s7) responde HTTP 500: medido, a causa é UMA ideia dela, a 133378, que
