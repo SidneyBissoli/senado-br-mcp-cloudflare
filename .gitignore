@@ -46,6 +46,9 @@ naming.png
 # Packaged Claude Code skill bundle (regenerated artifact)
 .claude/skills/senado-br.zip
 
+# Claude Code local settings (per-machine, not shared)
+.claude/settings.local.json
+
 # credencial do MCP Registry: publicar a partir desta pasta cria o arquivo,
 # e ele daria a qualquer um o direito de publicar no catalogo como voce
 .mcpregistry_registry_token
