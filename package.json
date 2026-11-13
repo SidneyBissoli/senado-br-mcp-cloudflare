@@ -90,7 +90,7 @@
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^5.0.0",
-    "wrangler": "^4.127.1"
+    "wrangler": "^4.161.0"
   },
   "overrides": {
     "path-to-regexp": "^8.4.2",
