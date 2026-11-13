@@ -53,3 +53,14 @@ database_id = "6d23ebdb-92b1-4112-9a8b-0d1597c589d9"
 # history is append-on-change so storage stays near-zero. Adjust cadence here (deploy-time).
 [triggers]
 crons = ["0 */2 * * *"]
+
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = true
+head_sampling_rate = 1
+persist = true
