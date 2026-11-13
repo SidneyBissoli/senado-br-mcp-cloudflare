@@ -103,5 +103,10 @@
     "exceljs": {
       "minimatch": "^11.0.1"
     }
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261110.1": true,
+    "core-js-pure": false
   }
 }
