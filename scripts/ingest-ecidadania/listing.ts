@@ -42,14 +42,15 @@ export interface ListingItem {
 
 /** Decode the handful of HTML entities that appear in listing anchor text. */
 export function decodeEntities(s: string): string {
+  // `&amp;` goes LAST: decoded first, `&amp;lt;` (the literal text "&lt;") would become "<".
   return s
-    .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&nbsp;/g, " ")
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(parseInt(n, 10)))
+    .replace(/&amp;/g, "&")
     .replace(/\s+/g, " ")
     .trim();
 }

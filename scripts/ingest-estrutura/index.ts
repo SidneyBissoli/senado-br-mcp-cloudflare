@@ -36,10 +36,11 @@ const decodeEntities = (s: string) =>
   s
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
-    .replace(/&nbsp;/g, " ");
+    .replace(/&nbsp;/g, " ")
+    // `&amp;` por último: decodificado antes, `&amp;lt;` (o texto "&lt;") viraria "<".
+    .replace(/&amp;/g, "&");
 
 async function fetchText(url: string, tentativas = 3): Promise<string> {
   let ultimoErro: unknown;

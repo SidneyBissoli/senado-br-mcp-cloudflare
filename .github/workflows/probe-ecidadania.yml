@@ -24,6 +24,11 @@ on:
           - ubuntu-latest
         default: ecidadania
 
+# Menor privilégio: sem este bloco o token herda o padrão do repositório
+# (actions/missing-workflow-permissions). Um bloco no nível do job substitui este.
+permissions:
+  contents: read
+
 jobs:
   probe:
     runs-on: ${{ inputs.runner == 'ubuntu-latest' && 'ubuntu-latest' || fromJSON('["self-hosted","ecidadania"]') }}

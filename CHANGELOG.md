@@ -6,6 +6,21 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Fixed
+
+- **Achados do code scanning (CodeQL ligado em 13/11/2026), sem mudança de superfície nem de versão.**
+  `textoDoHtml` (detalhe das ideias) repete a remoção de tags até estabilizar; a célula do dicionário
+  do dataset escapa `\` antes de `|`; os dois `decodeEntities` dos crawlers decodificam `&amp;` por
+  último (antes, o texto `&amp;lt;` virava `<`; nenhuma página guardada traz entidade duplamente
+  codificada, então o corpus não muda); o cabeçalho do `usage-report` deixou de imprimir o começo do
+  id da conta.
+
+### Security
+
+- Dez workflows (`ci`, `mcpscore`, `publish`, `probe-ecidadania`, `verify-consultas-votos` e os cinco
+  `ingest-ecidadania-*`) declaram `permissions: contents: read` no topo
+  (`actions/missing-workflow-permissions`).
+
 ### Added
 
 - **Arquivo bruto de páginas do e-Cidadania — fases B1 e B2 das ideias** (só os jobs off-Worker, o
