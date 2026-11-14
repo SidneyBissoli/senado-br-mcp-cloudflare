@@ -123,12 +123,16 @@ function decodificar(s: string): string {
  * em `<span>` ("pel<span>o</span>"), e trocar toda tag por espaço daria "pel o Deputado".
  */
 export function textoDoHtml(html: string): string {
-  return decodificar(
-    html
-      .replace(/<!--[\s\S]*?-->/g, " ")
-      .replace(/<\/?(?:p|div|li|ul|ol|h\d|br|section|figure|figcaption)\b[^>]*>/gi, " ")
-      .replace(/<[^>]+>/g, ""),
-  ).replace(/\s+/g, " ").trim();
+  let semTags = html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<\/?(?:p|div|li|ul|ol|h\d|br|section|figure|figcaption)\b[^>]*>/gi, " ");
+  // Repete até estabilizar: uma passada só sobre `<scr<b>ipt>` deixaria `<script>` inteiro.
+  let anterior: string;
+  do {
+    anterior = semTags;
+    semTags = semTags.replace(/<[^>]+>/g, "");
+  } while (semTags !== anterior);
+  return decodificar(semTags).replace(/\s+/g, " ").trim();
 }
 
 /** dd/mm/aaaa → aaaa-mm-dd (validado: 31/02 é recusado, não "corrigido"). */

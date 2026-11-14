@@ -208,7 +208,7 @@ async function main() {
     process.exit(2);
   }
 
-  const meta = `dataset \`${DATASET}\` · conta ${ACCOUNT_ID.slice(0, 8)}… · janela ${days}d (A/B) · ${new Date().toISOString().slice(0, 10)}`;
+  const meta = `dataset \`${DATASET}\` · janela ${days}d (A/B) · ${new Date().toISOString().slice(0, 10)}`;
   console.log(MD ? `# Relatório de uso — Vetor B\n\n${meta}` : `Analytics Engine — ${meta}\n`);
   for (const key of toRun) {
     const r = reports[key];

@@ -16,10 +16,13 @@ import {
   type VariableDef,
 } from "./schema.js";
 
-/** Escapa `|` e quebras de linha para uma célula de tabela Markdown. */
+/**
+ * Escapa `\`, `|` e quebras de linha para uma célula de tabela Markdown. A barra invertida vem
+ * primeiro: sem isso, um texto com `\|` desfaria o escape do `|`.
+ */
 function cell(s: string | undefined): string {
   if (!s) return "—";
-  return s.replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ").trim();
+  return s.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ").trim();
 }
 
 function variableRow(v: VariableDef): string {

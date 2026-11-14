@@ -12,6 +12,11 @@ on:
         type: boolean
         default: false
 
+# Menor privilégio: sem este bloco o token herda o padrão do repositório
+# (actions/missing-workflow-permissions). Um bloco no nível do job substitui este.
+permissions:
+  contents: read
+
 jobs:
   call:
     uses: ./.github/workflows/ingest-ecidadania-entity.yml
