@@ -104,8 +104,15 @@ export interface FalhaArquivo {
 }
 
 /**
- * Conta mais uma falha da `pagina` no dia `hoje`. Mesma página: soma 1 se o dia é outro, nada se é o
- * mesmo. Outra página (ou nenhuma antes): recomeça em 1. `pular` = chegou a DIAS_FALHA_PARA_PULAR.
+ * A página que falha ANDA (medido 15/11/2026): a ideia 133378 desceu de p951 (02/11) a p954 (13/11),
+ * p955 (14/11) e p956 (15/11), porque a s7 cresce ANTES dela. Comparar o número exato da página zerava
+ * a contagem todo dia e o pulo nunca chegava. Folga, em páginas, para tratar como "a mesma falha".
+ */
+export const FOLGA_PAGINA_FALHA = 3;
+
+/**
+ * Conta mais uma falha da `pagina` no dia `hoje`. Mesma falha: soma 1 se o dia é outro, nada se é o
+ * mesmo. Outra falha (ou nenhuma antes): recomeça em 1. `pular` = chegou a DIAS_FALHA_PARA_PULAR.
  */
 export function contarFalhaArquivo(
   anterior: FalhaArquivo | null,
@@ -113,6 +120,8 @@ export function contarFalhaArquivo(
   hoje: string,
 ): { falha: FalhaArquivo; pular: boolean } {
   let dias = 1;
-  if (anterior && anterior.pagina === pagina) dias = anterior.dia === hoje ? anterior.dias : anterior.dias + 1;
+  // Simétrica: a s7 normalmente cresce antes da página ruim (ela desce), mas também pode encolher.
+  const mesmaFalha = anterior !== null && Math.abs(pagina - anterior.pagina) <= FOLGA_PAGINA_FALHA;
+  if (anterior && mesmaFalha) dias = anterior.dia === hoje ? anterior.dias : anterior.dias + 1;
   return { falha: { pagina, dias, dia: hoje }, pular: dias >= DIAS_FALHA_PARA_PULAR };
 }
