@@ -225,7 +225,7 @@ describe("autoprova do zstd com dicionário", () => {
   });
 
   it.runIf(!TEM_DICIONARIO)("Node sem dicionário: recusa, dizendo a versão (o job para antes de coletar)", () => {
-    expect(() => autoprovaZstd()).toThrow(new RegExp(process.version.replace(/\./g, "\\.")));
+    expect(() => autoprovaZstd()).toThrow(process.version);
   });
 });
 
