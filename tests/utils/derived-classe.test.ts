@@ -29,7 +29,6 @@ import {
   NOTA_DERIVACAO_DATA_ESTIMADA,
   NOTA_DERIVACAO_STATUS_IDEIA,
   NOTA_DERIVACAO_LEGISLATURA,
-  NOTA_DERIVACAO_LEGISLATURA_PADRAO,
   NOTA_DERIVACAO_SUBORDINADAS,
   type Provenance,
 } from "../../src/utils/provenance.js";
@@ -96,7 +95,7 @@ describe("derivado / derivadoSe: the generic marker", () => {
     const notas = [
       NOTA_DERIVACAO_SOMAS, NOTA_DERIVACAO_BRUTO, NOTA_DERIVACAO_PLACAR, NOTA_DERIVACAO_PLACAR_COMISSAO,
       NOTA_DERIVACAO_PERCENTUAIS, NOTA_DERIVACAO_RANKING_ECIDADANIA, NOTA_DERIVACAO_DATA_ESTIMADA,
-      NOTA_DERIVACAO_LEGISLATURA, NOTA_DERIVACAO_LEGISLATURA_PADRAO, NOTA_DERIVACAO_SUBORDINADAS,
+      NOTA_DERIVACAO_LEGISLATURA, NOTA_DERIVACAO_SUBORDINADAS,
       NOTA_DERIVACAO_STATUS_IDEIA,
     ];
     expect(new Set(notas).size).toBe(notas.length);
@@ -200,10 +199,8 @@ describe("legislative aggregates", () => {
     limpo(provenanceDaDistribuicao(legis(), "autoria"));
   });
 
-  it("legislatura atual: the period is always computed; the fallback says the number is assumed", () => {
-    const comNumero = [{ Mandato: { PrimeiraLegislaturaDoMandato: { NumeroLegislatura: "57" } } }];
-    marcado(provenanceDaLegislatura(legis(), comNumero), NOTA_DERIVACAO_LEGISLATURA);
-    marcado(provenanceDaLegislatura(legis(), []), NOTA_DERIVACAO_LEGISLATURA_PADRAO);
+  it("legislatura atual: number and dates are the source's; the period label is composed (derived)", () => {
+    marcado(provenanceDaLegislatura(legis()), NOTA_DERIVACAO_LEGISLATURA);
   });
 });
 

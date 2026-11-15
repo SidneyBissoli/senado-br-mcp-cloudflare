@@ -16,21 +16,42 @@
 import { describe, it, expect } from "vitest";
 import {
   extractParlamentares,
-  deriveLegislaturaAtual,
+  parseLegislaturaVigente,
   tabularPartidos,
   tabularUfs,
 } from "../../src/tools/referencia.js";
 import { digArrayRoot } from "../../src/utils/upstream-parse.js";
 import { ensureArray } from "../../src/utils/validation.js";
 import senadorListaAtualRaw from "./fixtures/legado/senador-lista-atual.json?raw";
+import legislaturaNaDataRaw from "./fixtures/legado/plenario-legislatura-na-data.json?raw";
 import tiposNormaRaw from "./fixtures/legado/tipos-norma.json?raw";
 import tiposUsoPalavraRaw from "./fixtures/legado/tipos-uso-palavra.json?raw";
 
 const listaAtual = JSON.parse(senadorListaAtualRaw);
+const legislaturaNaData = JSON.parse(legislaturaNaDataRaw);
 const tiposNorma = JSON.parse(tiposNormaRaw);
 const tiposUsoPalavra = JSON.parse(tiposUsoPalavraRaw);
 
-// ── /senador/lista/atual — source for partidos, ufs and legislatura-atual ──
+// ── /plenario/legislatura/{data} — source for legislatura-atual ──────────
+
+describe("contract: /plenario/legislatura/{data} (legislatura-atual)", () => {
+  it("raw fixture carries the wrapper path and the keys the parser reads", () => {
+    expect(legislaturaNaData).toHaveProperty("ListaLegislatura.Legislaturas.Legislatura");
+    const leg = ensureArray(legislaturaNaData.ListaLegislatura.Legislaturas.Legislatura)[0] as any;
+    for (const k of ["NumeroLegislatura", "DataInicio", "DataFim"]) expect(leg).toHaveProperty(k);
+    expect(typeof leg.NumeroLegislatura).toBe("string");
+  });
+
+  it("parseLegislaturaVigente yields the legislature in force on the capture date", () => {
+    const leg = parseLegislaturaVigente(legislaturaNaData);
+    expect(leg.numero).toBeGreaterThanOrEqual(57); // the capture is never older than 2026
+    expect(leg.periodo).toMatch(/^\d{4}-\d{4}$/);
+    expect(leg.dataInicio).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(leg.dataFim > leg.dataInicio).toBe(true);
+  });
+});
+
+// ── /senador/lista/atual — source for partidos and ufs ──────────────────
 
 describe("contract: /senador/lista/atual (referencia derivations)", () => {
   it("raw fixture carries the wrapper path and the keys the tabulators read", () => {
@@ -38,8 +59,6 @@ describe("contract: /senador/lista/atual (referencia derivations)", () => {
     const items = listaAtual.ListaParlamentarEmExercicio.Parlamentares.Parlamentar;
     expect(Array.isArray(items)).toBe(true);
     expect(items.length).toBeGreaterThan(0);
-    // deriveLegislaturaAtual reads the first senator's mandate legislature number
-    expect(items[0]).toHaveProperty("Mandato.PrimeiraLegislaturaDoMandato.NumeroLegislatura");
     // tabularPartidos falls back to IdentificacaoParlamentar.SiglaPartidoParlamentar
     // (Mandato.Partido is NOT served by this endpoint's current shape)
     expect(items[0]).toHaveProperty("IdentificacaoParlamentar.SiglaPartidoParlamentar");
@@ -50,16 +69,6 @@ describe("contract: /senador/lista/atual (referencia derivations)", () => {
   it("extractParlamentares resolves the list", () => {
     const parlamentares = extractParlamentares(listaAtual);
     expect(parlamentares.length).toBeGreaterThan(0);
-  });
-
-  it("deriveLegislaturaAtual yields a well-formed legislature", () => {
-    const leg = deriveLegislaturaAtual(extractParlamentares(listaAtual));
-    expect(typeof leg.numero).toBe("number");
-    // 57th legislature started 2023; any refreshed capture must be at or after it
-    expect(leg.numero).toBeGreaterThanOrEqual(57);
-    expect(leg.periodo).toMatch(/^\d{4}-\d{4}$/);
-    expect(leg.dataInicio).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(leg.dataFim).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("tabularPartidos resolves real party siglas (not the S/Partido fallback)", () => {

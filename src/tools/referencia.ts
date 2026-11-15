@@ -9,9 +9,10 @@ import type { SenadoToolHost } from "../tool-host.js";
 import { z } from "zod";
 import { cachedFetchWithMeta } from "../cache/manager.js";
 import { upstreamFetch } from "../throttle/upstream.js";
-import { errorFrom, ensureArray } from "../utils/validation.js";
-import { digArrayRoot } from "../utils/upstream-parse.js";
-import { NOTA_DERIVACAO_LEGISLATURA, NOTA_DERIVACAO_LEGISLATURA_PADRAO, NOTA_DERIVACAO_SOMAS, derivado, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
+import { errorFrom, ensureArray, safeInt } from "../utils/validation.js";
+import { RootNotFoundError, digArrayRoot } from "../utils/upstream-parse.js";
+import { hojeEmBrasilia } from "../utils/janela.js";
+import { NOTA_DERIVACAO_LEGISLATURA, NOTA_DERIVACAO_SOMAS, derivado, provenanceFor, resultWithProvenance, type Provenance } from "../utils/provenance.js";
 import { CACHE_STATIC } from "../types.js";
 
 export const TIPOS_MATERIA = [
@@ -42,7 +43,7 @@ export const UFS = [
   { sigla: "TO", nome: "Tocantins" },
 ];
 
-/** Shared fetcher for the current senators list (used by partidos, ufs, legislatura).
+/** Shared fetcher for the current senators list (used by partidos and ufs).
  *  Returns the upstream value + its real extraction timestamp (for provenance). */
 async function fetchSenadoresAtuais(baseUrl: string) {
   return cachedFetchWithMeta("_senadores_atuais", {}, CACHE_STATIC, () =>
@@ -57,32 +58,40 @@ export function extractParlamentares(response: any): any[] {
   return ensureArray(list);
 }
 
-/** Derive the current federal legislatura from the senators list. */
-export function deriveLegislaturaAtual(parlamentares: any[]) {
-  const primeiro = parlamentares[0];
-  let legislatura = primeiro?.Mandato?.PrimeiraLegislaturaDoMandato?.NumeroLegislatura;
-  if (legislatura) {
-    legislatura = parseInt(legislatura);
-    const anoInicio = 2023 - (57 - legislatura) * 4;
-    return {
-      numero: legislatura,
-      periodo: `${anoInicio}-${anoInicio + 4}`,
-      dataInicio: `${anoInicio}-02-01`,
-      dataFim: `${anoInicio + 4}-01-31`,
-    };
-  }
-  // Fallback to the 57th legislatura (2023-2027)
-  return { numero: 57, periodo: "2023-2027", dataInicio: "2023-02-01", dataFim: "2027-01-31" };
+/** Upstream path for the legislatura in force on an ISO date (`AAAA-MM-DD` → `/plenario/legislatura/AAAAMMDD`). */
+export function caminhoLegislaturaNaData(dataIso: string): string {
+  return `/plenario/legislatura/${dataIso.replaceAll("-", "")}`;
 }
 
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * `tabela=legislatura-atual` (contract v1.3): period and dates are always the server's arithmetic;
- * when the source sends no legislatura number the number itself is the server's fallback, and the
- * note says so.
+ * The legislatura in force on the queried date, as `/plenario/legislatura/{data}` publishes it:
+ * number, start and end are the source's; only `periodo` is composed here, from the years of those
+ * two dates. No pinned fallback — a fixed number answers the wrong legislatura, silently, as soon
+ * as the next one starts. (The previous reading took the FIRST senator's
+ * `PrimeiraLegislaturaDoMandato`, which is the previous legislatura for the two thirds elected
+ * four years earlier — measured 15/11/2026: 54 of 81 senators carry 56; right only by list order.)
  */
-export function provenanceDaLegislatura(prov: Provenance, parlamentares: any[]): Provenance {
-  const doFonte = Boolean(parlamentares[0]?.Mandato?.PrimeiraLegislaturaDoMandato?.NumeroLegislatura);
-  return derivado(prov, doFonte ? NOTA_DERIVACAO_LEGISLATURA : NOTA_DERIVACAO_LEGISLATURA_PADRAO);
+export function parseLegislaturaVigente(response: unknown) {
+  const contexto = "senado_tabelas_referencia:legislatura-atual";
+  const leg: any = digArrayRoot(response, [["ListaLegislatura", "Legislaturas", "Legislatura"]], contexto)[0];
+  const numero = safeInt(leg?.NumeroLegislatura);
+  const dataInicio = leg?.DataInicio;
+  const dataFim = leg?.DataFim;
+  if (!numero || !DATA_ISO.test(dataInicio ?? "") || !DATA_ISO.test(dataFim ?? "")) {
+    throw new RootNotFoundError(
+      contexto,
+      "A fonte oficial não informou a legislatura vigente (número, início e fim) para a data de hoje. " +
+        "Pode indicar mudança de formato no upstream.",
+    );
+  }
+  return { numero, periodo: `${dataInicio.slice(0, 4)}-${dataFim.slice(0, 4)}`, dataInicio, dataFim };
+}
+
+/** `tabela=legislatura-atual` (contract v1.3): the `periodo` label is the server's composition. */
+export function provenanceDaLegislatura(prov: Provenance): Provenance {
+  return derivado(prov, NOTA_DERIVACAO_LEGISLATURA);
 }
 
 /** Tally seated senators per party (sigla → count). */
@@ -177,14 +186,19 @@ export function registerReferenciaTools(server: SenadoToolHost, baseUrl: string)
           }
 
           case "legislatura-atual": {
-            const { value, fetchedAt } = await fetchSenadoresAtuais(baseUrl);
-            const parlamentares = extractParlamentares(value);
-            const prov = provenanceFor("SENADO_LEGIS", baseUrl, "/senador/lista/atual", {
+            // Keyed by Brasília's date: the cached answer can never outlive the day it was read for.
+            const hoje = hojeEmBrasilia();
+            const caminho = caminhoLegislaturaNaData(hoje);
+            const { value, fetchedAt } = await cachedFetchWithMeta(
+              "senado_legislatura_vigente", { data: hoje }, CACHE_STATIC,
+              () => upstreamFetch(caminho, {}, baseUrl),
+            );
+            const prov = provenanceFor("SENADO_LEGIS", baseUrl, caminho, {
               dataset_id: "tabela=legislatura-atual", retrieved_at: fetchedAt,
             });
             return resultWithProvenance(
-              { tabela: params.tabela, ...deriveLegislaturaAtual(parlamentares) },
-              provenanceDaLegislatura(prov, parlamentares),
+              { tabela: params.tabela, ...parseLegislaturaVigente(value) },
+              provenanceDaLegislatura(prov),
             );
           }
 
