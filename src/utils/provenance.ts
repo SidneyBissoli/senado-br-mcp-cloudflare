@@ -405,12 +405,9 @@ export const NOTA_DERIVACAO_DATA_ESTIMADA =
 /** Situação de uma ideia fora do corpus: classificada pelo servidor a partir da linha do tempo. */
 export const NOTA_DERIVACAO_STATUS_IDEIA =
   "A situação da ideia foi classificada pelo servidor a partir da linha do tempo publicada, porque a ideia ainda não está no corpus; a categoria do portal, quando lida da listagem, prevalece.";
-/** Legislatura sem número na fonte: o próprio número é o padrão do servidor. */
-export const NOTA_DERIVACAO_LEGISLATURA_PADRAO =
-  "A fonte não informou a legislatura: o servidor assume a 57ª (2023–2027) e calcula o período e as datas.";
-/** Período e datas da legislatura derivados do número dela. */
+/** Legislatura vigente: número e datas da fonte; só o rótulo do período é composto. */
 export const NOTA_DERIVACAO_LEGISLATURA =
-  "Período e datas da legislatura calculados pelo servidor a partir do número publicado pela fonte (mandatos de quatro anos).";
+  "Número, início e fim da legislatura são os publicados pela fonte para a data de hoje; o período (anos) é composto pelo servidor a partir dessas duas datas.";
 
 /**
  * Marca o bloco como derivado (contrato v1.3): `derived: true` + a nota dada. Aplique por

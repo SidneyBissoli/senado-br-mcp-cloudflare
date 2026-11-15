@@ -8,6 +8,18 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- **`senado_tabelas_referencia` `tabela=legislatura-atual` lê a legislatura vigente da fonte (3.25.4).**
+  Antes, o número vinha do `PrimeiraLegislaturaDoMandato` do PRIMEIRO senador da lista em exercício e o
+  período era a conta `2023 - (57 - n) * 4`, com fallback fixo na 57ª. Medido em 15/11/2026: 54 dos 81
+  senadores trazem a 56ª ali (eleitos em 2018) — a resposta só saía certa porque o primeiro da lista
+  (AC) foi eleito em 2022; e a partir de 01/02/2027 o fallback responderia a 57ª sem erro. Agora a
+  ferramenta lê `/plenario/legislatura/{hoje em Brasília}` — número, início e fim publicados pela fonte
+  (que já responde a 58ª para 01/02/2027) — com cache chaveado pela data; o servidor só compõe o
+  rótulo `periodo` (nota de derivação reescrita). Sem a legislatura na resposta, a ferramenta falha com
+  erro de formato em vez de chutar. Saem `deriveLegislaturaAtual`, a nota
+  `NOTA_DERIVACAO_LEGISLATURA_PADRAO` e o teste-fusível do número fixo; entram fixture e bloco de
+  contrato para o endpoint novo. Superfície (`tools/list`) inalterada.
+
 - **Achados do code scanning (CodeQL ligado em 13/11/2026), sem mudança de superfície nem de versão.**
   `textoDoHtml` (detalhe das ideias) repete a remoção de tags até estabilizar; a célula do dicionário
   do dataset escapa `\` antes de `|`; os dois `decodeEntities` dos crawlers decodificam `&amp;` por

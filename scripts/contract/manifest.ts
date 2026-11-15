@@ -17,6 +17,8 @@
  * - financeiro: www.senado.gov.br Arquimedes JSON feeds (execução orçamentária)
  */
 
+import { hojeEmBrasilia } from "../../src/utils/janela.js";
+
 export interface Helpers {
   /** upstreamFetch against the legis base (appends .json). */
   legis: (
@@ -317,6 +319,12 @@ export const FIXTURES: FixtureSpec[] = [
     family: "legado",
     name: "tabelas-plenario-legislaturas",
     capture: (h) => h.legis("/plenario/lista/legislaturas"),
+  },
+  {
+    // senado_tabelas_referencia tabela=legislatura-atual reads the legislatura in force today
+    family: "legado",
+    name: "plenario-legislatura-na-data",
+    capture: (h) => h.legis(`/plenario/legislatura/${hojeEmBrasilia().replaceAll("-", "")}`),
   },
 
   // ── legado: vetos, autores, legislação, orçamento parlamentar ──────────
