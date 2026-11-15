@@ -55,7 +55,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          # 24 (≥ 24.6): o arquivo bruto comprime com zstd (opção `dictionary` do zlib, 24.6+); a
+          # autoprova em arquivo-run.ts para o job se faltar (15/11/2026).
+          node-version: "24"
           cache: "npm"
 
       - name: Install dependencies
@@ -72,6 +74,11 @@ jobs:
           # A D1-scoped API token can't read /memberships for account auto-discovery, so wrangler
           # needs the account id explicitly (otherwise: "request to /memberships failed", code 9106).
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          # Arquivo bruto (B4, 15/11/2026): o CSV inteiro, como baixado, vai ao balde privado
+          # `ecidadania-arquivos` antes do parse; sem credencial o job falha no início.
+          ECIDADANIA_R2_ACCESS_KEY_ID: ${{ secrets.ECIDADANIA_R2_ACCESS_KEY_ID }}
+          ECIDADANIA_R2_SECRET_ACCESS_KEY: ${{ secrets.ECIDADANIA_R2_SECRET_ACCESS_KEY }}
+          ECIDADANIA_ARQUIVO: obrigatorio
         run: npm run ingest:ecidadania:consultas-votos
 
       - name: Apply to D1 (records the run row even on a guard failure)

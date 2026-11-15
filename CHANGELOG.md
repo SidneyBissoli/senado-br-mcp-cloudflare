@@ -8,6 +8,15 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
+- **Arquivo bruto ligado em consultas, eventos e no CSV de votos por UF (B4, 15/11/2026), sem mudança
+  de superfície nem de versão.** Os três jobs passam a guardar toda resposta antes de lê-la, no formato
+  zstd com referência: consultas (listagem, detalhe das novas e o `/processo` que decide o status),
+  eventos (listagem, detalhe e fragmento de comentários da fatia rotativa) e o CSV Arquimedes (bytes
+  como baixados, antes do decode windows-1252; versão repetida não se regrava). `ECIDADANIA_ARQUIVO`
+  obrigatório em todos os coletores; `verify-consultas-votos` em Node 24 com as credenciais do balde.
+  O job do arquivo do CSV chama-se `csv-votos`: com `consultas-votos`, o passo que aplica
+  `out-consultas-votos-*.sql` reaplicaria os lotes do índice e duplicaria as linhas.
+
 - **Arquivo bruto do e-Cidadania em zstd com página de referência (decisão do dono, 15/11/2026), sem
   mudança de superfície nem de versão.** Medido em 15/11: o arquivo das ideias gravava ~105 MB/dia,
   porque cada página é quase toda o esqueleto do portal, e esse esqueleto muda a cada versão publicada
