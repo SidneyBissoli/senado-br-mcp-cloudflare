@@ -7,7 +7,7 @@
 
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { Arquivo, configDoAmbiente } from "./arquivo.js";
+import { Arquivo, autoprovaZstd, configDoAmbiente } from "./arquivo.js";
 import { applyD1File } from "./d1.js";
 import { observarRespostas } from "./http.js";
 import { criarClienteR2 } from "./r2.js";
@@ -22,6 +22,8 @@ export function ligarArquivo(o: { job: string; entidade: string; outDir: string 
     console.log(`[${o.job}][arquivo-bruto] desligado (sem credenciais do R2 ou ECIDADANIA_ARQUIVO=desligado)`);
     return { fechar: async () => {} };
   }
+  // Sem zstd com dicionário (Node < 24.6) o job para aqui, antes de coletar — nunca cai calado no gzip.
+  autoprovaZstd();
   const rodada = process.env.GITHUB_RUN_ID
     ? `${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT ?? "1"}`
     : `local-${new Date().toISOString().replace(/[:.]/g, "")}`;
@@ -59,7 +61,8 @@ export function ligarArquivo(o: { job: string; entidade: string; outDir: string 
       const r = arquivo.resumo();
       console.log(
         `[${o.job}][arquivo-bruto] ${r.leituras} leituras guardadas (${r.novas} páginas novas, ${r.repetidas} repetidas); ` +
-          `${(r.bytesOriginais / 1048576).toFixed(1)} MB originais, ${(r.bytesGravados / 1048576).toFixed(1)} MB gravados em gzip`,
+          `${(r.bytesOriginais / 1048576).toFixed(1)} MB originais, ${(r.bytesGravados / 1048576).toFixed(2)} MB gravados ` +
+          `(zstd com referência; ${r.referenciasNovas} referência(s) nova(s))`,
       );
     },
   };
