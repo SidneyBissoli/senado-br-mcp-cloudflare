@@ -11,6 +11,7 @@ import {
   DIAS_FALHA_PARA_PULAR,
   chavePuloArquivo,
   contarFalhaArquivo,
+  FOLGA_PAGINA_FALHA,
 } from "../../scripts/ingest-ecidadania/ideias-incremental.js";
 import { SITUACAO_STATUS } from "../../scripts/ingest-ecidadania/ideias-listing.js";
 import { leituraDoDetalhe, statusDaTransicao } from "../../scripts/ingest-ecidadania/ideias-registro.js";
@@ -129,9 +130,25 @@ describe("página da s7 que falha sempre (p951, 30/10/2026)", () => {
     expect(d3).toEqual({ falha: { pagina: 951, dias: 3, dia: "2026-11-02" }, pular: true });
   });
 
-  it("falha em OUTRA página recomeça a contagem", () => {
+  it("falha em OUTRA página (além da folga) recomeça a contagem", () => {
     const anterior = { pagina: 951, dias: 2, dia: "2026-11-01" };
     expect(contarFalhaArquivo(anterior, 960, "2026-11-02")).toEqual({ falha: { pagina: 960, dias: 1, dia: "2026-11-02" }, pular: false });
+  });
+
+  it("página que ANDA (série medida 13–15/11/2026: p954 → p955 → p956) pula no 3º dia", () => {
+    const d1 = contarFalhaArquivo(null, 954, "2026-11-13");
+    expect(d1.pular).toBe(false);
+    const d2 = contarFalhaArquivo(d1.falha, 955, "2026-11-14");
+    expect(d2).toEqual({ falha: { pagina: 955, dias: 2, dia: "2026-11-14" }, pular: false });
+    const d3 = contarFalhaArquivo(d2.falha, 956, "2026-11-15");
+    expect(d3).toEqual({ falha: { pagina: 956, dias: 3, dia: "2026-11-15" }, pular: true });
+  });
+
+  it(`folga de ${FOLGA_PAGINA_FALHA} páginas para os dois lados (a s7 também pode encolher)`, () => {
+    const anterior = { pagina: 956, dias: 1, dia: "2026-11-15" };
+    expect(contarFalhaArquivo(anterior, 956 + FOLGA_PAGINA_FALHA, "2026-11-16").falha.dias).toBe(2);
+    expect(contarFalhaArquivo(anterior, 956 - FOLGA_PAGINA_FALHA, "2026-11-16").falha.dias).toBe(2);
+    expect(contarFalhaArquivo(anterior, 956 + FOLGA_PAGINA_FALHA + 1, "2026-11-16").falha.dias).toBe(1);
   });
 
   it("o pulo conta como página lida: o cursor passa dela", () => {
