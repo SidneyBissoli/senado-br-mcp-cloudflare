@@ -1,8 +1,8 @@
 /**
  * Minimal R2 client for the raw-page archive (fase B, 30/10/2026), over R2's S3-compatible API.
  *
- * Why not a library: the archive needs exactly two calls (HEAD to skip a page already stored, PUT to
- * store a new one). AWS Signature V4 is ~50 lines over `node:crypto`, and the signer is pure and pinned
+ * Why not a library: the archive needs three calls (HEAD to skip a page already stored, PUT to store a
+ * new one, GET to load the zstd reference page of a portal layout). AWS Signature V4 is ~50 lines over `node:crypto`, and the signer is pure and pinned
  * by the AWS documentation's own example (`tests/scraper/ingest-r2.test.ts`) — cheaper than a new
  * dependency in a lock the Windows npm mangles. Node's fetch is fine here: the TLS block that forced
  * `curl` in `http.ts` is the e-Cidadania portal's, not Cloudflare's.
@@ -92,6 +92,8 @@ export interface ClienteR2 {
   existe(chave: string): Promise<boolean>;
   /** Store `corpo` under `chave`. Already stored (409 from the bucket lock) counts as success. */
   gravar(chave: string, corpo: Uint8Array, headers: Record<string, string>): Promise<void>;
+  /** Stored bytes of `chave`, or null when absent (used for the zstd reference pages, 15/11/2026). */
+  ler(chave: string): Promise<Uint8Array | null>;
 }
 
 export class R2Error extends Error {
@@ -121,7 +123,12 @@ export function criarClienteR2(o: OpcoesCliente): ClienteR2 {
   const tentativas = o.tentativas ?? 4;
 
   // 429/5xx/network repeat with backoff; any other answer is final.
-  async function chamar(method: "HEAD" | "PUT", chave: string, corpo?: Uint8Array, extra: Record<string, string> = {}): Promise<number> {
+  async function chamar(
+    method: "HEAD" | "PUT" | "GET",
+    chave: string,
+    corpo?: Uint8Array,
+    extra: Record<string, string> = {},
+  ): Promise<{ status: number; corpo?: Uint8Array }> {
     const path = `/${o.bucket}/${chave}`;
     const payloadSha256 = sha256Hex(corpo ?? new Uint8Array());
     let ultimo = "";
@@ -130,8 +137,9 @@ export function criarClienteR2(o: OpcoesCliente): ClienteR2 {
       try {
         const r = await fetchFn(`https://${host}${encodePath(path)}`, { method, headers, body: corpo });
         if (r.status !== 429 && r.status < 500) {
-          if (method === "PUT") await r.arrayBuffer().catch(() => undefined);
-          return r.status;
+          if (method === "GET" && r.status === 200) return { status: 200, corpo: new Uint8Array(await r.arrayBuffer()) };
+          if (method !== "HEAD") await r.arrayBuffer().catch(() => undefined);
+          return { status: r.status };
         }
         ultimo = `HTTP ${r.status}`;
       } catch (e) {
@@ -144,15 +152,21 @@ export function criarClienteR2(o: OpcoesCliente): ClienteR2 {
 
   return {
     async existe(chave) {
-      const s = await chamar("HEAD", chave);
+      const { status: s } = await chamar("HEAD", chave);
       if (s === 200) return true;
       if (s === 404) return false;
       throw new R2Error(`R2 HEAD ${chave}: HTTP ${s}`, s);
     },
     async gravar(chave, corpo, headers) {
-      const s = await chamar("PUT", chave, corpo, headers);
+      const { status: s } = await chamar("PUT", chave, corpo, headers);
       if (s === 200 || s === 409) return;
       throw new R2Error(`R2 PUT ${chave}: HTTP ${s}`, s);
+    },
+    async ler(chave) {
+      const r = await chamar("GET", chave);
+      if (r.status === 200 && r.corpo) return r.corpo;
+      if (r.status === 404) return null;
+      throw new R2Error(`R2 GET ${chave}: HTTP ${r.status}`, r.status);
     },
   };
 }

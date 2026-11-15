@@ -6,6 +6,22 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Changed
+
+- **Arquivo bruto do e-Cidadania em zstd com página de referência (decisão do dono, 15/11/2026), sem
+  mudança de superfície nem de versão.** Medido em 15/11: o arquivo das ideias gravava ~105 MB/dia,
+  porque cada página é quase toda o esqueleto do portal, e esse esqueleto muda a cada versão publicada
+  pelo Senado (27/10, 11/11) e a cada `DC.date.modified` do site — a releitura de uma página com o
+  mesmo dado virava página nova inteira (a da situação 99, com 30 ideias congeladas, saiu em 9 versões
+  em 17 dias, diferindo só nessa data). Agora cada página vai em zstd usando como dicionário a 1ª
+  página com HTTP 200 do mesmo tipo e da mesma versão do portal (`referencias/<sha>.html.gz`, em gzip,
+  apontada por `referencias/<tipo>/<versão>.sha`, relido depois de gravado): detalhe de ideia real
+  medido em 634 bytes contra ~49 KB. O hash continua sendo dos bytes exatos, sem normalização; o que
+  já estava em gzip fica e é reconhecido. Tabela nova `ecidadania_arquivo_pagina` (migration 0005)
+  registra formato e referência de cada página gravada; o manifesto ganha `formato`/`referencia`.
+  O cliente R2 ganha GET. Os jobs de ingestão passam a Node 24 (a opção `dictionary` do zlib é de
+  24.6), com autoprova no início do job: sem dicionário, o job para antes de coletar.
+
 ### Fixed
 
 - **`senado_tabelas_referencia` `tabela=legislatura-atual` lê a legislatura vigente da fonte (3.25.4).**
