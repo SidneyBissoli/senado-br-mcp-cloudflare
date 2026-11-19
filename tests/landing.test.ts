@@ -19,7 +19,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { buildLandingBody, landingResponseForPath } from "../src/landing.js";
+import { buildLandingBody, HTML_TITLE, landingResponseForPath } from "../src/landing.js";
 import { CONTACT_EMAIL, legalResponseForPath } from "../src/legal.js";
 import { USER_AGENT, VERSION } from "../src/version.js";
 
@@ -117,4 +117,20 @@ describe("páginas de obrigação não disputam a busca", () => {
       expect(html).not.toContain('property="og:');
     });
   }
+});
+
+describe("título da página (Bing: 'title too short', 18/11/2026)", () => {
+  it("<title> e og:title levam o HTML_TITLE; o h1 segue o nome do produto", async () => {
+    const html = await corpo("/");
+    expect(html).toContain(`<title>${HTML_TITLE}</title>`);
+    expect(html).toContain(`<meta property="og:title" content="${HTML_TITLE}">`);
+    expect(html).toContain("<h1>Dados Abertos Senado BR MCP</h1>");
+    expect(HTML_TITLE.startsWith("Dados Abertos Senado BR MCP")).toBe(true);
+  });
+
+  it("o título tem entre 50 e 60 caracteres, a faixa que o Bing recomenda", () => {
+    const n = [...HTML_TITLE].length;
+    expect(n).toBeGreaterThanOrEqual(50);
+    expect(n).toBeLessThanOrEqual(60);
+  });
 });
