@@ -12,6 +12,10 @@ const GITHUB_URL = "https://github.com/SidneyBissoli/senado-br-mcp-cloudflare";
 const NPM_URL = "https://www.npmjs.com/package/senado-br-mcp";
 export const SITE_URL = "https://senado.sidneybissoli.com";
 const PAGE_TITLE = "Dados Abertos Senado BR MCP";
+// `<title>` e `og:title`: o nome do produto (PAGE_TITLE, que segue no h1, no
+// og:site_name e no dado estruturado) mais o que ele entrega, em 50-60
+// caracteres. O Bing Webmaster acusou título curto no portfólio em 18/11/2026.
+export const HTML_TITLE = "Dados Abertos Senado BR MCP — votações, matérias, CEAPS";
 
 /**
  * UMA frase, em português: o que o servidor serve e de qual fonte. Vira a
@@ -47,7 +51,7 @@ function seoHead(): string {
   <link rel="canonical" href="${SITE_URL}/">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${PAGE_TITLE}">
-  <meta property="og:title" content="${PAGE_TITLE}">
+  <meta property="og:title" content="${HTML_TITLE}">
   <meta property="og:description" content="${RESUMO}">
   <meta property="og:url" content="${SITE_URL}/">
   <meta property="og:locale" content="pt_BR">
@@ -109,7 +113,7 @@ export function landingResponseForPath(pathname: string): Response | null {
   if (pathname !== "/") {
     return null;
   }
-  return new Response(htmlPage(PAGE_TITLE, buildLandingBody(), "pt-BR", seoHead()), {
+  return new Response(htmlPage(HTML_TITLE, buildLandingBody(), "pt-BR", seoHead()), {
     status: 200,
     headers: {
       "Content-Type": "text/html; charset=utf-8",
