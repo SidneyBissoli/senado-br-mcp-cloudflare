@@ -38,6 +38,16 @@ import { criarDisjuntor } from "./breaker.js";
 import { vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
 import { registroConsultaListada, syncRecordDeConsulta, loteParcial } from "./consultas-registro.js";
 import { descreverAndamento } from "./andamento.js";
+import { ligarArquivo, type ArquivoLigado } from "./arquivo-run.js";
+
+// Arquivo bruto (B4, 15/11/2026): toda resposta baixada neste job — listagem, detalhe das consultas
+// novas e o `/processo` que decide o status — é guardada antes de lida. `sair` descarrega o índice
+// pendente antes de encerrar o processo.
+let arquivo: ArquivoLigado = { fechar: async () => {} };
+async function sair(code: number): Promise<never> {
+  await arquivo.fechar();
+  process.exit(code);
+}
 
 const SENADO_BASE_URL = process.env.SENADO_BASE_URL || "https://legis.senado.leg.br/dadosabertos";
 const PAGE_DELAY_MS = Number(process.env.INGEST_PAGE_DELAY_MS) || 400;
@@ -106,6 +116,7 @@ async function main(): Promise<void> {
   const now = new Date().toISOString();
   const force = process.env.INGEST_FORCE === "1" || process.argv.includes("--force");
   const corpusMinPct = parseAnomalyMinPct(process.env.ECIDADANIA_CORPUS_MIN_PCT, 80);
+  arquivo = ligarArquivo({ job: "consultas", entidade: "consultas", outDir: dirname(OUT_PATH) });
 
   // 1. Crawl.
   const crawl = await crawlAllPages();
@@ -115,7 +126,7 @@ async function main(): Promise<void> {
     const err = `crawl incompleto: ${crawl.failedPages.length} pagina(s) falharam: ${crawl.failedPages.slice(0, 20).join(",")}`;
     console.error(`[gate] ${err} — corpus NÃO será sobrescrito`);
     writeFileSync(OUT_PATH, generateRunOnlySql(now, "erro", crawl.items.length, err));
-    process.exit(1);
+    return sair(1);
   }
 
   // 2. Status from /processo (tramitando=S). An incomplete status universe is a failed run.
@@ -127,7 +138,7 @@ async function main(): Promise<void> {
     const err = `status universe incompleto: ${e instanceof Error ? e.message : String(e)}`;
     console.error(`[gate] ${err} — corpus NÃO será sobrescrito`);
     writeFileSync(OUT_PATH, generateRunOnlySql(now, "erro", crawl.items.length, err));
-    process.exit(1);
+    return sair(1);
   }
 
   // 3. Normalize + hash (canonical ConsultaResumo via shared builder; metrica_principal = totalVotos).
@@ -151,7 +162,7 @@ async function main(): Promise<void> {
     const err = `taxa de leitura da listagem despencou: ${descreverVigia({ ...vigia, campos: vigia.quedas })}`;
     console.error(`[gate] verdict=anomalo — ${err} — corpus NÃO será sobrescrito`);
     writeFileSync(OUT_PATH, generateRunOnlySql(now, "anomalo", crawl.items.length, err));
-    process.exit(1);
+    return sair(1);
   }
   // 4. Catastrophic floor (after the completeness gate). force → only the rows>0 check applies. Antes
   // do detalhe desde 18/10/2026: os lotes parciais gravam DURANTE a leitura, então toda trava tem de
@@ -165,7 +176,7 @@ async function main(): Promise<void> {
     const err = `catastrophic floor: ${crawl.items.length} linhas vs último bom ${lastGoodRows} (< ${corpusMinPct}%); use --force se a redução for legítima`;
     console.error(`[gate] verdict=${verdict} — ${err} — corpus NÃO será sobrescrito`);
     writeFileSync(OUT_PATH, generateRunOnlySql(now, verdict, crawl.items.length, err));
-    process.exit(1);
+    return sair(1);
   }
 
   // 5. Detalhe (autoria/relator), gravado em LOTES durante o run: uma falha no meio não perde o que
@@ -266,10 +277,10 @@ async function main(): Promise<void> {
   const { annotated, rowsChanged } = planEntitySync(allRecords, existingHashes);
   writeFileSync(OUT_PATH, generateLoadSql(annotated, now, records.length, rowsChanged));
   console.log(`[load] wrote ${OUT_PATH}: ${allRecords.length} upserts (${records.length} crawled + ${restatusRecords.length} re-status), ${rowsChanged} changed (history) + ${gravadas} nos lotes, 1 ok run row`);
-  process.exit(0);
+  return sair(0);
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
   // Last-resort guard: record the failure so the Action's apply step can persist a run row.
   const err = e instanceof Error ? e.message : String(e);
   console.error(`[fatal] ${err}`);
@@ -278,5 +289,5 @@ main().catch((e) => {
   } catch {
     /* nothing more we can do */
   }
-  process.exit(1);
+  return sair(1);
 });

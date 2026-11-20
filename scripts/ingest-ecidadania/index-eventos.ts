@@ -42,6 +42,15 @@ import { fetchEventoDetalhe, fetchComentariosAudiencia, toComentarioRecord, plan
 import { mesclarCampo, vigiarCampos, descreverVigia } from "../../src/scraper/mesclar.js";
 import { fecharLote, LoteReprovadoError, LOTE_PADRAO, type Leitura } from "./lotes.js";
 import { descreverAndamento } from "./andamento.js";
+import { ligarArquivo, type ArquivoLigado } from "./arquivo-run.js";
+
+// Arquivo bruto (B4, 15/11/2026): listagem, detalhe e fragmento de comentários de cada evento são
+// guardados antes de lidos. `sair` descarrega o índice pendente antes de encerrar o processo.
+let arquivo: ArquivoLigado = { fechar: async () => {} };
+async function sair(code: number): Promise<never> {
+  await arquivo.fechar();
+  process.exit(code);
+}
 
 /** Campos do detalhe que o vigia confere a cada lote. */
 const CAMPOS_DETALHE_EVENTO = ["data", "hora", "comissaoNomeCompleto", "local", "descricao", "videoUrl"] as const;
@@ -315,6 +324,7 @@ async function main(): Promise<void> {
   const corpusMinPct = parseAnomalyMinPct(process.env.ECIDADANIA_CORPUS_MIN_PCT, 80);
 
   cleanOldBatches();
+  arquivo = ligarArquivo({ job: "eventos", entidade: ENTIDADE, outDir: OUT_DIR });
 
   const crawl = await crawlAllPages(nowDate);
   console.log(`[eventos][crawl] lastPage=${crawl.lastPage} items=${crawl.items.length} failedPages=${crawl.failedPages.length}`);
@@ -323,7 +333,7 @@ async function main(): Promise<void> {
     const err = `crawl incompleto: ${crawl.failedPages.length} pagina(s): ${crawl.failedPages.slice(0, 20).join(",")}`;
     console.error(`[eventos][gate] ${err} — corpus NÃO será sobrescrito`);
     writeFileSync(OUT_PATH, generateRunOnlySql(now, "erro", crawl.items.length, err, ENTIDADE));
-    process.exit(1);
+    return sair(1);
   }
 
   // Catastrophic floor on the LISTING count (detail/comment enrichment is best-effort, not a gate).
@@ -337,7 +347,7 @@ async function main(): Promise<void> {
     const err = `catastrophic floor: ${crawl.items.length} linhas (< ${corpusMinPct}% do último bom); use --force se legítimo`;
     console.error(`[eventos][gate] verdict=${verdict} — ${err}`);
     writeFileSync(OUT_PATH, generateRunOnlySql(now, verdict, crawl.items.length, err, ENTIDADE));
-    process.exit(1);
+    return sair(1);
   }
 
   // Fatia a enriquecer neste run: eventos com id > cursor, até CHUNK; dá a volta ao chegar ao fim.
@@ -371,7 +381,7 @@ async function main(): Promise<void> {
     // anteriores ficam com o cursor na cauda. O corpus da listagem NÃO é sobrescrito neste run.
     console.error(`[eventos][gate] verdict=anomalo — ${e.message} — corpus NÃO será sobrescrito`);
     writeFileSync(OUT_PATH, generateRunOnlySql(now, "anomalo", crawl.items.length, e.message, ENTIDADE));
-    process.exit(1);
+    return sair(1);
   }
   const { eventoRecords, detailFails, commentFails, enrichedCount, comentariosColetados, gravadas, comentariosGravados, lotes, cursorGravado, horaDoCursor, leituras } = enriched;
   console.log(
@@ -390,10 +400,10 @@ async function main(): Promise<void> {
   const loadSql = generateLoadSql(annotated, now, crawl.items.length, rowsChanged, ENTIDADE);
   writeFileSync(OUT_PATH, loadSql + cursorUpsertStmt(ENTIDADE, nextCursor, fullPasses, horaDoCursor ?? now) + "\n");
   console.log(`[eventos][load] wrote ${OUT_PATH}: ${eventoRecords.length} upserts, ${rowsChanged} changed (+ ${gravadas} nos lotes), cursor→${nextCursor}, 1 ok run row`);
-  process.exit(0);
+  return sair(0);
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
   const err = e instanceof Error ? e.message : String(e);
   console.error(`[eventos][fatal] ${err}`);
   try {
@@ -401,5 +411,5 @@ main().catch((e) => {
   } catch {
     /* nothing more we can do */
   }
-  process.exit(1);
+  return sair(1);
 });

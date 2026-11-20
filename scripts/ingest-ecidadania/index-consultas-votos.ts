@@ -38,6 +38,17 @@ import { ECIDADANIA_ARQUIMEDES_CSV_URL } from "../../src/utils/provenance.js";
 import { readExistingMeta, readLastGoodRows } from "./d1.js";
 import { generateLoadSqlBatches, generateRunOnlySql } from "./sql.js";
 import { verifyAcervoIntegrity } from "./verify.js";
+import { ligarArquivo, type ArquivoLigado } from "./arquivo-run.js";
+
+// Arquivo bruto (B4, 15/11/2026): o CSV é guardado inteiro, com os bytes como o Senado mandou (antes
+// do decode windows-1252), a cada versão — a mesma versão não se repete (chave = sha). Job do arquivo
+// = "csv-votos", e NÃO "consultas-votos": o passo do workflow aplica `out-consultas-votos-*.sql` e
+// reaplicaria os lotes do índice (`out-<job>-arquivo-NNN.sql`), duplicando as linhas.
+let arquivo: ArquivoLigado = { fechar: async () => {} };
+async function sair(code: number): Promise<never> {
+  await arquivo.fechar();
+  process.exit(code);
+}
 
 const ENTIDADE = "consultas_votos";
 const CSV_URL = process.env.SENADO_ECIDADANIA_CSV_URL || ECIDADANIA_ARQUIMEDES_CSV_URL;
@@ -69,6 +80,7 @@ async function main(): Promise<void> {
   const corpusMinPct = parseAnomalyMinPct(process.env.ECIDADANIA_CORPUS_MIN_PCT, 80);
 
   cleanOldOutputs();
+  arquivo = ligarArquivo({ job: "csv-votos", entidade: ENTIDADE, outDir: OUT_DIR });
 
   console.log(`[consultas_votos][download] GET ${CSV_URL}`);
   // The Arquimedes feed now does content negotiation and rejects the getText() default
@@ -88,7 +100,7 @@ async function main(): Promise<void> {
     const err = "CSV sem linhas de dados (download truncado ou layout mudou)";
     console.error(`[consultas_votos][gate] ${err} — corpus NÃO será sobrescrito`);
     writeRunOnly(now, "erro", 0, err);
-    process.exit(1);
+    return sair(1);
   }
 
   const aggs = aggregateByMateria(rows);
@@ -126,7 +138,7 @@ async function main(): Promise<void> {
     const err = `catastrophic floor: ${records.length} matérias (< ${corpusMinPct}% do último bom); use --force se legítimo`;
     console.error(`[consultas_votos][gate] verdict=${verdict} — ${err}`);
     writeRunOnly(now, verdict, records.length, err);
-    process.exit(1);
+    return sair(1);
   }
 
   const existingHashes = new Map(readExistingMeta(ENTIDADE).map((r) => [r.id, r.content_hash]));
@@ -138,7 +150,7 @@ async function main(): Promise<void> {
     if (integrity === "integro") {
       console.log(`[consultas_votos][verify] acervo íntegro: ${records.length} matérias, hash idêntico ao vintage registrado — nada reaplicado no D1`);
       writeRunOnly(now, "ok", records.length, null);
-      process.exit(0);
+      return sair(0);
     }
     const err =
       `DIVERGÊNCIA no acervo consultas_votos: ${rowsChanged} matéria(s) com hash diferente, ` +
@@ -146,16 +158,16 @@ async function main(): Promise<void> {
       `para ingerir o vintage novo, rode sem INGEST_CONSULTAS_VOTOS_VERIFY (ou com INGEST_FORCE=1).`;
     console.error(`[consultas_votos][verify][ALERTA] ${err}`);
     writeRunOnly(now, "anomalo", records.length, err);
-    process.exit(1);
+    return sair(1);
   }
 
   const files = generateLoadSqlBatches(annotated, now, records.length, rowsChanged, ENTIDADE, BATCH_SIZE);
   writeBatches(files);
   console.log(`[consultas_votos][load] wrote ${files.length} file(s): ${records.length} upserts, ${rowsChanged} changed, 1 ok run row`);
-  process.exit(0);
+  return sair(0);
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
   const err = e instanceof Error ? e.message : String(e);
   console.error(`[consultas_votos][fatal] ${err}`);
   try {
@@ -164,5 +176,5 @@ main().catch((e) => {
   } catch {
     /* nothing more we can do */
   }
-  process.exit(1);
+  return sair(1);
 });
