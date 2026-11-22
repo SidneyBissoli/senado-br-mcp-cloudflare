@@ -18,13 +18,16 @@
  * (token que LÊ o `ecidadania-arquivos` e grava o `ecidadania-observacoes`), CLOUDFLARE_API_TOKEN (D1).
  */
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { BALDE_PADRAO, autoprovaZstd } from "../ingest-ecidadania/arquivo.js";
 import { queryD1 } from "../ingest-ecidadania/d1.js";
 import { criarClienteR2, type ClienteR2 } from "../ingest-ecidadania/r2.js";
 import { fonteDaUrl, statusObservavel, versaoDoLeitor } from "./fatos.js";
 import { fundir, ForaDeOrdemError, type Leitura, type Observacao } from "./fundir.js";
-import { BALDE_OBSERVACOES, CHAVE_DA_COPIA, ENTIDADE, LOTE, leiturasDaLinha, sqlDoLote, type Contagem, type LinhaDoIndice } from "./linhas.js";
+import { BALDE_OBSERVACOES, CHAVE_DA_COPIA, CHAVE_DOS_INVARIANTES, ENTIDADE, LOTE, leiturasDaLinha, sqlDoLote, type Contagem, type LinhaDoIndice } from "./linhas.js";
+import { separarConhecidas, verificarInvariantes, type Conhecida, type Violacao } from "./invariantes.js";
 import { AbridorDePaginas, emParalelo } from "./paginas.js";
 import { escreverCopia, lerCopia } from "./parquet.js";
 import { clienteWrangler } from "./wrangler-r2.js";
@@ -119,6 +122,24 @@ async function main(): Promise<void> {
       `${c.erroLeitura} detalhes que o leitor recusou, ${c.listagemForaDoMolde} listagens fora do molde; ` +
       `${obs.length} observações, ${(bytes.length / 1048576).toFixed(2)} MB em Parquet → ${saida ?? `${BALDE_OBSERVACOES}/${CHAVE_DA_COPIA}`}; cursor ${cursor}`,
   );
+
+  // C4 — invariantes sobre o conjunto. A cópia já está gravada: um alerta nunca custa o dado.
+  const conhecidas = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "invariantes-conhecidas.json"), "utf8")) as Conhecida[];
+  const violacoes = verificarInvariantes(obs);
+  const { novas, conhecidas: explicadas } = separarConhecidas(violacoes, conhecidas);
+  const relatorio = JSON.stringify({ geradoEm: new Date().toISOString(), leitor, cursor, novas, conhecidas: explicadas }, null, 1);
+  if (saida) writeFileSync(saida.replace(/\.parquet$/, "") + "-invariantes.json", relatorio);
+  else await observacoes.gravar(CHAVE_DOS_INVARIANTES, new TextEncoder().encode(relatorio), { "content-type": "application/json" });
+  const porRegra = (vs: Violacao[]) => [...new Set(vs.map((v) => v.regra))].map((r) => `${r} ${vs.filter((v) => v.regra === r).length}`).join(", ") || "nenhuma";
+  console.log(`[observacoes][invariantes] ${violacoes.length} violação(ões): ${novas.length} nova(s) (${porRegra(novas)}), ${explicadas.length} conhecida(s)`);
+  for (const v of novas.slice(0, 50)) {
+    // Anotação do GitHub: aparece no resumo do run.
+    console.log(`::warning title=Invariante ${v.regra}::${v.entidade} ${v.entityId} (${v.fonte}): ${v.detalhe} — páginas ${v.paginas.map((p) => p.slice(0, 12)).join(", ")}`);
+  }
+  if (novas.length > 0) {
+    console.error(`[observacoes][invariantes] violação nova: conferir na fonte e explicar em invariantes-conhecidas.json (chave, motivo, conferidaEm)`);
+    process.exitCode = 1;
+  }
 }
 
 main().catch((e) => {

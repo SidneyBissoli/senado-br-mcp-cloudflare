@@ -7,8 +7,11 @@
  * (diferente de não ter o fato). A tipagem fica para a camada 3.
  *
  * Fontes:
- *   - `listagem` (`pesquisaideia?situacao=N&p=P`): para cada ideia da página, `situacao` (o N da URL,
- *     código do portal), `titulo` e `apoios`, como o leitor do corpus os lê;
+ *   - `listagem-sN` (`pesquisaideia?situacao=N&p=P`): para cada ideia da página, `titulo` e `apoios`,
+ *     como o leitor do corpus os lê. A situação N faz parte da SÉRIE, não é um fato: o portal lista a
+ *     mesma ideia em duas situações ao mesmo tempo (5+6, 5+8 — medido em 22/11/2026), e uma série só
+ *     por ideia alternava 5, 6, 5, 6… todo dia, fingindo mudança de situação e comparando contagens de
+ *     listagens diferentes. Estar listada na situação N de X a Y = o intervalo das linhas da série;
  *   - `detalhe` (`visualizacaoideia?id=N`): `statusHttp` sempre; com HTTP 200, os campos de
  *     `lerIdeiaDetalhe` + um fato `acontecimento` por item da linha do tempo e um `proposicao` por
  *     proposição. Página que o leitor recusa vira `erroLeitura` (a mensagem), nunca meio registro.
@@ -26,7 +29,17 @@ import { fileURLToPath } from "node:url";
 import { lerIdeiaDetalhe, type IdeiaDetalhe } from "../../src/scraper/ideia-detalhe.js";
 import { parseIdeiaListingPage } from "../ingest-ecidadania/ideias-listing.js";
 
-export type Fonte = "listagem" | "detalhe";
+/** Tipo da página pelo caminho da URL. */
+export type TipoDePagina = "listagem" | "detalhe";
+
+/** Fonte de uma série: o detalhe, ou a listagem de UMA situação do portal (`listagem-s5`). */
+export type Fonte = "detalhe" | "listagem" | `listagem-s${string}`;
+
+/** Fonte da série de uma listagem: `listagem-sN`, ou `listagem` se a URL não diz a situação. */
+export function fonteDaListagem(url: string): Fonte {
+  const s = situacaoDaUrl(url);
+  return s === null ? "listagem" : `listagem-s${s}`;
+}
 
 export interface Fato {
   campo: string;
@@ -45,12 +58,12 @@ export function situacaoDaUrl(url: string): string | null {
 
 /** Fatos da listagem. Lança se a página tem um bloco fora do molde (o leitor do corpus faz o mesmo). */
 export function fatosDaListagem(url: string, html: string): FatosDaListagem {
-  const situacao = situacaoDaUrl(url);
+  void url;
   const porId: FatosDaListagem = new Map();
   for (const it of parseIdeiaListingPage(html)) {
     const id = String(it.id);
     const fatos = porId.get(id) ?? [];
-    fatos.push({ campo: "situacao", valor: situacao }, { campo: "titulo", valor: it.titulo }, { campo: "apoios", valor: num(it.apoios) });
+    fatos.push({ campo: "titulo", valor: it.titulo }, { campo: "apoios", valor: num(it.apoios) });
     porId.set(id, fatos);
   }
   return porId;
@@ -114,12 +127,12 @@ export function fatosDoDetalhe(statusHttp: number, html: string): Fato[] {
 }
 
 /** Status que vira observação. 5xx e afins são falha de leitura (ficam no índice), não fato da ideia. */
-export function statusObservavel(fonte: Fonte, statusHttp: number): boolean {
+export function statusObservavel(fonte: TipoDePagina, statusHttp: number): boolean {
   return fonte === "listagem" ? statusHttp === 200 : statusHttp === 200 || statusHttp === 404 || statusHttp === 410;
 }
 
 /** Fonte da página pelo caminho da URL; null = tipo que esta versão não lê (fica para depois). */
-export function fonteDaUrl(url: string): Fonte | null {
+export function fonteDaUrl(url: string): TipoDePagina | null {
   if (/\/visualizacaoideia\?/.test(url)) return "detalhe";
   if (/\/pesquisaideia(?:\?|$)/.test(url)) return "listagem";
   return null;

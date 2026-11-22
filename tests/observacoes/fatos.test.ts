@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  fatosDaListagem, fatosDoDetalhe, fonteDaUrl, situacaoDaUrl, statusObservavel, versaoDoLeitor,
+  fatosDaListagem, fatosDoDetalhe, fonteDaListagem, fonteDaUrl, situacaoDaUrl, statusObservavel, versaoDoLeitor,
 } from "../../scripts/observacoes/fatos.js";
 import { leiturasDaLinha, sqlDoLote, type Contagem } from "../../scripts/observacoes/linhas.js";
 import { fundir } from "../../scripts/observacoes/fundir.js";
@@ -62,16 +62,31 @@ describe("fatos do detalhe (páginas reais de 17/10/2026)", () => {
 
 describe("fatos da listagem", () => {
   const url = "https://www12.senado.leg.br/ecidadania/pesquisaideia?situacao=5&p=3";
-  it("situação vem da URL; título e apoios por ideia", () => {
+  it("situação vem da URL e vira a série (listagem-sN); os fatos são título e apoios", () => {
     expect(situacaoDaUrl(url)).toBe("5");
-    expect(situacaoDaUrl("https://www12.senado.leg.br/ecidadania/pesquisaideia?p=3")).toBeNull();
+    expect(fonteDaListagem(url)).toBe("listagem-s5");
+    expect(fonteDaListagem("https://www12.senado.leg.br/ecidadania/pesquisaideia?p=3")).toBe("listagem");
     const porId = fatosDaListagem(url, fx("ideias-listing-2026-10.html"));
     expect(porId.size).toBeGreaterThan(0);
     for (const fatos of porId.values()) {
-      expect(fatos.map((f) => f.campo)).toEqual(["situacao", "titulo", "apoios"]);
-      expect(fatos[0].valor).toBe("5");
-      expect(fatos[2].valor).toMatch(/^\d+$/);
+      expect(fatos.map((f) => f.campo)).toEqual(["titulo", "apoios"]);
+      expect(fatos[1].valor).toMatch(/^\d+$/);
     }
+  });
+
+  it("mesma ideia listada em duas situações no mesmo dia: duas séries estáveis, nada alterna", () => {
+    const html = fx("ideias-listing-2026-10.html");
+    const linha = (id: number, sit: number, dia: number) => ({
+      id, url: `https://www12.senado.leg.br/ecidadania/pesquisaideia?situacao=${sit}&p=1`, entity_id: null,
+      instante: `2026-11-0${dia}T18:00:00.000Z`, status_http: 200, sha256: `s${id}`, formato: null, referencia: null,
+    });
+    const c = contagem();
+    const ls = [linha(1, 5, 1), linha(2, 6, 1), linha(3, 5, 2), linha(4, 6, 2), linha(5, 5, 3), linha(6, 6, 3)].flatMap((l) => leiturasDaLinha(l, html, c));
+    const obs = fundir([], ls);
+    const umaIdeia = obs.filter((o) => o.entityId === obs[0].entityId);
+    expect(umaIdeia.map((o) => [o.fonte, o.campo, o.leituras])).toEqual([
+      ["listagem-s5", "apoios", 3], ["listagem-s5", "titulo", 3], ["listagem-s6", "apoios", 3], ["listagem-s6", "titulo", 3],
+    ]);
   });
 
   it("listagem fora do molde não derruba o lote: conta e segue", () => {
@@ -88,7 +103,8 @@ describe("fatos da listagem", () => {
     const ls = leiturasDaLinha(l, fx("ideias-listing-2026-10.html"), c);
     expect(ls.length).toBeGreaterThan(1);
     expect(new Set(ls.map((x) => x.indice))).toEqual(new Set([9]));
-    expect(fundir([], ls).length).toBe(ls.length * 3);
+    expect(fundir([], ls).length).toBe(ls.length * 2);
+    expect(new Set(ls.map((x) => x.fonte))).toEqual(new Set(["listagem-s5"]));
   });
 });
 
