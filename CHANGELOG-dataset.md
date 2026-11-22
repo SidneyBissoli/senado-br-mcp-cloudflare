@@ -19,6 +19,25 @@ release tem também seu **version-DOI**. Enquanto o Zenodo não cunha, os campos
 
 ---
 
+## [dataset-v3.0.0] — não publicado · Anual 2026 (corte de janeiro/2027)
+
+- **schemaVersion:** `3.0.0` (o esquema 2.0.0 nunca saiu em release; a release acompanha o número do
+  esquema — decisão de 22/11/2026).
+- **concept-DOI:** `10.5281/zenodo.21183940` · **version-DOI:** reservado no corte.
+
+### Mudou (MAJOR)
+
+- **Formato:** tabelas tidy em **Parquet** (14 tabelas, `datapackage.json` Frictionless + `dicionario.md`);
+  sai o NDJSON. Tipos e nulos vêm no próprio arquivo; para planilha, converta com DuckDB.
+- **Fim do envelope por célula:** valores puros; a proveniência vai em colunas de origem por bloco de
+  página (`origem<Bloco>`: arquivo de páginas ou corpus; `coletadoEm<Bloco>`: quando a página foi lida).
+- **Séries no tempo:** apoios e situação das ideias, votos SIM/NÃO das consultas, votos por UF do acervo.
+- **Listas viram tabelas:** proposições, linha do tempo, pauta, convidados, comentários de eventos.
+- **Nome do autor da ideia**, como o portal o publica (já abreviado) e a UF declarada; o projeto não
+  completa nem cruza nomes. Comentaristas de eventos seguem sem nome.
+
+---
+
 ## [dataset-v1.0.0] — 2026-07-04 · Inaugural (bootstrap 2026)
 
 - **schemaVersion:** `1.0.0`
