@@ -8,6 +8,51 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- **As ferramentas do e-Cidadania leem a camada 3 (D3 do ROADMAP, 3.26.0).** O job das observações
+  copia no D1, todo dia, as tabelas publicadas que o servidor usa (`c3_*`, 12 tabelas; a DDL sai do
+  dicionário 3.0.0) gravando só as linhas que mudaram: um retrato chave × hash da última cópia aplicada
+  fica no balde privado, e a cópia seguinte compara com ele (`scripts/publicacao/projetar-d1.ts`).
+  Carga inicial em 22/11/2026: 1.137.124 linhas em ~5 min; o banco foi de 645 MB a 962 MB. A coluna
+  `sha` das séries não vai ao D1 (nenhuma ferramenta a mostra; −55 MB) e a chave é um hash de 16
+  caracteres em tabela `WITHOUT ROWID`. Comentários dos eventos (~268 mil) e a situação atual do portal
+  ficam fora: nenhuma ferramenta os lê. Decisões do dono de 22/11/2026: sempre as tabelas novas (o
+  corpus só responde por item que ainda não entrou nelas, marcado `corpus`); toda resposta diz de onde
+  e de quando veio cada bloco de página (`origemResumo`/`coletadoEmResumo`, `origemDetalhe`/
+  `coletadoEmDetalhe`, `origemComentarios`/`coletadoEmComentarios` — os nomes do dicionário); séries
+  dentro do `obter_*`, sem ferramenta nova: `obter_ideia` ganha `serieApoios` e `situacaoNoTempo`
+  (situação do portal e status do corpus, separados), `obter_consulta` ganha `serieVotos` (pares
+  SIM/NÃO) — só os pontos de mudança, até 60, os mais recentes, com `avisoSeries` quando corta.
+  `listar_ideias` filtra, ordena e pagina no banco (antes trazia as ~123 mil ideias a cada chamada);
+  `consultas_votos` lê os votos por UF só da UF pedida e das matérias da página.
+
+### Fixed
+
+- **Linha do tempo da ideia: o item do topo não some mais se vier colado no `<ol>`.** O leitor
+  (`lerIdeiaDetalhe`) descartava o primeiro pedaço do corte supondo que fosse espaço; com o `<li>` sem
+  nada antes, o acontecimento mais recente sumia calado. Nas páginas servidas até 21/11/2026 sempre há
+  o espaço (nenhuma perda medida); achado ao montar a fase C.
+- **Observações dos eventos guardam a ordem da pauta e dos convidados.** Cada item virava um fato
+  solto, e a fusão ordena os fatos pelo valor, então a ordem da página se perdia. O fato agora leva a
+  posição (`{posicao, texto}`), o que muda a versão do leitor dos eventos e refaz a cópia deles
+  inteira na rodada seguinte. Achado ao montar a D1.
+- **Observações do acervo de votos guardam ementa, autoria e o carimbo do CSV.** A C5 guardava só
+  matéria, situação e votos por UF; o dataset 2.0.0 publica os três, e a camada 3 os perderia. Muda a
+  versão do leitor do acervo (refeito na rodada seguinte; é uma linha do índice).
+- **Tabelas em Parquet: instante opcional aceita null.** A coluna de instante saía obrigatória mesmo
+  marcada opcional; nenhuma tabela da C3 tinha instante nulo, mas o `firstSeenAt` de um registro sem
+  histórico quebraria a gravação. Também ganhou o tipo decimal.
+
+### Changed
+
+- **e-Cidadania: `obter_ideia`, `obter_consulta` e `obter_evento` deixam de raspar o portal a cada
+  chamada no servidor hospedado** — leem a cópia diária (os destaques que o portal atualiza ao longo do
+  dia podem aparecer com até 1 dia de atraso, dito em `avisoCamada3`). A leitura ao vivo fica para o
+  item que ainda não entrou na cópia, e o canal stdio (sem D1) segue como era. Percentuais das
+  consultas com uma casa decimal (o inteiro escondia 50,4 × 49,6). Ideia cujo detalhe o arquivo do
+  projeto ainda não leu (o corpus não guarda a linha do tempo) sai sem `linhaDoTempo`, autor e data da
+  proposta, com `origemDetalhe: "corpus"`, até o arquivo chegar a ela; o link da Sugestão sai `null`
+  (a camada 3 não o guarda). Sem `ordenarPor`, `listar_ideias` lista as mais novas primeiro.
+
 - **Observações do e-Cidadania, camada 2 (fase C do ROADMAP, C1 + C2 das ideias), sem mudança de
   superfície.** Reprocessador `scripts/observacoes/` (job diário `observacoes-ecidadania.yml`, runner
   comum): lê o arquivo bruto (só leitura), extrai os fatos de cada página — listagem: situação, título,
@@ -47,25 +92,6 @@ All notable changes to this project are documented here. Format based on
   0%). Provado em dado real: nas 44.957 ideias com detalhe no arquivo, título, descrição e prazo batem
   com o corpus em 100%, e a UF em todas menos 2 (páginas que hoje não publicam a localidade). A
   edição pública (D2) sai na edição anual de janeiro/2027.
-
-### Fixed
-
-- **Linha do tempo da ideia: o item do topo não some mais se vier colado no `<ol>`.** O leitor
-  (`lerIdeiaDetalhe`) descartava o primeiro pedaço do corte supondo que fosse espaço; com o `<li>` sem
-  nada antes, o acontecimento mais recente sumia calado. Nas páginas servidas até 21/11/2026 sempre há
-  o espaço (nenhuma perda medida); achado ao montar a fase C.
-- **Observações dos eventos guardam a ordem da pauta e dos convidados.** Cada item virava um fato
-  solto, e a fusão ordena os fatos pelo valor, então a ordem da página se perdia. O fato agora leva a
-  posição (`{posicao, texto}`), o que muda a versão do leitor dos eventos e refaz a cópia deles
-  inteira na rodada seguinte. Achado ao montar a D1.
-- **Observações do acervo de votos guardam ementa, autoria e o carimbo do CSV.** A C5 guardava só
-  matéria, situação e votos por UF; o dataset 2.0.0 publica os três, e a camada 3 os perderia. Muda a
-  versão do leitor do acervo (refeito na rodada seguinte; é uma linha do índice).
-- **Tabelas em Parquet: instante opcional aceita null.** A coluna de instante saía obrigatória mesmo
-  marcada opcional; nenhuma tabela da C3 tinha instante nulo, mas o `firstSeenAt` de um registro sem
-  histórico quebraria a gravação. Também ganhou o tipo decimal.
-
-### Changed
 
 - **Arquivo bruto ligado em consultas, eventos e no CSV de votos por UF (B4, 15/11/2026), sem mudança
   de superfície nem de versão.** Os três jobs passam a guardar toda resposta antes de lê-la, no formato
