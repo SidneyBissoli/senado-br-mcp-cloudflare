@@ -63,6 +63,14 @@ describe("C5 — fatos sobre as páginas reais", () => {
     const d = fatosDoDetalheDeEvento(fx("evento-detalhe.html"));
     expect(d[0]).toEqual({ campo: "statusHttp", valor: "200" });
     expect(campos(d)).toEqual(expect.arrayContaining(["titulo", "data", "status"]));
+    // Pauta e convidados levam a posição na página (a fusão ordena por valor e perderia a ordem).
+    // A fixture real traz 5 convidados e pauta vazia.
+    for (const [campo, n] of [["pauta", 0], ["convidado", 5]] as const) {
+      const itens = d.filter((f) => f.campo === campo).map((f) => JSON.parse(f.valor!) as { posicao: number; texto: string });
+      expect(itens).toHaveLength(n);
+      expect(itens.map((i) => i.posicao)).toEqual(itens.map((_, k) => k));
+      expect(itens.every((i) => typeof i.texto === "string" && i.texto.length > 0)).toBe(true);
+    }
     const cs = fatosDosComentarios(fx("comentarios-audiencia.html"));
     const n = Number(cs[0].valor);
     expect(cs[0].campo).toBe("comentarios");

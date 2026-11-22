@@ -108,8 +108,10 @@ export function fatosDoDetalheDeEvento(html: string): Fato[] {
     { campo: "data", valor: txt(d.data) }, { campo: "hora", valor: txt(d.hora) },
     { campo: "comissao", valor: txt(d.comissao) }, { campo: "comissaoNomeCompleto", valor: txt(d.comissaoNomeCompleto) },
     { campo: "local", valor: txt(d.local) }, { campo: "status", valor: txt(d.status) }, { campo: "videoUrl", valor: txt(d.videoUrl) },
-    ...d.pauta.map((p) => ({ campo: "pauta", valor: p })),
-    ...d.convidados.map((c) => ({ campo: "convidado", valor: c })),
+    // Posição na página (0 = o primeiro) dentro do valor: a fusão ordena os fatos por valor, e sem ela
+    // a ordem da pauta e dos convidados se perderia (achado da D1, 22/11/2026).
+    ...d.pauta.map((p, posicao) => ({ campo: "pauta", valor: JSON.stringify({ posicao, texto: p }) })),
+    ...d.convidados.map((c, posicao) => ({ campo: "convidado", valor: JSON.stringify({ posicao, texto: c }) })),
   ];
 }
 
