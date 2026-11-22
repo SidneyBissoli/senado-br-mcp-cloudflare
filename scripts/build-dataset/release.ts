@@ -38,10 +38,13 @@ import {
   buildReleaseManifest,
   citacaoDoCorte,
   formatSha256Sums,
+  origemDosMetadados,
   validateReleaseVersion,
   type ReleaseFile,
 } from "../../src/dataset/release.js";
-import { ESQUEMA_V3 } from "../publicacao/dicionario.js";
+import { BALDE_OBSERVACOES } from "../observacoes/linhas.js";
+import { DICIONARIO, ESQUEMA_V3 } from "../publicacao/dicionario.js";
+import { chaveNoBalde, nomeDoRecurso } from "../publicacao/pacote.js";
 
 function flag(name: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);
@@ -80,7 +83,7 @@ async function main(): Promise<void> {
   }
   const datapackage = JSON.parse(readFileSync(datapackagePath, "utf8")) as {
     schemaVersion: string;
-    resources: Array<{ path: string; format: string; rows: number }>;
+    resources: Array<{ name: string; path: string; format: string; rows: number }>;
   };
   if (datapackage.schemaVersion !== ESQUEMA_V3) {
     throw new Error(
@@ -96,12 +99,18 @@ async function main(): Promise<void> {
     if (!existsSync(path)) throw new Error(`tabela ausente: ${path}`);
     const bytes = new Uint8Array(readFileSync(path));
     const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
-    const linhas = Number(parquetMetadata(ab).num_rows);
+    const meta = parquetMetadata(ab);
+    const linhas = Number(meta.num_rows);
     // Um Parquet trocado entre o empacotamento e o freeze não passa daqui.
     if (linhas !== r.rows) throw new Error(`${r.path}: ${linhas} linhas no arquivo ≠ ${r.rows} no datapackage.json`);
+    // Identidade do insumo (D2.a): a chave no balde vem do dicionário; leitor/cursor, do próprio Parquet.
+    const tabela = DICIONARIO.find((t) => nomeDoRecurso(t) === r.name);
+    if (!tabela) throw new Error(`recurso fora do dicionário: ${r.name}`);
+    const kv = Object.fromEntries((meta.key_value_metadata ?? []).map((e) => [e.key, e.value ?? ""]));
+    const origem = origemDosMetadados(BALDE_OBSERVACOES, chaveNoBalde(tabela), kv);
     const d = sha256(bytes);
-    files.push({ file: r.path, sha256: d, bytes: bytes.length, records: linhas });
-    console.log(`[release] ${r.path}: ${linhas} linhas, ${bytes.length} bytes, sha256=${d.slice(0, 12)}…`);
+    files.push({ file: r.path, sha256: d, bytes: bytes.length, records: linhas, origem });
+    console.log(`[release] ${r.path}: ${linhas} linhas, ${bytes.length} bytes, sha256=${d.slice(0, 12)}…, ${origem.leitor} cursor ${origem.cursor}`);
   }
   for (const file of ["datapackage.json", "dicionario.md"]) {
     const path = join(inDir, file);

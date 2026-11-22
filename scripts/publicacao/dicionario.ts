@@ -300,6 +300,14 @@ export const DICIONARIO: TabelaDoDicionario[] = [
   },
 ];
 
+/**
+ * Nome do recurso no `datapackage.json` e do arquivo no pacote (`<nome>.parquet`), sem pastas: o
+ * Zenodo não guarda pastas, e o pacote plano deixa o manifesto válido solto ou dentro do tarball
+ * (decisão do dono de 22/11/2026). Único por tabela (testado).
+ */
+export const nomeDoRecurso = (t: TabelaDoDicionario): string => t.caminho.replace(/[/_]/g, "-");
+export const arquivoDaTabela = (t: TabelaDoDicionario): string => `${nomeDoRecurso(t)}.parquet`;
+
 const linhaDaColuna = (c: ColunaDoDicionario) =>
   `| \`${c.nome}\`${c.calculada ? " ⚙️" : ""} | ${c.tipo} | ${c.descricao} | ${c.fonte} | ${c.nota ?? "—"} |`;
 
@@ -322,7 +330,7 @@ export function dicionarioMarkdown(): string {
   ];
   for (const t of DICIONARIO) {
     partes.push(
-      `## \`${t.caminho}\` — ${t.titulo}`, "", t.descricao, "", `**Uma linha por:** ${t.chave.map((k) => `\`${k}\``).join(" × ")}`, "",
+      `## \`${t.caminho}\` — ${t.titulo}`, "", t.descricao, "", `**Arquivo:** \`${arquivoDaTabela(t)}\``, "", `**Uma linha por:** ${t.chave.map((k) => `\`${k}\``).join(" × ")}`, "",
       "| Coluna | Tipo | Descrição | Fonte | Nota |", "|---|---|---|---|---|", ...t.colunas.map(linhaDaColuna), "",
     );
   }

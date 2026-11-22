@@ -102,6 +102,14 @@ O primeiro corte **cunha o concept-DOI** (estável para sempre) e o primeiro ver
 > `ESQUEMA_V3` em `scripts/publicacao/dicionario.ts`. O 3.0.0 leva a release 3.0.0 (o esquema 2.0.0
 > nunca saiu). O freeze confere as linhas de cada Parquet contra o manifesto e reescreve a cópia do
 > `CITATION.cff` no pacote com a versão e o version-DOI do corte.
+>
+> **Boas práticas (D2.a/D2.b, 22/11/2026):** o pacote é PLANO (um arquivo por tabela, nome do recurso:
+> `ideias-serie-apoios.parquet`), porque o Zenodo não guarda pastas. O Zenodo recebe os ~21 arquivos
+> SOLTOS (limite dele: 100 arquivos / 50 GB por registro; o envio recusa nome repetido, nome com pasta
+> e falta de `release.json`/`SHA256SUMS`/`datapackage.json`); o tarball fica só no GitHub Release. O
+> `release.json` leva, por tabela, `origem` (chave no balde, `leitor`, `cursor`, `geradoEm`, extras do
+> Parquet) — a identidade do insumo. Ensaio do envio sem token:
+> `npm run release:zenodo -- --version <v> --dry-run --file <cada arquivo da pasta>`.
 
 1. Decida o bump: **MINOR** (edição anual), **PATCH** (defeito de dado), **MAJOR** (mudança de schema —
    suba também `ESQUEMA_V3`/o dicionário). Atualize `DATASET_RELEASE_VERSION`/`DATASET_RELEASE_EDITION`

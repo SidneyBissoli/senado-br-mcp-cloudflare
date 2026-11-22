@@ -136,14 +136,14 @@ jobs:
             ${{ steps.dir.outputs.dir }}/SHA256SUMS
             ${{ steps.dir.outputs.dir }}/release.json
 
+      # Desde o 3.0.0 (D2.b): o Zenodo recebe os arquivos SOLTOS do pacote plano (cada tabela visível e
+      # baixável sozinha; o datapackage.json resolve os nomes); o tarball fica só no GitHub Release.
       - name: Zenodo — envia ao rascunho reservado (confere os DOIs do release.json antes)
         if: ${{ env.ZENODO_TOKEN != '' }}
         run: |
           ARGS=(--version "${{ steps.ver.outputs.version }}" \
-                --draft "${{ steps.zen.outputs.deposition_id }}" \
-                --file "${{ steps.pack.outputs.tar }}" \
-                --file "${{ steps.dir.outputs.dir }}/SHA256SUMS" \
-                --file "${{ steps.dir.outputs.dir }}/release.json")
+                --draft "${{ steps.zen.outputs.deposition_id }}")
+          for F in "${{ steps.dir.outputs.dir }}"/*; do ARGS+=(--file "$F"); done
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.zenodo_publish }}" = "true" ]; then
             ARGS+=(--publish)
           fi
