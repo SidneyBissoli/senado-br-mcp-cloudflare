@@ -13,7 +13,7 @@ import {
   lerComentarios, lerConsultasAtuais, lerEventosAtuais, lerFirstSeen, lerIdeiasAtuais, lerVotosNoHistorico, lerVotosUfAtuais,
 } from "./corpus-atual.js";
 import { tabelasDosEventos, type LinhaComentario, type LinhaEvento, type LinhaItemDoEvento } from "./eventos.js";
-import { tabelasDasIdeias, type LinhaAcontecimento, type LinhaIdeia, type LinhaProposicao } from "./ideias.js";
+import { situacoesAtuais, tabelasDasIdeias, type LinhaAcontecimento, type LinhaIdeia, type LinhaProposicao, type LinhaSituacaoAtual } from "./ideias.js";
 import { tabelaDeVotosUf, type LinhaVotosUf } from "./votos-uf.js";
 
 const t = <T>(nome: string, valor: (l: T) => string | null): ColunaDaTabela<T> => ({ nome, tipo: "texto", opcional: true, valor });
@@ -48,6 +48,11 @@ export const COLUNAS_PROPOSICOES: ColunaDaTabela<LinhaProposicao>[] = [
 
 export const COLUNAS_LINHA_DO_TEMPO: ColunaDaTabela<LinhaAcontecimento>[] = [
   id("id", (l) => l.id), { nome: "ordem", tipo: "inteiro", valor: (l) => l.ordem }, t("data", (l) => l.data), t("tipo", (l) => l.tipo), tt("texto", (l) => l.texto),
+];
+
+export const COLUNAS_SITUACOES_ATUAIS: ColunaDaTabela<LinhaSituacaoAtual>[] = [
+  id("id", (l) => l.id), tt("situacaoCodigo", (l) => l.situacaoCodigo), t("situacaoNome", (l) => l.situacaoNome),
+  { nome: "vistaEm", tipo: "instante", valor: (l) => l.vistaEm },
 ];
 
 export const COLUNAS_CONSULTAS: ColunaDaTabela<LinhaConsulta>[] = [
@@ -108,7 +113,11 @@ function montar(entidade: EntidadePublicada, obs: readonly Observacao[], kv: Rec
   if (entidade === "ideias") {
     const r = tabelasDasIdeias(obs, lerIdeiasAtuais(), lerFirstSeen("ideias"));
     return {
-      tabelas: [tabela("ideias", r.ideias, COLUNAS_IDEIAS, kv), tabela("proposicoes", r.proposicoes, COLUNAS_PROPOSICOES, kv), tabela("linha-do-tempo", r.linhaDoTempo, COLUNAS_LINHA_DO_TEMPO, kv)],
+      tabelas: [
+        tabela("ideias", r.ideias, COLUNAS_IDEIAS, kv), tabela("proposicoes", r.proposicoes, COLUNAS_PROPOSICOES, kv),
+        tabela("linha-do-tempo", r.linhaDoTempo, COLUNAS_LINHA_DO_TEMPO, kv),
+        tabela("situacoes-portal", situacoesAtuais(obs), COLUNAS_SITUACOES_ATUAIS, kv),
+      ],
       resumo: `resumo: ${contar(r.ideias, (x) => x.origemResumo)}; detalhe: ${contar(r.ideias, (x) => x.origemDetalhe)}`,
     };
   }

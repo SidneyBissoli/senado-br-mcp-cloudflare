@@ -20,6 +20,7 @@
  */
 
 import type { Observacao } from "../observacoes/fundir.js";
+import { situacaoDoArquivo, type PontoSituacao } from "../observacoes/series.js";
 import { agruparPorId, compararIds, contem, int, json, naLeitura, txt, ultimaLeitura } from "./comum.js";
 
 export const URL_DA_IDEIA = "https://www12.senado.leg.br/ecidadania/visualizacaoideia?id=";
@@ -218,4 +219,33 @@ function camposDaProposicao(p: Record<string, unknown>): Omit<LinhaProposicao, "
     parlamentarUf: txt(p.parlamentarUf), tipoSigla: txt(p.tipoSigla), tipoNome: txt(p.tipoNome), numero: txt(p.numero),
     ano: int(p.ano as string | number | null), complemento: txt(p.complemento), url: txt(p.url),
   };
+}
+
+export interface LinhaSituacaoAtual {
+  id: string;
+  situacaoCodigo: string;
+  situacaoNome: string | null;
+  /** Última vez que a ideia foi vista na listagem dessa situação. */
+  vistaEm: string;
+}
+
+/**
+ * Situação atual do portal (decisão 6 da fase D, calculada): a(s) situação(ões) em que a ideia foi
+ * vista no DIA (UTC) da sua avistagem mais recente em qualquer listagem. Duas ao mesmo tempo = duas
+ * linhas. Limite declarado: a s7 é varrida por cursor, então uma ideia também listada numa situação
+ * relida todo dia (as 30 da s99) aparece só nesta. Sem listagem no arquivo, a ideia fica de fora.
+ */
+export function situacoesAtuais(obs: readonly Observacao[]): LinhaSituacaoAtual[] {
+  const porId = new Map<string, PontoSituacao[]>();
+  for (const p of situacaoDoArquivo(obs)) {
+    const l = porId.get(p.entityId);
+    if (l) l.push(p);
+    else porId.set(p.entityId, [p]);
+  }
+  const out: LinhaSituacaoAtual[] = [];
+  for (const [id, ps] of porId) {
+    const dia = ps.reduce((m, p) => (p.ate > m ? p.ate : m), "").slice(0, 10);
+    for (const p of ps) if (p.ate.slice(0, 10) === dia) out.push({ id, situacaoCodigo: p.situacaoCodigo!, situacaoNome: p.situacaoNome, vistaEm: p.ate });
+  }
+  return out.sort((a, b) => compararIds(a.id, b.id) || compararIds(a.situacaoCodigo, b.situacaoCodigo));
 }

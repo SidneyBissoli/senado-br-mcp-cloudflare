@@ -29,8 +29,9 @@ All notable changes to this project are documented here. Format based on
   (um fato por UF), cada uma com a versão do leitor dela.
 - **Tabelas publicadas do e-Cidadania, camada 3 (D1 do ROADMAP), sem mudança de superfície.** O job
   das observações monta, depois de cada cópia, as tabelas tidy de cada entidade em
-  `publicacao/<entidade>/*.parquet` no balde privado (`scripts/publicacao/`): ideias (+ proposições e
-  linha do tempo), consultas (+ série de votos SIM/NÃO, arquivo e histórico do corpus), eventos (+
+  `publicacao/<entidade>/*.parquet` no balde privado (`scripts/publicacao/`): ideias (+ proposições,
+  linha do tempo e situação atual do portal — a(s) vista(s) no dia da avistagem mais recente, com a
+  data, marcada calculada; duas ao mesmo tempo = duas linhas), consultas (+ série de votos SIM/NÃO, arquivo e histórico do corpus), eventos (+
   pauta, convidados e comentários, um por linha) e votos por UF em formato longo (matéria × UF ×
   intervalo de versões do CSV). Decisões do dono de 22/11/2026: valor da camada 2 quando ela já o leu,
   senão o do corpus (540 consultas encerradas, a autoria antiga e as ideias removidas só existem nele);

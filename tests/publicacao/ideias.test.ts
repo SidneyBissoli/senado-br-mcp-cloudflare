@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { fundir, type Leitura } from "../../scripts/observacoes/fundir.js";
 import type { Fato, Fonte } from "../../scripts/observacoes/fatos.js";
-import { sugestaoDoCorpus, tabelasDasIdeias, type IdeiaDoCorpus } from "../../scripts/publicacao/ideias.js";
+import { situacoesAtuais, sugestaoDoCorpus, tabelasDasIdeias, type IdeiaDoCorpus } from "../../scripts/publicacao/ideias.js";
 
 let n = 0;
 const leitura = (id: string, fonte: Fonte, dia: number, fatos: Fato[]): Leitura => ({
@@ -88,6 +88,15 @@ describe("D1 — tabelas publicadas das ideias", () => {
     );
     const volta = (await parquetReadObjects({ file: b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer })) as Record<string, unknown>[];
     expect(volta.map((r) => [r.t === null ? null : (r.t as Date).toISOString(), r.d])).toEqual([[null, 50.4], ["2026-11-01T18:00:00.000Z", null]]);
+  });
+
+  it("situação atual: as vistas no dia da avistagem mais recente; duas ao mesmo tempo = duas linhas", () => {
+    const obs = fundir([], [lst("20", 5, 1, 1), lst("20", 5, 2, 1), lst("20", 6, 2, 1), lst("21", 5, 1, 1), lst("21", 8, 3, 1), lst("22", 7, 4, 0)]);
+    expect(situacoesAtuais(obs).map((s) => [s.id, s.situacaoCodigo, s.situacaoNome, s.vistaEm.slice(8, 10)])).toEqual([
+      ["20", "5", "Ideias abertas", "02"], ["20", "6", "Ideias em avaliação na CDH", "02"],
+      ["21", "8", "Ideias aguardando envio à CDH", "03"],
+      ["22", "7", "Ideias encerradas sem apoios suficientes", "04"],
+    ]);
   });
 
   it("ordem por id numérico; sugestão do corpus fora do formato vira null", () => {
