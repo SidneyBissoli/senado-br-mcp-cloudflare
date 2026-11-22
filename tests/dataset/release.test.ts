@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
+  citacaoDoCorte,
   DATASET_RELEASE_VERSION,
   DOI_PLACEHOLDER,
   buildReleaseManifest,
@@ -13,6 +16,7 @@ import {
   type ReleaseFile,
 } from "../../src/dataset/release.js";
 import { DATASET_SCHEMA_VERSION } from "../../src/dataset/schema.js";
+import { ESQUEMA_V3 } from "../../scripts/publicacao/dicionario.js";
 
 describe("validateReleaseVersion", () => {
   it("aceita SemVer estrito X.Y.Z", () => {
@@ -46,7 +50,7 @@ describe("versionFromTag", () => {
 
 describe("buildReleaseManifest", () => {
   const files: ReleaseFile[] = [
-    { file: "consultas.ndjson", sha256: "aa", bytes: 10, records: 3 },
+    { file: "consultas/consultas.parquet", sha256: "aa", bytes: 10, records: 3 },
     { file: "datapackage.json", sha256: "bb", bytes: 5 },
   ];
   const manifest = buildReleaseManifest({
@@ -71,19 +75,16 @@ describe("buildReleaseManifest", () => {
     expect(manifest.totalRecords).toBe(3);
   });
 
-  it("preserva o envelope de 6 campos e os caveats", () => {
-    expect(manifest.envelope).toEqual([
-      "value",
-      "sourceEndpoint",
-      "sourceField",
-      "retrievedAt",
-      "license",
-      "schemaVersion",
-    ]);
-    expect(Array.isArray(manifest.caveats)).toBe(true);
-    expect((manifest.caveats as string[]).join(" ")).toMatch(/14\/06\/2026/);
-    // A declaração load-bearing do bootstrap irregular tem de estar no manifesto.
-    expect((manifest.caveats as string[]).join(" ")).toMatch(/IRREGULAR/i);
+  it("3.0.0: sem envelope por célula; Parquet, dicionário e os caveats do esquema", () => {
+    expect(manifest).not.toHaveProperty("envelope");
+    expect(manifest.format).toBe("parquet");
+    expect(manifest.dictionary).toBe("dicionario.md");
+    const caveats = (manifest.caveats as string[]).join(" ");
+    expect(caveats).toMatch(/14\/06\/2026/);
+    // Censura à esquerda e a origem por bloco são as ressalvas load-bearing do esquema 3.0.0.
+    expect(caveats).toMatch(/censuradas à esquerda/);
+    expect(caveats).toMatch(/arquivo de páginas ou corpus/);
+    expect(caveats).toMatch(/autorNome/);
   });
 
   it("é determinístico e diffável (ordem de chaves estável)", () => {
@@ -169,6 +170,30 @@ describe("conferirDoisDoManifesto", () => {
   });
 });
 
+describe("citacaoDoCorte", () => {
+  const raiz = readFileSync(join(process.cwd(), "CITATION.cff"), "utf8");
+
+  it("a cópia do pacote leva a versão, a data e o version-DOI do corte; o concept fica", () => {
+    const c = citacaoDoCorte(raiz, { version: "3.0.0", versionDoi: "10.5281/zenodo.31000001", date: "2027-01-15" });
+    expect(c).toMatch(/^version: 3\.0\.0$/m);
+    expect(c).toMatch(/^date-released: "2027-01-15"$/m);
+    expect(c).toContain('value: "10.5281/zenodo.31000001"\n    description: Version-DOI (dataset-v3.0.0, snapshot de 2027-01-15)');
+    expect(c).toContain('doi: "10.5281/zenodo.21183940"'); // concept-DOI intacto
+    expect(c).not.toContain("21183941"); // nunca o version-DOI de outra versão
+  });
+
+  it("DOI em placeholder: o identificador do version-DOI sai, sem herdar o da raiz", () => {
+    const c = citacaoDoCorte(raiz, { version: "3.0.0", versionDoi: DOI_PLACEHOLDER, date: "2027-01-15" });
+    expect(c).not.toMatch(/description: Version-DOI/);
+    expect(c).not.toContain("21183941");
+    expect(c).toMatch(/description: Concept-DOI/);
+  });
+
+  it("recusa CITATION.cff sem as linhas que reescreve", () => {
+    expect(() => citacaoDoCorte("cff-version: 1.2.0\n", { version: "3.0.0", versionDoi: DOI_PLACEHOLDER, date: "2027-01-15" })).toThrow();
+  });
+});
+
 describe("buildZenodoMetadata", () => {
   const zj = {
     title: "T",
@@ -202,7 +227,8 @@ describe("buildZenodoMetadata", () => {
 });
 
 describe("constantes de release", () => {
-  it("DATASET_RELEASE_VERSION é SemVer válido", () => {
+  it("DATASET_RELEASE_VERSION é SemVer válido e acompanha o esquema 3.0.0 (decisão de 22/11/2026)", () => {
     expect(() => validateReleaseVersion(DATASET_RELEASE_VERSION)).not.toThrow();
+    expect(DATASET_RELEASE_VERSION).toBe(ESQUEMA_V3);
   });
 });

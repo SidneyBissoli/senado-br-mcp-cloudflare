@@ -16,8 +16,14 @@
  *       · MAJOR  → mudança de schema (schemaVersion sobe junto);
  *       · MINOR  → edição periódica nova (mais dado, mesmo schema) — a cadência anual da ETAPA 2;
  *       · PATCH  → release extraordinário (defeito de dado corrigido), version-DOI próprio (ETAPA 2/D2).
- *   Hoje as duas coincidem em 1.0.0, mas o `release.json` carrega ambas separadamente — um patch de
- *   dado sobe a release sem tocar o schema, e o auditor nunca as confunde.
+ *   O `release.json` carrega ambas separadamente — um patch de dado sobe a release sem tocar o
+ *   schema, e o auditor nunca as confunde. Exceção registrada: o esquema 2.0.0 nunca saiu em release,
+ *   e o corte do esquema 3.0.0 leva a release 3.0.0 (decisão do dono de 22/11/2026: o mesmo número
+ *   do esquema, contra um dataset-v2.0.0 que um leitor tomaria pelo esquema 2.0.0).
+ *
+ * Desde o 3.0.0 o release congela o pacote da camada 3 (`scripts/publicacao/empacotar.ts`): só
+ * Parquet, `datapackage.json` Frictionless e `dicionario.md`. O envelope por célula do 1.0.0/2.0.0
+ * acabou; a proveniência vai em colunas de origem por bloco.
  *
  * DOIs: o concept-DOI é estável entre versões (o que um paper cita para "o dataset"); cada release
  * ganha um version-DOI próprio. Ambos são cunhados pelo Zenodo na primeira publicação (passo humano,
@@ -34,9 +40,9 @@ import type { Entidade } from "../scraper/pipeline.js";
 
 // ── Versão/edição do release (bumpar por corte; referida no changelog e no manifesto) ──────────
 /** Versão SemVer da EDIÇÃO congelada. Tag = `dataset-v${DATASET_RELEASE_VERSION}`. */
-export const DATASET_RELEASE_VERSION = "1.0.0";
+export const DATASET_RELEASE_VERSION = "3.0.0";
 /** Rótulo humano da edição (aparece no manifesto e no GitHub Release). */
-export const DATASET_RELEASE_EDITION = "Inaugural — bootstrap 2026 (piso 14/06/2026)";
+export const DATASET_RELEASE_EDITION = "Anual 2026 — esquema 3.0.0 (tabelas tidy em Parquet)";
 
 /** Placeholder de DOI até o Zenodo cunhar (ver runbook). Detectável em teste e em revisão. */
 export const DOI_PLACEHOLDER = "10.5281/zenodo.PENDENTE";
@@ -91,7 +97,7 @@ export interface ReleaseFile {
   /** SHA-256 hex (minúsculo) do conteúdo do arquivo como está na bundle (canônico, sem gzip). */
   sha256: string;
   bytes: number;
-  /** Registros na entidade (NDJSON) — omitido para metadados como datapackage.json/dictionary.md. */
+  /** Linhas da tabela (Parquet) — omitido para metadados como datapackage.json/dicionario.md. */
   records?: number;
 }
 
@@ -132,7 +138,8 @@ export function buildReleaseManifest(input: ReleaseManifestInput): Record<string
       "Senado Federal — Portal e-Cidadania (www12.senado.leg.br/ecidadania) + acervo Arquimedes",
     gitCommit: input.gitCommit,
     generatedAt: input.generatedAt,
-    envelope: ["value", "sourceEndpoint", "sourceField", "retrievedAt", "license", "schemaVersion"],
+    format: "parquet",
+    dictionary: "dicionario.md",
     totalRecords,
     files: input.files.map((f) => ({
       file: f.file,
@@ -146,16 +153,19 @@ export function buildReleaseManifest(input: ReleaseManifestInput): Record<string
   };
 }
 
-/** Caveats canônicos do release (mesma substância do dicionário/manifesto da Fase 1.2). */
+/**
+ * Caveats canônicos do release do esquema 3.0.0 — a mesma substância das notas do dicionário
+ * (`scripts/publicacao/dicionario.ts`), resumida para o manifesto; o detalhe fica no `dicionario.md`.
+ */
 export const RELEASE_CAVEATS: string[] = [
-  "Piso duro da série = 14/06/2026 (criação da base D1); nada anterior é capturável.",
-  "firstSeenAt é censurado à esquerda, baseline por entidade (consultas 16/06/2026; ideias/eventos 29/06/2026) — o vintage de baseline deve ser excluído de análises de ritmo; série interpretável a partir de 22/06/2026 (consultas) / 30/06/2026 (ideias, eventos).",
-  "Antes da entrada em produção do cron diário, a resolução do first-seen foi IRREGULAR (gaps de 2–6 dias): a série é interpretável, não uniforme, no período de bootstrap — ver CHANGELOG-dataset.md.",
-  "consultas_votos é acervo de vintage único (série = 1); único campo temporal = referencePeriod.",
+  "Piso duro da série = 14/06/2026 (criação do corpus); nada anterior é capturável.",
+  "As datas de primeira observação são do robô, não do Senado, e censuradas à esquerda: a primeira varredura completa de cada entidade (16/06/2026 consultas; 29/06/2026 ideias e eventos) marca quase todo o acervo antigo — exclua essas datas de análises de ritmo de entrada.",
+  "Cada linha diz, por bloco de página, de onde veio o valor (origem: arquivo de páginas ou corpus) e quando a página foi lida (coletadoEm). O arquivo de páginas começa em 30/10/2026 nas ideias e em 20/11/2026 nas demais entidades; antes disso, e para o que saiu da listagem, vale o último valor que o corpus guardou.",
+  "Séries no tempo (apoios, situação, votos): entre `desde` e `ate` o valor foi visto em todas as leituras daquela série; fora delas, nada se afirma. No corpus, um ponto por mudança (`desde = ate`).",
+  "autorNome é o nome do autor da ideia como o portal o publica (já abreviado); null quando o detalhe da ideia ainda vem do corpus, que nunca guardou o nome. Comentaristas de eventos seguem sem nome.",
   "Não existe data de abertura de consulta upstream (Recon Parte II).",
   "Status de eventos dobra REGISTRADO/'sem data prevista' em 'agendado' (Recon §4.1) — declarado, não corrigido.",
-  "eventos: comentarios/hora/data são só-listagem, com caveat PROVISÓRIO (A3) até o estudo de reconciliação listagem×detalhe.",
-  "CSV Arquimedes transcodificado de windows-1252 para UTF-8 na leitura.",
+  "O acervo Arquimedes (votos por UF) é publicado em windows-1252; aqui está em UTF-8.",
 ];
 
 // ── SHA256SUMS (formato coreutils: `<hash>  <arquivo>`) ─────────────────────────────────────────
@@ -228,6 +238,33 @@ export function conferirDoisDoManifesto(
     }
   }
   return problemas;
+}
+
+// ── CITATION.cff do corte ───────────────────────────────────────────────────────────────────────
+/**
+ * Reescreve o `CITATION.cff` da raiz para a cópia que vai DENTRO do pacote: `version`, `date-released`
+ * e o identificador do version-DOI passam a ser os deste corte (o da raiz descreve o último release
+ * publicado, e o version-DOI deste só existe durante o workflow). Com DOI em placeholder, o
+ * identificador do version-DOI sai (nunca vai um DOI de outra versão). Lança se o arquivo perder as
+ * linhas que reescreve — o corte não segue com citação de outra versão.
+ */
+export function citacaoDoCorte(cff: string, corte: { version: string; versionDoi: string; date: string }): string {
+  validateReleaseVersion(corte.version);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(corte.date)) throw new Error(`data do corte inválida: "${corte.date}"`);
+  const versao = /^version: .*$/m;
+  const data = /^date-released: .*$/m;
+  // O bloco do version-DOI: `- type: doi` + `value` + `description: Version-DOI …`, no fim de `identifiers`.
+  const bloco = /^ {2}- type: doi\n {4}value: "[^"]*"\n {4}description: Version-DOI[^\n]*\n?/m;
+  if (!versao.test(cff) || !data.test(cff) || !bloco.test(cff)) {
+    throw new Error("CITATION.cff sem `version`, `date-released` ou o identificador do version-DOI");
+  }
+  const novoBloco = doiReal(corte.versionDoi)
+    ? `  - type: doi\n    value: "${corte.versionDoi}"\n    description: Version-DOI (dataset-v${corte.version}, snapshot de ${corte.date})\n`
+    : "";
+  return cff
+    .replace(versao, `version: ${corte.version}`)
+    .replace(data, `date-released: "${corte.date}"`)
+    .replace(bloco, novoBloco);
 }
 
 // ── Metadados Zenodo (a partir do `.zenodo.json` + o release corrente) ──────────────────────────

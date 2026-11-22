@@ -1,7 +1,8 @@
 # Licença do DADO
 
-Este arquivo cobre o **dataset** de participação do e-Cidadania (os arquivos `*.ndjson`,
-`datapackage.json`, `dictionary.md` e o data package congelado publicado no Zenodo). A licença do
+Este arquivo cobre o **dataset** de participação do e-Cidadania (as tabelas `*.parquet` — `*.ndjson`
+na versão 1.0.0 —, `datapackage.json`, `dicionario.md` — `dictionary.md` na 1.0.0 — e o data package
+congelado publicado no Zenodo). A licença do
 **código** deste repositório é a MIT ([`LICENSE`](LICENSE)) e é **separada** desta.
 
 ## Fonte e termos
@@ -26,7 +27,8 @@ Termos oficiais: <https://www12.senado.leg.br/dados-abertos>.
   version-DOI do snapshot; ver [`CITATION.cff`](CITATION.cff) e [`CHANGELOG-dataset.md`](CHANGELOG-dataset.md)).
 - **Sem garantia.** O dataset é uma coleta independente, **não** afiliada nem endossada pelo Senado
   Federal. Cobertura, caveats temporais e limitações estão declarados em
-  [`docs/dataset-dictionary.md`](docs/dataset-dictionary.md) e no changelog.
+  [`docs/dataset-dictionary-v3.md`](docs/dataset-dictionary-v3.md) (esquema 3.0.0;
+  [`docs/dataset-dictionary.md`](docs/dataset-dictionary.md) para a 1.0.0) e no changelog.
 
 ## Nota de compatibilidade (Zenodo / SPDX)
 

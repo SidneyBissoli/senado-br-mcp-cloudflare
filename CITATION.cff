@@ -4,6 +4,8 @@
 #
 # DOIs cunhados no Zenodo em 2026-07-04 (release dataset-v1.0.0). Cite o concept-DOI para "o dataset"
 # (todas as versões); cite o version-DOI do snapshot específico usado num paper. Ver docs/release-runbook.md.
+# `version`, `date-released` e o Version-DOI abaixo descrevem o ÚLTIMO release publicado; a cópia que
+# vai dentro de cada pacote é reescrita pelo freeze com os do corte (`citacaoDoCorte`).
 cff-version: 1.2.0
 message: >-
   Se você usar este dataset, cite-o usando os metadados abaixo. Cite o version-DOI do snapshot
@@ -12,10 +14,14 @@ title: Dataset de participação do e-Cidadania (Senado Federal)
 abstract: >-
   Dataset científico citável da camada de participação cidadã do portal e-Cidadania do Senado
   Federal do Brasil — consultas públicas (Apoie), ideias legislativas, eventos/audiências
-  interativas e votos históricos por UF (acervo Arquimedes). Cada valor de cada registro carrega
-  um envelope de proveniência por campo (fonte, campo de origem, instante de coleta, licença e
-  versão de schema). Camada não coberta pelo pacote R congressbr. Licença do dado declarada em
-  LICENSE-DATA.md (separada da licença de código, MIT).
+  interativas e votos históricos por UF (acervo Arquimedes). Na versão 3.0.0: tabelas tidy em
+  Parquet, com as séries no tempo de apoios, situação e votos e, em cada linha, a origem e o
+  instante de coleta de cada bloco de valores; inclui o nome do autor de cada ideia legislativa
+  exatamente como o portal o publica — já abreviado pelo próprio Senado (ex.: "PEDRO H. S. V.") —
+  e a UF declarada; o projeto não completa nem cruza nomes, e comentaristas de eventos seguem sem
+  nome. Na versão 1.0.0: NDJSON com envelope de proveniência por campo. Camada não coberta pelo
+  pacote R congressbr. Licença do dado declarada em LICENSE-DATA.md (separada da licença de
+  código, MIT).
 type: dataset
 version: 1.0.0
 date-released: "2026-07-04"
