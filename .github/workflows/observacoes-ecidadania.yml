@@ -13,7 +13,7 @@ name: Observações e-Cidadania (fase C)
 #
 # Segredos: OBSERVACOES_R2_ACCESS_KEY_ID/SECRET = token R2 com leitura do `ecidadania-arquivos` e
 # leitura e gravação do `ecidadania-observacoes` (criado pelo dono no painel da Cloudflare);
-# CLOUDFLARE_API_TOKEN = o mesmo das coletas (lê o índice no D1).
+# CLOUDFLARE_API_TOKEN = o mesmo das coletas (lê o índice no D1 e grava as tabelas `c3_*` da D3).
 # Segurança (repo PÚBLICO): só schedule e workflow_dispatch — nunca pull_request.
 
 on:
@@ -58,3 +58,10 @@ jobs:
 
       - name: Reprocessar (arquivo → observações)
         run: npx tsx scripts/observacoes/index.ts ${{ inputs.completo && '--completo' || '' }}
+
+      # D3: copia no D1 as tabelas da camada 3 que o servidor lê, só as linhas que mudaram (retrato da
+      # última projeção no balde). Roda mesmo se o passo anterior falhou (ex.: invariante nova, que só
+      # falha DEPOIS de gravar as tabelas): projetar o que está no balde nunca piora a cópia do D1.
+      - name: Projetar a camada 3 no D1
+        if: ${{ !cancelled() }}
+        run: npx tsx scripts/publicacao/projetar-d1.ts

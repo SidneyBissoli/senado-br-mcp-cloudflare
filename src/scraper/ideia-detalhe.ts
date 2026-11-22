@@ -145,7 +145,7 @@ function isoDeDataBr(s: string, onde: string): string {
 const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
 
 /** "26 de junho de 2018" → 2018-06-26. */
-function isoDeDataExtenso(s: string, onde: string): string {
+export function isoDeDataExtenso(s: string, onde: string): string {
   const m = /^(\d{1,2}) de (\p{L}+) de (\d{4})$/u.exec(s.trim());
   const mes = m ? MESES.indexOf(m[2].toLowerCase()) + 1 : 0;
   if (!m || mes === 0) throw new IdeiaDetalheForaDoMoldeError(`${onde}: data "${s}" não é "d de mês de aaaa"`);
