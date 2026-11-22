@@ -17,6 +17,16 @@ All notable changes to this project are documented here. Format based on
   (`hyparquet-writer` + `hyparquet`, instantes em UTC), uma cópia no balde privado novo
   `ecidadania-observacoes`, com o cursor e a versão do leitor nos metadados do próprio arquivo:
   incremental igual ao completo (teste), e refaz tudo sozinho quando o leitor muda.
+- **Fase C completa para as ideias e estendida a consultas, eventos e acervo de votos (C3, C4, C5),
+  sem mudança de superfície.** A série da listagem passa a ser por ideia × situação (`listagem-sN`): o
+  portal lista a mesma ideia em duas situações ao mesmo tempo, e a série única alternava a situação
+  todo dia. C4: invariantes sobre o conjunto (prazo = proposta + 120 dias, uma Sugestão, apoios que não
+  diminuem na mesma série) em `ideias/invariantes.json`; violação nova faz o job falhar depois de
+  gravar a cópia. C3: `ideias/serie-apoios.parquet` e `ideias/historico-situacao.parquet`, arquivo
+  (desde 30/10) e corpus (`ecidadania_history`, desde 14/06, um ponto por mudança, sem a restauração
+  A3) lado a lado, com a origem de cada linha. C5: cópias próprias de consultas (votos SIM/NÃO),
+  eventos (listagem, detalhe com pauta e convidados, comentários um a um) e do CSV de votos por UF
+  (um fato por UF), cada uma com a versão do leitor dela.
 
 ### Fixed
 

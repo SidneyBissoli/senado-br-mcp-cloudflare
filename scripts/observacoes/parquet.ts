@@ -92,3 +92,31 @@ export async function lerCopia(bytes: Uint8Array): Promise<{ meta: MetadadosDaCo
   }));
   return { meta: { cursor, leitor, entidade: kv.get("entidade") ?? "", geradoEm: kv.get("geradoEm") ?? "" }, obs };
 }
+
+/** Coluna de uma tabela derivada (C3): texto, instante UTC ou inteiro; `opcional` aceita null. */
+export interface ColunaDaTabela<T> {
+  nome: string;
+  tipo: "texto" | "instante" | "inteiro";
+  opcional?: boolean;
+  valor: (linha: T) => string | number | null;
+}
+
+/** Grava uma tabela derivada em Parquet com o mesmo cuidado da cópia (esquema explícito, UTC). */
+export function escreverTabela<T>(linhas: readonly T[], colunas: readonly ColunaDaTabela<T>[], kv: Record<string, string>): Uint8Array {
+  const schema = colunas.map((c) =>
+    c.tipo === "instante" ? instante(c.nome) : c.tipo === "inteiro" ? { ...inteiro(c.nome), repetition_type: c.opcional ? ("OPTIONAL" as const) : ("REQUIRED" as const) } : texto(c.nome, c.opcional),
+  );
+  const buf = parquetWriteBuffer({
+    schema: [{ name: "root", num_children: schema.length }, ...schema],
+    columnData: colunas.map((c) => ({
+      name: c.nome,
+      data: linhas.map((l) => {
+        const v = c.valor(l);
+        return c.tipo === "instante" && v !== null ? new Date(String(v)) : v;
+      }) as never,
+    })),
+    kvMetadata: Object.entries(kv).map(([key, value]) => ({ key, value })),
+    createdBy: "senado-br-mcp observacoes (fase C)",
+  });
+  return new Uint8Array(buf);
+}

@@ -1,6 +1,7 @@
 name: Observações e-Cidadania (fase C)
 
-# Reprocessador da fase C do ROADMAP (C2 + C1 das ideias): arquivo bruto (fase B, balde privado
+# Reprocessador da fase C do ROADMAP (C1/C2 das ideias, C3 séries, C4 invariantes, C5 consultas,
+# eventos e acervo de votos por UF): arquivo bruto (fase B, balde privado
 # `ecidadania-arquivos`, SÓ leitura) → observações em Parquet (camada 2, balde privado
 # `ecidadania-observacoes`, uma cópia substituída a cada run). Incremental: lê só as linhas do índice
 # depois do cursor guardado nos metadados da própria cópia; refaz tudo sozinho quando o leitor muda.
@@ -37,6 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
+      # A situação da listagem de eventos compara a data com o instante da leitura em hora LOCAL
+      # (eventos-listing.ts): fixar o fuso mantém o reprocessamento determinístico.
+      TZ: UTC
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       OBSERVACOES_R2_ACCESS_KEY_ID: ${{ secrets.OBSERVACOES_R2_ACCESS_KEY_ID }}

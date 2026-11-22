@@ -26,6 +26,11 @@ export interface Violacao {
   detalhe: string;
   /** Páginas do arquivo que mostram a violação (para abrir e conferir). */
   paginas: string[];
+  /**
+   * `violacao` derruba o job; `transitoria` (queda de uma leitura desfeita na seguinte: página
+   * defasada do portal) e `pendente` (queda de uma leitura ainda sem a seguinte) só são relatadas.
+   */
+  tipo: "violacao" | "transitoria" | "pendente";
 }
 
 /** Chave estável de uma violação (para a lista das conhecidas). */
@@ -69,7 +74,7 @@ export function verificarInvariantes(obs: readonly Observacao[]): Violacao[] {
         if (!prop?.valor) continue;
         const esperado = mais120Dias(prop.valor);
         if (p.valor !== esperado) {
-          out.push({ ...base, regra: "prazo120", detalhe: `proposta ${prop.valor} + 120 = ${esperado}, página diz ${p.valor}`, paginas: [p.shaPrimeiro] });
+          out.push({ ...base, regra: "prazo120", tipo: "violacao", detalhe: `proposta ${prop.valor} + 120 = ${esperado}, página diz ${p.valor}`, paginas: [p.shaPrimeiro] });
         }
       }
       // no máximo uma Sugestão ao longo do tempo
@@ -81,7 +86,7 @@ export function verificarInvariantes(obs: readonly Observacao[]): Violacao[] {
         if (!sugestoes.has(k)) sugestoes.set(k, o);
       }
       if (sugestoes.size > 1) {
-        out.push({ ...base, regra: "umaSugestao", detalhe: `Sugestões ${[...sugestoes.keys()].join(", ")}`, paginas: [...sugestoes.values()].map((o) => o.shaPrimeiro) });
+        out.push({ ...base, regra: "umaSugestao", tipo: "violacao", detalhe: `Sugestões ${[...sugestoes.keys()].join(", ")}`, paginas: [...sugestoes.values()].map((o) => o.shaPrimeiro) });
       }
     }
 
@@ -91,8 +96,15 @@ export function verificarInvariantes(obs: readonly Observacao[]): Violacao[] {
       const antes = Number(apoios[i - 1].valor);
       const depois = Number(apoios[i].valor);
       if (depois < antes) {
+        // Queda de UMA leitura: página defasada do portal se a leitura seguinte desfaz (transitória),
+        // ou ainda sem leitura seguinte (pendente). Medido em 22/11/2026: 10 de 10 quedas eram isto,
+        // conferidas nas páginas guardadas (a mesma ideia em duas páginas da mesma coleta, uma montada
+        // antes). Relatadas, sem alerta; a queda que persiste continua sendo violação.
+        const seguinte = apoios[i + 1];
+        const umaLeitura = apoios[i].leituras === 1;
+        const tipo: Violacao["tipo"] = umaLeitura && !seguinte ? "pendente" : umaLeitura && Number(seguinte.valor) >= antes ? "transitoria" : "violacao";
         out.push({
-          ...base, regra: "apoiosNaoDecrescem",
+          ...base, regra: "apoiosNaoDecrescem", tipo,
           detalhe: `${antes} (até ${apoios[i - 1].vistoUltimo.slice(0, 10)}) → ${depois} (${apoios[i].vistoPrimeiro.slice(0, 10)})`,
           paginas: [apoios[i - 1].shaUltimo, apoios[i].shaPrimeiro],
         });
@@ -110,10 +122,11 @@ export interface Conhecida {
 }
 
 /** Separa as violações em novas (derrubam o job) e conhecidas (só relatadas). */
-export function separarConhecidas(vs: readonly Violacao[], conhecidas: readonly Conhecida[]): { novas: Violacao[]; conhecidas: Violacao[] } {
+export function separarConhecidas(vs: readonly Violacao[], conhecidas: readonly Conhecida[]): { novas: Violacao[]; conhecidas: Violacao[]; semAlerta: Violacao[] } {
   const ks = new Set(conhecidas.map((c) => c.chave));
   const novas: Violacao[] = [];
   const velhas: Violacao[] = [];
-  for (const v of vs) (ks.has(chaveDaViolacao(v)) ? velhas : novas).push(v);
-  return { novas, conhecidas: velhas };
+  const semAlerta: Violacao[] = [];
+  for (const v of vs) (v.tipo !== "violacao" ? semAlerta : ks.has(chaveDaViolacao(v)) ? velhas : novas).push(v);
+  return { novas, conhecidas: velhas, semAlerta };
 }
