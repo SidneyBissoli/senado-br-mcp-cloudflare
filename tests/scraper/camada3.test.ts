@@ -7,6 +7,8 @@ import {
   proposicoesComOrdem, situacoesNoTempo, votosPorUfDaC3,
 } from "../../src/scraper/camada3.js";
 import { PROJETADAS } from "../../scripts/publicacao/projecao.js";
+import { juntarDetalhe, precisaDoDetalheAoVivo } from "../../src/tools/ecidadania.js";
+import type { IdeiaDetalhe } from "../../src/scraper/ideia-detalhe.js";
 import { bancoC3, d1De, GERADO_EM, linhasDeExemplo } from "./camada3-fixture.js";
 
 const AGORA = new Date("2026-11-22T18:00:00Z");
@@ -89,6 +91,31 @@ describe("camada 3 — séries e mapeamentos puros", () => {
       { codigo: 1, uf: "AC", sim: 9, nao: 0, desde: "b", ate: "b" },
     ]);
     expect(m.get(1)).toEqual({ AC: { sim: 9, nao: 0 }, SP: { sim: 2, nao: 2 } });
+  });
+});
+
+describe("camada 3 — detalhe ao vivo para a ideia que o arquivo ainda não leu", () => {
+  const daCopia = { titulo: "T", descricao: "do corpus", apoios: 5, linhaDoTempo: [], autorNome: null } as unknown as IdeiaDetalhe;
+  const aoVivo = { titulo: "T vivo", descricao: "da página", apoios: 9, linhaDoTempo: [{ ordem: 0 }], autorNome: "ANA" } as unknown as IdeiaDetalhe;
+  const linha = { titulo: "T", apoios: 5, origemResumo: "listagem", coletadoEmResumo: "r", origemDetalhe: "corpus", coletadoEmDetalhe: "c" };
+
+  it("só quando o detalhe não vem do arquivo", () => {
+    expect(precisaDoDetalheAoVivo({ origemDetalhe: "arquivo" })).toBe(false);
+    expect(precisaDoDetalheAoVivo({ origemDetalhe: "corpus" })).toBe(true);
+    expect(precisaDoDetalheAoVivo({ origemDetalhe: null })).toBe(true);
+  });
+
+  it("título e apoios da cópia; o resto da página; origem ao-vivo com o instante da leitura", () => {
+    const j = juntarDetalhe(daCopia, linha, aoVivo, "2026-11-22T20:00:00.000Z");
+    expect([j.detalhe.titulo, j.detalhe.apoios, j.detalhe.descricao, j.detalhe.autorNome]).toEqual(["T", 5, "da página", "ANA"]);
+    expect(j.detalhe.linhaDoTempo).toHaveLength(1);
+    expect(j.origens).toEqual({ origemResumo: "listagem", coletadoEmResumo: "r", origemDetalhe: "ao-vivo", coletadoEmDetalhe: "2026-11-22T20:00:00.000Z" });
+  });
+
+  it("sem leitura ao vivo (portal fora), fica a cópia", () => {
+    const j = juntarDetalhe(daCopia, linha, null, null);
+    expect(j.detalhe).toBe(daCopia);
+    expect(j.origens.origemDetalhe).toBe("corpus");
   });
 });
 
