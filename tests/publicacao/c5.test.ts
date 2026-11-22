@@ -4,7 +4,7 @@ import type { Fato, Fonte } from "../../scripts/observacoes/fatos.js";
 import { percentual } from "../../scripts/publicacao/comum.js";
 import { pontosDoCorpus, tabelasDasConsultas, type ConsultaDoCorpus } from "../../scripts/publicacao/consultas.js";
 import { tabelasDosEventos, type EventoDoCorpus } from "../../scripts/publicacao/eventos.js";
-import { tabelaDeVotosUf } from "../../scripts/publicacao/votos-uf.js";
+import { tabelasDoAcervo } from "../../scripts/publicacao/votos-uf.js";
 
 let n = 0;
 const dia = (d: number) => `2026-11-${String(d).padStart(2, "0")}T18:00:00.000Z`;
@@ -87,21 +87,24 @@ describe("D1 — eventos", () => {
 describe("D1 — votos por UF", () => {
   const csv = (d: number, sp: number) =>
     leitura("consultas_votos", "10", "csv", d, [
-      ...f({ materia: "SUG 1/2026", status: "Descontinuado" }),
+      ...f({ materia: "SUG 1/2026", status: "Descontinuado", ementa: "Propõe X", autoria: "Programa E-cidadania", referencePeriod: `2026-11-${String(d).padStart(2, "0")}` }),
       { campo: "votosUf", valor: JSON.stringify({ uf: "SP", sim: sp, nao: 0 }) },
       { campo: "votosUf", valor: JSON.stringify({ uf: "RJ", sim: 1, nao: 1 }) },
     ]);
 
   it("longo: matéria × UF × intervalo de versões; matéria fora do arquivo vem do corpus", () => {
     const obs = fundir([], [csv(1, 3), csv(8, 3), csv(15, 4)]);
-    const r = tabelaDeVotosUf(obs, [
-      { entityId: "10", scrapedAt: "2026-11-19T00:00:00.000Z", materia: "x", status: "y", votosPorUf: "{}" },
-      { entityId: "11", scrapedAt: "2026-11-19T00:00:00.000Z", materia: "PL 2/2020", status: "Encerrada", votosPorUf: JSON.stringify({ AC: { sim: 2, nao: 0 } }) },
+    const base = { scrapedAt: "2026-11-19T00:00:00.000Z", ementa: "E", autoria: "A", referencePeriod: "2026-11-19" };
+    const { materias, votosUf: r } = tabelasDoAcervo(obs, [
+      { ...base, entityId: "10", materia: "x", status: "y", votosPorUf: "{}" },
+      { ...base, entityId: "11", materia: "PL 2/2020", status: "Encerrada", votosPorUf: JSON.stringify({ AC: { sim: 2, nao: 0 } }) },
+    ]);
+    expect(materias.map((m) => [m.codigo, m.materia, m.ementa, m.referencePeriod, m.votosSim, m.votosNao, m.totalVotos, m.origem])).toEqual([
+      ["10", "SUG 1/2026", "Propõe X", "2026-11-15", 5, 1, 6, "csv"], ["11", "PL 2/2020", "E", "2026-11-19", 2, 0, 2, "corpus"],
     ]);
     expect(r.map((l) => [l.codigo, l.uf, l.sim, l.desde.slice(8, 10), l.ate.slice(8, 10), l.leituras, l.origem])).toEqual([
       ["10", "RJ", 1, "01", "15", 3, "csv"], ["10", "SP", 3, "01", "08", 2, "csv"], ["10", "SP", 4, "15", "15", 1, "csv"],
       ["11", "AC", 2, "19", "19", 1, "corpus"],
     ]);
-    expect(r[0].materia).toBe("SUG 1/2026");
   });
 });

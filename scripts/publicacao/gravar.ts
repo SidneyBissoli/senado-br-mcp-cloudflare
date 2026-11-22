@@ -14,7 +14,7 @@ import {
 } from "./corpus-atual.js";
 import { tabelasDosEventos, type LinhaComentario, type LinhaEvento, type LinhaItemDoEvento } from "./eventos.js";
 import { situacoesAtuais, tabelasDasIdeias, type LinhaAcontecimento, type LinhaIdeia, type LinhaProposicao, type LinhaSituacaoAtual } from "./ideias.js";
-import { tabelaDeVotosUf, type LinhaVotosUf } from "./votos-uf.js";
+import { tabelasDoAcervo, type LinhaMateriaDoAcervo, type LinhaVotosUf } from "./votos-uf.js";
 
 const t = <T>(nome: string, valor: (l: T) => string | null): ColunaDaTabela<T> => ({ nome, tipo: "texto", opcional: true, valor });
 const tt = <T>(nome: string, valor: (l: T) => string): ColunaDaTabela<T> => ({ nome, tipo: "texto", valor });
@@ -83,8 +83,15 @@ export const COLUNAS_COMENTARIOS: ColunaDaTabela<LinhaComentario>[] = [
   t("texto", (l) => l.texto), t("momentoVideoUrl", (l) => l.momentoVideoUrl), t("convidadoAssociado", (l) => l.convidadoAssociado), tt("origem", (l) => l.origem),
 ];
 
+export const COLUNAS_MATERIAS_DO_ACERVO: ColunaDaTabela<LinhaMateriaDoAcervo>[] = [
+  id("codigo", (l) => l.codigo), t("materia", (l) => l.materia), t("ementa", (l) => l.ementa), t("autoria", (l) => l.autoria),
+  t("status", (l) => l.status), t("referencePeriod", (l) => l.referencePeriod), i("votosSim", (l) => l.votosSim), i("votosNao", (l) => l.votosNao),
+  i("totalVotos", (l) => l.totalVotos), tt("url", (l) => l.url), tt("origem", (l) => l.origem),
+  { nome: "coletadoEm", tipo: "instante", valor: (l) => l.coletadoEm },
+];
+
 export const COLUNAS_VOTOS_UF: ColunaDaTabela<LinhaVotosUf>[] = [
-  id("codigo", (l) => l.codigo), t("materia", (l) => l.materia), t("status", (l) => l.status), tt("uf", (l) => l.uf), i("sim", (l) => l.sim), i("nao", (l) => l.nao),
+  id("codigo", (l) => l.codigo), tt("uf", (l) => l.uf), i("sim", (l) => l.sim), i("nao", (l) => l.nao),
   { nome: "desde", tipo: "instante", valor: (l) => l.desde }, { nome: "ate", tipo: "instante", valor: (l) => l.ate },
   { nome: "leituras", tipo: "inteiro", valor: (l) => l.leituras }, t("sha", (l) => l.sha), tt("origem", (l) => l.origem),
 ];
@@ -138,8 +145,11 @@ function montar(entidade: EntidadePublicada, obs: readonly Observacao[], kv: Rec
       resumo: `resumo: ${contar(r.eventos, (x) => x.origemResumo)}; detalhe: ${contar(r.eventos, (x) => x.origemDetalhe)}; comentários: ${contar(r.eventos, (x) => x.origemComentarios)}`,
     };
   }
-  const r = tabelaDeVotosUf(obs, lerVotosUfAtuais());
-  return { tabelas: [tabela("votos-uf", r, COLUNAS_VOTOS_UF, kv)], resumo: `origem: ${contar(r, (x) => x.origem)}` };
+  const r = tabelasDoAcervo(obs, lerVotosUfAtuais());
+  return {
+    tabelas: [tabela("materias", r.materias, COLUNAS_MATERIAS_DO_ACERVO, kv), tabela("votos-uf", r.votosUf, COLUNAS_VOTOS_UF, kv)],
+    resumo: `matérias: ${contar(r.materias, (x) => x.origem)}; votos por UF: ${contar(r.votosUf, (x) => x.origem)}`,
+  };
 }
 
 export async function gravarPublicacao(entidade: EntidadePublicada, o: { obs: readonly Observacao[]; leitor: string; cursor: number; balde: ClienteR2; saida?: string }): Promise<void> {

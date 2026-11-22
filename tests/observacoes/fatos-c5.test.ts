@@ -88,7 +88,10 @@ describe("C5 — fatos sobre as páginas reais", () => {
     const m = fatosDoCsv(texto);
     expect(m.size).toBeGreaterThan(0);
     const [id, fs] = [...m][0];
-    expect(fs.slice(0, 2).map((f) => f.campo)).toEqual(["materia", "status"]);
+    expect(fs.slice(0, 5).map((f) => f.campo)).toEqual(["materia", "status", "ementa", "autoria", "referencePeriod"]);
+    // O carimbo "Dados atualizados até" vira data ISO; ementa e autoria vêm preenchidas.
+    expect(fs[4].valor).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(fs[2].valor && fs[3].valor).toBeTruthy();
     const ufs = fs.filter((f) => f.campo === "votosUf");
     expect(ufs.length).toBeGreaterThan(0);
     const v1 = { indice: 1, instante: "2026-11-16T05:00:00.000Z", sha256: "a", entidade: "consultas_votos", entityId: id, fonte: "csv" as const, fatos: fs };

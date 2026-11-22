@@ -34,7 +34,7 @@ const CAMPOS: Record<Entidade, string[]> = {
     ex("titulo"), ex("data"), ex("hora"), ex("comissao"), ex("comissaoNomeCompleto"), ex("local"), ex("descricao"),
     ex("pauta"), ex("convidados"), ex("videoUrl"), ex("comentarios"), "status",
   ],
-  consultas_votos: [ex("materia"), "status", ex("votosPorUf")],
+  consultas_votos: [ex("materia"), ex("ementa"), ex("autoria"), "status", ex("referencePeriod"), ex("votosPorUf")],
 };
 
 export function sqlDoAtual(e: Entidade, depoisDe: number, pagina = PAGINA): string {
@@ -98,7 +98,8 @@ export function lerEventosAtuais(): EventoDoCorpus[] {
 
 export function lerVotosUfAtuais(): VotosUfDoCorpus[] {
   return lerAtual("consultas_votos").map((r) => ({
-    entityId: String(r.entity_id), scrapedAt: r.scraped_at, materia: s(r.materia), status: s(r.status), votosPorUf: j(r.votosPorUf),
+    entityId: String(r.entity_id), scrapedAt: r.scraped_at, materia: s(r.materia), ementa: s(r.ementa), autoria: s(r.autoria), status: s(r.status),
+    referencePeriod: s(r.referencePeriod), votosPorUf: j(r.votosPorUf),
   }));
 }
 

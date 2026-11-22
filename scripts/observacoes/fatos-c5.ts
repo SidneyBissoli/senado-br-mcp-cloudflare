@@ -127,13 +127,19 @@ export function fatosDosComentarios(html: string): Fato[] {
 }
 
 export function fatosDoCsv(texto: string): Map<string, Fato[]> {
-  const { rows } = parseVotosCsv(texto);
+  const { rows, referencePeriod } = parseVotosCsv(texto);
   const m = new Map<string, Fato[]>();
   for (const r of rows) {
     const k = String(r.codigoMateria);
     let f = m.get(k);
     if (!f) {
-      f = [{ campo: "materia", valor: txt(r.materia) }, { campo: "status", valor: txt(r.status) }];
+      // Ementa, autoria e o carimbo "dados atualizados até" também: o dataset 2.0.0 os publica, e sem
+      // eles a camada 3 perderia informação (achado da D1, 22/11/2026).
+      f = [
+        { campo: "materia", valor: txt(r.materia) }, { campo: "status", valor: txt(r.status) },
+        { campo: "ementa", valor: txt(r.ementa) }, { campo: "autoria", valor: txt(r.autoria) },
+        { campo: "referencePeriod", valor: txt(referencePeriod) },
+      ];
       m.set(k, f);
     }
     f.push({ campo: "votosUf", valor: JSON.stringify({ uf: r.uf, sim: r.votosSim, nao: r.votosNao }) });

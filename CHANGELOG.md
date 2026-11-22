@@ -32,8 +32,11 @@ All notable changes to this project are documented here. Format based on
   `publicacao/<entidade>/*.parquet` no balde privado (`scripts/publicacao/`): ideias (+ proposições,
   linha do tempo e situação atual do portal — a(s) vista(s) no dia da avistagem mais recente, com a
   data, marcada calculada; duas ao mesmo tempo = duas linhas), consultas (+ série de votos SIM/NÃO, arquivo e histórico do corpus), eventos (+
-  pauta, convidados e comentários, um por linha) e votos por UF em formato longo (matéria × UF ×
-  intervalo de versões do CSV). Decisões do dono de 22/11/2026: valor da camada 2 quando ela já o leu,
+  pauta, convidados e comentários, um por linha) e o acervo de votos por UF (matérias, com ementa,
+  autoria, carimbo e totais; e os votos em formato longo, matéria × UF × intervalo de versões do CSV).
+  Dicionário do esquema 3.0.0 em fonte única (`scripts/publicacao/dicionario.ts` →
+  `docs/dataset-dictionary-v3.md`, `npm run dataset:dictionary:v3`), amarrado por teste às colunas
+  gravadas. Decisões do dono de 22/11/2026: valor da camada 2 quando ela já o leu,
   senão o do corpus (540 consultas encerradas, a autoria antiga e as ideias removidas só existem nele);
   origem e `coletadoEm` por bloco de página (resumo, detalhe e, nos eventos, comentários); colunas
   calculadas mantidas e marcadas, com os percentuais em uma casa decimal e null sem votos (0/0 não é
@@ -51,6 +54,9 @@ All notable changes to this project are documented here. Format based on
   solto, e a fusão ordena os fatos pelo valor, então a ordem da página se perdia. O fato agora leva a
   posição (`{posicao, texto}`), o que muda a versão do leitor dos eventos e refaz a cópia deles
   inteira na rodada seguinte. Achado ao montar a D1.
+- **Observações do acervo de votos guardam ementa, autoria e o carimbo do CSV.** A C5 guardava só
+  matéria, situação e votos por UF; o dataset 2.0.0 publica os três, e a camada 3 os perderia. Muda a
+  versão do leitor do acervo (refeito na rodada seguinte; é uma linha do índice).
 - **Tabelas em Parquet: instante opcional aceita null.** A coluna de instante saía obrigatória mesmo
   marcada opcional; nenhuma tabela da C3 tinha instante nulo, mas o `firstSeenAt` de um registro sem
   histórico quebraria a gravação. Também ganhou o tipo decimal.
