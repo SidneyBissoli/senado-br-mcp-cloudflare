@@ -69,7 +69,8 @@
     "release:dataset": "tsx scripts/build-dataset/release.ts",
     "release:zenodo": "tsx scripts/build-dataset/zenodo-publish.ts",
     "manifest:lhm": "node scripts/gen-lhm-manifest.mjs",
-    "dataset:dictionary:v3": "tsx scripts/publicacao/gerar-dicionario.ts"
+    "dataset:dictionary:v3": "tsx scripts/publicacao/gerar-dicionario.ts",
+    "dataset:pacote": "tsx scripts/publicacao/empacotar.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",

@@ -36,7 +36,11 @@ All notable changes to this project are documented here. Format based on
   autoria, carimbo e totais; e os votos em formato longo, matéria × UF × intervalo de versões do CSV).
   Dicionário do esquema 3.0.0 em fonte única (`scripts/publicacao/dicionario.ts` →
   `docs/dataset-dictionary-v3.md`, `npm run dataset:dictionary:v3`), amarrado por teste às colunas
-  gravadas. Decisões do dono de 22/11/2026: valor da camada 2 quando ela já o leu,
+  gravadas. Empacotador da D2 (`npm run dataset:pacote`, `scripts/publicacao/empacotar.ts`): lê as 14
+  tabelas do balde (ou de uma pasta), grava cada uma em Parquet e em CSV (RFC 4180, UTF-8, null =
+  vazio) e escreve o `datapackage.json` Frictionless (recurso tabular por tabela, tipos, formatos,
+  chave primária, fonte e marca de calculada por coluna) e o `dicionario.md`. Ensaiado em dado real:
+  14 tabelas, ~1,6 milhão de linhas, validadas pelo `frictionless validate` 5.18.1. Decisões do dono de 22/11/2026: valor da camada 2 quando ela já o leu,
   senão o do corpus (540 consultas encerradas, a autoria antiga e as ideias removidas só existem nele);
   origem e `coletadoEm` por bloco de página (resumo, detalhe e, nos eventos, comentários); colunas
   calculadas mantidas e marcadas, com os percentuais em uma casa decimal e null sem votos (0/0 não é
