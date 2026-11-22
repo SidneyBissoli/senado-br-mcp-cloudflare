@@ -32,8 +32,16 @@ describe("C4 — invariantes das ideias", () => {
   });
 
   it("apoios que diminuem na mesma série violam; em séries diferentes (outra listagem) não se comparam", () => {
-    const cai = fundir([], [leitura("5", "listagem-s5", [apoios(10)]), leitura("5", "listagem-s5", [apoios(9)])]);
-    expect(verificarInvariantes(cai)).toMatchObject([{ regra: "apoiosNaoDecrescem", fonte: "listagem-s5", detalhe: expect.stringContaining("10") }]);
+    const l5 = (id: string, v: number) => leitura(id, "listagem-s5", [apoios(v)]);
+    // persiste (duas leituras em 9): violação
+    const cai = fundir([], [l5("5", 10), l5("5", 9), l5("5", 9)]);
+    expect(verificarInvariantes(cai)).toMatchObject([{ regra: "apoiosNaoDecrescem", tipo: "violacao", fonte: "listagem-s5", detalhe: expect.stringContaining("10") }]);
+    // uma leitura em 0 e volta (página defasada, medido 22/11): transitória
+    expect(verificarInvariantes(fundir([], [l5("9", 1), l5("9", 0), l5("9", 6)])).map((v) => v.tipo)).toEqual(["transitoria"]);
+    // uma leitura em 0 e nada depois: pendente
+    expect(verificarInvariantes(fundir([], [l5("10", 1), l5("10", 0)])).map((v) => v.tipo)).toEqual(["pendente"]);
+    // uma leitura em 0 e volta abaixo do anterior: violação
+    expect(verificarInvariantes(fundir([], [l5("11", 5), l5("11", 0), l5("11", 3)])).map((v) => v.tipo)).toEqual(["violacao"]);
     const duasListagens = fundir([], [leitura("6", "listagem-s5", [apoios(10)]), leitura("6", "listagem-s6", [apoios(9)])]);
     expect(verificarInvariantes(duasListagens)).toEqual([]);
     const sobe = fundir([], [leitura("7", "listagem-s5", [apoios(1)]), leitura("7", "listagem-s5", [apoios(1)]), leitura("7", "listagem-s5", [apoios(2)])]);
@@ -41,10 +49,13 @@ describe("C4 — invariantes das ideias", () => {
   });
 
   it("violação explicada em conhecidas sai das novas, mas continua relatada", () => {
-    const vs = verificarInvariantes(fundir([], [leitura("8", "listagem-s5", [apoios(3)]), leitura("8", "listagem-s5", [apoios(1)])]));
+    const l8 = (v: number) => leitura("8", "listagem-s5", [apoios(v)]);
+    const vs = verificarInvariantes(fundir([], [l8(3), l8(1), l8(1)]));
     const r = separarConhecidas(vs, [{ chave: chaveDaViolacao(vs[0]), motivo: "teste", conferidaEm: "2026-11-22" }]);
     expect(r.novas).toEqual([]);
     expect(r.conhecidas).toHaveLength(1);
+    const t = separarConhecidas(verificarInvariantes(fundir([], [leitura("12", "listagem-s5", [apoios(1)]), leitura("12", "listagem-s5", [apoios(0)])])), []);
+    expect([t.novas.length, t.semAlerta.length]).toEqual([0, 1]);
     expect(chaveDaViolacao(vs[0])).toBe("apoiosNaoDecrescem:ideias:8:listagem-s5");
   });
 });

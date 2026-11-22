@@ -32,8 +32,11 @@ import { parseIdeiaListingPage } from "../ingest-ecidadania/ideias-listing.js";
 /** Tipo da página pelo caminho da URL. */
 export type TipoDePagina = "listagem" | "detalhe";
 
-/** Fonte de uma série: o detalhe, ou a listagem de UMA situação do portal (`listagem-s5`). */
-export type Fonte = "detalhe" | "listagem" | `listagem-s${string}`;
+/**
+ * Fonte de uma série: o detalhe, ou a listagem de UMA situação do portal (`listagem-s5`); na C5
+ * também o fragmento de comentários dos eventos e o CSV do acervo de votos (`fatos-c5.ts`).
+ */
+export type Fonte = "detalhe" | "listagem" | `listagem-s${string}` | "comentarios" | "csv";
 
 /** Fonte da série de uma listagem: `listagem-sN`, ou `listagem` se a URL não diz a situação. */
 export function fonteDaListagem(url: string): Fonte {
