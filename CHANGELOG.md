@@ -44,6 +44,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Changed
 
+- **`obter_ideia` lê ao vivo o detalhe que o arquivo ainda não leu (3.26.1, decisão do dono de
+  22/11/2026).** Na 3.26.0, as ~78 mil ideias com detalhe do corpus saíam sem linha do tempo, autor e
+  data da proposta — menos do que a ferramenta dava antes. Agora, para elas, o detalhe vem da página
+  (`origemDetalhe: "ao-vivo"`, `coletadoEmDetalhe` = a leitura), e título, apoios e séries seguem da
+  cópia. Portal fora ou ideia removida: fica o detalhe do corpus, com `avisoDetalhe`. Vale até o
+  arquivo ler a ideia (B3, ~31/12/2026), sem mudança de código.
 - **e-Cidadania: `obter_ideia`, `obter_consulta` e `obter_evento` deixam de raspar o portal a cada
   chamada no servidor hospedado** — leem a cópia diária (os destaques que o portal atualiza ao longo do
   dia podem aparecer com até 1 dia de atraso, dito em `avisoCamada3`). A leitura ao vivo fica para o

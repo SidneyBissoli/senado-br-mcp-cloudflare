@@ -312,6 +312,31 @@ export function seriesDaIdeia(apoios: Parameters<typeof pontosDeApoios>[0], situ
   };
 }
 
+/**
+ * Ideia da camada 3 cujo detalhe o arquivo ainda não leu: o corpus não guarda linha do tempo, autor nem
+ * data da proposta, então o `obter_ideia` lê a página ao vivo (decisão do dono de 22/11/2026, depois da
+ * D3: evita a regressão contra o que a ferramenta dava antes). Vale até a B3 chegar à ideia.
+ */
+export const precisaDoDetalheAoVivo = (l: OrigensDoBloco): boolean => l.origemDetalhe !== "arquivo";
+
+/**
+ * Junta o detalhe lido ao vivo com a cópia: título e apoios ficam os da cópia (bloco resumo, com o
+ * instante dele); o resto vem da página. Sem leitura ao vivo, fica o detalhe da cópia.
+ */
+export function juntarDetalhe(
+  daCopia: IdeiaDetalhe,
+  linha: OrigensDoBloco & { titulo: string | null; apoios: number | null },
+  aoVivo: IdeiaDetalhe | null,
+  fetchedAt: string | null,
+): { detalhe: IdeiaDetalhe; origens: OrigensDoBloco } {
+  const origens = origensDa(linha);
+  if (!aoVivo) return { detalhe: daCopia, origens };
+  return {
+    detalhe: { ...aoVivo, titulo: linha.titulo ?? aoVivo.titulo, apoios: linha.apoios ?? aoVivo.apoios },
+    origens: { ...origens, origemDetalhe: "ao-vivo", coletadoEmDetalhe: fetchedAt },
+  };
+}
+
 /** Série de votos do `obter_consulta`: pares SIM/NÃO nos pontos de mudança, com teto e aviso. */
 export function serieDaConsulta(linhas: Parameters<typeof pontosDeVotos>[0]) {
   const v = cortar(pontosDeVotos(linhas), TETO_SERIE, "votos", "consultas/serie-votos");
@@ -567,7 +592,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
   // G6. senado_ecidadania_obter_ideia
   server.tool(
     "senado_ecidadania_obter_ideia",
-    "Obtém o detalhe de uma ideia legislativa do e-Cidadania, lido da cópia diária do dataset do projeto (páginas do portal guardadas e lidas; a ideia que ainda não entrou nela é lida ao vivo da página). Retorna `id`, `titulo`, `descricao`, `apoios`, `status`, `origemStatus`, `autor` (\"NOME (UF)\", o nome abreviado como o portal publica), `url`, `plConvertido` (a Sugestão gerada, \"SUG n/ano\"), `dataEncerramento` (fim do período de apoio, quando encerrado) e os campos da linha do tempo do portal: `dataProposta` (data em que a ideia foi proposta, publicada pela fonte), `prazoApoios` (data limite para os 20.000 apoios), `dataMeta`/`meta` (quando alcançou a meta), `sugestao` (número, ano, data e link da Sugestão), `decisaoCdh` (a CDH transformou ou não a Sugestão), `encerramento` (apoios recebidos e fim do período), `oficina` (ideia de Oficina Legislativa), `proposicoes` (cada proposição em que a ideia virou — pela CDH ou adotada por senador/deputado —, com sigla, número, ano, parlamentar e link), `linhaDoTempo` (os acontecimentos como publicados, mais recente primeiro) e `avisos` (acontecimento que o servidor não reconheceu, copiado sem interpretação). **Situação:** `status` é a categoria do portal guardada no corpus (`aberta`/`encerrada`/`convertida`/`removida`, as mesmas de `senado_ecidadania_listar_ideias`); se a ideia ainda não está no corpus, o servidor a classifica pela linha do tempo e `origemStatus` diz isso. **Datas:** use `dataProposta`; `dataPublicacao` é a data limite (nome histórico, igual a `prazoApoios`) e `dataCriacaoEstimada` é estimativa mantida por compatibilidade. `comentarios`, `problema` e `solucao` vêm `null`: a página não os publica. **No tempo:** `serieApoios` (apoios a cada mudança: `apoios`, `desde`, `ate`, `origem`) e `situacaoNoTempo` (`portal`: a situação em que a ideia foi vista na listagem, com o intervalo; `corpus`: o status a cada mudança, desde 14/06/2026), até 60 pontos cada, os mais recentes — `avisoSeries` diz quando houve corte. **Origem:** `origemResumo`/`coletadoEmResumo` (título e apoios) e `origemDetalhe`/`coletadoEmDetalhe` (o resto) dizem de onde e de quando veio cada bloco (`listagem`/`detalhe`/`arquivo` = página guardada; `corpus` = banco do projeto, quando o arquivo ainda não leu a página — aí linha do tempo, autor e data da proposta podem faltar). Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
+    "Obtém o detalhe de uma ideia legislativa do e-Cidadania, lido da cópia diária do dataset do projeto (páginas do portal guardadas e lidas; a ideia que ainda não entrou nela é lida ao vivo da página). Retorna `id`, `titulo`, `descricao`, `apoios`, `status`, `origemStatus`, `autor` (\"NOME (UF)\", o nome abreviado como o portal publica), `url`, `plConvertido` (a Sugestão gerada, \"SUG n/ano\"), `dataEncerramento` (fim do período de apoio, quando encerrado) e os campos da linha do tempo do portal: `dataProposta` (data em que a ideia foi proposta, publicada pela fonte), `prazoApoios` (data limite para os 20.000 apoios), `dataMeta`/`meta` (quando alcançou a meta), `sugestao` (número, ano, data e link da Sugestão), `decisaoCdh` (a CDH transformou ou não a Sugestão), `encerramento` (apoios recebidos e fim do período), `oficina` (ideia de Oficina Legislativa), `proposicoes` (cada proposição em que a ideia virou — pela CDH ou adotada por senador/deputado —, com sigla, número, ano, parlamentar e link), `linhaDoTempo` (os acontecimentos como publicados, mais recente primeiro) e `avisos` (acontecimento que o servidor não reconheceu, copiado sem interpretação). **Situação:** `status` é a categoria do portal guardada no corpus (`aberta`/`encerrada`/`convertida`/`removida`, as mesmas de `senado_ecidadania_listar_ideias`); se a ideia ainda não está no corpus, o servidor a classifica pela linha do tempo e `origemStatus` diz isso. **Datas:** use `dataProposta`; `dataPublicacao` é a data limite (nome histórico, igual a `prazoApoios`) e `dataCriacaoEstimada` é estimativa mantida por compatibilidade. `comentarios`, `problema` e `solucao` vêm `null`: a página não os publica. **No tempo:** `serieApoios` (apoios a cada mudança: `apoios`, `desde`, `ate`, `origem`) e `situacaoNoTempo` (`portal`: a situação em que a ideia foi vista na listagem, com o intervalo; `corpus`: o status a cada mudança, desde 14/06/2026), até 60 pontos cada, os mais recentes — `avisoSeries` diz quando houve corte. **Origem:** `origemResumo`/`coletadoEmResumo` (título e apoios) e `origemDetalhe`/`coletadoEmDetalhe` (o resto) dizem de onde e de quando veio cada bloco (`listagem`/`detalhe`/`arquivo` = página guardada; `ao-vivo` = o arquivo ainda não leu a página da ideia, então o detalhe é lido na hora; `corpus` = idem, mas a leitura na hora falhou — aí linha do tempo, autor e data da proposta faltam, e `avisoDetalhe` diz por quê). Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
     { id: z.number().int().positive().describe("ID da ideia legislativa") },
     async (params) => {
       try {
@@ -575,16 +600,34 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
         // séries de apoios e de situação. Fora da camada 3 (ideia nova, cópia ausente): a leitura ao vivo.
         const c3 = await ideiaInteiraDaC3(db, params.id, corpusStaleMaxMin());
         if (c3) {
-          const base = montarDetalheDaIdeia(params.id, c3.detalhe, c3.linha.status);
+          // Detalhe que o arquivo ainda não leu (vem do corpus, sem linha do tempo/autor/data da
+          // proposta): lido ao vivo, como antes da D3, até o arquivo chegar à ideia. A cópia segue
+          // dando título, apoios e séries. Portal fora (ou ideia removida): fica o detalhe do corpus.
+          let lida: IdeiaDetalhe | null = null;
+          let fetchedAt: string | null = null;
+          let avisoDetalhe: string | null = null;
+          if (precisaDoDetalheAoVivo(c3.linha)) {
+            try {
+              const r = await cachedFetchWithMeta("ecidadania_ideia_v2", { id: params.id }, CACHE_ON_DEMAND, () => obterIdeiaInternal(params.id));
+              lida = r.value;
+              fetchedAt = r.fetchedAt;
+            } catch (e) {
+              avisoDetalhe = `a leitura ao vivo do detalhe falhou (${e instanceof Error ? e.message.slice(0, 160) : String(e)}); o detalhe vem do corpus, sem linha do tempo, autor e data da proposta.`;
+            }
+          }
+          const j = juntarDetalhe(c3.detalhe, c3.linha, lida, fetchedAt);
+          const base = montarDetalheDaIdeia(params.id, j.detalhe, c3.linha.status);
+          if (lida) writeDetalheThrough(db, ctx, "ideias", params.id, base);
           const detalhe = {
             ...base,
             url: c3.linha.url,
-            ...origensDa(c3.linha),
+            ...j.origens,
             ...seriesDaIdeia(c3.serieApoios, c3.situacoes),
+            ...(avisoDetalhe ? { avisoDetalhe } : {}),
             avisoCamada3: AVISO_CAMADA3,
           };
           const resumo = ["titulo", "apoios"];
-          const prov = provenanceDoItemC3(c3.linha.url, `ideia=${params.id}`, c3.linha, {
+          const prov = provenanceDoItemC3(c3.linha.url, `ideia=${params.id}`, j.origens, {
             Resumo: resumo,
             Detalhe: Object.keys(base).filter((k) => !resumo.includes(k) && k !== "status" && k !== "origemStatus"),
           }, c3.meta.lastScrapedAt);
