@@ -6,6 +6,25 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+### Added
+
+- **Observações do e-Cidadania, camada 2 (fase C do ROADMAP, C1 + C2 das ideias), sem mudança de
+  superfície.** Reprocessador `scripts/observacoes/` (job diário `observacoes-ecidadania.yml`, runner
+  comum): lê o arquivo bruto (só leitura), extrai os fatos de cada página — listagem: situação, título,
+  apoios; detalhe: status HTTP, os campos de `lerIdeiaDetalhe`, um fato por acontecimento da linha do
+  tempo e por proposição — e funde as leituras seguidas iguais em uma linha por valor (visto
+  primeiro/último, número de leituras, primeira e última página). Formato longo, em Parquet
+  (`hyparquet-writer` + `hyparquet`, instantes em UTC), uma cópia no balde privado novo
+  `ecidadania-observacoes`, com o cursor e a versão do leitor nos metadados do próprio arquivo:
+  incremental igual ao completo (teste), e refaz tudo sozinho quando o leitor muda.
+
+### Fixed
+
+- **Linha do tempo da ideia: o item do topo não some mais se vier colado no `<ol>`.** O leitor
+  (`lerIdeiaDetalhe`) descartava o primeiro pedaço do corte supondo que fosse espaço; com o `<li>` sem
+  nada antes, o acontecimento mais recente sumia calado. Nas páginas servidas até 21/11/2026 sempre há
+  o espaço (nenhuma perda medida); achado ao montar a fase C.
+
 ### Changed
 
 - **Arquivo bruto ligado em consultas, eventos e no CSV de votos por UF (B4, 15/11/2026), sem mudança

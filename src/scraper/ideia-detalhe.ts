@@ -363,7 +363,9 @@ export function lerIdeiaDetalhe(html: string): IdeiaDetalhe {
 
   const linha = /<ol class="timeline">([\s\S]*?)<\/ol>\s*<\/section>/.exec(html);
   if (!linha) throw new IdeiaDetalheForaDoMoldeError("sem a Linha do Tempo (<ol class=\"timeline\">)");
-  const itens = linha[1].split(/(?=<li class="timeline-item)/).slice(1);
+  // Fica com os pedaços que SÃO itens. `.slice(1)` supunha texto antes do 1º <li>: com o <li> colado
+  // no <ol>, o acontecimento mais recente sumia calado (achado em 21/11/2026, fase C).
+  const itens = linha[1].split(/(?=<li class="timeline-item)/).filter((p) => p.startsWith('<li class="timeline-item'));
   if (itens.length === 0) throw new IdeiaDetalheForaDoMoldeError("Linha do Tempo vazia");
 
   const ideia: IdeiaDetalhe = {

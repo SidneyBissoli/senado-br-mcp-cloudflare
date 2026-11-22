@@ -79,6 +79,12 @@ describe("lerIdeiaDetalhe — vocabulário fechado sobre as capturas reais", () 
     expect(d.linhaDoTempo.map((e) => e.ativo)).toEqual([true, false, false, false, false, false, false, false]);
     expect(d.linhaDoTempo.map((e) => e.ordem)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
   });
+
+  it("<li> colado no <ol> (sem espaço antes): o item do topo não some (achado de 21/11/2026)", () => {
+    const colada = trocar(aberta, /<ol class="timeline">\s*/, '<ol class="timeline">');
+    expect(tipos(colada)).toEqual(tipos(aberta));
+    expect(tipos(aberta)).toHaveLength(2);
+  });
 });
 
 describe("lerIdeiaDetalhe — um caminho por fixture", () => {
