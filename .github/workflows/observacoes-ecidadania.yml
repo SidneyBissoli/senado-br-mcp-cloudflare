@@ -1,0 +1,56 @@
+name: Observações e-Cidadania (fase C)
+
+# Reprocessador da fase C do ROADMAP (C2 + C1 das ideias): arquivo bruto (fase B, balde privado
+# `ecidadania-arquivos`, SÓ leitura) → observações em Parquet (camada 2, balde privado
+# `ecidadania-observacoes`, uma cópia substituída a cada run). Incremental: lê só as linhas do índice
+# depois do cursor guardado nos metadados da própria cópia; refaz tudo sozinho quando o leitor muda.
+# Desenho e decisões do dono: ROADMAP, "Desenho da fase C" (21/11/2026).
+#
+# Runner COMUM do GitHub, de propósito: não acessa o portal do Senado (só R2 e D1, da Cloudflare),
+# então não disputa o runner `ecidadania` nem entra no grupo de concorrência das coletas.
+# Horário: depois da última coleta das ideias do dia (11:00 UTC); atraso só empurra para o dia seguinte.
+#
+# Segredos: OBSERVACOES_R2_ACCESS_KEY_ID/SECRET = token R2 com leitura do `ecidadania-arquivos` e
+# leitura e gravação do `ecidadania-observacoes` (criado pelo dono no painel da Cloudflare);
+# CLOUDFLARE_API_TOKEN = o mesmo das coletas (lê o índice no D1).
+# Segurança (repo PÚBLICO): só schedule e workflow_dispatch — nunca pull_request.
+
+on:
+  schedule:
+    - cron: "30 14 * * *" # diário 14:30 UTC (11:30 America/Sao_Paulo)
+  workflow_dispatch:
+    inputs:
+      completo:
+        description: "Ignorar a cópia anterior e refazer tudo do arquivo"
+        type: boolean
+        default: false
+
+concurrency:
+  group: observacoes-ecidadania
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  observacoes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      OBSERVACOES_R2_ACCESS_KEY_ID: ${{ secrets.OBSERVACOES_R2_ACCESS_KEY_ID }}
+      OBSERVACOES_R2_SECRET_ACCESS_KEY: ${{ secrets.OBSERVACOES_R2_SECRET_ACCESS_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          # 24 (≥ 24.6): as páginas desde 15/11/2026 estão em zstd com dicionário.
+          node-version: "24"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Reprocessar (arquivo → observações)
+        run: npx tsx scripts/observacoes/index.ts ${{ inputs.completo && '--completo' || '' }}
