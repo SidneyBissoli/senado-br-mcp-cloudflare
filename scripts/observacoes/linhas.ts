@@ -3,12 +3,14 @@
  * de uma linha dele. Separadas para os testes importarem sem rodar o script.
  */
 
-import { fatosDaListagem, fatosDoDetalhe, fonteDaUrl, type Fato } from "./fatos.js";
+import { fatosDaListagem, fatosDoDetalhe, fonteDaListagem, fonteDaUrl, type Fato } from "./fatos.js";
 import type { Leitura } from "./fundir.js";
 
 export const BALDE_OBSERVACOES = "ecidadania-observacoes";
 export const ENTIDADE = "ideias";
 export const CHAVE_DA_COPIA = `${ENTIDADE}/observacoes.parquet`;
+/** Relatório da C4 (invariantes), regravado a cada run. */
+export const CHAVE_DOS_INVARIANTES = `${ENTIDADE}/invariantes.json`;
 export const LOTE = 2000;
 
 export interface LinhaDoIndice {
@@ -47,13 +49,14 @@ export interface Contagem {
  * ilegível no balde (aí o run para: pular deixaria um buraco que o cursor esconderia).
  */
 export function leiturasDaLinha(l: LinhaDoIndice, html: string, c: Contagem): Leitura[] {
-  const fonte = fonteDaUrl(l.url)!;
-  const base = { indice: l.id, instante: l.instante, sha256: l.sha256, entidade: ENTIDADE, fonte };
-  if (fonte === "detalhe") {
+  const base = { indice: l.id, instante: l.instante, sha256: l.sha256, entidade: ENTIDADE };
+  if (fonteDaUrl(l.url) === "detalhe") {
     const fatos = fatosDoDetalhe(l.status_http, html);
     if (fatos.some((f) => f.campo === "erroLeitura")) c.erroLeitura++;
-    return l.entity_id ? [{ ...base, entityId: l.entity_id, fatos }] : [];
+    return l.entity_id ? [{ ...base, fonte: "detalhe", entityId: l.entity_id, fatos }] : [];
   }
+  // A listagem de cada situação é uma série própria (ver `fatos.ts`).
+  const fonte = fonteDaListagem(l.url);
   let porId: Map<string, Fato[]>;
   try {
     porId = fatosDaListagem(l.url, html);
@@ -62,6 +65,6 @@ export function leiturasDaLinha(l: LinhaDoIndice, html: string, c: Contagem): Le
     console.warn(`[observacoes] listagem fora do molde (índice ${l.id}, ${l.url}): ${e instanceof Error ? e.message : String(e)}`);
     return [];
   }
-  return [...porId].map(([entityId, fatos]) => ({ ...base, entityId, fatos }));
+  return [...porId].map(([entityId, fatos]) => ({ ...base, fonte, entityId, fatos }));
 }
 
