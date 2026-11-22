@@ -13,7 +13,7 @@
  * Opções: `--completo` (ignora a cópia), `--limite N` (para depois de N linhas do índice — amostra),
  * `--local` (clientes pelo `wrangler r2 object`, login do dono), `--saida <arquivo>` (grava a cópia
  * no disco em vez do balde), `--paralelo N` (páginas abertas ao mesmo tempo; padrão 16), `--desde N`
- * (amostra a partir da linha N do índice, sem cópia anterior; exige `--saida`), `--sem-series` (pula a C3).
+ * (amostra a partir da linha N do índice, sem cópia anterior; exige `--saida`), `--sem-series` (pula a C3), `--sem-publicacao` (pula a D1).
  * Ambiente do job: CLOUDFLARE_ACCOUNT_ID, OBSERVACOES_R2_ACCESS_KEY_ID, OBSERVACOES_R2_SECRET_ACCESS_KEY
  * (token que LÊ o `ecidadania-arquivos` e grava o `ecidadania-observacoes`), CLOUDFLARE_API_TOKEN (D1).
  */
@@ -28,6 +28,7 @@ import { fonteDaUrl, statusObservavel, versaoDoLeitor } from "./fatos.js";
 import { fundir, ForaDeOrdemError, type Leitura, type Observacao } from "./fundir.js";
 import { BALDE_OBSERVACOES, CHAVE_DA_COPIA, CHAVE_DOS_INVARIANTES, ENTIDADE, LOTE, leiturasDaLinha, sqlDoLote, type Contagem, type LinhaDoIndice } from "./linhas.js";
 import { gravarSeries } from "./series-run.js";
+import { gravarPublicacao } from "../publicacao/gravar.js";
 import { ENTIDADES_C5, decodificarC5, fonteC5, leiturasC5, sqlDoLoteC5, statusObservavelC5, versaoDoLeitorC5, type ContagemC5 } from "./fatos-c5.js";
 import { separarConhecidas, verificarInvariantes, type Conhecida, type Violacao } from "./invariantes.js";
 import { AbridorDePaginas, emParalelo } from "./paginas.js";
@@ -168,8 +169,9 @@ async function main(): Promise<void> {
   for (const entidade of ENTIDADES_C5) {
     if (!entidades.includes(entidade)) continue;
     const c: ContagemC5 = { foraDoMolde: 0 };
-    await reprocessar({
-      entidade, chave: `${entidade}/observacoes.parquet`, leitor: versaoDoLeitorC5(entidade),
+    const leitorC5 = versaoDoLeitorC5(entidade);
+    const r = await reprocessar({
+      entidade, chave: `${entidade}/observacoes.parquet`, leitor: leitorC5,
       sql: (cursor, lote) => sqlDoLoteC5(entidade, cursor, lote),
       fonte: (l) => {
         const f = fonteC5(entidade, l.url);
@@ -178,6 +180,8 @@ async function main(): Promise<void> {
       leituras: (l, bytes) => leiturasC5(entidade, l, decodificarC5(fonteC5(entidade, l.url)!, bytes), c),
     }, o, abridor, observacoes);
     console.log(`[observacoes][${entidade}] ${c.foraDoMolde} página(s) que o leitor recusou`);
+    // D1 — tabelas publicadas da entidade (camada 3), depois da cópia gravada.
+    if (!process.argv.includes("--sem-publicacao")) await gravarPublicacao(entidade, { obs: r.obs, leitor: leitorC5, cursor: r.cursor, balde: observacoes, saida });
   }
   if (falhouInvariante) process.exitCode = 1;
 }
@@ -199,6 +203,8 @@ async function invariantesESeries(obs: Observacao[], cursor: number, leitor: str
   }
   // C3 — séries de apoios e de situação (arquivo + corpus), refeitas inteiras.
   if (!process.argv.includes("--sem-series")) await gravarSeries({ obs, leitor, cursor, balde: observacoes, saida });
+  // D1 — tabelas publicadas das ideias (camada 3): arquivo primeiro, corpus de reserva.
+  if (!process.argv.includes("--sem-publicacao")) await gravarPublicacao("ideias", { obs, leitor, cursor, balde: observacoes, saida });
 
   if (novas.length > 0) console.error(`[observacoes][invariantes] violação nova: conferir na fonte e explicar em invariantes-conhecidas.json (chave, motivo, conferidaEm)`);
   return novas.length > 0;

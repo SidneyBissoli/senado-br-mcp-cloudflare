@@ -63,6 +63,14 @@ describe("C5 — fatos sobre as páginas reais", () => {
     const d = fatosDoDetalheDeEvento(fx("evento-detalhe.html"));
     expect(d[0]).toEqual({ campo: "statusHttp", valor: "200" });
     expect(campos(d)).toEqual(expect.arrayContaining(["titulo", "data", "status"]));
+    // Pauta e convidados levam a posição na página (a fusão ordena por valor e perderia a ordem).
+    // A fixture real traz 5 convidados e pauta vazia.
+    for (const [campo, n] of [["pauta", 0], ["convidado", 5]] as const) {
+      const itens = d.filter((f) => f.campo === campo).map((f) => JSON.parse(f.valor!) as { posicao: number; texto: string });
+      expect(itens).toHaveLength(n);
+      expect(itens.map((i) => i.posicao)).toEqual(itens.map((_, k) => k));
+      expect(itens.every((i) => typeof i.texto === "string" && i.texto.length > 0)).toBe(true);
+    }
     const cs = fatosDosComentarios(fx("comentarios-audiencia.html"));
     const n = Number(cs[0].valor);
     expect(cs[0].campo).toBe("comentarios");
@@ -80,7 +88,10 @@ describe("C5 — fatos sobre as páginas reais", () => {
     const m = fatosDoCsv(texto);
     expect(m.size).toBeGreaterThan(0);
     const [id, fs] = [...m][0];
-    expect(fs.slice(0, 2).map((f) => f.campo)).toEqual(["materia", "status"]);
+    expect(fs.slice(0, 5).map((f) => f.campo)).toEqual(["materia", "status", "ementa", "autoria", "referencePeriod"]);
+    // O carimbo "Dados atualizados até" vira data ISO; ementa e autoria vêm preenchidas.
+    expect(fs[4].valor).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(fs[2].valor && fs[3].valor).toBeTruthy();
     const ufs = fs.filter((f) => f.campo === "votosUf");
     expect(ufs.length).toBeGreaterThan(0);
     const v1 = { indice: 1, instante: "2026-11-16T05:00:00.000Z", sha256: "a", entidade: "consultas_votos", entityId: id, fonte: "csv" as const, fatos: fs };

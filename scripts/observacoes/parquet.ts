@@ -93,19 +93,26 @@ export async function lerCopia(bytes: Uint8Array): Promise<{ meta: MetadadosDaCo
   return { meta: { cursor, leitor, entidade: kv.get("entidade") ?? "", geradoEm: kv.get("geradoEm") ?? "" }, obs };
 }
 
-/** Coluna de uma tabela derivada (C3): texto, instante UTC ou inteiro; `opcional` aceita null. */
+/**
+ * Coluna de uma tabela derivada (C3, D1): texto, instante UTC, inteiro (INT32) ou decimal (DOUBLE);
+ * `opcional` aceita null — em TODOS os tipos (até 22/11/2026 o instante saía obrigatório mesmo opcional).
+ */
 export interface ColunaDaTabela<T> {
   nome: string;
-  tipo: "texto" | "instante" | "inteiro";
+  tipo: "texto" | "instante" | "inteiro" | "decimal";
   opcional?: boolean;
   valor: (linha: T) => string | number | null;
 }
 
 /** Grava uma tabela derivada em Parquet com o mesmo cuidado da cópia (esquema explícito, UTC). */
 export function escreverTabela<T>(linhas: readonly T[], colunas: readonly ColunaDaTabela<T>[], kv: Record<string, string>): Uint8Array {
-  const schema = colunas.map((c) =>
-    c.tipo === "instante" ? instante(c.nome) : c.tipo === "inteiro" ? { ...inteiro(c.nome), repetition_type: c.opcional ? ("OPTIONAL" as const) : ("REQUIRED" as const) } : texto(c.nome, c.opcional),
-  );
+  const schema = colunas.map((c) => {
+    const repetition_type = c.opcional ? ("OPTIONAL" as const) : ("REQUIRED" as const);
+    if (c.tipo === "instante") return { ...instante(c.nome), repetition_type };
+    if (c.tipo === "inteiro") return { ...inteiro(c.nome), repetition_type };
+    if (c.tipo === "decimal") return { name: c.nome, type: "DOUBLE" as const, repetition_type };
+    return texto(c.nome, c.opcional);
+  });
   const buf = parquetWriteBuffer({
     schema: [{ name: "root", num_children: schema.length }, ...schema],
     columnData: colunas.map((c) => ({

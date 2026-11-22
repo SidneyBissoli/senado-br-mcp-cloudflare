@@ -108,8 +108,10 @@ export function fatosDoDetalheDeEvento(html: string): Fato[] {
     { campo: "data", valor: txt(d.data) }, { campo: "hora", valor: txt(d.hora) },
     { campo: "comissao", valor: txt(d.comissao) }, { campo: "comissaoNomeCompleto", valor: txt(d.comissaoNomeCompleto) },
     { campo: "local", valor: txt(d.local) }, { campo: "status", valor: txt(d.status) }, { campo: "videoUrl", valor: txt(d.videoUrl) },
-    ...d.pauta.map((p) => ({ campo: "pauta", valor: p })),
-    ...d.convidados.map((c) => ({ campo: "convidado", valor: c })),
+    // Posição na página (0 = o primeiro) dentro do valor: a fusão ordena os fatos por valor, e sem ela
+    // a ordem da pauta e dos convidados se perderia (achado da D1, 22/11/2026).
+    ...d.pauta.map((p, posicao) => ({ campo: "pauta", valor: JSON.stringify({ posicao, texto: p }) })),
+    ...d.convidados.map((c, posicao) => ({ campo: "convidado", valor: JSON.stringify({ posicao, texto: c }) })),
   ];
 }
 
@@ -125,13 +127,19 @@ export function fatosDosComentarios(html: string): Fato[] {
 }
 
 export function fatosDoCsv(texto: string): Map<string, Fato[]> {
-  const { rows } = parseVotosCsv(texto);
+  const { rows, referencePeriod } = parseVotosCsv(texto);
   const m = new Map<string, Fato[]>();
   for (const r of rows) {
     const k = String(r.codigoMateria);
     let f = m.get(k);
     if (!f) {
-      f = [{ campo: "materia", valor: txt(r.materia) }, { campo: "status", valor: txt(r.status) }];
+      // Ementa, autoria e o carimbo "dados atualizados até" também: o dataset 2.0.0 os publica, e sem
+      // eles a camada 3 perderia informação (achado da D1, 22/11/2026).
+      f = [
+        { campo: "materia", valor: txt(r.materia) }, { campo: "status", valor: txt(r.status) },
+        { campo: "ementa", valor: txt(r.ementa) }, { campo: "autoria", valor: txt(r.autoria) },
+        { campo: "referencePeriod", valor: txt(referencePeriod) },
+      ];
       m.set(k, f);
     }
     f.push({ campo: "votosUf", valor: JSON.stringify({ uf: r.uf, sim: r.votosSim, nao: r.votosNao }) });

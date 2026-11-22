@@ -27,6 +27,26 @@ All notable changes to this project are documented here. Format based on
   A3) lado a lado, com a origem de cada linha. C5: cópias próprias de consultas (votos SIM/NÃO),
   eventos (listagem, detalhe com pauta e convidados, comentários um a um) e do CSV de votos por UF
   (um fato por UF), cada uma com a versão do leitor dela.
+- **Tabelas publicadas do e-Cidadania, camada 3 (D1 do ROADMAP), sem mudança de superfície.** O job
+  das observações monta, depois de cada cópia, as tabelas tidy de cada entidade em
+  `publicacao/<entidade>/*.parquet` no balde privado (`scripts/publicacao/`): ideias (+ proposições,
+  linha do tempo e situação atual do portal — a(s) vista(s) no dia da avistagem mais recente, com a
+  data, marcada calculada; duas ao mesmo tempo = duas linhas), consultas (+ série de votos SIM/NÃO, arquivo e histórico do corpus), eventos (+
+  pauta, convidados e comentários, um por linha) e o acervo de votos por UF (matérias, com ementa,
+  autoria, carimbo e totais; e os votos em formato longo, matéria × UF × intervalo de versões do CSV).
+  Dicionário do esquema 3.0.0 em fonte única (`scripts/publicacao/dicionario.ts` →
+  `docs/dataset-dictionary-v3.md`, `npm run dataset:dictionary:v3`), amarrado por teste às colunas
+  gravadas. Empacotador da D2 (`npm run dataset:pacote`, `scripts/publicacao/empacotar.ts`): lê as 14
+  tabelas do balde (ou de uma pasta), grava cada uma em Parquet e em CSV (RFC 4180, UTF-8, null =
+  vazio) e escreve o `datapackage.json` Frictionless (recurso tabular por tabela, tipos, formatos,
+  chave primária, fonte e marca de calculada por coluna) e o `dicionario.md`. Ensaiado em dado real:
+  14 tabelas, ~1,6 milhão de linhas, validadas pelo `frictionless validate` 5.18.1. Decisões do dono de 22/11/2026: valor da camada 2 quando ela já o leu,
+  senão o do corpus (540 consultas encerradas, a autoria antiga e as ideias removidas só existem nele);
+  origem e `coletadoEm` por bloco de página (resumo, detalhe e, nos eventos, comentários); colunas
+  calculadas mantidas e marcadas, com os percentuais em uma casa decimal e null sem votos (0/0 não é
+  0%). Provado em dado real: nas 44.957 ideias com detalhe no arquivo, título, descrição e prazo batem
+  com o corpus em 100%, e a UF em todas menos 2 (páginas que hoje não publicam a localidade). A
+  edição pública (D2) sai na edição anual de janeiro/2027.
 
 ### Fixed
 
@@ -34,6 +54,16 @@ All notable changes to this project are documented here. Format based on
   (`lerIdeiaDetalhe`) descartava o primeiro pedaço do corte supondo que fosse espaço; com o `<li>` sem
   nada antes, o acontecimento mais recente sumia calado. Nas páginas servidas até 21/11/2026 sempre há
   o espaço (nenhuma perda medida); achado ao montar a fase C.
+- **Observações dos eventos guardam a ordem da pauta e dos convidados.** Cada item virava um fato
+  solto, e a fusão ordena os fatos pelo valor, então a ordem da página se perdia. O fato agora leva a
+  posição (`{posicao, texto}`), o que muda a versão do leitor dos eventos e refaz a cópia deles
+  inteira na rodada seguinte. Achado ao montar a D1.
+- **Observações do acervo de votos guardam ementa, autoria e o carimbo do CSV.** A C5 guardava só
+  matéria, situação e votos por UF; o dataset 2.0.0 publica os três, e a camada 3 os perderia. Muda a
+  versão do leitor do acervo (refeito na rodada seguinte; é uma linha do índice).
+- **Tabelas em Parquet: instante opcional aceita null.** A coluna de instante saía obrigatória mesmo
+  marcada opcional; nenhuma tabela da C3 tinha instante nulo, mas o `firstSeenAt` de um registro sem
+  histórico quebraria a gravação. Também ganhou o tipo decimal.
 
 ### Changed
 
