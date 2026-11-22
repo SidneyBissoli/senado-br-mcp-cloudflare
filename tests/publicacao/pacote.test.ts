@@ -18,7 +18,10 @@ describe("D2 — pacote 3.0.0 (só Parquet)", () => {
     // Nenhum CSV, nenhum `bytes` (o validador não o confere em Parquet e reprova).
     expect(m.resources.every((x) => x.format === "parquet" && x.path.endsWith(".parquet") && !("bytes" in x) && !("parquet" in x))).toBe(true);
     const r = m.resources.find((x) => x.name === "consultas-votos-votos-uf")!;
-    expect([r.path, r.rows, r.schema.primaryKey]).toEqual(["consultas_votos/votos-uf.parquet", 7, ["codigo", "uf", "desde"]]);
+    expect([r.path, r.rows, r.schema.primaryKey]).toEqual(["consultas-votos-votos-uf.parquet", 7, ["codigo", "uf", "desde"]]);
+    // Pacote plano (o Zenodo não guarda pastas): nenhum caminho com pasta, nenhum nome repetido.
+    expect(m.resources.every((x) => !x.path.includes("/"))).toBe(true);
+    expect(new Set(m.resources.map((x) => x.path)).size).toBe(DICIONARIO.length);
     const campos = m.resources.find((x) => x.name === "consultas-consultas")!.schema.fields;
     expect(campos.find((f) => f.name === "percentualSim")).toMatchObject({ type: "number", calculada: true });
     expect(campos.find((f) => f.name === "coletadoEmResumo")).toMatchObject({ type: "datetime", format: "%Y-%m-%dT%H:%M:%S.%fZ" });

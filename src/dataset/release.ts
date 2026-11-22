@@ -99,6 +99,37 @@ export interface ReleaseFile {
   bytes: number;
   /** Linhas da tabela (Parquet) — omitido para metadados como datapackage.json/dicionario.md. */
   records?: number;
+  /** Identidade do insumo de uma tabela (só tabelas): de onde, de que versão do código e até onde. */
+  origem?: OrigemDaTabela;
+}
+
+/**
+ * De onde a tabela saiu. O empacotador copia os bytes do balde sem alteração, então o `sha256` do
+ * arquivo É o do objeto `chave` no balde; `leitor` + `cursor` (metadados gravados no próprio Parquet
+ * pelo job das observações) dizem com que versão do código e até qual registro do arquivo de páginas
+ * a tabela foi montada — o que permite refazê-la a partir do arquivo bruto (privado).
+ */
+export interface OrigemDaTabela {
+  balde: string;
+  chave: string;
+  leitor: string;
+  cursor: number;
+  geradoEm: string;
+  /** Demais metadados do Parquet (ex.: versões do corpus usadas nas séries), como gravados. */
+  extras?: Record<string, string>;
+}
+
+/**
+ * Lê a origem dos metadados chave-valor de um Parquet publicado. Lança se faltar leitor, cursor ou
+ * geradoEm: tabela sem identidade de insumo não entra num release congelado.
+ */
+export function origemDosMetadados(balde: string, chave: string, kv: Record<string, string>): OrigemDaTabela {
+  const { leitor, cursor, geradoEm, entidade: _entidade, ...resto } = kv;
+  const n = Number(cursor);
+  if (!leitor || !Number.isInteger(n) || n < 0 || !geradoEm || Number.isNaN(Date.parse(geradoEm))) {
+    throw new Error(`${chave}: Parquet sem identidade do insumo (leitor="${leitor ?? ""}", cursor="${cursor ?? ""}", geradoEm="${geradoEm ?? ""}")`);
+  }
+  return { balde, chave, leitor, cursor: n, geradoEm, ...(Object.keys(resto).length ? { extras: resto } : {}) };
 }
 
 export interface ReleaseManifestInput {
@@ -146,12 +177,21 @@ export function buildReleaseManifest(input: ReleaseManifestInput): Record<string
       sha256: f.sha256,
       bytes: f.bytes,
       ...(f.records != null ? { records: f.records } : {}),
+      ...(f.origem ? { origem: f.origem } : {}),
     })),
+    origemNota: NOTA_DA_ORIGEM,
     changelog: "CHANGELOG-dataset.md",
     citation: "CITATION.cff",
     caveats: RELEASE_CAVEATS,
   };
 }
+
+/** Como ler `files[].origem` no `release.json`. */
+export const NOTA_DA_ORIGEM =
+  "Cada tabela foi copiada byte a byte do objeto `origem.chave` no balde `origem.balde`: o sha256 do arquivo é o do objeto. " +
+  "`origem.leitor` (versão do código que montou a tabela) e `origem.cursor` (último registro do arquivo de páginas incluído) " +
+  "identificam o insumo: com os dois, a tabela pode ser refeita a partir do arquivo de páginas, que é privado. " +
+  "`origem.extras` traz os demais metadados gravados no próprio Parquet.";
 
 /**
  * Caveats canônicos do release do esquema 3.0.0 — a mesma substância das notas do dicionário
@@ -162,6 +202,7 @@ export const RELEASE_CAVEATS: string[] = [
   "As datas de primeira observação são do robô, não do Senado, e censuradas à esquerda: a primeira varredura completa de cada entidade (16/06/2026 consultas; 29/06/2026 ideias e eventos) marca quase todo o acervo antigo — exclua essas datas de análises de ritmo de entrada.",
   "Cada linha diz, por bloco de página, de onde veio o valor (origem: arquivo de páginas ou corpus) e quando a página foi lida (coletadoEm). O arquivo de páginas começa em 30/10/2026 nas ideias e em 20/11/2026 nas demais entidades; antes disso, e para o que saiu da listagem, vale o último valor que o corpus guardou.",
   "Séries no tempo (apoios, situação, votos): entre `desde` e `ate` o valor foi visto em todas as leituras daquela série; fora delas, nada se afirma. No corpus, um ponto por mudança (`desde = ate`).",
+  "Série de apoios das ideias, origem corpus: antes de 18/10/2026, apoios = 0 pode ser contagem AUSENTE lida como 0; a origem do arquivo de páginas (desde 30/10/2026) não tem essa ambiguidade.",
   "autorNome é o nome do autor da ideia como o portal o publica (já abreviado); null quando o detalhe da ideia ainda vem do corpus, que nunca guardou o nome. Comentaristas de eventos seguem sem nome.",
   "Não existe data de abertura de consulta upstream (Recon Parte II).",
   "Status de eventos dobra REGISTRADO/'sem data prevista' em 'agendado' (Recon §4.1) — declarado, não corrigido.",
@@ -236,6 +277,31 @@ export function conferirDoisDoManifesto(
     if (manifest[campo] !== dois[campo]) {
       problemas.push(`${campo} do release.json = "${String(manifest[campo])}", reservado = "${dois[campo]}"`);
     }
+  }
+  return problemas;
+}
+
+// ── Arquivos soltos no Zenodo ───────────────────────────────────────────────────────────────────
+/** Limite do Zenodo por registro (help.zenodo.org, "Manage files", conferido em 22/11/2026). */
+export const ZENODO_MAX_ARQUIVOS = 100;
+
+/**
+ * Confere a lista de nomes que vai ao rascunho do Zenodo (que não guarda pastas: o nome enviado é o
+ * nome final). Devolve os problemas (vazia = confere): nome repetido (um sobrescreveria o outro), nome
+ * com pasta, acima do limite de arquivos, ou sem o `datapackage.json`/`SHA256SUMS` que tornam os
+ * arquivos soltos utilizáveis e verificáveis.
+ */
+export function conferirArquivosDoEnvio(nomes: readonly string[]): string[] {
+  const problemas: string[] = [];
+  const vistos = new Set<string>();
+  for (const n of nomes) {
+    if (/[/\\]/.test(n)) problemas.push(`nome com pasta: ${n}`);
+    if (vistos.has(n)) problemas.push(`nome repetido: ${n}`);
+    vistos.add(n);
+  }
+  if (nomes.length > ZENODO_MAX_ARQUIVOS) problemas.push(`${nomes.length} arquivos > limite do Zenodo (${ZENODO_MAX_ARQUIVOS})`);
+  for (const obrigatorio of ["release.json", "SHA256SUMS", "datapackage.json"]) {
+    if (!vistos.has(obrigatorio)) problemas.push(`falta ${obrigatorio}`);
   }
   return problemas;
 }

@@ -12,13 +12,13 @@
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { parquetMetadata } from "hyparquet";
 import { criarClienteR2, type ClienteR2 } from "../ingest-ecidadania/r2.js";
 import { BALDE_OBSERVACOES } from "../observacoes/linhas.js";
 import { clienteWrangler } from "../observacoes/wrangler-r2.js";
 import { DICIONARIO, ESQUEMA_V3, dicionarioMarkdown } from "./dicionario.js";
-import { chaveNoBalde, manifesto, type Contagem } from "./pacote.js";
+import { arquivoDaTabela, chaveNoBalde, manifesto, type Contagem } from "./pacote.js";
 
 const arg = (n: string) => {
   const i = process.argv.indexOf(n);
@@ -39,6 +39,7 @@ async function main(): Promise<void> {
   const saida = arg("--saida") ?? join("dataset", ESQUEMA_V3);
   const fonte = de ? null : balde();
   const contagens: Contagem[] = [];
+  mkdirSync(saida, { recursive: true });
   for (const t of DICIONARIO) {
     const chave = chaveNoBalde(t);
     const bytes = de ? new Uint8Array(readFileSync(join(de, chave))) : await fonte!.ler(chave);
@@ -51,11 +52,10 @@ async function main(): Promise<void> {
     const esperados = t.colunas.map((c) => c.nome);
     if (nomes.join(",") !== esperados.join(",")) throw new Error(`${chave}: colunas ${nomes.join(",")} ≠ dicionário ${esperados.join(",")}`);
     const linhas = Number(meta.num_rows);
-    const base = join(saida, t.caminho);
-    mkdirSync(dirname(base), { recursive: true });
-    writeFileSync(`${base}.parquet`, bytes);
+    // Pacote plano: um arquivo por tabela, sem pastas (o Zenodo não guarda pastas).
+    writeFileSync(join(saida, arquivoDaTabela(t)), bytes);
     contagens.push({ caminho: t.caminho, linhas });
-    console.log(`[pacote] ${t.caminho}: ${linhas} linhas, Parquet ${(bytes.length / 1048576).toFixed(2)} MB`);
+    console.log(`[pacote] ${arquivoDaTabela(t)}: ${linhas} linhas, Parquet ${(bytes.length / 1048576).toFixed(2)} MB`);
   }
   writeFileSync(join(saida, "datapackage.json"), JSON.stringify(manifesto(contagens, new Date().toISOString()), null, 2) + "\n");
   writeFileSync(join(saida, "dicionario.md"), dicionarioMarkdown());

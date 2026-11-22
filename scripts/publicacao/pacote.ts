@@ -7,12 +7,14 @@
  * em 22/11/2026 com `frictionless[parquet]` 5.18.1: 14 de 14 tabelas válidas com este manifesto.
  */
 
-import { DICIONARIO, ESQUEMA_V3, type ColunaDoDicionario, type TabelaDoDicionario } from "./dicionario.js";
+import { DICIONARIO, ESQUEMA_V3, arquivoDaTabela, nomeDoRecurso, type ColunaDoDicionario, type TabelaDoDicionario } from "./dicionario.js";
 
 /** Chave da tabela no balde: as séries da C3 ficam onde a C3 as grava; o resto, sob `publicacao/`. */
 export function chaveNoBalde(t: TabelaDoDicionario): string {
   return t.caminho === "ideias/serie-apoios" || t.caminho === "ideias/historico-situacao" ? `${t.caminho}.parquet` : `publicacao/${t.caminho}.parquet`;
 }
+
+export { arquivoDaTabela, nomeDoRecurso };
 
 export const LICENCA = "Dados Abertos do Senado Federal — uso livre com atribuição da fonte.";
 
@@ -52,10 +54,10 @@ export function manifesto(contagens: readonly Contagem[], geradoEm: string): Rec
     created: geradoEm,
     resources: DICIONARIO.filter((t) => por.has(t.caminho)).map((t) => ({
       profile: "tabular-data-resource",
-      name: t.caminho.replace(/[/_]/g, "-"),
+      name: nomeDoRecurso(t),
       title: t.titulo,
       description: t.descricao,
-      path: `${t.caminho}.parquet`,
+      path: arquivoDaTabela(t),
       format: "parquet",
       mediatype: "application/vnd.apache.parquet",
       rows: por.get(t.caminho)!.linhas,

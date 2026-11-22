@@ -29,6 +29,11 @@ release tem também seu **version-DOI**. Enquanto o Zenodo não cunha, os campos
 
 - **Formato:** tabelas tidy em **Parquet** (14 tabelas, `datapackage.json` Frictionless + `dicionario.md`);
   sai o NDJSON. Tipos e nulos vêm no próprio arquivo; para planilha, converta com DuckDB.
+- **Entrega:** pacote plano, um arquivo por tabela (`ideias-serie-apoios.parquet` etc.). No Zenodo, os
+  arquivos vão soltos: cada tabela se vê e se baixa sozinha, e `SHA256SUMS` confere o que se baixou. O
+  tarball com tudo fica no GitHub Release.
+- **Origem do insumo no `release.json`:** por tabela, a chave no balde, a versão do código que a montou
+  (`leitor`) e o último registro do arquivo de páginas incluído (`cursor`).
 - **Fim do envelope por célula:** valores puros; a proveniência vai em colunas de origem por bloco de
   página (`origem<Bloco>`: arquivo de páginas ou corpus; `coletadoEm<Bloco>`: quando a página foi lida).
 - **Séries no tempo:** apoios e situação das ideias, votos SIM/NÃO das consultas, votos por UF do acervo.

@@ -31,6 +31,7 @@ import { appendFileSync, readFileSync, existsSync } from "node:fs";
 import { basename, join } from "node:path";
 import {
   buildZenodoMetadata,
+  conferirArquivosDoEnvio,
   conferirDoisDoManifesto,
   doisDaDeposicao,
   validateReleaseVersion,
@@ -126,6 +127,10 @@ async function main(): Promise<void> {
     console.log("[zenodo] DRY-RUN — metadata que seria enviada:");
     console.log(JSON.stringify(buildZenodoMetadata(zj, { version, conceptDoi: flag("concept-doi") || "" }), null, 2));
     console.log(`[zenodo] arquivos: ${files.join(", ") || "(nenhum)"}`);
+    if (files.length > 0) {
+      const p = conferirArquivosDoEnvio(files.map((f) => basename(f)));
+      console.log(p.length ? `[zenodo] o envio seria RECUSADO:\n  ${p.join("\n  ")}` : `[zenodo] lista de ${files.length} arquivos confere`);
+    }
     return;
   }
 
@@ -172,6 +177,8 @@ async function main(): Promise<void> {
   // ── Etapa 2: envio para o rascunho reservado ─────────────────────────────────
   if (files.length === 0) throw new Error("nenhum --file para enviar (e não é --dry-run).");
   for (const f of files) if (!existsSync(f)) throw new Error(`arquivo não encontrado: ${f}`);
+  const problemasDoEnvio = conferirArquivosDoEnvio(files.map((f) => basename(f)));
+  if (problemasDoEnvio.length > 0) throw new Error(`envio recusado, nada enviado:\n  ${problemasDoEnvio.join("\n  ")}`);
   const manifestPath = files.find((f) => basename(f) === "release.json");
   if (!manifestPath) throw new Error("o envio precisa incluir o release.json (é ele que leva os DOIs).");
 

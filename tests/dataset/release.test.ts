@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   citacaoDoCorte,
+  conferirArquivosDoEnvio,
+  ZENODO_MAX_ARQUIVOS,
   DATASET_RELEASE_VERSION,
   DOI_PLACEHOLDER,
   buildReleaseManifest,
@@ -11,6 +13,7 @@ import {
   doisDaDeposicao,
   formatSha256Sums,
   nextVersion,
+  origemDosMetadados,
   validateReleaseVersion,
   versionFromTag,
   type ReleaseFile,
@@ -167,6 +170,56 @@ describe("conferirDoisDoManifesto", () => {
 
   it("acusa DOI de outra deposição", () => {
     expect(conferirDoisDoManifesto({ ...dois, versionDoi: "10.5281/zenodo.30999999" }, dois)).toHaveLength(1);
+  });
+});
+
+describe("origemDosMetadados (D2.a)", () => {
+  it("leitor, cursor e geradoEm viram a origem; o resto vai a extras; entidade sai (já está no caminho)", () => {
+    const o = origemDosMetadados("ecidadania-observacoes", "ideias/serie-apoios.parquet", {
+      entidade: "ideias", leitor: "observacoes@a67c9ad36c9b", cursor: "56920", geradoEm: "2026-11-22T20:47:21.354Z", corpusVersoes: "504290",
+    });
+    expect(o).toEqual({
+      balde: "ecidadania-observacoes", chave: "ideias/serie-apoios.parquet", leitor: "observacoes@a67c9ad36c9b",
+      cursor: 56920, geradoEm: "2026-11-22T20:47:21.354Z", extras: { corpusVersoes: "504290" },
+    });
+  });
+
+  it("sem extras, o campo não aparece", () => {
+    const o = origemDosMetadados("b", "c", { leitor: "x@1", cursor: "0", geradoEm: "2026-11-22T00:00:00.000Z" });
+    expect(o).not.toHaveProperty("extras");
+  });
+
+  it("recusa Parquet sem identidade do insumo", () => {
+    for (const kv of <Record<string, string>[]>[{}, { leitor: "x@1", geradoEm: "2026-11-22T00:00:00Z" }, { leitor: "x@1", cursor: "-1", geradoEm: "2026-11-22T00:00:00Z" }, { leitor: "x@1", cursor: "3", geradoEm: "ontem" }]) {
+      expect(() => origemDosMetadados("b", "c", kv)).toThrow(/identidade do insumo/);
+    }
+  });
+
+  it("o manifesto leva a origem por tabela e a nota de como lê-la", () => {
+    const origem = origemDosMetadados("b", "c", { leitor: "x@1", cursor: "7", geradoEm: "2026-11-22T00:00:00.000Z" });
+    const m = buildReleaseManifest({
+      releaseVersion: "3.0.0", edition: "e", schemaVersion: "3.0.0", conceptDoi: DOI_PLACEHOLDER, versionDoi: DOI_PLACEHOLDER,
+      gitCommit: "x", generatedAt: "x", files: [{ file: "t.parquet", sha256: "aa", bytes: 1, records: 1, origem }, { file: "datapackage.json", sha256: "bb", bytes: 1 }],
+    }) as { files: Array<Record<string, unknown>>; origemNota: string };
+    expect(m.files[0].origem).toEqual(origem);
+    expect(m.files[1]).not.toHaveProperty("origem");
+    expect(m.origemNota).toMatch(/leitor/);
+  });
+});
+
+describe("conferirArquivosDoEnvio (D2.b)", () => {
+  const base = ["release.json", "SHA256SUMS", "datapackage.json", "dicionario.md", "ideias-ideias.parquet"];
+
+  it("confere o pacote plano", () => {
+    expect(conferirArquivosDoEnvio(base)).toEqual([]);
+  });
+
+  it("acusa nome repetido, pasta, falta de manifesto e excesso de arquivos", () => {
+    expect(conferirArquivosDoEnvio([...base, "ideias-ideias.parquet"])).toEqual(["nome repetido: ideias-ideias.parquet"]);
+    expect(conferirArquivosDoEnvio([...base, "ideias/ideias.parquet"])).toEqual(["nome com pasta: ideias/ideias.parquet"]);
+    expect(conferirArquivosDoEnvio(base.filter((n) => n !== "datapackage.json"))).toEqual(["falta datapackage.json"]);
+    const muitos = [...base, ...Array.from({ length: 96 }, (_, i) => `t${i}.parquet`)];
+    expect(conferirArquivosDoEnvio(muitos)).toEqual([`101 arquivos > limite do Zenodo (${ZENODO_MAX_ARQUIVOS})`]);
   });
 });
 

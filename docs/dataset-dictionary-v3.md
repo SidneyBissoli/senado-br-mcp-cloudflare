@@ -15,6 +15,8 @@ Três camadas: o **arquivo de páginas** (cada página baixada, guardada inteira
 
 Uma linha por ideia legislativa, com o estado mais recente lido. Bloco RESUMO (título, apoios): a leitura mais recente da listagem de qualquer situação ou do detalhe. Bloco DETALHE (o resto): a última página de detalhe que o leitor abriu.
 
+**Arquivo:** `ideias-ideias.parquet`
+
 **Uma linha por:** `id`
 
 | Coluna | Tipo | Descrição | Fonte | Nota |
@@ -48,6 +50,8 @@ Uma linha por ideia legislativa, com o estado mais recente lido. Bloco RESUMO (t
 
 Uma linha por proposição em que a ideia foi transformada (pela CDH ou adotada por parlamentar), na ordem cronológica da linha do tempo.
 
+**Arquivo:** `ideias-proposicoes.parquet`
+
 **Uma linha por:** `id` × `data` × `tipoSigla` × `numero` × `ano`
 
 | Coluna | Tipo | Descrição | Fonte | Nota |
@@ -70,6 +74,8 @@ Uma linha por proposição em que a ideia foi transformada (pela CDH ou adotada 
 
 Uma linha por acontecimento da linha do tempo da página de detalhe, da última leitura aberta. Só ideias com detalhe no arquivo de páginas (o corpus nunca guardou a linha do tempo).
 
+**Arquivo:** `ideias-linha-do-tempo.parquet`
+
 **Uma linha por:** `id` × `ordem`
 
 | Coluna | Tipo | Descrição | Fonte | Nota |
@@ -84,6 +90,8 @@ Uma linha por acontecimento da linha do tempo da página de detalhe, da última 
 
 A(s) situação(ões) do portal em que a ideia está agora: as vistas no DIA da sua avistagem mais recente em qualquer listagem. Duas ao mesmo tempo = duas linhas (o portal lista a mesma ideia em duas situações).
 
+**Arquivo:** `ideias-situacoes-portal.parquet`
+
 **Uma linha por:** `id` × `situacaoCodigo`
 
 | Coluna | Tipo | Descrição | Fonte | Nota |
@@ -96,6 +104,8 @@ A(s) situação(ões) do portal em que a ideia está agora: as vistas no DIA da 
 ## `ideias/historico-situacao` — Histórico de situação das ideias
 
 Situação ao longo do tempo, de duas origens que não se misturam: a situação do PORTAL vista no arquivo de páginas (desde 30/10/2026) e o status de 3 valores do corpus (desde 14/06/2026, um ponto por mudança).
+
+**Arquivo:** `ideias-historico-situacao.parquet`
 
 **Uma linha por:** `entity_id` × `origem` × `desde`
 
@@ -115,6 +125,8 @@ Situação ao longo do tempo, de duas origens que não se misturam: a situação
 
 Apoios ao longo do tempo: do arquivo de páginas por série (listagem de cada situação, detalhe) e do corpus (um ponto por mudança, desde 14/06/2026), lado a lado.
 
+**Arquivo:** `ideias-serie-apoios.parquet`
+
 **Uma linha por:** `entity_id` × `origem` × `desde`
 
 | Coluna | Tipo | Descrição | Fonte | Nota |
@@ -130,6 +142,8 @@ Apoios ao longo do tempo: do arquivo de páginas por série (listagem de cada si
 ## `consultas/consultas` — Consultas públicas
 
 Uma linha por consulta pública. Bloco RESUMO: a listagem (matéria, ementa, votos). Bloco DETALHE: a página da consulta (autoria). As encerradas saíram da listagem e vêm do corpus.
+
+**Arquivo:** `consultas-consultas.parquet`
 
 **Uma linha por:** `id`
 
@@ -157,6 +171,8 @@ Uma linha por consulta pública. Bloco RESUMO: a listagem (matéria, ementa, vot
 
 Votos SIM e NÃO de cada consulta ao longo do tempo, em formato longo: arquivo de páginas (desde 20/11/2026) e corpus (desde 14/06/2026, um ponto por mudança).
 
+**Arquivo:** `consultas-serie-votos.parquet`
+
 **Uma linha por:** `id` × `voto` × `origem` × `desde`
 
 | Coluna | Tipo | Descrição | Fonte | Nota |
@@ -173,6 +189,8 @@ Votos SIM e NÃO de cada consulta ao longo do tempo, em formato longo: arquivo d
 ## `eventos/eventos` — Eventos interativos (audiências)
 
 Uma linha por evento. Bloco RESUMO (título, comissão, situação): a leitura mais recente da listagem ou do detalhe. Bloco DETALHE: a página do evento. Bloco COMENTÁRIOS: o fragmento de comentários.
+
+**Arquivo:** `eventos-eventos.parquet`
 
 **Uma linha por:** `id`
 
@@ -202,6 +220,8 @@ Uma linha por evento. Bloco RESUMO (título, comissão, situação): a leitura m
 
 Uma linha por item de pauta, na ordem da página.
 
+**Arquivo:** `eventos-pauta.parquet`
+
 **Uma linha por:** `id` × `ordem`
 
 | Coluna | Tipo | Descrição | Fonte | Nota |
@@ -215,6 +235,8 @@ Uma linha por item de pauta, na ordem da página.
 
 Uma linha por convidado (agente público na função; nome mantido), na ordem da página.
 
+**Arquivo:** `eventos-convidados.parquet`
+
 **Uma linha por:** `id` × `ordem`
 
 | Coluna | Tipo | Descrição | Fonte | Nota |
@@ -227,6 +249,8 @@ Uma linha por convidado (agente público na função; nome mantido), na ordem da
 ## `eventos/comentarios` — Comentários dos eventos
 
 Um comentário por linha, da última leitura do fragmento. Conteúdo de cidadão: só UF e texto, SEM nome.
+
+**Arquivo:** `eventos-comentarios.parquet`
 
 **Uma linha por:** `eventoId` × `comentarioId`
 
@@ -245,6 +269,8 @@ Um comentário por linha, da última leitura do fragmento. Conteúdo de cidadão
 ## `consultas_votos/materias` — Matérias do acervo de votos por UF
 
 Uma linha por matéria do acervo histórico (CSV Arquimedes), na versão mais recente do CSV.
+
+**Arquivo:** `consultas-votos-materias.parquet`
 
 **Uma linha por:** `codigo`
 
@@ -266,6 +292,8 @@ Uma linha por matéria do acervo histórico (CSV Arquimedes), na versão mais re
 ## `consultas_votos/votos-uf` — Votos por UF do acervo
 
 Formato longo: uma linha por matéria × UF × valor visto, com o intervalo de versões do CSV em que ele valeu.
+
+**Arquivo:** `consultas-votos-votos-uf.parquet`
 
 **Uma linha por:** `codigo` × `uf` × `desde`
 
