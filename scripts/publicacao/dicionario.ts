@@ -94,7 +94,7 @@ export const DICIONARIO: TabelaDoDicionario[] = [
       { nome: "descricao", tipo: "string", descricao: "Texto da ideia, escrito pelo cidadão.", fonte: `bloco detalhe: ${P.ideia}${RESERVA}`, nota: "No corpus o texto foi cortado em 2.000 caracteres; do arquivo vem inteiro." },
       { nome: "status", tipo: "string", descricao: "Classificação do projeto: aberta | encerrada | convertida | removida.", fonte: "corpus (classificação calculada a partir da situação do portal, da linha do tempo e da resposta 410)", calculada: true, nota: "Não é a situação do portal: para ela, ver `situacoes-portal` e `historico-situacao`." },
       { nome: "dataProposta", tipo: "date", descricao: "Data em que a ideia foi proposta.", fonte: `bloco detalhe: ${P.ideia}, data do acontecimento "Ideia proposta por NOME (UF)" da linha do tempo`, nota: "Null quando o detalhe ainda vem do corpus (o corpus não a guardava)." },
-      { nome: "autorNome", tipo: "string", descricao: "Nome do cidadão autor, como o portal o publica (já abreviado, ex.: \"PEDRO H. S. V.\").", fonte: `bloco detalhe: ${P.ideia}`, nota: "Decisão do dono de 17/10/2026. Null quando o detalhe ainda vem do corpus (o corpus nunca guardou o nome). Comentaristas de eventos seguem sem nome." },
+      { nome: "autorNome", tipo: "string", descricao: "Nome do cidadão autor, como o portal o publica (já abreviado, ex.: \"PEDRO H. S. V.\").", fonte: `bloco detalhe: ${P.ideia}`, nota: "Dado pessoal: finalidade e direitos do titular na seção \"Dado pessoal\" deste dicionário (decisão do dono de 17/10/2026; nota de 22/11/2026). Null quando o detalhe ainda vem do corpus (o corpus nunca guardou o nome) ou quando o titular pediu a omissão. Comentaristas de eventos seguem sem nome." },
       { nome: "autorUf", tipo: "string", descricao: "Localidade do autor como publicada: sigla da UF ou \"Exterior\".", fonte: `bloco detalhe: ${P.ideia}, o parêntese depois do nome${RESERVA}`, nota: "Null = a página não publica localidade (há páginas de autor \"USUARIO …\" sem parêntese)." },
       { nome: "oficinaNivel", tipo: "string", descricao: "Nível da Oficina Legislativa, quando a ideia veio de uma.", fonte: `bloco detalhe: ${P.ideia}, acontecimento da oficina` },
       { nome: "oficinaDataCadastro", tipo: "string", descricao: "Data e hora do cadastro na Oficina Legislativa, como publicada (AAAA-MM-DDTHH:MM, hora local, SEM fuso).", fonte: `bloco detalhe: ${P.ideia}, acontecimento da oficina`, nota: "Texto, não instante: a página não diz o fuso." },
@@ -311,6 +311,24 @@ export const arquivoDaTabela = (t: TabelaDoDicionario): string => `${nomeDoRecur
 const linhaDaColuna = (c: ColunaDoDicionario) =>
   `| \`${c.nome}\`${c.calculada ? " ⚙️" : ""} | ${c.tipo} | ${c.descricao} | ${c.fonte} | ${c.nota ?? "—"} |`;
 
+/**
+ * Finalidade do único dado pessoal do dataset — o nome do autor da ideia — e os direitos do titular
+ * (decisão do dono de 22/11/2026). Base: LGPD, art. 7º, §§ 3º, 6º e 7º, lidos em planalto.gov.br em
+ * 22/11/2026. NÃO se invoca o § 4º (quem publica o nome é o portal, não comprovadamente o titular) nem o
+ * inciso IV (o projeto não é "órgão de pesquisa" no sentido do art. 5º, XVIII). A omissão prometida
+ * está implementada em `omissoes.ts`.
+ */
+export const FINALIDADE_DO_NOME: readonly string[] = [
+  "## Dado pessoal: o nome do autor da ideia (LGPD)",
+  "",
+  "- **O que é:** `autorNome` e `autorUf` em `ideias/ideias`, e o mesmo nome no acontecimento \"Ideia proposta por NOME (UF)\" de `ideias/linha-do-tempo`. Nenhum outro campo traz nome de cidadão; comentaristas de eventos seguem sem nome.",
+  "- **De onde vem:** o portal e-Cidadania publica, em página aberta e junto da ideia, o nome do autor já abreviado pelo próprio Senado (ex.: \"PEDRO H. S. V.\") e a UF. O dataset copia o que está publicado: não completa o nome, não infere identidade e não cruza com outras bases.",
+  "- **Finalidade:** pesquisa sobre participação cidadã no Senado (quem propõe, de onde e com que desfecho), compatível com a finalidade e o interesse público que justificaram a publicação no portal (LGPD, art. 7º, § 3º). Como tratamento posterior de dado de acesso público, segue o art. 7º, § 7º: propósito legítimo e específico e preservação dos direitos do titular.",
+  "- **Para quem reutiliza:** ao usar o nome, você também trata dado pessoal e responde pela sua própria finalidade; dispensar o consentimento não dispensa os princípios da LGPD (art. 7º, § 6º). O projeto pede que o nome não seja usado para identificar, contatar ou perfilar pessoas, nem cruzado com outras bases.",
+  "- **Direitos do titular:** quem estiver nomeado e quiser o nome omitido escreve para sbissoli76@gmail.com informando o número da ideia. O nome sai a partir da edição seguinte do dataset: autor e UF ficam nulos, e a linha do tempo mostra \"[nome omitido a pedido do titular]\". Versões já publicadas no Zenodo não podem ser alteradas.",
+  "",
+];
+
 /** Dicionário em Markdown, determinístico (sem carimbo de tempo): regenerar e `git diff` acusa deriva. */
 export function dicionarioMarkdown(): string {
   const partes = [
@@ -327,6 +345,7 @@ export function dicionarioMarkdown(): string {
     "",
     "Três camadas: o **arquivo de páginas** (cada página baixada, guardada inteira, endereçada pelo sha256; privado), as **observações** (o que cada página mostrou e quando) e estas **tabelas**. Cada valor vem da leitura mais recente do arquivo; o que o arquivo ainda não leu — ou nunca vai ler, como as consultas encerradas que saíram da listagem e as ideias removidas — vem do **corpus**, o banco que o projeto mantém desde 14/06/2026. As colunas `origem<Bloco>` e `coletadoEm<Bloco>` dizem, por bloco de página, de onde e de quando veio cada linha.",
     "",
+    ...FINALIDADE_DO_NOME,
   ];
   for (const t of DICIONARIO) {
     partes.push(

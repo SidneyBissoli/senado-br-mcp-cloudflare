@@ -14,6 +14,7 @@ import {
 } from "./corpus-atual.js";
 import { tabelasDosEventos, type LinhaComentario, type LinhaEvento, type LinhaItemDoEvento } from "./eventos.js";
 import { situacoesAtuais, tabelasDasIdeias, type LinhaAcontecimento, type LinhaIdeia, type LinhaProposicao, type LinhaSituacaoAtual } from "./ideias.js";
+import { omitirNomes } from "./omissoes.js";
 import { tabelasDoAcervo, type LinhaMateriaDoAcervo, type LinhaVotosUf } from "./votos-uf.js";
 
 const t = <T>(nome: string, valor: (l: T) => string | null): ColunaDaTabela<T> => ({ nome, tipo: "texto", opcional: true, valor });
@@ -119,13 +120,15 @@ function contar<T>(xs: readonly T[], f: (x: T) => unknown): string {
 function montar(entidade: EntidadePublicada, obs: readonly Observacao[], kv: Record<string, string>): { tabelas: Tabela[]; resumo: string } {
   if (entidade === "ideias") {
     const r = tabelasDasIdeias(obs, lerIdeiasAtuais(), lerFirstSeen("ideias"));
+    // Nomes omitidos a pedido do titular (LGPD; `omissoes.ts`), antes de qualquer gravação.
+    const o = omitirNomes(r.ideias, r.linhaDoTempo);
     return {
       tabelas: [
-        tabela("ideias", r.ideias, COLUNAS_IDEIAS, kv), tabela("proposicoes", r.proposicoes, COLUNAS_PROPOSICOES, kv),
-        tabela("linha-do-tempo", r.linhaDoTempo, COLUNAS_LINHA_DO_TEMPO, kv),
+        tabela("ideias", o.ideias, COLUNAS_IDEIAS, kv), tabela("proposicoes", r.proposicoes, COLUNAS_PROPOSICOES, kv),
+        tabela("linha-do-tempo", o.linhaDoTempo, COLUNAS_LINHA_DO_TEMPO, kv),
         tabela("situacoes-portal", situacoesAtuais(obs), COLUNAS_SITUACOES_ATUAIS, kv),
       ],
-      resumo: `resumo: ${contar(r.ideias, (x) => x.origemResumo)}; detalhe: ${contar(r.ideias, (x) => x.origemDetalhe)}`,
+      resumo: `resumo: ${contar(r.ideias, (x) => x.origemResumo)}; detalhe: ${contar(r.ideias, (x) => x.origemDetalhe)}; nomes omitidos a pedido: ${o.omitidas}`,
     };
   }
   if (entidade === "consultas") {
