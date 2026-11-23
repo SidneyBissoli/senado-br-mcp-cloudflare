@@ -39,7 +39,9 @@ release tem também seu **version-DOI**. Enquanto o Zenodo não cunha, os campos
 - **Séries no tempo:** apoios e situação das ideias, votos SIM/NÃO das consultas, votos por UF do acervo.
 - **Listas viram tabelas:** proposições, linha do tempo, pauta, convidados, comentários de eventos.
 - **Nome do autor da ideia**, como o portal o publica (já abreviado) e a UF declarada; o projeto não
-  completa nem cruza nomes. Comentaristas de eventos seguem sem nome.
+  completa nem cruza nomes. Comentaristas de eventos seguem sem nome. Finalidade, limites de reúso e
+  direitos do titular (LGPD) na seção "Dado pessoal" do `dicionario.md`; o titular pede a omissão por
+  e-mail, e ela vale a partir da edição seguinte.
 
 ---
 

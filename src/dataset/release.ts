@@ -203,7 +203,7 @@ export const RELEASE_CAVEATS: string[] = [
   "Cada linha diz, por bloco de página, de onde veio o valor (origem: arquivo de páginas ou corpus) e quando a página foi lida (coletadoEm). O arquivo de páginas começa em 30/10/2026 nas ideias e em 20/11/2026 nas demais entidades; antes disso, e para o que saiu da listagem, vale o último valor que o corpus guardou.",
   "Séries no tempo (apoios, situação, votos): entre `desde` e `ate` o valor foi visto em todas as leituras daquela série; fora delas, nada se afirma. No corpus, um ponto por mudança (`desde = ate`).",
   "Série de apoios das ideias, origem corpus: antes de 18/10/2026, apoios = 0 pode ser contagem AUSENTE lida como 0; a origem do arquivo de páginas (desde 30/10/2026) não tem essa ambiguidade.",
-  "autorNome é o nome do autor da ideia como o portal o publica (já abreviado); null quando o detalhe da ideia ainda vem do corpus, que nunca guardou o nome. Comentaristas de eventos seguem sem nome.",
+  "autorNome é o nome do autor da ideia como o portal o publica (já abreviado); null quando o detalhe da ideia ainda vem do corpus, que nunca guardou o nome, ou quando o titular pediu a omissão. Comentaristas de eventos seguem sem nome. Finalidade, limites de reúso e direitos do titular (LGPD): seção \"Dado pessoal\" do dicionario.md.",
   "Não existe data de abertura de consulta upstream (Recon Parte II).",
   "Status de eventos dobra REGISTRADO/'sem data prevista' em 'agendado' (Recon §4.1) — declarado, não corrigido.",
   "O acervo Arquimedes (votos por UF) é publicado em windows-1252; aqui está em UTF-8.",

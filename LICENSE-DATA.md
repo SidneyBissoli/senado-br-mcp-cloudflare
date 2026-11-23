@@ -25,6 +25,10 @@ Termos oficiais: <https://www12.senado.leg.br/dados-abertos>.
 - **Uso livre**, inclusive comercial, acadêmico e derivado.
 - **Atribuição obrigatória** da fonte original (Senado Federal) e recomendada deste dataset (cite o
   version-DOI do snapshot; ver [`CITATION.cff`](CITATION.cff) e [`CHANGELOG-dataset.md`](CHANGELOG-dataset.md)).
+- **Dado pessoal (a partir da versão 3.0.0):** o nome do autor de cada ideia legislativa, como o
+  portal o publica. Quem o usa também trata dado pessoal e responde pela própria finalidade (LGPD).
+  Finalidade, limites de reúso e como o titular pede a omissão: seção "Dado pessoal" do
+  [`docs/dataset-dictionary-v3.md`](docs/dataset-dictionary-v3.md) (`dicionario.md` no pacote).
 - **Sem garantia.** O dataset é uma coleta independente, **não** afiliada nem endossada pelo Senado
   Federal. Cobertura, caveats temporais e limitações estão declarados em
   [`docs/dataset-dictionary-v3.md`](docs/dataset-dictionary-v3.md) (esquema 3.0.0;
