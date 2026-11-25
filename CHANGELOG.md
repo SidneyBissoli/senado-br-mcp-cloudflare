@@ -8,6 +8,16 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- **Coletor da autoria oficial das matérias (E1.b do ROADMAP, vínculos com códigos oficiais).**
+  Job novo `ingest-ecidadania-autoria.yml` (diário, 17:00 UTC, runner `ecidadania`): para cada consulta,
+  proposição das ideias e matéria do acervo de votos por UF, lê `/processo?codigoMateria` e `/processo/{id}`
+  no Senado, ou `/proposicoes/{id}/autores` na Câmara, e guarda TODA resposta no arquivo bruto antes de
+  lê-la. O estado de cada matéria (`ecidadania_autoria_estado`, migration 0006) só é gravado depois de o
+  índice do arquivo ser descarregado, e falha não marca nada (volta no run seguinte). O job recusa rodar
+  com o arquivo desligado. Medido em 25/11/2026 (30 consultas ao acaso): 1 processo por matéria, detalhe
+  de 39 KB em média que fica em ~1,7 KB no arquivo; carga inicial ~18,6 mil matérias (~32 MB, ~2 semanas
+  em fatias de 1.500), depois só as novas. No arquivo, um pedaço numérico do caminho vira `id` no tipo da
+  resposta (uma referência por endpoint, não por matéria) e o id da leitura sai também das URLs da API.
 - **As ferramentas do e-Cidadania leem a camada 3 (D3 do ROADMAP, 3.26.0).** O job das observações
   copia no D1, todo dia, as tabelas publicadas que o servidor usa (`c3_*`, 12 tabelas; a DDL sai do
   dicionário 3.0.0) gravando só as linhas que mudaram: um retrato chave × hash da última cópia aplicada

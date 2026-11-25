@@ -43,7 +43,7 @@ import { ligarArquivo, type ArquivoLigado } from "./arquivo-run.js";
 // Arquivo bruto (B4, 15/11/2026): toda resposta baixada neste job — listagem, detalhe das consultas
 // novas e o `/processo` que decide o status — é guardada antes de lida. `sair` descarrega o índice
 // pendente antes de encerrar o processo.
-let arquivo: ArquivoLigado = { fechar: async () => {} };
+let arquivo: ArquivoLigado = { fechar: async () => {}, descarregar: async () => {} };
 async function sair(code: number): Promise<never> {
   await arquivo.fechar();
   process.exit(code);

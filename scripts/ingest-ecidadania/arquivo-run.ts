@@ -13,14 +13,21 @@ import { observarRespostas } from "./http.js";
 import { criarClienteR2 } from "./r2.js";
 
 export interface ArquivoLigado {
+  /** false = sem credenciais ou ECIDADANIA_ARQUIVO=desligado: nada é guardado. */
+  readonly ligado?: boolean;
   fechar(): Promise<void>;
+  /**
+   * Descarrega já o índice pendente. Quem grava um estado que depende das leituras (a autoria das
+   * matérias, E1.b) chama antes de gravá-lo: assim nunca há estado "feito" sem a linha no índice.
+   */
+  descarregar(): Promise<void>;
 }
 
 export function ligarArquivo(o: { job: string; entidade: string; outDir: string }): ArquivoLigado {
   const cfg = configDoAmbiente(process.env);
   if (!cfg) {
     console.log(`[${o.job}][arquivo-bruto] desligado (sem credenciais do R2 ou ECIDADANIA_ARQUIVO=desligado)`);
-    return { fechar: async () => {} };
+    return { ligado: false, fechar: async () => {}, descarregar: async () => {} };
   }
   // Sem zstd com dicionário (Node < 24.6) o job para aqui, antes de coletar — nunca cai calado no gzip.
   autoprovaZstd();
@@ -49,6 +56,10 @@ export function ligarArquivo(o: { job: string; entidade: string; outDir: string 
 
   let fechado = false;
   return {
+    ligado: true,
+    async descarregar() {
+      if (!fechado) await arquivo.descarregar();
+    },
     async fechar() {
       if (fechado) return;
       fechado = true;

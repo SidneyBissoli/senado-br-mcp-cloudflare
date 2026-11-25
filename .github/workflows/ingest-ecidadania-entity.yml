@@ -22,7 +22,7 @@ on:
   workflow_call:
     inputs:
       entity:
-        description: "Which corpus to ingest: consultas | eventos | ideias | ideias-detalhe"
+        description: "Which corpus to ingest: consultas | eventos | ideias | ideias-detalhe | autoria"
         required: true
         type: string
       force:
@@ -149,3 +149,15 @@ jobs:
         run: |
           files=$(ls scripts/ingest-ecidadania/out-ideias-detalhe-[0-9]*.sql 2>/dev/null | sort || true)
           if [ -n "$files" ]; then bash scripts/apply-d1.sh $files; else echo "nenhum arquivo a aplicar (lotes já aplicados durante o run)"; fi
+
+      # ── autoria (E1.b, 25/11/2026): autoria OFICIAL das matérias das consultas, das ideias e do acervo ──
+      # Senado /processo?codigoMateria + /processo/{id}; Câmara /proposicoes/{id}/autores. Toda resposta no
+      # arquivo bruto; o estado (ecidadania_autoria_estado, migration 0006) é gravado em lotes DURANTE o
+      # run, sempre depois do índice do arquivo. Fatia de 1500 matérias/run (~2 chamadas cada, pausa de
+      # 500 ms): a carga inicial (~18,6 mil) leva ~2 semanas; depois só as matérias novas.
+      - name: Collect official authorship (autoria)
+        if: inputs.entity == 'autoria'
+        env:
+          INGEST_AUTORIA_CHUNK: "1500"
+          INGEST_AUTORIA_DELAY_MS: "500"
+        run: npm run ingest:ecidadania:autoria

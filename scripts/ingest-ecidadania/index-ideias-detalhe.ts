@@ -51,7 +51,7 @@ const OUT_PREFIX = "out-ideias-detalhe-";
 const LOTE_PREFIX = `${OUT_PREFIX}lote-`;
 
 /** Arquivo bruto (fase B): ligado no início do run; todo caminho de saída o fecha antes de sair. */
-let arquivo: ArquivoLigado = { fechar: async () => {} };
+let arquivo: ArquivoLigado = { fechar: async () => {}, descarregar: async () => {} };
 
 function cleanOldOutputs(): void {
   for (const f of readdirSync(OUT_DIR)) {

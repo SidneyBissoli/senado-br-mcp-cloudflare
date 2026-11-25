@@ -44,7 +44,7 @@ import { ligarArquivo, type ArquivoLigado } from "./arquivo-run.js";
 // do decode windows-1252), a cada versão — a mesma versão não se repete (chave = sha). Job do arquivo
 // = "csv-votos", e NÃO "consultas-votos": o passo do workflow aplica `out-consultas-votos-*.sql` e
 // reaplicaria os lotes do índice (`out-<job>-arquivo-NNN.sql`), duplicando as linhas.
-let arquivo: ArquivoLigado = { fechar: async () => {} };
+let arquivo: ArquivoLigado = { fechar: async () => {}, descarregar: async () => {} };
 async function sair(code: number): Promise<never> {
   await arquivo.fechar();
   process.exit(code);

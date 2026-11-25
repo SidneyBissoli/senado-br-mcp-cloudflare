@@ -116,7 +116,12 @@ export function chaveDoManifesto(job: string, rodada: string, parte: number): st
 /** Id da página de detalhe (`visualizacaoideia?id=N`, `visualizacaoaudiencia?id=N`…); null nas listagens. */
 export function idDaUrl(url: string): string | null {
   const m = /\/visualizacao[a-z]+\?(?:[^#]*&)?id=(\d+)/i.exec(url);
-  return m ? m[1] : null;
+  if (m) return m[1];
+  // Respostas das APIs da autoria das matérias (E1.b, 25/11/2026): `processo?codigoMateria=N` → N
+  // (código da matéria), `processo/N` → N (id do processo), `proposicoes/N/autores` (Câmara) → N.
+  const api = /[?&]codigoMateria=(\d+)/.exec(url) ?? /\/dadosabertos\/processo\/(\d+)(?:[.?#]|$)/.exec(url) ??
+    /\/api\/v2\/proposicoes\/(\d+)\//.exec(url);
+  return api ? api[1] : null;
 }
 
 /** Tipo da página = último segmento do caminho, em minúsculas e sem acento (`pesquisaideia`). */
@@ -127,7 +132,15 @@ export function tipoDaPagina(url: string): string {
   } catch {
     caminho = url.split("?")[0];
   }
-  const seg = decodeURIComponent(caminho.split("/").filter(Boolean).pop() ?? "");
+  const segs = caminho.split("/").filter(Boolean);
+  // Caminho com pedaço numérico (APIs: `processo/7956349`, `proposicoes/2295936/autores`): o último
+  // pedaço seria o id e cada resposta viraria um tipo, com a sua própria referência. O número vira
+  // "id" e o tipo junta os três últimos pedaços. Nenhum endereço do portal tem pedaço numérico
+  // (conferido no índice em 25/11/2026), então os tipos antigos não mudam.
+  const numerico = (s: string) => /^\d+(\.json)?$/.test(s);
+  const seg = segs.some(numerico)
+    ? segs.map((s) => (numerico(s) ? "id" : decodeURIComponent(s))).slice(-3).join("-")
+    : decodeURIComponent(segs.pop() ?? "");
   const t = seg
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
