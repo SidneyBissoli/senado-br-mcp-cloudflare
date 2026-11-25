@@ -214,6 +214,28 @@ const CARGOS: Record<string, { por: "Senador" | "Deputado"; sexo: "feminino" | "
   Deputada: { por: "Deputado", sexo: "feminino" },
 };
 
+const ADOTANTE = /(Senador|Senadora|Deputado|Deputada) ([^,()]+?) \(([A-Z]{2})\)/g;
+
+/**
+ * Quem adotou a ideia, lido do span "A ideia foi adotada pelo(a) …". Um parlamentar →
+ * nome sem o cargo e a UF. Coautoria (24/11/2026, ideia 127858: 28 senadores no mesmo span) →
+ * o texto do span INTEIRO, como publicado, e UF null: a lista com código oficial vem da
+ * autoria da matéria (`vinculos/autores`, decisão 5 do E1), não de um recorte deste texto.
+ * Antes, o grupo preguiçoso esticava até o último "(UF)": nome = a lista sem o 1º cargo,
+ * UF = a do último. Exportada para teste.
+ */
+export function adotantesDaIdeia(html: string): { primeiroCargo: string; parlamentar: string; uf: string | null } | null {
+  const span = /A ideia foi adotada pel<span>[oa]<\/span>\s*<span>([^<]+)<\/span>/.exec(html);
+  if (!span) return null;
+  const texto = span[1].replace(/\s+/g, " ").trim();
+  const nomes = [...texto.matchAll(ADOTANTE)];
+  if (nomes.length === 0 || nomes[0].index !== 0) return null;
+  if (nomes.length === 1 && nomes[0][0] === texto) {
+    return { primeiroCargo: nomes[0][1], parlamentar: nomes[0][2].trim(), uf: nomes[0][3] };
+  }
+  return { primeiroCargo: nomes[0][1], parlamentar: texto, uf: null };
+}
+
 interface Contexto { ideia: IdeiaDetalhe; item: Acontecimento; html: string; onde: string }
 
 /** Campo de valor único: a segunda ocorrência é molde novo, nunca sobrescrita. */
@@ -325,11 +347,11 @@ function lerItem(c: Contexto): TipoAcontecimento | null {
     }
 
     const cargo = CARGOS[quem];
-    const autor = /A ideia foi adotada pel<span>[oa]<\/span>\s*<span>\s*(Senador|Senadora|Deputado|Deputada) (.+?) \(([A-Z]{2})\)\s*<\/span>/.exec(html);
-    if (!autor || autor[1] !== quem) {
+    const adotantes = adotantesDaIdeia(html);
+    if (!adotantes || adotantes.primeiroCargo !== quem) {
       throw new IdeiaDetalheForaDoMoldeError(`${onde}: "transformada por ${quem}" sem "adotada pelo(a) ${quem} NOME (UF)" correspondente`);
     }
-    c.ideia.proposicoes.push(novaProposicao({ ...base, transformadaPor: cargo.por, sexo: cargo.sexo, parlamentar: autor[2].trim(), parlamentarUf: autor[3] }));
+    c.ideia.proposicoes.push(novaProposicao({ ...base, transformadaPor: cargo.por, sexo: cargo.sexo, parlamentar: adotantes.parlamentar, parlamentarUf: adotantes.uf }));
     return "adocao";
   }
 

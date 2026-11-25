@@ -9,7 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
-  lerIdeiaDetalhe, partesDaProposicao, textoDoHtml, statusDaLinhaDoTempo, detalheParaCorpus, apoiosPublicados,
+  lerIdeiaDetalhe, partesDaProposicao, adotantesDaIdeia, textoDoHtml, statusDaLinhaDoTempo, detalheParaCorpus, apoiosPublicados,
   IdeiaDetalheForaDoMoldeError, type TipoAcontecimento,
 } from "../../src/scraper/ideia-detalhe.js";
 import aberta from "../fixtures/ecidadania/ideias-detalhe-2026-10/aberta-221186.html?raw";
@@ -28,6 +28,7 @@ import cdhPlp from "../fixtures/ecidadania/ideias-detalhe-2026-10/cdh-plp-198137
 import cdhIns from "../fixtures/ecidadania/ideias-detalhe-2026-10/cdh-ins-108750.html?raw";
 import adotadaSem20mil from "../fixtures/ecidadania/ideias-detalhe-2026-10/adotada-sem-20mil-102777.html?raw";
 import adotadaDeputada from "../fixtures/ecidadania/ideias-detalhe-2026-10/adotada-deputada-senadora-144418.html?raw";
+import adotadaCoautoria from "../fixtures/ecidadania/ideias-detalhe-2026-10/adotada-coautoria-28-127858.html?raw";
 import adotadaInc from "../fixtures/ecidadania/ideias-detalhe-2026-10/adotada-inc-200691.html?raw";
 import adotadaPrc from "../fixtures/ecidadania/ideias-detalhe-2026-10/adotada-prc-55581.html?raw";
 import requerimento from "../fixtures/ecidadania/ideias-detalhe-2026-10/requerimento-19341.html?raw";
@@ -203,6 +204,25 @@ describe("lerIdeiaDetalhe — um caminho por fixture", () => {
     expect(lerIdeiaDetalhe(adotadaDeputada).proposicoes[0]).toMatchObject({ transformadaPor: "Deputado", sexo: "feminino", parlamentar: "Maria do Rosário", parlamentarUf: "RS" });
     expect(lerIdeiaDetalhe(adotadaInc).proposicoes[0]).toMatchObject({ tipoSigla: "INC", tipoNome: "Indicação (CD)", numero: 1011, ano: 2026 });
     expect(lerIdeiaDetalhe(adotadaPrc).proposicoes[0]).toMatchObject({ tipoSigla: "PRC", tipoNome: "Projeto de Resolução (CD)", numero: 76, ano: 2025, parlamentar: "Kim Kataguiri" });
+  });
+
+  it("coautoria (E1.a, ideia 127858): o span inteiro como publicado e UF null, nunca a UF do último", () => {
+    const p = lerIdeiaDetalhe(adotadaCoautoria).proposicoes;
+    expect(p).toHaveLength(1);
+    expect(p[0]).toMatchObject({ transformadaPor: "Senador", sexo: "masculino", tipoSigla: "PEC", numero: 12, ano: 2021, parlamentarUf: null });
+    expect(p[0].parlamentar).toMatch(/^Senador Alessandro Vieira \(SE\), Senador Rodrigo Cunha \(AL\), /);
+    expect(p[0].parlamentar).toMatch(/, Senador Dário Berger \(SC\)$/);
+    expect(p[0].parlamentar!.match(/\([A-Z]{2}\)/g)).toHaveLength(28);
+    expect(p[0].url).toBe("https://www25.senado.leg.br/web/atividade/materias/-/materia/148537");
+  });
+
+  it("adotantesDaIdeia: um nome, coautoria e fora do molde", () => {
+    const span = (x: string) => `A ideia foi adotada pel<span>o</span> <span>${x}</span>`;
+    expect(adotantesDaIdeia(span("Senador Paulo Paim (RS)"))).toEqual({ primeiroCargo: "Senador", parlamentar: "Paulo Paim", uf: "RS" });
+    expect(adotantesDaIdeia(span("Senadora A (SP), Senador B (RJ)"))).toEqual({ primeiroCargo: "Senadora", parlamentar: "Senadora A (SP), Senador B (RJ)", uf: null });
+    expect(adotantesDaIdeia(span("Paulo Paim (RS)"))).toBeNull();
+    expect(adotantesDaIdeia(span("Senador Paulo Paim"))).toBeNull();
+    expect(adotantesDaIdeia("sem adoção")).toBeNull();
   });
 
   it("transformada sem autor: Requerimento da CDH (sem decisão da CDH inventada)", () => {

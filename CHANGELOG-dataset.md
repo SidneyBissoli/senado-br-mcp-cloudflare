@@ -43,6 +43,13 @@ release tem também seu **version-DOI**. Enquanto o Zenodo não cunha, os campos
   direitos do titular (LGPD) na seção "Dado pessoal" do `dicionario.md`; o titular pede a omissão por
   e-mail, e ela vale a partir da edição seguinte.
 
+### Corrigido antes do corte
+
+- **Coautoria em `ideias/proposicoes`:** quando vários parlamentares adotam a ideia juntos (ideia
+  127858, PEC 12/2021: 28 senadores), `parlamentar` trazia a lista sem o primeiro cargo e
+  `parlamentarUf` a UF do último da lista. Agora `parlamentar` traz a lista inteira como o portal a
+  publica e `parlamentarUf` fica nulo; um parlamentar só continua como antes.
+
 ---
 
 ## [dataset-v1.0.0] — 2026-07-04 · Inaugural (bootstrap 2026)
