@@ -68,8 +68,8 @@ Uma linha por proposição em que a ideia foi transformada (pela CDH ou adotada 
 | `data` | date | Data do acontecimento de transformação. | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
 | `transformadaPor` | string | Quem transformou, como publicado: Comissão | Senador | Deputado. | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
 | `sexo` | string | Gênero gramatical do cargo publicado: feminino (Senadora, Deputada) | masculino | null (Comissão). | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | Lido do cargo, não de cadastro. |
-| `parlamentar` | string | Nome do parlamentar (agente público). | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
-| `parlamentarUf` | string | UF do parlamentar. | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
+| `parlamentar` | string | Nome do parlamentar (agente público). Em coautoria, a lista inteira como o portal a publica (ex.: "Senador A (SE), Senadora B (SP), …"). | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | Coautoria não é separada aqui: o projeto não recorta a lista do portal. Os autores um a um, com código oficial, estão na autoria da matéria publicada pelo Senado (API de dados abertos, /processo) ou pela Câmara, a partir do link em url. |
+| `parlamentarUf` | string | UF do parlamentar. | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | Null em coautoria: cada coautor tem a sua UF dentro do texto de parlamentar. |
 | `tipoSigla` | string | Sigla do tipo de proposição (PL, PEC, PLP…). | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
 | `tipoNome` | string | Nome do tipo, como publicado. | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
 | `numero` | string | Número da proposição. | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |

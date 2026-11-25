@@ -27,6 +27,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- **Ideia adotada por vários parlamentares: nome e UF não se misturam mais.** O leitor da linha do
+  tempo (`lerIdeiaDetalhe`) supunha um parlamentar por adoção; com coautoria (ideia 127858, 28
+  senadores), o nome virava a lista sem o primeiro cargo e a UF era a do último. Agora
+  `adotantesDaIdeia` devolve, em coautoria, o texto inteiro como publicado e UF nula (decisão 5 do E1:
+  os coautores com código oficial vêm da autoria da matéria, não de um recorte desta lista). Como o
+  hash do leitor muda, o próximo run das observações refaz as ideias do zero.
 - **Linha do tempo da ideia: o item do topo não some mais se vier colado no `<ol>`.** O leitor
   (`lerIdeiaDetalhe`) descartava o primeiro pedaço do corte supondo que fosse espaço; com o `<li>` sem
   nada antes, o acontecimento mais recente sumia calado. Nas páginas servidas até 21/11/2026 sempre há
