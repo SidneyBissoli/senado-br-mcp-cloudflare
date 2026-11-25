@@ -195,6 +195,18 @@ describe("chaves, índice e manifesto", () => {
     expect(idDaUrl("https://www12.senado.leg.br/ecidadania/visualizacaoideia?id=136304")).toBe("136304");
     expect(idDaUrl("https://www12.senado.leg.br/ecidadania/visualizacaoaudiencia?id=9")).toBe("9");
     expect(idDaUrl("https://www12.senado.leg.br/ecidadania/pesquisaideia?situacao=99&p=1")).toBeNull();
+    // APIs da autoria das matérias (E1.b)
+    expect(idDaUrl("https://legis.senado.leg.br/dadosabertos/processo?codigoMateria=143307")).toBe("143307");
+    expect(idDaUrl("https://legis.senado.leg.br/dadosabertos/processo/7956349")).toBe("7956349");
+    expect(idDaUrl("https://dadosabertos.camara.leg.br/api/v2/proposicoes/2295936/autores")).toBe("2295936");
+    expect(idDaUrl("https://legis.senado.leg.br/dadosabertos/processo.json?sigla=MPV&tramitando=S")).toBeNull();
+  });
+
+  it("tipoDaPagina: pedaço numérico vira 'id' (uma referência por endpoint, não por matéria)", () => {
+    expect(tipoDaPagina("https://legis.senado.leg.br/dadosabertos/processo/7956349")).toBe("dadosabertos-processo-id");
+    expect(tipoDaPagina("https://legis.senado.leg.br/dadosabertos/processo/8796447")).toBe("dadosabertos-processo-id");
+    expect(tipoDaPagina("https://legis.senado.leg.br/dadosabertos/processo?codigoMateria=1")).toBe("processo");
+    expect(tipoDaPagina("https://dadosabertos.camara.leg.br/api/v2/proposicoes/2295936/autores")).toBe("proposicoes-id-autores");
   });
 
   it("linha do índice escapa aspas e manifesto tem uma linha JSON por leitura", () => {

@@ -1,0 +1,20 @@
+name: Ingest e-Cidadania — autoria das matérias
+
+# Scheduler stub (E1.b do ROADMAP, 25/11/2026): autoria OFICIAL das matérias (Senado /processo e Câmara
+# /proposicoes/{id}/autores), uma fatia por run, toda resposta no arquivo bruto. Lógica no reutilizável.
+on:
+  schedule:
+    - cron: "0 17 * * *" # daily 17:00 UTC (14:00 America/Sao_Paulo)
+  workflow_dispatch:
+
+# Menor privilégio: sem este bloco o token herda o padrão do repositório
+# (actions/missing-workflow-permissions). Um bloco no nível do job substitui este.
+permissions:
+  contents: read
+
+jobs:
+  call:
+    uses: ./.github/workflows/ingest-ecidadania-entity.yml
+    with:
+      entity: autoria
+    secrets: inherit

@@ -78,7 +78,7 @@ const OUT_PREFIX = "out-ideias-";
 const disjuntor = criarDisjuntor();
 
 /** Arquivo bruto (fase B): ligado no início do run; todo caminho de saída o fecha antes de sair. */
-let arquivo: ArquivoLigado = { fechar: async () => {} };
+let arquivo: ArquivoLigado = { fechar: async () => {}, descarregar: async () => {} };
 
 type IdeiaCrawlItem = IdeiaListingItem & { status: string };
 
