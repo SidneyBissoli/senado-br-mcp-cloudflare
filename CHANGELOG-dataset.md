@@ -27,7 +27,7 @@ release tem também seu **version-DOI**. Enquanto o Zenodo não cunha, os campos
 
 ### Mudou (MAJOR)
 
-- **Formato:** tabelas tidy em **Parquet** (14 tabelas, `datapackage.json` Frictionless + `dicionario.md`);
+- **Formato:** tabelas tidy em **Parquet** (16 tabelas, `datapackage.json` Frictionless + `dicionario.md`);
   sai o NDJSON. Tipos e nulos vêm no próprio arquivo; para planilha, converta com DuckDB.
 - **Entrega:** pacote plano, um arquivo por tabela (`ideias-serie-apoios.parquet` etc.). No Zenodo, os
   arquivos vão soltos: cada tabela se vê e se baixa sozinha, e `SHA256SUMS` confere o que se baixou. O
@@ -42,6 +42,16 @@ release tem também seu **version-DOI**. Enquanto o Zenodo não cunha, os campos
   completa nem cruza nomes. Comentaristas de eventos seguem sem nome. Finalidade, limites de reúso e
   direitos do titular (LGPD) na seção "Dado pessoal" do `dicionario.md`; o titular pede a omissão por
   e-mail, e ela vale a partir da edição seguinte.
+
+### Adicionado
+
+- **Vínculos com as matérias oficiais (duas tabelas novas).** `vinculos/materias` (derivada) liga cada
+  consulta, proposição gerada por ideia e matéria do acervo ao código oficial da matéria no Senado ou na
+  Câmara, dizendo o método do vínculo (o número que o portal usa, ou o link publicado na ideia; nunca por
+  nome) e se a autoria oficial já foi lida. `vinculos/autores` (cópia) traz os autores um a um como o
+  Senado e a Câmara os publicam, com código do parlamentar, UF, partido e o papel: quem apresentou a
+  matéria (`iniciativa`) e de quem é o texto em tramitação (`texto`), que podem diferir. Nas consultas,
+  o vínculo só entra se a autoria oficial começa pela que o portal mostra.
 
 ### Corrigido antes do corte
 

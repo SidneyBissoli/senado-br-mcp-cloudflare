@@ -28,7 +28,8 @@ import { fonteDaUrl, statusObservavel, versaoDoLeitor } from "./fatos.js";
 import { fundir, ForaDeOrdemError, type Leitura, type Observacao } from "./fundir.js";
 import { BALDE_OBSERVACOES, CHAVE_DA_COPIA, CHAVE_DOS_INVARIANTES, ENTIDADE, LOTE, leiturasDaLinha, sqlDoLote, type Contagem, type LinhaDoIndice } from "./linhas.js";
 import { gravarSeries } from "./series-run.js";
-import { gravarPublicacao } from "../publicacao/gravar.js";
+import { gravarPublicacao, lerItensPublicados } from "../publicacao/gravar.js";
+import { ENTIDADE_AUTORIA, fonteAutoria, leiturasAutoria, sqlDoLoteAutoria, statusObservavelAutoria, versaoDoLeitorAutoria, type ContagemAutoria } from "./fatos-autoria.js";
 import { ENTIDADES_C5, decodificarC5, fonteC5, leiturasC5, sqlDoLoteC5, statusObservavelC5, versaoDoLeitorC5, type ContagemC5 } from "./fatos-c5.js";
 import { separarConhecidas, verificarInvariantes, type Conhecida, type Violacao } from "./invariantes.js";
 import { AbridorDePaginas, emParalelo } from "./paginas.js";
@@ -141,7 +142,7 @@ async function main(): Promise<void> {
     saida: arg("--saida"),
     desde: arg("--desde"),
   };
-  const entidades = (arg("--entidades") ?? [ENTIDADE, ...ENTIDADES_C5].join(",")).split(",");
+  const entidades = (arg("--entidades") ?? [ENTIDADE, ...ENTIDADES_C5, ENTIDADE_AUTORIA].join(",")).split(",");
   const saida = o.saida;
   // As páginas desde 15/11/2026 estão em zstd com dicionário: sem Node ≥ 24.6 para aqui, não lê lixo.
   autoprovaZstd();
@@ -182,6 +183,25 @@ async function main(): Promise<void> {
     console.log(`[observacoes][${entidade}] ${c.foraDoMolde} página(s) que o leitor recusou`);
     // D1 — tabelas publicadas da entidade (camada 3), depois da cópia gravada.
     if (!process.argv.includes("--sem-publicacao")) await gravarPublicacao(entidade, { obs: r.obs, leitor: leitorC5, cursor: r.cursor, balde: observacoes, saida });
+  }
+  // E1.c — autoria oficial das matérias (job `autoria`) → vínculos. Por último: liga os itens que as
+  // entidades acima acabaram de publicar.
+  if (entidades.includes(ENTIDADE_AUTORIA)) {
+    const c: ContagemAutoria = { foraDoMolde: 0 };
+    const leitor = versaoDoLeitorAutoria();
+    const r = await reprocessar({
+      entidade: ENTIDADE_AUTORIA, chave: `${ENTIDADE_AUTORIA}/observacoes.parquet`, leitor, sql: sqlDoLoteAutoria,
+      fonte: (l) => {
+        const f = fonteAutoria(l.url);
+        return f !== null && statusObservavelAutoria(l.status_http) ? f : null;
+      },
+      leituras: (l, bytes) => leiturasAutoria(l, utf8.decode(bytes), c),
+    }, o, abridor, observacoes);
+    console.log(`[observacoes][${ENTIDADE_AUTORIA}] ${c.foraDoMolde} resposta(s) que o leitor recusou`);
+    if (!process.argv.includes("--sem-publicacao")) {
+      const itens = await lerItensPublicados(observacoes, saida);
+      await gravarPublicacao("autoria", { obs: r.obs, leitor, cursor: r.cursor, balde: observacoes, saida, itens });
+    }
   }
   if (falhouInvariante) process.exitCode = 1;
 }

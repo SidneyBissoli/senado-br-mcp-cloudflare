@@ -8,6 +8,15 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- **Tabelas de vínculos no dataset 3.0.0 (E1.c do ROADMAP).** O job das observações lê as respostas
+  da autoria oficial guardadas pela E1.b (`scripts/observacoes/fatos-autoria.ts`, entidade `autoria`,
+  num módulo próprio para não mudar a versão do leitor das outras entidades) e publica
+  `vinculos/materias` (derivada: item do e-Cidadania × matéria oficial, com método e situação) e
+  `vinculos/autores` (cópia: autores na ordem oficial, com papel `iniciativa`/`texto`/`camara`, código
+  do parlamentar e a página de origem) — `scripts/publicacao/vinculos.ts`, dicionário e Frictionless.
+  Vigia: nas consultas, `documento.resumoAutoria` tem de ser a autoria do portal ou começar por ela
+  seguida de vírgula (o portal mostra só o primeiro autor, cortado na 1ª vírgula; 120 consultas
+  medidas em 25/11/2026, todas conferem); vínculo que não confere fica fora e é avisado no run.
 - **Coletor da autoria oficial das matérias (E1.b do ROADMAP, vínculos com códigos oficiais).**
   Job novo `ingest-ecidadania-autoria.yml` (diário, 17:00 UTC, runner `ecidadania`): para cada consulta,
   proposição das ideias e matéria do acervo de votos por UF, lê `/processo?codigoMateria` e `/processo/{id}`
@@ -15,7 +24,7 @@ All notable changes to this project are documented here. Format based on
   lê-la. O estado de cada matéria (`ecidadania_autoria_estado`, migration 0006) só é gravado depois de o
   índice do arquivo ser descarregado, e falha não marca nada (volta no run seguinte). O job recusa rodar
   com o arquivo desligado. Medido em 25/11/2026 (30 consultas ao acaso): 1 processo por matéria, detalhe
-  de 39 KB em média que fica em ~1,7 KB no arquivo; carga inicial ~18,6 mil matérias (~32 MB, ~2 semanas
+  de 39 KB em média; no 1º run (1.500 matérias) ~3 KB por matéria no arquivo; carga inicial ~18,5 mil matérias (~56 MB, ~2 semanas
   em fatias de 1.500), depois só as novas. No arquivo, um pedaço numérico do caminho vira `id` no tipo da
   resposta (uma referência por endpoint, não por matéria) e o id da leitura sai também das URLs da API.
 - **As ferramentas do e-Cidadania leem a camada 3 (D3 do ROADMAP, 3.26.0).** O job das observações

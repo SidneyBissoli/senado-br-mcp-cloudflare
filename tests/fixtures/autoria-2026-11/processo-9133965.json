@@ -1,0 +1,48 @@
+{
+ "_captura": {
+  "url": "https://legis.senado.leg.br/dadosabertos/processo/9133965",
+  "em": "2026-11-25",
+  "recorte": "só as chaves que o leitor usa; valores intactos"
+ },
+ "id": 9133965,
+ "codigoMateria": 176514,
+ "identificacao": "PL 5905/2026 (Substitutivo-CD)",
+ "siglaCasaIniciadora": "SF",
+ "idProcessoCasaInicial": 2980024,
+ "autoriaIniciativa": [
+  {
+   "autor": "Marcelo Crivella",
+   "sexo": "M",
+   "siglaTipo": "SENADOR",
+   "descricaoTipo": "SENADOR",
+   "ordem": 1,
+   "outrosAutoresNaoInformados": "Não",
+   "codigoParlamentar": 3366,
+   "uf": "RJ",
+   "siglaPartido": "REPUBLICANOS",
+   "partido": "Republicanos",
+   "siglaCargo": "SENADOR",
+   "cargo": "Senador",
+   "idEnte": 1,
+   "siglaEnte": "SF",
+   "casaEnte": "SF",
+   "ente": "Senado Federal"
+  }
+ ],
+ "documento": {
+  "autoria": [
+   {
+    "autor": "Câmara dos Deputados",
+    "siglaTipo": "CAMARA",
+    "descricaoTipo": "CAMARA",
+    "ordem": 1,
+    "outrosAutoresNaoInformados": "Não",
+    "idEnte": 2,
+    "siglaEnte": "CD",
+    "casaEnte": "CD",
+    "ente": "Câmara dos Deputados"
+   }
+  ],
+  "resumoAutoria": "Câmara dos Deputados"
+ }
+}

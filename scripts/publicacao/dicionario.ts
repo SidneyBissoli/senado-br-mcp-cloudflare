@@ -50,6 +50,9 @@ const P = {
   listaEvento: `listagem \`${E}/principalaudiencia?p={N}\``,
   evento: `detalhe \`${E}/visualizacaoaudiencia?id={ID}\``,
   comentarios: `fragmento \`${E}/ajaxcolecaocomentarioaudiencia?audienciaId={ID}\``,
+  listaProcessos: "lista `https://legis.senado.leg.br/dadosabertos/processo?codigoMateria={CODIGO}` (API de dados abertos do Senado)",
+  processo: "detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado)",
+  autoresCamara: "`https://dadosabertos.camara.leg.br/api/v2/proposicoes/{CODIGO}/autores` (API de dados abertos da Câmara)",
   csv: "CSV Arquimedes `https://www.senado.gov.br/bi-arqs/Arquimedes/ecidadania/DadosAbertos/Proposi%C3%A7%C3%B5es-com-votos.csv` (windows-1252, lido como UTF-8)",
 } as const;
 
@@ -121,7 +124,7 @@ export const DICIONARIO: TabelaDoDicionario[] = [
       { nome: "data", tipo: "date", descricao: "Data do acontecimento de transformação.", fonte: P.ideia },
       { nome: "transformadaPor", tipo: "string", descricao: "Quem transformou, como publicado: Comissão | Senador | Deputado.", fonte: P.ideia },
       { nome: "sexo", tipo: "string", descricao: "Gênero gramatical do cargo publicado: feminino (Senadora, Deputada) | masculino | null (Comissão).", fonte: P.ideia, nota: "Lido do cargo, não de cadastro." },
-      { nome: "parlamentar", tipo: "string", descricao: "Nome do parlamentar (agente público). Em coautoria, a lista inteira como o portal a publica (ex.: \"Senador A (SE), Senadora B (SP), …\").", fonte: P.ideia, nota: "Coautoria não é separada aqui: o projeto não recorta a lista do portal. Os autores um a um, com código oficial, estão na autoria da matéria publicada pelo Senado (API de dados abertos, /processo) ou pela Câmara, a partir do link em url." },
+      { nome: "parlamentar", tipo: "string", descricao: "Nome do parlamentar (agente público). Em coautoria, a lista inteira como o portal a publica (ex.: \"Senador A (SE), Senadora B (SP), …\").", fonte: P.ideia, nota: "Coautoria não é separada aqui: o projeto não recorta a lista do portal. Os autores um a um, com código oficial, estão em `vinculos/autores` (cópia da autoria publicada pelo Senado ou pela Câmara), ligados a esta linha por `vinculos/materias` (entidade ideias, mesmo id e o link em url)." },
       { nome: "parlamentarUf", tipo: "string", descricao: "UF do parlamentar.", fonte: P.ideia, nota: "Null em coautoria: cada coautor tem a sua UF dentro do texto de parlamentar." },
       { nome: "tipoSigla", tipo: "string", descricao: "Sigla do tipo de proposição (PL, PEC, PLP…).", fonte: P.ideia },
       { nome: "tipoNome", tipo: "string", descricao: "Nome do tipo, como publicado.", fonte: P.ideia },
@@ -296,6 +299,65 @@ export const DICIONARIO: TabelaDoDicionario[] = [
       { nome: "sim", tipo: "integer", descricao: "Votos SIM dessa UF.", fonte: `${P.csv}, coluna VOTO SIM` },
       { nome: "nao", tipo: "integer", descricao: "Votos NÃO dessa UF.", fonte: `${P.csv}, coluna VOTO NÃO` },
       ...serie({ origens: "csv (arquivo de páginas) | corpus" }),
+    ],
+  },
+  {
+    caminho: "vinculos/materias", titulo: "Vínculos dos itens do e-Cidadania com as matérias oficiais", chave: ["entidade", "itemId", "casa", "codigo"],
+    descricao:
+      "Tabela DERIVADA: uma linha por item do e-Cidadania (consulta, proposição gerada por ideia, matéria do acervo) × matéria oficial no Senado ou na Câmara, " +
+      "com o método do vínculo e a situação da leitura da autoria oficial. Os autores da matéria estão em `vinculos/autores` (pela casa e pelo código).",
+    colunas: [
+      { nome: "entidade", tipo: "string", descricao: "Tabela de onde vem o item: consultas | ideias | consultas_votos.", fonte: "projeto", calculada: true },
+      { nome: "itemId", tipo: "integer", descricao: "Id do item: o `id` da consulta, o `id` da ideia (ligue a `ideias/proposicoes` por ele e por `linkPublicado` = `url`) ou o `codigo` do acervo.", fonte: "tabela da entidade" },
+      { nome: "casa", tipo: "string", descricao: "Casa da matéria oficial: SF (Senado) | CD (Câmara).", fonte: "projeto, pelo método", calculada: true },
+      { nome: "codigo", tipo: "integer", descricao: "Código oficial: `codigoMateria` no Senado; id da proposição na Câmara.", fonte: "projeto, pelo método", calculada: true },
+      {
+        nome: "metodo", tipo: "string", descricao: "Como o vínculo foi feito: id-da-consulta | link-publicado | codigo-do-acervo.", fonte: "projeto", calculada: true,
+        nota: "id-da-consulta e codigo-do-acervo: o número que o portal usa já é o código da matéria no Senado. link-publicado: o código lido do link da proposição na linha do tempo da ideia (`…/materia/<codigo>` no Senado, `idProposicao=<id>` na Câmara). Nenhum vínculo é feito por nome.",
+      },
+      { nome: "linkPublicado", tipo: "string", descricao: "Link da proposição como a ideia o publica (só no método link-publicado).", fonte: P.ideia },
+      {
+        nome: "situacao", tipo: "string", descricao: "Leitura da autoria oficial: lida | sem-processo | nao-encontrada | pendente.", fonte: `${P.listaProcessos}; ${P.autoresCamara}`, calculada: true,
+        nota: "pendente = o robô ainda não leu a matéria na fonte oficial (carga inicial a partir de 25/11/2026), ou a leitura veio incompleta. sem-processo = o Senado responde a matéria sem nenhum processo; nao-encontrada = a fonte não conhece o código (404).",
+      },
+      { nome: "processos", tipo: "string", descricao: "Ids dos processos da matéria no Senado, separados por vírgula.", fonte: P.listaProcessos },
+      { nome: "identificacao", tipo: "string", descricao: "Identificação oficial da matéria (ex.: \"PDL 323/2020\"), do primeiro processo.", fonte: `${P.processo}, campo identificacao` },
+      { nome: "resumoAutoria", tipo: "string", descricao: "Autoria do texto em tramitação, por extenso, como o Senado a resume (primeiro processo).", fonte: `${P.processo}, campo documento.resumoAutoria` },
+      { nome: "autoriaNoPortal", tipo: "string", descricao: "Autoria que o portal e-Cidadania mostra (só nas consultas; a mesma coluna de `consultas/consultas`).", fonte: P.consulta },
+      {
+        nome: "confereComPortal", tipo: "string", descricao: "sim = `resumoAutoria` é a autoria do portal ou começa por ela seguida de vírgula; null = nada a comparar.", fonte: "comparação do projeto", calculada: true,
+        nota: "O portal mostra só o primeiro autor e esconde os demais atrás de \"e outros\"; o corte é na primeira vírgula, até no nome de comissão. Vínculo que não confere fica fora desta tabela (é avisado no processamento).",
+      },
+      { nome: "conferidoEm", tipo: "datetime", descricao: "Quando a matéria foi lida na fonte oficial (UTC).", fonte: "índice do arquivo de páginas" },
+    ],
+  },
+  {
+    caminho: "vinculos/autores", titulo: "Autores oficiais das matérias", chave: ["casa", "codigo", "processo", "papel", "posicao"],
+    descricao:
+      "CÓPIA da autoria publicada pelo Senado e pela Câmara: uma linha por matéria × processo × papel × autor, na ordem publicada. Só matérias ligadas a algum item em `vinculos/materias`.",
+    colunas: [
+      { nome: "casa", tipo: "string", descricao: "SF | CD.", fonte: "projeto", calculada: true },
+      { nome: "codigo", tipo: "integer", descricao: "Código oficial da matéria (o mesmo de `vinculos/materias`).", fonte: `${P.processo}, campo codigoMateria; na Câmara, o id da proposição` },
+      { nome: "processo", tipo: "integer", descricao: "Id do processo no Senado (null na Câmara).", fonte: P.listaProcessos },
+      {
+        nome: "papel", tipo: "string", descricao: "iniciativa = quem apresentou a matéria (`autoriaIniciativa`); texto = autoria do texto em tramitação (`documento.autoria`); camara = autor na API da Câmara.", fonte: `${P.processo}; ${P.autoresCamara}`,
+        nota: "Iniciativa e texto podem divergir: um substitutivo da Câmara a projeto do Senado tem o texto da Câmara e a iniciativa do senador.",
+      },
+      { nome: "posicao", tipo: "integer", descricao: "Posição do autor na lista publicada (1 = o primeiro).", fonte: "ordem da lista na resposta" },
+      { nome: "ordem", tipo: "integer", descricao: "Ordem de autoria como a fonte a numera (`ordem`; na Câmara, `ordemAssinatura`).", fonte: `${P.processo}; ${P.autoresCamara}` },
+      { nome: "autor", tipo: "string", descricao: "Nome do autor (parlamentar ou órgão) como a Casa o publica.", fonte: `${P.processo}, campo autor; Câmara, campo nome` },
+      { nome: "tipo", tipo: "string", descricao: "Tipo do autor (ex.: SENADOR, COMISSAO; na Câmara, \"Deputado(a)\").", fonte: `${P.processo}, campo siglaTipo; Câmara, campo tipo` },
+      { nome: "codigoParlamentar", tipo: "integer", descricao: "Código do parlamentar no Senado (null para órgão).", fonte: `${P.processo}, campo codigoParlamentar` },
+      { nome: "idDeputado", tipo: "integer", descricao: "Id do deputado na Câmara (só na casa CD; null para órgão).", fonte: `${P.autoresCamara}, final do campo uri` },
+      { nome: "uf", tipo: "string", descricao: "UF do parlamentar.", fonte: `${P.processo}, campo uf`, nota: "Null na Câmara: a lista de autores não traz a UF." },
+      { nome: "siglaPartido", tipo: "string", descricao: "Partido do parlamentar como a fonte o registra na autoria.", fonte: `${P.processo}, campo siglaPartido` },
+      { nome: "cargo", tipo: "string", descricao: "Cargo do autor (ex.: SENADOR).", fonte: `${P.processo}, campo siglaCargo` },
+      { nome: "ente", tipo: "string", descricao: "Casa ou ente do autor (ex.: SF, CD).", fonte: `${P.processo}, campo siglaEnte` },
+      { nome: "outrosAutoresNaoInformados", tipo: "string", descricao: "Sim/Não, como a fonte publica.", fonte: `${P.processo}, campo outrosAutoresNaoInformados` },
+      { nome: "proponente", tipo: "integer", descricao: "1 = proponente (só na Câmara).", fonte: `${P.autoresCamara}, campo proponente` },
+      { nome: "url", tipo: "string", descricao: "Endereço da resposta da fonte de onde veio a linha.", fonte: "montada pelo projeto a partir do código", calculada: true },
+      { nome: "coletadoEm", tipo: "datetime", descricao: "Quando a resposta foi lida (UTC).", fonte: "índice do arquivo de páginas" },
+      { nome: "sha", tipo: "string", descricao: "sha256 da resposta guardada (o arquivo bruto é privado; o hash prova a leitura).", fonte: "arquivo de páginas" },
     ],
   },
 ];

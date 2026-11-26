@@ -68,7 +68,7 @@ Uma linha por proposição em que a ideia foi transformada (pela CDH ou adotada 
 | `data` | date | Data do acontecimento de transformação. | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
 | `transformadaPor` | string | Quem transformou, como publicado: Comissão | Senador | Deputado. | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
 | `sexo` | string | Gênero gramatical do cargo publicado: feminino (Senadora, Deputada) | masculino | null (Comissão). | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | Lido do cargo, não de cadastro. |
-| `parlamentar` | string | Nome do parlamentar (agente público). Em coautoria, a lista inteira como o portal a publica (ex.: "Senador A (SE), Senadora B (SP), …"). | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | Coautoria não é separada aqui: o projeto não recorta a lista do portal. Os autores um a um, com código oficial, estão na autoria da matéria publicada pelo Senado (API de dados abertos, /processo) ou pela Câmara, a partir do link em url. |
+| `parlamentar` | string | Nome do parlamentar (agente público). Em coautoria, a lista inteira como o portal a publica (ex.: "Senador A (SE), Senadora B (SP), …"). | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | Coautoria não é separada aqui: o projeto não recorta a lista do portal. Os autores um a um, com código oficial, estão em `vinculos/autores` (cópia da autoria publicada pelo Senado ou pela Câmara), ligados a esta linha por `vinculos/materias` (entidade ideias, mesmo id e o link em url). |
 | `parlamentarUf` | string | UF do parlamentar. | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | Null em coautoria: cada coautor tem a sua UF dentro do texto de parlamentar. |
 | `tipoSigla` | string | Sigla do tipo de proposição (PL, PEC, PLP…). | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
 | `tipoNome` | string | Nome do tipo, como publicado. | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
@@ -316,3 +316,57 @@ Formato longo: uma linha por matéria × UF × valor visto, com o intervalo de v
 | `leituras` | integer | Quantas leituras seguidas mostraram o valor. | arquivo de páginas (1 no corpus) | — |
 | `sha` | string | sha256 da primeira página guardada que mostrou o valor (o arquivo bruto é privado; o hash prova a leitura). | arquivo de páginas (null no corpus) | — |
 | `origem` ⚙️ | string | De onde vem a linha: csv (arquivo de páginas) | corpus. | projeto | — |
+
+## `vinculos/materias` — Vínculos dos itens do e-Cidadania com as matérias oficiais
+
+Tabela DERIVADA: uma linha por item do e-Cidadania (consulta, proposição gerada por ideia, matéria do acervo) × matéria oficial no Senado ou na Câmara, com o método do vínculo e a situação da leitura da autoria oficial. Os autores da matéria estão em `vinculos/autores` (pela casa e pelo código).
+
+**Arquivo:** `vinculos-materias.parquet`
+
+**Uma linha por:** `entidade` × `itemId` × `casa` × `codigo`
+
+| Coluna | Tipo | Descrição | Fonte | Nota |
+|---|---|---|---|---|
+| `entidade` ⚙️ | string | Tabela de onde vem o item: consultas | ideias | consultas_votos. | projeto | — |
+| `itemId` | integer | Id do item: o `id` da consulta, o `id` da ideia (ligue a `ideias/proposicoes` por ele e por `linkPublicado` = `url`) ou o `codigo` do acervo. | tabela da entidade | — |
+| `casa` ⚙️ | string | Casa da matéria oficial: SF (Senado) | CD (Câmara). | projeto, pelo método | — |
+| `codigo` ⚙️ | integer | Código oficial: `codigoMateria` no Senado; id da proposição na Câmara. | projeto, pelo método | — |
+| `metodo` ⚙️ | string | Como o vínculo foi feito: id-da-consulta | link-publicado | codigo-do-acervo. | projeto | id-da-consulta e codigo-do-acervo: o número que o portal usa já é o código da matéria no Senado. link-publicado: o código lido do link da proposição na linha do tempo da ideia (`…/materia/<codigo>` no Senado, `idProposicao=<id>` na Câmara). Nenhum vínculo é feito por nome. |
+| `linkPublicado` | string | Link da proposição como a ideia o publica (só no método link-publicado). | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaoideia?id={ID}` | — |
+| `situacao` ⚙️ | string | Leitura da autoria oficial: lida | sem-processo | nao-encontrada | pendente. | lista `https://legis.senado.leg.br/dadosabertos/processo?codigoMateria={CODIGO}` (API de dados abertos do Senado); `https://dadosabertos.camara.leg.br/api/v2/proposicoes/{CODIGO}/autores` (API de dados abertos da Câmara) | pendente = o robô ainda não leu a matéria na fonte oficial (carga inicial a partir de 25/11/2026), ou a leitura veio incompleta. sem-processo = o Senado responde a matéria sem nenhum processo; nao-encontrada = a fonte não conhece o código (404). |
+| `processos` | string | Ids dos processos da matéria no Senado, separados por vírgula. | lista `https://legis.senado.leg.br/dadosabertos/processo?codigoMateria={CODIGO}` (API de dados abertos do Senado) | — |
+| `identificacao` | string | Identificação oficial da matéria (ex.: "PDL 323/2020"), do primeiro processo. | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo identificacao | — |
+| `resumoAutoria` | string | Autoria do texto em tramitação, por extenso, como o Senado a resume (primeiro processo). | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo documento.resumoAutoria | — |
+| `autoriaNoPortal` | string | Autoria que o portal e-Cidadania mostra (só nas consultas; a mesma coluna de `consultas/consultas`). | detalhe `https://www12.senado.leg.br/ecidadania/visualizacaomateria?id={ID}` | — |
+| `confereComPortal` ⚙️ | string | sim = `resumoAutoria` é a autoria do portal ou começa por ela seguida de vírgula; null = nada a comparar. | comparação do projeto | O portal mostra só o primeiro autor e esconde os demais atrás de "e outros"; o corte é na primeira vírgula, até no nome de comissão. Vínculo que não confere fica fora desta tabela (é avisado no processamento). |
+| `conferidoEm` | datetime | Quando a matéria foi lida na fonte oficial (UTC). | índice do arquivo de páginas | — |
+
+## `vinculos/autores` — Autores oficiais das matérias
+
+CÓPIA da autoria publicada pelo Senado e pela Câmara: uma linha por matéria × processo × papel × autor, na ordem publicada. Só matérias ligadas a algum item em `vinculos/materias`.
+
+**Arquivo:** `vinculos-autores.parquet`
+
+**Uma linha por:** `casa` × `codigo` × `processo` × `papel` × `posicao`
+
+| Coluna | Tipo | Descrição | Fonte | Nota |
+|---|---|---|---|---|
+| `casa` ⚙️ | string | SF | CD. | projeto | — |
+| `codigo` | integer | Código oficial da matéria (o mesmo de `vinculos/materias`). | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo codigoMateria; na Câmara, o id da proposição | — |
+| `processo` | integer | Id do processo no Senado (null na Câmara). | lista `https://legis.senado.leg.br/dadosabertos/processo?codigoMateria={CODIGO}` (API de dados abertos do Senado) | — |
+| `papel` | string | iniciativa = quem apresentou a matéria (`autoriaIniciativa`); texto = autoria do texto em tramitação (`documento.autoria`); camara = autor na API da Câmara. | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado); `https://dadosabertos.camara.leg.br/api/v2/proposicoes/{CODIGO}/autores` (API de dados abertos da Câmara) | Iniciativa e texto podem divergir: um substitutivo da Câmara a projeto do Senado tem o texto da Câmara e a iniciativa do senador. |
+| `posicao` | integer | Posição do autor na lista publicada (1 = o primeiro). | ordem da lista na resposta | — |
+| `ordem` | integer | Ordem de autoria como a fonte a numera (`ordem`; na Câmara, `ordemAssinatura`). | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado); `https://dadosabertos.camara.leg.br/api/v2/proposicoes/{CODIGO}/autores` (API de dados abertos da Câmara) | — |
+| `autor` | string | Nome do autor (parlamentar ou órgão) como a Casa o publica. | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo autor; Câmara, campo nome | — |
+| `tipo` | string | Tipo do autor (ex.: SENADOR, COMISSAO; na Câmara, "Deputado(a)"). | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo siglaTipo; Câmara, campo tipo | — |
+| `codigoParlamentar` | integer | Código do parlamentar no Senado (null para órgão). | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo codigoParlamentar | — |
+| `idDeputado` | integer | Id do deputado na Câmara (só na casa CD; null para órgão). | `https://dadosabertos.camara.leg.br/api/v2/proposicoes/{CODIGO}/autores` (API de dados abertos da Câmara), final do campo uri | — |
+| `uf` | string | UF do parlamentar. | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo uf | Null na Câmara: a lista de autores não traz a UF. |
+| `siglaPartido` | string | Partido do parlamentar como a fonte o registra na autoria. | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo siglaPartido | — |
+| `cargo` | string | Cargo do autor (ex.: SENADOR). | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo siglaCargo | — |
+| `ente` | string | Casa ou ente do autor (ex.: SF, CD). | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo siglaEnte | — |
+| `outrosAutoresNaoInformados` | string | Sim/Não, como a fonte publica. | detalhe `https://legis.senado.leg.br/dadosabertos/processo/{PROCESSO}` (API de dados abertos do Senado), campo outrosAutoresNaoInformados | — |
+| `proponente` | integer | 1 = proponente (só na Câmara). | `https://dadosabertos.camara.leg.br/api/v2/proposicoes/{CODIGO}/autores` (API de dados abertos da Câmara), campo proponente | — |
+| `url` ⚙️ | string | Endereço da resposta da fonte de onde veio a linha. | montada pelo projeto a partir do código | — |
+| `coletadoEm` | datetime | Quando a resposta foi lida (UTC). | índice do arquivo de páginas | — |
+| `sha` | string | sha256 da resposta guardada (o arquivo bruto é privado; o hash prova a leitura). | arquivo de páginas | — |
