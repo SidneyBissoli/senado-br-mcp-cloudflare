@@ -490,6 +490,8 @@ The **detail tools** (`obter_*`) stay **live** (HTML scraped with CSS-class-targ
 
 **Since 3.26.0 (ROADMAP D3) the tools read layer 3 first.** The daily observations job (`observacoes-ecidadania.yml`) projects the published dataset tables it builds (`scripts/publicacao/`) into D1 as `c3_*` tables (`scripts/publicacao/projetar-d1.ts`; names in `src/scraper/camada3-tabelas.ts`; DDL generated from the 3.0.0 dictionary), writing only the rows that changed since the last applied projection (a key × hash snapshot kept in the private bucket). `src/scraper/camada3.ts` reads them: lists filter/sort/page in SQL, `obter_ideia` adds `serieApoios` and `situacaoNoTempo`, `obter_consulta` adds `serieVotos` (change points only, capped at 60 with a cut notice), and every item says where and when each page block came from (`origem…`/`coletadoEm…`, the dictionary names). Items not yet in layer 3 come from the corpus (marked `corpus`); `obter_*` of an item in neither falls back to the live path above. Without the `c3_*` tables (stdio channel, cold D1) every tool behaves as described above.
 
+**Since 3.27.0 (ROADMAP E1) `obter_consulta` and `obter_ideia` also return `materiasOficiais`:** the official bill each item is tied to (Senate `codigoMateria` or Chamber proposition id — the consultation id already is the bill code; an idea's proposition is read from the link the portal publishes, never by name), its identification, the reading status at the official source, and the authors with their role (`iniciativa` = who introduced it, `texto` = author of the text under consideration, `camara` = Chamber), `codigoParlamentar` (follow with `senado_obter_senador`) or `idDeputado`. Read from `c3_vinculos_materias` / `c3_vinculos_autores` (dataset tables `vinculos/materias` and `vinculos/autores`, built from the official API responses the `autoria` job archives daily); D1 keeps only what the tools show (no links of the per-UF vote archive). Without those tables the field is absent.
+
 #### Full-corpus ingestion (off-Worker)
 
 The three live e-Cidadania corpora are owned by the **daily** Action (`.github/workflows/ingest-ecidadania.yml`), each with its own `scripts/ingest-ecidadania/index-*.ts` orchestrator emitting batched `out-*.sql` the apply step bulk-loads:
@@ -687,10 +689,10 @@ The frozen NDJSON is **not** committed (built from the sovereign D1 corpus on de
 | Tool | Description |
 |------|-------------|
 | `senado_ecidadania_listar_consultas` | Consultas públicas (conjunto completo das **abertas** — matérias em tramitação) com votação sim/não; filtro `status` (padrão `aberta`) |
-| `senado_ecidadania_obter_consulta` | Detalhe de uma consulta: votos, autor, relator, comentários |
+| `senado_ecidadania_obter_consulta` | Detalhe de uma consulta: votos, autor, relator, comentários; matéria oficial e autores com código e papel |
 | `senado_ecidadania_consultas_analise` | Analisa o conjunto completo de consultas **abertas** via `modo` (consenso/polarizada); `status` padrão `aberta` |
 | `senado_ecidadania_listar_ideias` | Ideias legislativas de cidadãos; ranking das mais apoiadas via `ordenarPor: apoios` |
-| `senado_ecidadania_obter_ideia` | Detalhe de uma ideia: texto, apoios, data em que foi proposta, linha do tempo (meta, Sugestão, decisão da CDH, encerramento) e proposições em que virou |
+| `senado_ecidadania_obter_ideia` | Detalhe de uma ideia: texto, apoios, data em que foi proposta, linha do tempo (meta, Sugestão, decisão da CDH, encerramento) e proposições em que virou, com a matéria oficial e os autores com código e papel |
 | `senado_ecidadania_listar_eventos` | Eventos interativos (audiências, sabatinas, lives); ranking dos mais comentados via `ordenarPor` |
 | `senado_ecidadania_obter_evento` | Detalhe de um evento: pauta, convidados, link de vídeo |
 | `senado_ecidadania_sugerir_tema_enquete` | Sugere temas para enquete mensal a partir de critérios configuráveis |
