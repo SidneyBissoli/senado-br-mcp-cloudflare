@@ -18,12 +18,16 @@ import { dirname, join } from "node:path";
 const DB_NAME = "senado-ecidadania";
 
 /** Run a read-only query and return the `results` rows. SQL must be static (no untrusted input). */
-export function queryD1<T = Record<string, unknown>>(sql: string, attempts = 2): T[] {
-  // --no-install so npx never tries to fetch wrangler; capture stderr so a failure surfaces the real
-  // Cloudflare/wrangler message instead of a bare "Command failed". Retry once for transient API errors.
+export function queryD1<T = Record<string, unknown>>(sql: string, attempts = 3): T[] {
+  // --no-install so npx never tries to fetch wrangler; capture stderr AND stdout so a failure surfaces
+  // the real Cloudflare/wrangler message instead of a bare "Command failed" (with --json wrangler prints
+  // its error object on stdout: the 25/11/2026 observations run died with an empty message). Retries
+  // transient API errors with a pause (5 s, then 15 s): the two back-to-back tries of that run both failed,
+  // and the same query answered in 9 s minutes later.
   const cmd = `npx --no-install wrangler d1 execute ${DB_NAME} --remote --json --command "${sql}"`;
   let lastErr: unknown;
   for (let i = 0; i < attempts; i++) {
+    if (i > 0) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, i === 1 ? 5_000 : 15_000);
     try {
       const out = execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
       // wrangler --json prints an array of query results; tolerate leading non-JSON log lines.
@@ -33,8 +37,11 @@ export function queryD1<T = Record<string, unknown>>(sql: string, attempts = 2):
       return first?.results ?? [];
     } catch (e) {
       lastErr = e;
-      const stderr = (e as { stderr?: Uint8Array | string }).stderr;
-      if (stderr) (e as Error).message += `\nwrangler stderr: ${(typeof stderr === "string" ? stderr : new TextDecoder().decode(stderr)).slice(0, 1000)}`;
+      const texto = (x: Uint8Array | string | undefined) => (x === undefined ? "" : typeof x === "string" ? x : new TextDecoder().decode(x)).trim();
+      const { stderr, stdout } = e as { stderr?: Uint8Array | string; stdout?: Uint8Array | string };
+      if (texto(stderr)) (e as Error).message += `\nwrangler stderr: ${texto(stderr).slice(0, 1000)}`;
+      if (texto(stdout)) (e as Error).message += `\nwrangler stdout: ${texto(stdout).slice(0, 1000)}`;
+      console.warn(`[d1] tentativa ${i + 1}/${attempts} falhou: ${(e as Error).message.split("\n").slice(-2).join(" | ").slice(0, 300)}`);
     }
   }
   throw lastErr;

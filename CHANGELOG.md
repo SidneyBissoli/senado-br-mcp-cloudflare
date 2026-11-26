@@ -46,6 +46,12 @@ All notable changes to this project are documented here. Format based on
 
 ### Fixed
 
+- **Leitura do D1 nos jobs off-Worker (`queryD1`): erro com texto e retentativa com pausa.** O job das
+  observações de 25/11/2026 parou ao ler o histórico do corpus com a mensagem vazia ("Command failed"):
+  com `--json`, o wrangler escreve o erro no stdout, que não entrava na mensagem. Agora entram stderr e
+  stdout, cada tentativa falha deixa um aviso no log, e são 3 tentativas com pausa de 5 s e 15 s (antes,
+  2 seguidas). A mesma consulta respondeu em 9 s minutos depois.
+
 - **Ideia adotada por vários parlamentares: nome e UF não se misturam mais.** O leitor da linha do
   tempo (`lerIdeiaDetalhe`) supunha um parlamentar por adoção; com coautoria (ideia 127858, 28
   senadores), o nome virava a lista sem o primeiro cargo e a UF era a do último. Agora
