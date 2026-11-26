@@ -409,6 +409,26 @@ export const NOTA_DERIVACAO_STATUS_IDEIA =
 export const NOTA_DERIVACAO_LEGISLATURA =
   "Número, início e fim da legislatura são os publicados pela fonte para a data de hoje; o período (anos) é composto pelo servidor a partir dessas duas datas.";
 
+/** Vínculo do item do e-Cidadania com a matéria oficial (E1.d): o vínculo é do projeto, os autores são cópia. */
+export const NOTA_DERIVACAO_VINCULOS =
+  "O vínculo com a matéria oficial (materiasOficiais: casa, código, método e situação da leitura) é feito pelo projeto, pelo número que o portal usa ou pelo link publicado na ideia, nunca por nome; os autores são cópia do que o Senado e a Câmara publicam.";
+
+/**
+ * Acrescenta sub-fontes às que o bloco já tem (`withFieldSources` sozinho as SUBSTITUI). O topo passa
+ * a ser o mais antigo entre todas, como em `withFieldSources`.
+ */
+export function comMaisFontes(prov: Provenance, extras: FieldSource[]): Provenance {
+  if (extras.length === 0) return prov;
+  const atuais: FieldSource[] = (prov.field_sources ?? []).map((f) => ({
+    fields: [...f.fields], source_url: f.source_url,
+    ...(f.dataset_id != null ? { dataset_id: f.dataset_id } : {}),
+    ...(f.data_vintage != null ? { reference_period: f.data_vintage } : {}),
+    ...(f.retrieved_at != null ? { retrieved_at: f.retrieved_at } : {}),
+    served_from_cache: f.served_from_cache ?? null,
+  }));
+  return withFieldSources(prov, [...atuais, ...extras]);
+}
+
 /**
  * Marca o bloco como derivado (contrato v1.3): `derived: true` + a nota dada. Aplique por
  * último, sobre o bloco já completo (inclusive o de `withFieldSources`); o envelope é

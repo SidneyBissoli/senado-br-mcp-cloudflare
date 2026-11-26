@@ -23,7 +23,7 @@ import { escreverTabela } from "../observacoes/parquet.js";
 import { BALDE_OBSERVACOES } from "../observacoes/linhas.js";
 import { clienteWrangler } from "../observacoes/wrangler-r2.js";
 import { chaveNoBalde } from "./pacote.js";
-import { esquemaDe, planejar, PROJETADAS, projetarLinhas, type LinhaProjetada, type TabelaProjetada } from "./projecao.js";
+import { esquemaDe, filtrar, planejar, somenteCom, PROJETADAS, projetarLinhas, type LinhaProjetada, type TabelaProjetada } from "./projecao.js";
 
 const arg = (n: string) => {
   const i = process.argv.indexOf(n);
@@ -77,7 +77,15 @@ async function projetar(b: ClienteR2, t: TabelaProjetada, o: { seco?: string; co
   const esperados = t.dic.colunas.map((c) => c.nome);
   if (nomes.join(",") !== esperados.join(",")) throw new Error(`${t.caminho}: colunas ${nomes.join(",")} ≠ dicionário ${esperados.join(",")}`);
   const geradoEm = (meta.key_value_metadata ?? []).find((e) => e.key === "geradoEm")?.value ?? null;
-  const linhas = projetarLinhas(t, (await parquetReadObjects({ file: ab })) as Record<string, unknown>[]);
+  let brutas = filtrar(t, (await parquetReadObjects({ file: ab })) as Record<string, unknown>[]);
+  if (t.somenteCom) {
+    // A tabela de referência, com o filtro DELA: as mesmas linhas que a projeção dela leva ao D1.
+    const ref = PROJETADAS.find((x) => x.caminho === t.somenteCom!.de)!;
+    const rb = await b.ler(chaveNoBalde(ref.dic));
+    if (!rb) throw new Error(`tabela ausente no balde: ${chaveNoBalde(ref.dic)}`);
+    brutas = somenteCom(t, brutas, filtrar(ref, (await parquetReadObjects({ file: buf(rb) })) as Record<string, unknown>[]));
+  }
+  const linhas = projetarLinhas(t, brutas);
   const retrato = o.completo ? null : await lerRetrato(b, t);
   const plano = planejar(t, linhas, retrato, { geradoEm, aplicadoEm: o.aplicadoEm });
   const sqlBytes = plano.arquivos.reduce((s, a) => s + Buffer.byteLength(a), 0);

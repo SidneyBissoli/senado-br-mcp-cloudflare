@@ -8,6 +8,18 @@ All notable changes to this project are documented here. Format based on
 
 ### Added
 
+- **`obter_consulta` e `obter_ideia` mostram a matéria oficial e os autores (E1.d do ROADMAP, 3.27.0).**
+  Campo novo `materiasOficiais`: para a consulta (o id já é o código da matéria) e para cada proposição
+  gerada pela ideia (pelo link publicado), a Casa, o código oficial, a identificação, o método do vínculo,
+  a situação da leitura na fonte oficial e os autores com `papel` (`iniciativa`/`texto`/`camara`),
+  `codigoParlamentar` (para `senado_obter_senador`) ou `idDeputado`, UF e partido. Nenhuma ferramenta
+  nova (decisão 6). A proveniência ganha uma sub-fonte por matéria lida, com a URL da API oficial e o
+  instante da leitura, e a nota de derivação do vínculo. Lido das tabelas `c3_vinculos_materias` e
+  `c3_vinculos_autores`, que a projeção no D1 passa a copiar **só no que as ferramentas mostram**: sem
+  os vínculos do acervo de votos por UF (~60% das linhas; medido 26/11/2026, os autores iriam de ~13 MB a
+  ~25 MB de SQL na carga completa), sem o texto do portal (já em `c3_consultas`) e sem o sha. Para isso
+  a projeção aceita `filtro` (linhas excluídas por valor) e `somenteCom` (linhas cuja chave aparece em
+  outra tabela projetada). Sem as tabelas (canal stdio, cópia ainda não projetada) o campo não aparece.
 - **Tabelas de vínculos no dataset 3.0.0 (E1.c do ROADMAP).** O job das observações lê as respostas
   da autoria oficial guardadas pela E1.b (`scripts/observacoes/fatos-autoria.ts`, entidade `autoria`,
   num módulo próprio para não mudar a versão do leitor das outras entidades) e publica

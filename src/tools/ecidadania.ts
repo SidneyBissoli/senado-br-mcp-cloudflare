@@ -22,6 +22,8 @@ import {
   NOTA_DERIVACAO_RANKING_ECIDADANIA,
   NOTA_DERIVACAO_SOMAS,
   NOTA_DERIVACAO_STATUS_IDEIA,
+  NOTA_DERIVACAO_VINCULOS,
+  comMaisFontes,
   derivado,
   derivadoSe,
   provenanceArquimedesVotos,
@@ -30,6 +32,7 @@ import {
   type FieldSource,
   type Provenance,
 } from "../utils/provenance.js";
+import { materiasOficiaisDaC3, type MateriaOficial } from "../scraper/vinculos-c3.js";
 import { tagUntrustedFields, tagUntrustedList, neutralizeUntrustedText, sanitizeScrapedText } from "../utils/untrusted.js";
 import { CACHE_ON_DEMAND } from "../types.js";
 import type { Env } from "../types.js";
@@ -192,6 +195,23 @@ export function provenanceEventoDetalhe(
  */
 export const NOTA_DERIVACAO_ANALISE_CONSULTAS = `${NOTA_DERIVACAO_RANKING_ECIDADANIA} ${NOTA_DERIVACAO_PERCENTUAIS}`;
 export const provenanceDasConsultas = (prov: Provenance): Provenance => derivado(prov, NOTA_DERIVACAO_PERCENTUAIS);
+
+/**
+ * E1.d: as matérias oficiais entram no bloco como sub-fontes (uma por matéria lida, com a URL da API
+ * oficial e o instante da leitura) e o bloco ganha a nota do vínculo, somada à que já tinha. Sem
+ * matéria (canal stdio, item sem vínculo), o bloco volta intacto.
+ */
+export function provenanceComVinculos(prov: Provenance, oficiais: readonly MateriaOficial[] | null): Provenance {
+  if (!oficiais || oficiais.length === 0) return prov;
+  const fontes: FieldSource[] = oficiais
+    .filter((m) => m.conferidoEm)
+    .map((m) => ({ fields: ["materiasOficiais"], source_url: m.fonte, retrieved_at: m.conferidoEm!, served_from_cache: null }));
+  const p = comMaisFontes(prov, fontes);
+  return derivado(p, [p.derivation_note, NOTA_DERIVACAO_VINCULOS].filter(Boolean).join(" "));
+}
+
+/** O campo das matérias oficiais na resposta: ausente quando os vínculos não estão no banco. */
+export const campoDasMateriasOficiais = (oficiais: MateriaOficial[] | null) => (oficiais ? { materiasOficiais: oficiais } : {});
 export const provenanceDaAnaliseDeConsultas = (prov: Provenance): Provenance => derivado(prov, NOTA_DERIVACAO_ANALISE_CONSULTAS);
 export const provenanceDasIdeias = (prov: Provenance, ideias: ReadonlyArray<{ dataCriacaoEstimada?: string | null }>): Provenance =>
   derivadoSe(prov, ideias.some((i) => i.dataCriacaoEstimada != null), NOTA_DERIVACAO_DATA_ESTIMADA);
@@ -456,30 +476,33 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
   // G2. senado_ecidadania_obter_consulta
   server.tool(
     "senado_ecidadania_obter_consulta",
-    "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `url`. O portal não publica o período da consulta: `dataAbertura`/`dataEncerramento` (e `comissao`/`linkMateria`) vêm sempre `null` — a consulta abre quando a matéria entra em tramitação e encerra quando sai, refletido em `status`. O campo `comentarios` vem `null`: a página de consulta não possui recurso de comentários. O campo `relator` vem `null`: a página da consulta publica só autoria e ementa, não a relatoria — o relator da matéria sai de `senado_obter_materia` com o mesmo número (`codigoMateria` = `id`). Lida da cópia diária do dataset do projeto (a consulta que ainda não entrou nela é lida ao vivo): `serieVotos` traz os votos no tempo (`em`, `votosSim`, `votosNao`, `origem`; só quando o par muda, até 60 pontos, os mais recentes — `avisoSeries` diz quando houve corte) e `origemResumo`/`coletadoEmResumo`/`origemDetalhe`/`coletadoEmDetalhe` dizem de onde e de quando veio cada bloco. Percentuais com uma casa decimal. Obtenha o `id` antes via `senado_ecidadania_listar_consultas` ou `senado_ecidadania_consultas_analise`.",
+    "Obtém o detalhe de uma consulta pública específica do e-Cidadania. Retorna um objeto com `id`, `materia`, `ementa`, `votosSim`/`votosNao`/`totalVotos`, `percentualSim`/`percentualNao`, `status`, `autor`, `relator`, `url`. O portal não publica o período da consulta: `dataAbertura`/`dataEncerramento` (e `comissao`/`linkMateria`) vêm sempre `null` — a consulta abre quando a matéria entra em tramitação e encerra quando sai, refletido em `status`. O campo `comentarios` vem `null`: a página de consulta não possui recurso de comentários. O campo `relator` vem `null`: a página da consulta publica só autoria e ementa, não a relatoria — o relator da matéria sai de `senado_obter_materia` com o mesmo número (`codigoMateria` = `id`). Lida da cópia diária do dataset do projeto (a consulta que ainda não entrou nela é lida ao vivo): `serieVotos` traz os votos no tempo (`em`, `votosSim`, `votosNao`, `origem`; só quando o par muda, até 60 pontos, os mais recentes — `avisoSeries` diz quando houve corte) e `origemResumo`/`coletadoEmResumo`/`origemDetalhe`/`coletadoEmDetalhe` dizem de onde e de quando veio cada bloco. Percentuais com uma casa decimal. **Matéria oficial:** `materiasOficiais` liga a consulta à matéria no Senado (`casa` SF, `codigo` = codigoMateria) ou na Câmara (CD, id da proposição), com `identificacao` (ex.: \"PL 5905/2026\"), `metodo` (como o vínculo foi feito, nunca por nome), `situacao` da leitura na fonte oficial (`lida`/`sem-processo`/`nao-encontrada`/`pendente` = ainda não lida), `processos`, `resumoAutoria` e `autores` (cada um com `papel` — `iniciativa` = quem apresentou, `texto` = autoria do texto em tramitação, que pode ser outra Casa; `camara` na Câmara —, `codigoParlamentar` para `senado_obter_senador`, `idDeputado`, `uf`, `siglaPartido`). Siga a matéria com `senado_obter_materia`/`senado_obter_processo`. Obtenha o `id` antes via `senado_ecidadania_listar_consultas` ou `senado_ecidadania_consultas_analise`.",
     { id: z.number().int().positive().describe("ID da consulta pública") },
     async (params) => {
       try {
         // D3: a consulta da camada 3, com a série de votos; fora dela, a leitura ao vivo de antes.
-        const c3 = await consultaInteiraDaC3(db, params.id, corpusStaleMaxMin());
+        const [c3, oficiais] = await Promise.all([
+          consultaInteiraDaC3(db, params.id, corpusStaleMaxMin()),
+          materiasOficiaisDaC3(db, "consultas", params.id),
+        ]);
         if (c3) {
-          const detalhe = consultaDetalheDaC3(c3.linha, c3.serie);
+          const detalhe = { ...consultaDetalheDaC3(c3.linha, c3.serie), ...campoDasMateriasOficiais(oficiais) };
           return resultWithProvenance(
             tagUntrustedFields("consultas", detalhe),
-            provenanceDasConsultas(provenanceDoItemC3(c3.linha.url, `consulta=${params.id}`, c3.linha, {
+            provenanceComVinculos(provenanceDasConsultas(provenanceDoItemC3(c3.linha.url, `consulta=${params.id}`, c3.linha, {
               Resumo: ["materia", "ementa", "votosSim", "votosNao", "totalVotos", "percentualSim", "percentualNao"],
               Detalhe: ["autor"],
-            }, c3.meta.lastScrapedAt)),
+            }, c3.meta.lastScrapedAt)), oficiais),
           );
         }
         const { value: r, fetchedAt } = await cachedFetchWithMeta("ecidadania_consulta", { id: params.id }, CACHE_ON_DEMAND, () =>
           obterConsultaInternal(params.id),
         );
         writeDetalheThrough(db, ctx, "consultas", params.id, r as Record<string, unknown>);
-        const detalhe = buildConsultaDetalheResult(r as Record<string, unknown>);
+        const detalhe = { ...buildConsultaDetalheResult(r as Record<string, unknown>), ...campoDasMateriasOficiais(oficiais) };
         return resultWithProvenance(
           tagUntrustedFields("consultas", detalhe),
-          provenanceDasConsultas(provDetalhe(r, `/visualizacaomateria?id=${params.id}`, `consulta=${params.id}`, fetchedAt)),
+          provenanceComVinculos(provenanceDasConsultas(provDetalhe(r, `/visualizacaomateria?id=${params.id}`, `consulta=${params.id}`, fetchedAt)), oficiais),
         );
       } catch (e) { return ecidadaniaError(e); }
     },
@@ -592,13 +615,16 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
   // G6. senado_ecidadania_obter_ideia
   server.tool(
     "senado_ecidadania_obter_ideia",
-    "Obtém o detalhe de uma ideia legislativa do e-Cidadania, lido da cópia diária do dataset do projeto (páginas do portal guardadas e lidas; a ideia que ainda não entrou nela é lida ao vivo da página). Retorna `id`, `titulo`, `descricao`, `apoios`, `status`, `origemStatus`, `autor` (\"NOME (UF)\", o nome abreviado como o portal publica), `url`, `plConvertido` (a Sugestão gerada, \"SUG n/ano\"), `dataEncerramento` (fim do período de apoio, quando encerrado) e os campos da linha do tempo do portal: `dataProposta` (data em que a ideia foi proposta, publicada pela fonte), `prazoApoios` (data limite para os 20.000 apoios), `dataMeta`/`meta` (quando alcançou a meta), `sugestao` (número, ano, data e link da Sugestão), `decisaoCdh` (a CDH transformou ou não a Sugestão), `encerramento` (apoios recebidos e fim do período), `oficina` (ideia de Oficina Legislativa), `proposicoes` (cada proposição em que a ideia virou — pela CDH ou adotada por senador/deputado —, com sigla, número, ano, parlamentar e link), `linhaDoTempo` (os acontecimentos como publicados, mais recente primeiro) e `avisos` (acontecimento que o servidor não reconheceu, copiado sem interpretação). **Situação:** `status` é a categoria do portal guardada no corpus (`aberta`/`encerrada`/`convertida`/`removida`, as mesmas de `senado_ecidadania_listar_ideias`); se a ideia ainda não está no corpus, o servidor a classifica pela linha do tempo e `origemStatus` diz isso. **Datas:** use `dataProposta`; `dataPublicacao` é a data limite (nome histórico, igual a `prazoApoios`) e `dataCriacaoEstimada` é estimativa mantida por compatibilidade. `comentarios`, `problema` e `solucao` vêm `null`: a página não os publica. **No tempo:** `serieApoios` (apoios a cada mudança: `apoios`, `desde`, `ate`, `origem`) e `situacaoNoTempo` (`portal`: a situação em que a ideia foi vista na listagem, com o intervalo; `corpus`: o status a cada mudança, desde 14/06/2026), até 60 pontos cada, os mais recentes — `avisoSeries` diz quando houve corte. **Origem:** `origemResumo`/`coletadoEmResumo` (título e apoios) e `origemDetalhe`/`coletadoEmDetalhe` (o resto) dizem de onde e de quando veio cada bloco (`listagem`/`detalhe`/`arquivo` = página guardada; `ao-vivo` = o arquivo ainda não leu a página da ideia, então o detalhe é lido na hora; `corpus` = idem, mas a leitura na hora falhou — aí linha do tempo, autor e data da proposta faltam, e `avisoDetalhe` diz por quê). Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
+    "Obtém o detalhe de uma ideia legislativa do e-Cidadania, lido da cópia diária do dataset do projeto (páginas do portal guardadas e lidas; a ideia que ainda não entrou nela é lida ao vivo da página). Retorna `id`, `titulo`, `descricao`, `apoios`, `status`, `origemStatus`, `autor` (\"NOME (UF)\", o nome abreviado como o portal publica), `url`, `plConvertido` (a Sugestão gerada, \"SUG n/ano\"), `dataEncerramento` (fim do período de apoio, quando encerrado) e os campos da linha do tempo do portal: `dataProposta` (data em que a ideia foi proposta, publicada pela fonte), `prazoApoios` (data limite para os 20.000 apoios), `dataMeta`/`meta` (quando alcançou a meta), `sugestao` (número, ano, data e link da Sugestão), `decisaoCdh` (a CDH transformou ou não a Sugestão), `encerramento` (apoios recebidos e fim do período), `oficina` (ideia de Oficina Legislativa), `proposicoes` (cada proposição em que a ideia virou — pela CDH ou adotada por senador/deputado —, com sigla, número, ano, parlamentar e link), `linhaDoTempo` (os acontecimentos como publicados, mais recente primeiro) e `avisos` (acontecimento que o servidor não reconheceu, copiado sem interpretação). **Situação:** `status` é a categoria do portal guardada no corpus (`aberta`/`encerrada`/`convertida`/`removida`, as mesmas de `senado_ecidadania_listar_ideias`); se a ideia ainda não está no corpus, o servidor a classifica pela linha do tempo e `origemStatus` diz isso. **Datas:** use `dataProposta`; `dataPublicacao` é a data limite (nome histórico, igual a `prazoApoios`) e `dataCriacaoEstimada` é estimativa mantida por compatibilidade. `comentarios`, `problema` e `solucao` vêm `null`: a página não os publica. **No tempo:** `serieApoios` (apoios a cada mudança: `apoios`, `desde`, `ate`, `origem`) e `situacaoNoTempo` (`portal`: a situação em que a ideia foi vista na listagem, com o intervalo; `corpus`: o status a cada mudança, desde 14/06/2026), até 60 pontos cada, os mais recentes — `avisoSeries` diz quando houve corte. **Origem:** `origemResumo`/`coletadoEmResumo` (título e apoios) e `origemDetalhe`/`coletadoEmDetalhe` (o resto) dizem de onde e de quando veio cada bloco (`listagem`/`detalhe`/`arquivo` = página guardada; `ao-vivo` = o arquivo ainda não leu a página da ideia, então o detalhe é lido na hora; `corpus` = idem, mas a leitura na hora falhou — aí linha do tempo, autor e data da proposta faltam, e `avisoDetalhe` diz por quê). **Matéria oficial:** `materiasOficiais` liga cada proposição gerada pela ideia (pelo link publicado) à matéria no Senado (`casa` SF, `codigo` = codigoMateria) ou na Câmara (CD, id da proposição), com `identificacao` (ex.: \"PL 5905/2026\"), `metodo` (como o vínculo foi feito, nunca por nome), `situacao` da leitura na fonte oficial (`lida`/`sem-processo`/`nao-encontrada`/`pendente` = ainda não lida), `processos`, `resumoAutoria` e `autores` (cada um com `papel` — `iniciativa` = quem apresentou, `texto` = autoria do texto em tramitação, que pode ser outra Casa; `camara` na Câmara —, `codigoParlamentar` para `senado_obter_senador`, `idDeputado`, `uf`, `siglaPartido`). Siga a matéria com `senado_obter_materia`/`senado_obter_processo`. Obtenha o `id` antes via `senado_ecidadania_listar_ideias`.",
     { id: z.number().int().positive().describe("ID da ideia legislativa") },
     async (params) => {
       try {
         // D3: a ideia da camada 3 (detalhe do arquivo, ou do corpus enquanto o arquivo não a leu), com as
         // séries de apoios e de situação. Fora da camada 3 (ideia nova, cópia ausente): a leitura ao vivo.
-        const c3 = await ideiaInteiraDaC3(db, params.id, corpusStaleMaxMin());
+        const [c3, oficiais] = await Promise.all([
+          ideiaInteiraDaC3(db, params.id, corpusStaleMaxMin()),
+          materiasOficiaisDaC3(db, "ideias", params.id),
+        ]);
         if (c3) {
           // Detalhe que o arquivo ainda não leu (vem do corpus, sem linha do tempo/autor/data da
           // proposta): lido ao vivo, como antes da D3, até o arquivo chegar à ideia. A cópia segue
@@ -624,6 +650,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
             ...j.origens,
             ...seriesDaIdeia(c3.serieApoios, c3.situacoes),
             ...(avisoDetalhe ? { avisoDetalhe } : {}),
+            ...campoDasMateriasOficiais(oficiais),
             avisoCamada3: AVISO_CAMADA3,
           };
           const resumo = ["titulo", "apoios"];
@@ -635,7 +662,7 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
             ...(base.dataCriacaoEstimada != null ? [NOTA_DERIVACAO_DATA_ESTIMADA] : []),
             ...(c3.linha.status ? [] : [NOTA_DERIVACAO_STATUS_IDEIA]),
           ];
-          return resultWithProvenance(tagUntrustedFields("ideias", detalhe), notas.length ? derivado(prov, notas.join(" ")) : prov);
+          return resultWithProvenance(tagUntrustedFields("ideias", detalhe), provenanceComVinculos(notas.length ? derivado(prov, notas.join(" ")) : prov, oficiais));
         }
         // v2: a chave muda com o formato — o L1 guardaria a leitura do leitor antigo.
         const { value: lida, fetchedAt, fromCache } = await cachedFetchWithMeta("ecidadania_ideia_v2", { id: params.id }, CACHE_ON_DEMAND, () =>
@@ -646,13 +673,13 @@ export function registerECidadaniaTools(server: SenadoToolHost, _baseUrl: string
         const detalhe = montarDetalheDaIdeia(params.id, lida, doCorpus?.status ?? null);
         writeDetalheThrough(db, ctx, "ideias", params.id, detalhe);
         return resultWithProvenance(
-          tagUntrustedFields("ideias", detalhe),
-          provenanceDaIdeia(
+          tagUntrustedFields("ideias", { ...detalhe, ...campoDasMateriasOficiais(oficiais) }),
+          provenanceComVinculos(provenanceDaIdeia(
             provDetalhe(detalhe, `/visualizacaoideia?id=${params.id}`, `ideia=${params.id}`, fetchedAt),
             detalhe,
             doCorpus,
             { fetchedAt, fromCache },
-          ),
+          ), oficiais),
         );
       } catch (e) { return ecidadaniaError(e); }
     },

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { TABELAS_C3 } from "../../src/scraper/camada3-tabelas.js";
 import { DICIONARIO } from "../../scripts/publicacao/dicionario.js";
 import {
-  MAX_BYTES_STATEMENT, PROJETADAS, chaveCurta, ddl, deletes, diferenca, esquemaDe, inserts, normalizar, planejar, projetarLinhas,
+  MAX_BYTES_STATEMENT, PROJETADAS, chaveCurta, ddl, deletes, diferenca, esquemaDe, filtrar, inserts, normalizar, planejar, projetarLinhas, somenteCom,
 } from "../../scripts/publicacao/projecao.js";
 
 const ideias = PROJETADAS.find((t) => t.caminho === "ideias/ideias")!;
@@ -106,5 +106,35 @@ describe("projeção da camada 3 no D1 — plano", () => {
     const p = planejar(ideias, muitas, null, { geradoEm: null, aplicadoEm: "x", maxBytesArquivo: 200_000 });
     expect(p.arquivos.length).toBeGreaterThan(2);
     for (const a of p.arquivos) expect(a.endsWith(";\n")).toBe(true);
+  });
+});
+
+describe("projeção da camada 3 no D1 — só as linhas que o servidor mostra (E1.d)", () => {
+  const materias = PROJETADAS.find((t) => t.caminho === "vinculos/materias")!;
+  const autores = PROJETADAS.find((t) => t.caminho === "vinculos/autores")!;
+
+  it("vínculos do acervo ficam fora; os autores seguem os vínculos que ficaram (casa × código)", () => {
+    const vs = [
+      { entidade: "consultas", itemId: 1, casa: "SF", codigo: 1 },
+      { entidade: "ideias", itemId: 9, casa: "CD", codigo: 2 },
+      { entidade: "consultas_votos", itemId: 1, casa: "SF", codigo: 1 }, // a mesma matéria da consulta 1
+      { entidade: "consultas_votos", itemId: 3, casa: "SF", codigo: 3 }, // só do acervo
+    ];
+    const ficam = filtrar(materias, vs);
+    expect(ficam.map((v) => v.entidade)).toEqual(["consultas", "ideias"]);
+    const as = [
+      { casa: "SF", codigo: 1, papel: "iniciativa" }, { casa: "CD", codigo: 2, papel: "camara" },
+      { casa: "SF", codigo: 3, papel: "iniciativa" }, { casa: "CD", codigo: 1, papel: "camara" },
+    ];
+    expect(somenteCom(autores, as, ficam)).toEqual([as[0], as[1]]);
+  });
+
+  it("inteiro do Parquet (bigint) junta com number", () => {
+    expect(somenteCom(autores, [{ casa: "SF", codigo: 7n }], [{ casa: "SF", codigo: 7 }])).toHaveLength(1);
+  });
+
+  it("tabela sem filtro passa inteira", () => {
+    expect(filtrar(ideias, [{ id: 1 }, { id: 2 }])).toHaveLength(2);
+    expect(somenteCom(ideias, [{ id: 1 }], [])).toHaveLength(1);
   });
 });

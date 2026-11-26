@@ -3,7 +3,7 @@
   "name": "io.github.SidneyBissoli/senado-br-mcp-cloudflare",
   "title": "Dados Abertos Senado BR MCP",
   "description": "MCP server for Brazilian Federal Senate open data (legislative, administrative, e-Cidadania).",
-  "version": "3.26.1",
+  "version": "3.27.0",
   "websiteUrl": "https://senado.sidneybissoli.com",
   "icons": [
     {
@@ -29,7 +29,7 @@
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "senado-br-mcp",
-      "version": "3.26.1",
+      "version": "3.27.0",
       "transport": {
         "type": "stdio"
       }
@@ -42,8 +42,8 @@
         "spec": "https://github.com/SidneyBissoli/mcp-br-commons/blob/main/packages/mcp-surface/SPEC.md",
         "endpoint": "https://senado.sidneybissoli.com/mcp",
         "declared": {
-          "sha256": "9b1d332411ff93af8f9cb0c27b8be297a4d8f26a20366dd70b5a5258adc687a8",
-          "lockedAt": "3.26.1"
+          "sha256": "61dae4555eb722878200a1c10502b79a3dd2b7e6d0c7bb41102f5b1486966954",
+          "lockedAt": "3.27.0"
         },
         "anonymous": {
           "sha256": "ade1bd429bdfc63453a924614520010bb782ffd8d24fdd6483aa17d5b36b61a4",

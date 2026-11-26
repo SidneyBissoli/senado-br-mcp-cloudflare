@@ -10,6 +10,7 @@ import { PROJETADAS } from "../../scripts/publicacao/projecao.js";
 import { juntarDetalhe, precisaDoDetalheAoVivo } from "../../src/tools/ecidadania.js";
 import type { IdeiaDetalhe } from "../../src/scraper/ideia-detalhe.js";
 import { bancoC3, d1De, GERADO_EM, linhasDeExemplo } from "./camada3-fixture.js";
+import { COLS_AUTOR, COLS_VINCULO, materiasOficiaisDaC3 } from "../../src/scraper/vinculos-c3.js";
 
 const AGORA = new Date("2026-11-22T18:00:00Z");
 const DIAS10 = 14400;
@@ -19,6 +20,8 @@ describe("camada 3 — colunas lidas pelo servidor existem na projeção", () =>
     ["ideias/ideias", COLS_IDEIA],
     ["consultas/consultas", COLS_CONSULTA],
     ["eventos/eventos", COLS_EVENTO],
+    ["vinculos/materias", COLS_VINCULO],
+    ["vinculos/autores", COLS_AUTOR],
   ])("%s", (caminho, cols) => {
     const projetadas = PROJETADAS.find((t) => t.caminho === caminho)!.colunas.map((c) => c.nome);
     expect(cols.split(", ").filter((c) => !projetadas.includes(c))).toEqual([]);
@@ -120,6 +123,13 @@ describe("camada 3 — detalhe ao vivo para a ideia que o arquivo ainda não leu
 });
 
 describe("camada 3 — leitura no D1 (SQLite com o SQL da projeção)", () => {
+  it("vínculos: sem as tabelas (ou sem D1), null — a ferramenta responde sem o campo", async () => {
+    const { ["vinculos/materias"]: _m, ["vinculos/autores"]: _a, ...sem } = linhasDeExemplo();
+    expect(await materiasOficiaisDaC3(d1De(bancoC3(sem)), "consultas", 5000)).toBeNull();
+    expect(await materiasOficiaisDaC3(undefined, "consultas", 5000)).toBeNull();
+    expect(await materiasOficiaisDaC3(d1De(bancoC3(linhasDeExemplo())), "consultas", 5000)).toHaveLength(1);
+  });
+
   it("sem as tabelas, devolve null (o chamador cai no corpus)", async () => {
     const vazio = d1De(bancoC3({}));
     expect(await metaDaC3(vazio, ["c3_ideias"], DIAS10, AGORA)).toBeNull();
@@ -214,6 +224,36 @@ describe("camada 3 — as ferramentas leem a cópia (servidor real, transporte e
       { em: "2026-06-14T00:00:00.000Z", votosSim: 60, votosNao: 30, origem: "corpus" },
       { em: "2026-11-20T00:00:00.000Z", votosSim: 70, votosNao: 30, origem: "listagem" },
     ]);
+  });
+
+  it("obter_consulta: matéria oficial com as duas autorias, cada uma com o papel (E1.d)", async () => {
+    const r = await chamar("senado_ecidadania_obter_consulta", { id: 5000 });
+    expect(r.materiasOficiais).toEqual([{
+      casa: "SF", codigo: 5000, identificacao: "PL 5905/2026 (Substitutivo-CD)", metodo: "id-da-consulta", linkPublicado: null, situacao: "lida",
+      processos: [9133965], resumoAutoria: "Câmara dos Deputados", conferidoEm: "2026-11-25T19:38:20.000Z",
+      fonte: "https://legis.senado.leg.br/dadosabertos/processo?codigoMateria=5000",
+      autores: [
+        { papel: "iniciativa", posicao: 1, autor: "Marcelo Crivella", tipo: "SENADOR", codigoParlamentar: 3366, idDeputado: null, uf: "RJ", siglaPartido: "REPUBLICANOS" },
+        { papel: "texto", posicao: 1, autor: "Câmara dos Deputados", tipo: "CAMARA", codigoParlamentar: null, idDeputado: null, uf: null, siglaPartido: null },
+      ],
+    }]);
+    // A leitura oficial vira sub-fonte com a URL da API; o bloco soma a nota do vínculo à dos percentuais.
+    const fs = r.provenance.field_sources as Array<{ fields: string[]; source_url: string }>;
+    expect(fs.find((f) => f.fields.includes("materiasOficiais"))?.source_url).toBe("https://legis.senado.leg.br/dadosabertos/processo?codigoMateria=5000");
+    expect(fs.some((f) => f.fields.includes("votosSim"))).toBe(true);
+    expect(r.provenance.derived).toBe(true);
+    expect(r.provenance.derivation_note).toMatch(/Percentuais[\s\S]*nunca por nome/);
+  });
+
+  it("vínculos: item sem vínculo dá lista vazia; ideia com proposição ainda não lida dá pendente sem autores", async () => {
+    expect((await chamar("senado_ecidadania_obter_consulta", { id: 4000 })).materiasOficiais).toEqual([]);
+    const r = await chamar("senado_ecidadania_obter_ideia", { id: 100 });
+    expect(r.materiasOficiais).toEqual([expect.objectContaining({
+      casa: "CD", codigo: 2295936, situacao: "pendente", autores: [], conferidoEm: null,
+      fonte: "https://dadosabertos.camara.leg.br/api/v2/proposicoes/2295936/autores",
+    })]);
+    // Sem leitura oficial, nada de sub-fonte nova: o instante do topo não muda.
+    expect(new Date(r.provenance.retrieved_at).toISOString()).toBe("2026-11-20T09:00:00.000Z");
   });
 
   it("obter_evento: pauta na ordem da página e contagem canônica", async () => {
