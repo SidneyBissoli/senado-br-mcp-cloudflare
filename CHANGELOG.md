@@ -6,6 +6,13 @@ All notable changes to this project are documented here. Format based on
 
 ## [Unreleased]
 
+## [3.27.0] - 2026-11-26
+
+Primeira versão publicada no npm desde a 3.25.3. As versões 3.25.4, 3.26.0 e 3.26.1 foram numeradas
+no código (e servidas pelo Worker) mas nunca publicadas: tudo o que está abaixo, até a 3.25.3, entra
+nesta. Destaques: as ferramentas do e-Cidadania leem a camada 3 do dataset (3.26.0) e `obter_consulta`/
+`obter_ideia` mostram a matéria oficial e os autores com código e papel (3.27.0).
+
 ### Added
 
 - **`obter_consulta` e `obter_ideia` mostram a matéria oficial e os autores (E1.d do ROADMAP, 3.27.0).**
