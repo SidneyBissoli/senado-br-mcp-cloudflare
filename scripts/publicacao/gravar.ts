@@ -4,7 +4,8 @@
  * lado de `--saida`). Refeitas inteiras a cada run. A edição pública (D2) empacota daqui.
  */
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { parquetReadObjects } from "hyparquet";
 import type { ClienteR2 } from "../ingest-ecidadania/r2.js";
 import type { Observacao } from "../observacoes/fundir.js";
 import { escreverTabela, type ColunaDaTabela } from "../observacoes/parquet.js";
@@ -16,6 +17,7 @@ import { tabelasDosEventos, type LinhaComentario, type LinhaEvento, type LinhaIt
 import { situacoesAtuais, tabelasDasIdeias, type LinhaAcontecimento, type LinhaIdeia, type LinhaProposicao, type LinhaSituacaoAtual } from "./ideias.js";
 import { omitirNomes } from "./omissoes.js";
 import { tabelasDoAcervo, type LinhaMateriaDoAcervo, type LinhaVotosUf } from "./votos-uf.js";
+import { tabelasDosVinculos, type ItensDoECidadania, type LinhaAutor, type LinhaVinculoMateria } from "./vinculos.js";
 
 const t = <T>(nome: string, valor: (l: T) => string | null): ColunaDaTabela<T> => ({ nome, tipo: "texto", opcional: true, valor });
 const tt = <T>(nome: string, valor: (l: T) => string): ColunaDaTabela<T> => ({ nome, tipo: "texto", valor });
@@ -97,7 +99,24 @@ export const COLUNAS_VOTOS_UF: ColunaDaTabela<LinhaVotosUf>[] = [
   { nome: "leituras", tipo: "inteiro", valor: (l) => l.leituras }, t("sha", (l) => l.sha), tt("origem", (l) => l.origem),
 ];
 
-export type EntidadePublicada = "ideias" | "consultas" | "eventos" | "consultas_votos";
+export const COLUNAS_VINCULOS_MATERIAS: ColunaDaTabela<LinhaVinculoMateria>[] = [
+  tt("entidade", (l) => l.entidade), id("itemId", (l) => l.itemId), tt("casa", (l) => l.casa), id("codigo", (l) => l.codigo), tt("metodo", (l) => l.metodo),
+  t("linkPublicado", (l) => l.linkPublicado), tt("situacao", (l) => l.situacao), t("processos", (l) => l.processos), t("identificacao", (l) => l.identificacao),
+  t("resumoAutoria", (l) => l.resumoAutoria), t("autoriaNoPortal", (l) => l.autoriaNoPortal), t("confereComPortal", (l) => l.confereComPortal),
+  ts("conferidoEm", (l) => l.conferidoEm),
+];
+
+export const COLUNAS_VINCULOS_AUTORES: ColunaDaTabela<LinhaAutor>[] = [
+  tt("casa", (l) => l.casa), id("codigo", (l) => l.codigo), i("processo", (l) => (l.processo === null ? null : Number(l.processo))), tt("papel", (l) => l.papel),
+  { nome: "posicao", tipo: "inteiro", valor: (l) => l.posicao }, i("ordem", (l) => l.ordem), t("autor", (l) => l.autor), t("tipo", (l) => l.tipo),
+  i("codigoParlamentar", (l) => l.codigoParlamentar), i("idDeputado", (l) => l.idDeputado), t("uf", (l) => l.uf), t("siglaPartido", (l) => l.siglaPartido),
+  t("cargo", (l) => l.cargo), t("ente", (l) => l.ente), t("outrosAutoresNaoInformados", (l) => l.outrosAutoresNaoInformados), i("proponente", (l) => l.proponente),
+  tt("url", (l) => l.url), { nome: "coletadoEm", tipo: "instante", valor: (l) => l.coletadoEm }, tt("sha", (l) => l.sha),
+];
+
+/** Entidade da camada 2 → pasta das tabelas publicadas (a autoria publica os vínculos). */
+export type EntidadePublicada = "ideias" | "consultas" | "eventos" | "consultas_votos" | "autoria";
+const pastaDa = (e: EntidadePublicada): string => (e === "autoria" ? "vinculos" : e);
 
 interface Tabela {
   nome: string;
@@ -117,7 +136,19 @@ function contar<T>(xs: readonly T[], f: (x: T) => unknown): string {
 }
 
 /** Monta as tabelas da entidade (lê o corpus do D1). Devolve as tabelas e um resumo para o log. */
-function montar(entidade: EntidadePublicada, obs: readonly Observacao[], kv: Record<string, string>): { tabelas: Tabela[]; resumo: string } {
+function montar(entidade: EntidadePublicada, obs: readonly Observacao[], kv: Record<string, string>, itens?: ItensDoECidadania): { tabelas: Tabela[]; resumo: string } {
+  if (entidade === "autoria") {
+    if (!itens) throw new Error("vínculos sem os itens do e-Cidadania");
+    const r = tabelasDosVinculos(obs, itens);
+    // Anotação do GitHub: aparece no resumo do run.
+    for (const c of r.naoConferem.slice(0, 20)) console.log(`::warning title=Vínculo fora (autoria não confere)::consulta ${c}: resumoAutoria oficial não começa pela autoria do portal`);
+    return {
+      tabelas: [tabela("materias", r.materias, COLUNAS_VINCULOS_MATERIAS, kv), tabela("autores", r.autores, COLUNAS_VINCULOS_AUTORES, kv)],
+      resumo:
+        `vínculos: ${contar(r.materias, (x) => `${x.entidade}/${x.situacao}`)}; autores: ${contar(r.autores, (x) => x.papel)}; ` +
+        `fora por não conferir com o portal: ${r.naoConferem.length}; detalhe de outra matéria: ${r.incoerentes}`,
+    };
+  }
   if (entidade === "ideias") {
     const r = tabelasDasIdeias(obs, lerIdeiasAtuais(), lerFirstSeen("ideias"));
     // Nomes omitidos a pedido do titular (LGPD; `omissoes.ts`), antes de qualquer gravação.
@@ -155,14 +186,41 @@ function montar(entidade: EntidadePublicada, obs: readonly Observacao[], kv: Rec
   };
 }
 
-export async function gravarPublicacao(entidade: EntidadePublicada, o: { obs: readonly Observacao[]; leitor: string; cursor: number; balde: ClienteR2; saida?: string }): Promise<void> {
+/** Onde uma tabela publicada é gravada: no balde, ou ao lado de `--saida`. */
+const chaveDaPublicada = (pasta: string, nome: string) => `publicacao/${pasta}/${nome}.parquet`;
+const arquivoAoLado = (saida: string, pasta: string, nome: string) => `${saida.replace(/\.parquet$/, "")}-pub-${pasta}-${nome}.parquet`;
+
+/**
+ * Os itens do e-Cidadania que os vínculos ligam, lidos das tabelas JÁ publicadas (no job, as outras
+ * entidades publicam antes da autoria, no mesmo run): proposições das ideias, consultas e o acervo.
+ */
+export async function lerItensPublicados(balde: ClienteR2, saida?: string): Promise<ItensDoECidadania> {
+  const ler = async (pasta: string, nome: string): Promise<Record<string, unknown>[]> => {
+    const bytes = saida ? new Uint8Array(readFileSync(arquivoAoLado(saida, pasta, nome))) : await balde.ler(chaveDaPublicada(pasta, nome));
+    if (!bytes) throw new Error(`tabela publicada ausente: ${pasta}/${nome}`);
+    const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    return (await parquetReadObjects({ file: ab })) as Record<string, unknown>[];
+  };
+  const s = (x: unknown) => (x === null || x === undefined ? null : String(x));
+  return {
+    proposicoes: (await ler("ideias", "proposicoes")).map((r) => ({ id: String(r.id), url: s(r.url) })),
+    consultas: (await ler("consultas", "consultas")).map((r) => ({ id: String(r.id), autoria: s(r.autoria) })),
+    acervo: (await ler("consultas_votos", "materias")).map((r) => ({ codigo: String(r.codigo) })),
+  };
+}
+
+export async function gravarPublicacao(
+  entidade: EntidadePublicada,
+  o: { obs: readonly Observacao[]; leitor: string; cursor: number; balde: ClienteR2; saida?: string; itens?: ItensDoECidadania },
+): Promise<void> {
+  const pasta = pastaDa(entidade);
   const kv = { entidade, leitor: o.leitor, cursor: String(o.cursor), geradoEm: new Date().toISOString() };
-  const { tabelas, resumo } = montar(entidade, o.obs, kv);
+  const { tabelas, resumo } = montar(entidade, o.obs, kv, o.itens);
   for (const tb of tabelas) {
-    if (o.saida) writeFileSync(`${o.saida.replace(/\.parquet$/, "")}-pub-${entidade}-${tb.nome}.parquet`, tb.bytes);
-    else await o.balde.gravar(`publicacao/${entidade}/${tb.nome}.parquet`, tb.bytes, { "content-type": "application/vnd.apache.parquet" });
+    if (o.saida) writeFileSync(arquivoAoLado(o.saida, pasta, tb.nome), tb.bytes);
+    else await o.balde.gravar(chaveDaPublicada(pasta, tb.nome), tb.bytes, { "content-type": "application/vnd.apache.parquet" });
   }
   console.log(
-    `[observacoes][publicacao][${entidade}] ${tabelas.map((tb) => `${tb.nome} ${tb.linhas} (${(tb.bytes.length / 1048576).toFixed(2)} MB)`).join(", ")}; ${resumo}`,
+    `[observacoes][publicacao][${pasta}] ${tabelas.map((tb) => `${tb.nome} ${tb.linhas} (${(tb.bytes.length / 1048576).toFixed(2)} MB)`).join(", ")}; ${resumo}`,
   );
 }

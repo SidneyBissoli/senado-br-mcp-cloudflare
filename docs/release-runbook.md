@@ -96,7 +96,7 @@ O primeiro corte **cunha o concept-DOI** (estável para sempre) e o primeiro ver
 ## Cortes seguintes (anual, ou extraordinário)
 
 > **Desde o 3.0.0 (D2, 22/11/2026)** o release congela o pacote da camada 3: `npm run dataset:pacote`
-> lê as 14 tabelas do balde `ecidadania-observacoes` e grava `*.parquet` + `datapackage.json` +
+> lê as 16 tabelas do balde `ecidadania-observacoes` e grava `*.parquet` + `datapackage.json` +
 > `dicionario.md` (só Parquet, decisão do dono de 22/11/2026). O `build:dataset` (NDJSON do D1) e o
 > `DATASET_SCHEMA_VERSION` de `src/dataset/schema.ts` descrevem só o 1.0.0/2.0.0; o esquema vigente é
 > `ESQUEMA_V3` em `scripts/publicacao/dicionario.ts`. O 3.0.0 leva a release 3.0.0 (o esquema 2.0.0

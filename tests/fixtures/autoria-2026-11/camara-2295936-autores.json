@@ -1,0 +1,17 @@
+{
+ "_captura": {
+  "url": "https://dadosabertos.camara.leg.br/api/v2/proposicoes/2295936/autores",
+  "em": "2026-11-25",
+  "recorte": "só as chaves que o leitor usa; valores intactos"
+ },
+ "dados": [
+  {
+   "uri": "https://dadosabertos.camara.leg.br/api/v2/deputados/74398",
+   "nome": "Maria do Rosário",
+   "codTipo": 10000,
+   "tipo": "Deputado(a)",
+   "ordemAssinatura": 1,
+   "proponente": 1
+  }
+ ]
+}

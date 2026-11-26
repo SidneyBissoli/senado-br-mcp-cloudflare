@@ -13,6 +13,7 @@ const GRAVADAS: Record<string, readonly ColunaDaTabela<never>[]> = {
   "eventos/eventos": G.COLUNAS_EVENTOS, "eventos/pauta": G.COLUNAS_ITENS_DO_EVENTO, "eventos/convidados": G.COLUNAS_ITENS_DO_EVENTO,
   "eventos/comentarios": G.COLUNAS_COMENTARIOS,
   "consultas_votos/materias": G.COLUNAS_MATERIAS_DO_ACERVO, "consultas_votos/votos-uf": G.COLUNAS_VOTOS_UF,
+  "vinculos/materias": G.COLUNAS_VINCULOS_MATERIAS, "vinculos/autores": G.COLUNAS_VINCULOS_AUTORES,
 } as unknown as Record<string, readonly ColunaDaTabela<never>[]>;
 
 /** Tipo Parquet gravado → tipos Frictionless aceitos (texto pode ser data ou hora em ISO). */
