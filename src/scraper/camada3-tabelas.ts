@@ -25,6 +25,10 @@ export interface TabelaC3 {
   indices: string[][];
   /** Colunas do dicionário que NÃO vão ao D1 (nenhuma ferramenta as mostra). */
   omitir?: string[];
+  /** Linhas que NÃO vão ao D1: as que têm em `coluna` um dos valores de `excluir` (nenhuma ferramenta as mostra). */
+  filtro?: { coluna: string; excluir: string[] };
+  /** Só as linhas cujas `colunas` aparecem (mesmos nomes) na tabela `de` já filtrada. */
+  somenteCom?: { de: string; colunas: string[] };
 }
 
 export const TABELAS_C3: readonly TabelaC3[] = [
@@ -40,6 +44,12 @@ export const TABELAS_C3: readonly TabelaC3[] = [
   { caminho: "eventos/convidados", tabela: "c3_eventos_convidados", indices: [["id"]] },
   { caminho: "consultas_votos/materias", tabela: "c3_acervo_materias", indices: [["codigo"]] },
   { caminho: "consultas_votos/votos-uf", tabela: "c3_acervo_votos_uf", indices: [["codigo"], ["uf"]], omitir: ["sha"] },
+  // E1.d: os vínculos que `obter_consulta`/`obter_ideia` mostram. Sem o texto do portal (já está em
+  // `c3_consultas`), sem o sha (prova do arquivo; o dataset o traz) e sem o acervo de votos por UF
+  // (nenhuma ferramenta mostra os vínculos dele; medido 26/11/2026: o acervo seria ~60% das linhas, e os
+  // autores iriam de ~13 MB a ~25 MB de SQL na carga completa). O dataset publica tudo.
+  { caminho: "vinculos/materias", tabela: "c3_vinculos_materias", indices: [["entidade", "itemId"]], omitir: ["autoriaNoPortal"], filtro: { coluna: "entidade", excluir: ["consultas_votos"] } },
+  { caminho: "vinculos/autores", tabela: "c3_vinculos_autores", indices: [["casa", "codigo"]], omitir: ["sha"], somenteCom: { de: "vinculos/materias", colunas: ["casa", "codigo"] } },
 ];
 
 export const tabelaC3 = (caminho: string): string => {

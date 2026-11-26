@@ -51,8 +51,31 @@ export const PROJETADAS: readonly TabelaProjetada[] = TABELAS_C3.map((t) => {
   }
   const colunas = dic.colunas.filter((c) => !omitir.includes(c.nome));
   for (const cols of t.indices) for (const c of cols) if (!colunas.some((x) => x.nome === c)) throw new Error(`${t.caminho}: índice em coluna inexistente ${c}`);
+  if (t.filtro && !dic.colunas.some((x) => x.nome === t.filtro!.coluna)) throw new Error(`${t.caminho}: filtro em coluna inexistente ${t.filtro.coluna}`);
+  if (t.somenteCom) {
+    const ref = DICIONARIO.find((d) => d.caminho === t.somenteCom!.de);
+    if (!ref || !TABELAS_C3.some((x) => x.caminho === t.somenteCom!.de)) throw new Error(`${t.caminho}: somenteCom de tabela não projetada ${t.somenteCom.de}`);
+    for (const c of t.somenteCom.colunas) if (!dic.colunas.some((x) => x.nome === c) || !ref.colunas.some((x) => x.nome === c)) throw new Error(`${t.caminho}: somenteCom em coluna inexistente ${c}`);
+  }
   return { ...t, dic, colunas };
 });
+
+/** Chave de junção de `somenteCom` (valores normalizados em JSON). */
+const juncao = (l: Record<string, unknown>, colunas: readonly string[]) => JSON.stringify(colunas.map((c) => (typeof l[c] === "bigint" ? Number(l[c]) : (l[c] ?? null))));
+
+/** As linhas que passam no `filtro` da tabela. */
+export function filtrar(t: Pick<TabelaProjetada, "filtro">, linhas: readonly Record<string, unknown>[]): Record<string, unknown>[] {
+  const f = t.filtro;
+  return f ? linhas.filter((l) => !f.excluir.includes(String(l[f.coluna]))) : [...linhas];
+}
+
+/** As linhas de `t` cujas colunas de `somenteCom` aparecem nas linhas (já filtradas) da tabela de referência. */
+export function somenteCom(t: Pick<TabelaProjetada, "somenteCom">, linhas: readonly Record<string, unknown>[], referencia: readonly Record<string, unknown>[]): Record<string, unknown>[] {
+  const s = t.somenteCom;
+  if (!s) return [...linhas];
+  const chaves = new Set(referencia.map((r) => juncao(r, s.colunas)));
+  return linhas.filter((l) => chaves.has(juncao(l, s.colunas)));
+}
 
 /** CREATE TABLE + índices da tabela, gerados do dicionário. */
 export function ddl(t: TabelaProjetada): string[] {

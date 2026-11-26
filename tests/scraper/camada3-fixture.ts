@@ -135,5 +135,28 @@ export function linhasDeExemplo(): Record<string, Record<string, unknown>[]> {
       { codigo: 77, uf: "RJ", sim: 5, nao: 3, desde: D, ate: D, leituras: 1, origem: "csv" },
       { codigo: 78, uf: "RJ", sim: 1, nao: 1, desde: D, ate: D, leituras: 1, origem: "csv" },
     ],
+    // E1.d: a consulta 5000 tem as duas autorias (o caso da 176514: texto da Câmara, iniciativa de
+    // senador); a ideia 100 liga a uma proposição da Câmara ainda não lida; a 4000 não tem vínculo.
+    "vinculos/materias": [
+      {
+        entidade: "consultas", itemId: 5000, casa: "SF", codigo: 5000, metodo: "id-da-consulta", situacao: "lida", processos: "9133965",
+        identificacao: "PL 5905/2026 (Substitutivo-CD)", resumoAutoria: "Câmara dos Deputados", confereComPortal: "sim", conferidoEm: "2026-11-25T19:38:20.000Z",
+      },
+      {
+        entidade: "ideias", itemId: 100, casa: "CD", codigo: 2295936, metodo: "link-publicado", situacao: "pendente",
+        linkPublicado: "https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao=2295936",
+      },
+    ],
+    "vinculos/autores": [
+      {
+        casa: "SF", codigo: 5000, processo: 9133965, papel: "texto", posicao: 1, ordem: 1, autor: "Câmara dos Deputados", tipo: "CAMARA",
+        url: "https://legis.senado.leg.br/dadosabertos/processo/9133965", coletadoEm: "2026-11-25T19:38:20.000Z", sha: "a".repeat(64),
+      },
+      {
+        casa: "SF", codigo: 5000, processo: 9133965, papel: "iniciativa", posicao: 1, ordem: 1, autor: "Marcelo Crivella", tipo: "SENADOR",
+        codigoParlamentar: 3366, uf: "RJ", siglaPartido: "REPUBLICANOS", cargo: "SENADOR", ente: "SF",
+        url: "https://legis.senado.leg.br/dadosabertos/processo/9133965", coletadoEm: "2026-11-25T19:38:20.000Z", sha: "a".repeat(64),
+      },
+    ],
   };
 }
